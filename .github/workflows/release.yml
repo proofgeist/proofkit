@@ -10,7 +10,7 @@ on:
 
 jobs:
   release:
-    if: ${{ github.repository_owner == 't3-oss' }}
+    if: ${{ github.repository_owner == 'proofgeist' }}
     name: Create a PR for release workflow
     runs-on: ubuntu-latest
     steps:

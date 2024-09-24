@@ -12,7 +12,7 @@ on:
 jobs:
   notify-codeowners:
     if: |
-      github.repository_owner == 't3-oss'
+      github.repository_owner == 'proofgeist'
     runs-on: ubuntu-latest
     steps:
       - name: Parse changed files and write to env
@@ -21,8 +21,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const changedFiles = (await github.rest.pulls.listFiles({
-              owner: "t3-oss",
-              repo: "create-t3-app",
+              owner: "proofgeist",
+              repo: "proofkit",
               pull_number: context.payload.number,
             })).data.map(file => file.filename);
 

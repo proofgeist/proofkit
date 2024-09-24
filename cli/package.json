@@ -19,7 +19,7 @@
   "type": "module",
   "exports": "./dist/index.js",
   "bin": {
-    "create-t3-app": "./dist/index.js"
+    "proofkit": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -43,9 +43,9 @@
     "format": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ../.gitignore --ignore-unknown --no-error-on-unmatched-pattern --write",
     "format:check": "prettier '**/*.{cjs,mjs,ts,tsx,md,json}' --ignore-path ../.gitignore --ignore-unknown --no-error-on-unmatched-pattern --check",
     "release": "changeset version",
-    "pub:beta": "pnpm build && npm publish --tag beta",
-    "pub:next": "pnpm build && npm publish --tag next",
-    "pub:release": "pnpm build && npm publish"
+    "pub:beta": "pnpm build && npm publish --tag beta --access public",
+    "pub:next": "pnpm build && npm publish --tag next --access public",
+    "pub:release": "pnpm build && npm publish --access public"
   },
   "dependencies": {
     "@clack/core": "^0.3.4",

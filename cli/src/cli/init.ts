@@ -192,14 +192,6 @@ const initProject = async ({
 }): Promise<CliResults> => {
   const cliResults = defaultOptions;
 
-  // FIXME: TEMPORARY WARNING WHEN USING YARN 3. SEE ISSUE #57
-  if (process.env.npm_config_user_agent?.startsWith("yarn/3")) {
-    logger.warn(`  WARNING: It looks like you are using Yarn 3. This is currently not supported,
-  and likely to result in a crash. Please run create-t3-app with another
-  package manager such as pnpm, npm, or Yarn Classic.
-  See: https://github.com/t3-oss/create-t3-app/issues/57`);
-  }
-
   // Needs to be separated outside the if statement to correctly infer the type as string | undefined
   const cliProvidedName = appName;
   if (cliProvidedName) {
@@ -388,7 +380,7 @@ const initProject = async ({
       },
     };
   } catch (err) {
-    // If the user is not calling create-t3-app from an interactive terminal, inquirer will throw an IsTTYError
+    // If the user is not calling proofkit from an interactive terminal, inquirer will throw an IsTTYError
     // If this happens, we catch the error, tell the user what has happened, and then continue to run the program with a default t3 app
     if (err instanceof IsTTYError) {
       logger.warn(`

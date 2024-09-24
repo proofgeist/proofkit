@@ -16,7 +16,7 @@ export const renderVersionWarning = (npmVersion: string) => {
     logger.warn("  Please report any bugs you encounter.");
   } else if (currentVersion.includes("next")) {
     logger.warn(
-      "  You are running create-t3-app with the @next tag which is no longer maintained."
+      "  You are running proofkit with the @next tag which is no longer maintained."
     );
     logger.warn("  Please run the CLI with @latest instead.");
   } else if (currentVersion !== npmVersion) {
@@ -47,7 +47,7 @@ function checkForLatestVersion(): Promise<string> {
   return new Promise((resolve, reject) => {
     https
       .get(
-        "https://registry.npmjs.org/-/package/create-t3-app/dist-tags",
+        "https://registry.npmjs.org/-/package/@proofgeist/kit/dist-tags",
         (res) => {
           if (res.statusCode === 200) {
             let body = "";
@@ -71,7 +71,7 @@ export const getNpmVersion = () =>
   // `fetch` to the registry is faster than `npm view` so we try that first
   checkForLatestVersion().catch(() => {
     try {
-      return execSync("npm view create-t3-app version").toString().trim();
+      return execSync("npm view proofkit version").toString().trim();
     } catch {
       return null;
     }

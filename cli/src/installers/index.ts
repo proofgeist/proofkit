@@ -1,0 +1,60 @@
+import {
+  envVariablesInstaller,
+  type FMAuthKeys,
+} from "~/installers/envVars.js";
+import { nextAuthInstaller } from "~/installers/nextAuth.js";
+import { trpcInstaller } from "~/installers/trpc.js";
+import { type PackageManager } from "~/utils/getUserPkgManager.js";
+import { dynamicEslintInstaller } from "./eslint.js";
+
+// Turning this into a const allows the list to be iterated over for programmatically creating prompt options
+// Should increase extensibility in the future
+export const availablePackages = [
+  "nextAuth",
+  "trpc",
+  "envVariables",
+  "eslint",
+  "fmdapi",
+  "webViewerFetch",
+  "clerk",
+] as const;
+export type AvailablePackages = (typeof availablePackages)[number];
+
+export interface InstallerOptions {
+  projectDir: string;
+  pkgManager: PackageManager;
+  noInstall: boolean;
+  keys: FMAuthKeys;
+  packages?: PkgInstallerMap;
+  projectName: string;
+  scopedAppName: string;
+  fileName: string;
+  dataApiKey: string;
+  fmServerURL: string;
+}
+
+export type Installer = (opts: InstallerOptions) => void;
+
+export type PkgInstallerMap = {
+  [pkg in AvailablePackages]?: {
+    inUse: boolean;
+    installer: Installer;
+  };
+};
+
+export const buildPkgInstallerMap = (
+  packages: AvailablePackages[]
+): PkgInstallerMap => ({
+  trpc: {
+    inUse: packages.includes("trpc"),
+    installer: trpcInstaller,
+  },
+  envVariables: {
+    inUse: true,
+    installer: envVariablesInstaller,
+  },
+  eslint: {
+    inUse: true,
+    installer: dynamicEslintInstaller,
+  },
+});

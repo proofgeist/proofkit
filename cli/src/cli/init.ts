@@ -70,14 +70,12 @@ interface CliFlags {
 interface CliResults {
   appName: string;
   authType: "none" | "next-auth" | "clerk";
-  packages: AvailablePackages[];
   flags: CliFlags;
   keys: FMAuthKeys;
 }
 
 const defaultOptions: CliResults = {
   appName: DEFAULT_APP_NAME,
-  packages: [],
   authType: "none",
   keys: { ottoApiKey: "" },
   flags: {
@@ -352,14 +350,8 @@ const initProject = async ({
         })
       ).toString();
 
-    const packages: AvailablePackages[] = [];
-
-    // always install fmdapi for next app
-    packages.push("fmdapi");
-
     return {
       appName: projectName.toString() ?? cliResults.appName,
-      packages,
       authType:
         auth === "clerk"
           ? "clerk"
@@ -471,7 +463,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
 
   const {
     appName,
-    packages,
     keys,
     authType,
     flags: {
@@ -487,7 +478,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     },
   } = await initProject({ opts, appName: name });
 
-  const usePackages = buildPkgInstallerMap(packages);
+  const usePackages = buildPkgInstallerMap();
 
   // e.g. dir/@mono/app returns ["@mono/app", "dir/app"]
   const [scopedAppName, appDir] = parseNameAndPath(appName);
@@ -545,7 +536,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
 
   await logNextSteps({
     projectName: appDir,
-    appRouter,
     noInstall,
     projectDir,
   });

@@ -9,10 +9,7 @@ export const logNextSteps = async ({
   projectName = DEFAULT_APP_NAME,
   noInstall,
   projectDir,
-}: Pick<
-  InstallerOptions,
-  "projectName" | "noInstall" | "projectDir" | "appRouter"
->) => {
+}: Pick<InstallerOptions, "projectName" | "noInstall" | "projectDir">) => {
   const pkgManager = getUserPkgManager();
 
   logger.info("Next steps:");

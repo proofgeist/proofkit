@@ -2,8 +2,6 @@ import {
   envVariablesInstaller,
   type FMAuthKeys,
 } from "~/installers/envVars.js";
-import { nextAuthInstaller } from "~/installers/nextAuth.js";
-import { trpcInstaller } from "~/installers/trpc.js";
 import { type PackageManager } from "~/utils/getUserPkgManager.js";
 import { dynamicEslintInstaller } from "./eslint.js";
 
@@ -42,13 +40,7 @@ export type PkgInstallerMap = {
   };
 };
 
-export const buildPkgInstallerMap = (
-  packages: AvailablePackages[]
-): PkgInstallerMap => ({
-  trpc: {
-    inUse: packages.includes("trpc"),
-    installer: trpcInstaller,
-  },
+export const buildPkgInstallerMap = (): PkgInstallerMap => ({
   envVariables: {
     inUse: true,
     installer: envVariablesInstaller,

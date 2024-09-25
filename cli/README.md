@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Get started with a new ProofKit project by running <code>npm create @proofgeist/kit@latest</code>
+  Get started with a new ProofKit project by running <code>npx @proofgeist/kit@latest</code>
 </p>
 
 <h2 id="about">More Docs coming soon</h2>

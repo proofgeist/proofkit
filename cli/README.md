@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-  <img src="https://github.com/proofgeist/proofkit/blob/33144ded0237da6e7ece853bc7b173ff38420846/www/public/images/proofkit.svg" width="260" alt="Logo for ProofKit">
+  <img src="https://github.com/proofgeist/proofkit/blob/320a74c7d5597013a3f344218f8cc9fe3802e2d1/www/public/images/proofkit.svg" width="260" alt="Logo for ProofKit">
 </picture>
 </p>
 

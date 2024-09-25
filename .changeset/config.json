@@ -10,6 +10,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@proofkit/www", "@proofkit/upgrade"],
   "changedFilePatterns": ["src/**", "template/**"]
 }

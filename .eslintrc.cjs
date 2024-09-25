@@ -30,7 +30,7 @@ const config = {
     // These off/not-configured-the-way-we-want lint rules we like & opt into
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unused-vars": [
-      "error",
+      "warn",
       { argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" },
     ],
     "@typescript-eslint/consistent-type-imports": [

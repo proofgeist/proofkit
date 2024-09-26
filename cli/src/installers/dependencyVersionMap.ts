@@ -1,3 +1,5 @@
+import { getVersion } from "~/utils/getProofKitVersion.js";
+
 /*
  * This maps the necessary packages to a version.
  * This improves performance significantly over fetching it from the npm registry.
@@ -46,5 +48,8 @@ export const dependencyVersionMap = {
 
   // FileMaker Data API
   "@proofgeist/fmdapi": "^4",
+
+  // ProofKit
+  "@proofgeist/kit": getVersion(),
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

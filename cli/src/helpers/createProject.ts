@@ -66,9 +66,6 @@ export const createProject = async ({
     fmServerURL,
   });
 
-  selectLayoutFile({ projectDir, packages });
-  selectPageFile({ projectDir, packages });
-
   if (authType === "next-auth") {
     await addAuth({
       type: "next-auth",

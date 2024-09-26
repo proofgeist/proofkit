@@ -22,10 +22,8 @@ import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
 import { fetchServerVersions } from "~/helpers/version-fetcher.js";
 import { type FMAuthKeys } from "~/installers/envVars.js";
-import {
-  buildPkgInstallerMap,
-  type AvailablePackages,
-} from "~/installers/index.js";
+import { buildPkgInstallerMap } from "~/installers/index.js";
+import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { IsTTYError } from "~/utils/isTTYError.js";
@@ -317,14 +315,16 @@ const initProject = async ({
     );
 
     const schemaName =
-      cliResults.flags.schemaName ??
-      (await p.text({
-        message: "What would you like to call the generated layout client?",
-        defaultValue: layout,
-      }));
+      cliResults.flags.schemaName ||
+      (
+        await p.text({
+          message: "What would you like to call the generated layout client?",
+          defaultValue: layout,
+        })
+      ).toString();
 
     const auth =
-      cliResults.flags.auth ??
+      opts?.auth ??
       (
         await p.select({
           message:
@@ -452,8 +452,8 @@ async function getValidFileMakerServerUrl(
   return { url, ottoVersion, fmsVersion };
 }
 
-type CT3APackageJSON = PackageJson & {
-  ct3aMetadata?: {
+type ProofKitPackageJSON = PackageJson & {
+  proofkitMetadata?: {
     initVersion: string;
   };
 };
@@ -507,9 +507,15 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   // Write name to package.json
   const pkgJson = fs.readJSONSync(
     path.join(projectDir, "package.json")
-  ) as CT3APackageJSON;
+  ) as ProofKitPackageJSON;
   pkgJson.name = scopedAppName;
-  pkgJson.ct3aMetadata = { initVersion: getVersion() };
+  pkgJson.proofkitMetadata = { initVersion: getVersion() };
+
+  addPackageDependency({
+    dependencies: ["@proofgeist/kit"],
+    devMode: true,
+    projectDir,
+  });
 
   // ? Bun doesn't support this field (yet)
   if (pkgManager !== "bun") {

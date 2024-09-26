@@ -35,7 +35,7 @@ export const nextAuthInstaller = async ({
   const authConfigSrc = path.join(
     extrasDir,
     "src/server",
-    "auth-app",
+    "next-auth",
     "base.ts"
   );
   const authConfigDest = path.join(projectDir, "src/server/auth.ts");
@@ -44,11 +44,23 @@ export const nextAuthInstaller = async ({
   const passwordSrc = path.join(
     extrasDir,
     "src/server",
-    "auth-app",
+    "next-auth",
     "password.ts"
   );
   const passwordDest = path.join(projectDir, "src/server/password.ts");
   fs.copySync(passwordSrc, passwordDest);
+
+  // copy users.ts to data directory
+  fs.copySync(
+    path.join(extrasDir, "src/server/data/users.ts"),
+    path.join(projectDir, "src/server/data/users.ts")
+  );
+
+  // copy auth pages
+  fs.copySync(
+    path.join(extrasDir, "src/app/auth"),
+    path.join(projectDir, "src/app/auth")
+  );
 
   await runExecCommand({
     command: ["auth", "secret"],

@@ -1,7 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
 
-import { PKG_ROOT } from "~/consts.js";
 import { type Installer } from "~/installers/index.js";
 
 export type FMAuthKeys =

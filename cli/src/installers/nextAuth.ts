@@ -1,17 +1,14 @@
 import path from "path";
+import chalk from "chalk";
 import fs from "fs-extra";
-import {
-  JsxOpeningFragment,
-  Project,
-  SyntaxKind,
-  type ReturnStatement,
-  type SourceFile,
-} from "ts-morph";
+import { Project, SyntaxKind, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { runExecCommand } from "~/helpers/installDependencies.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
+import { ensureReturnStatementIsWrappedInFragment } from "~/utils/ts-morph.js";
+import { addToHeaderSlot } from "./auth-shared.js";
 
 export const nextAuthInstaller = async ({
   projectDir,
@@ -65,7 +62,7 @@ export const nextAuthInstaller = async ({
 
   // copy auth pages
   fs.copySync(
-    path.join(extrasDir, "src/app/auth"),
+    path.join(extrasDir, "src/app/next-auth"),
     path.join(projectDir, "src/app/auth")
   );
 
@@ -102,6 +99,11 @@ export const nextAuthInstaller = async ({
   );
 
   // add a protected safe-action-client
+  addToSafeActionClient(
+    project.addSourceFileAtPathIfExists(
+      path.join(projectDir, "src/server/safe-action.ts")
+    )
+  );
 
   // TODO do this part in-house, maybe with execa directly
   await runExecCommand({
@@ -167,71 +169,35 @@ function addNextAuthProviderToRootLayout(rootLayoutSource: SourceFile) {
   rootLayoutSource.saveSync();
 }
 
-function addToHeaderSlot(slotSourceFile: SourceFile, importFrom: string) {
-  slotSourceFile.addImportDeclaration({
-    defaultImport: "UserMenu",
-    moduleSpecifier: importFrom,
-  });
-
-  // ensure Group from @mantine/core is imported
-  const mantineCoreImport = slotSourceFile.getImportDeclaration(
-    (dec) => dec.getModuleSpecifierValue() === "@mantine/core"
-  );
-  if (!mantineCoreImport) {
-    slotSourceFile.addImportDeclaration({
-      namedImports: [{ name: "Group" }],
-      moduleSpecifier: "@mantine/core",
-    });
-  } else {
-    const groupImport = mantineCoreImport
-      .getNamedImports()
-      .find((imp) => imp.getName() === "Group");
-
-    if (!groupImport) {
-      mantineCoreImport.addNamedImport({ name: "Group" });
-    }
-  }
-
-  const returnStatement = ensureReturnStatementIsWrappedInFragment(
-    slotSourceFile
-      .getFunction((dec) => dec.isDefaultExport())
-      ?.getBody()
-      ?.getFirstDescendantByKind(SyntaxKind.ReturnStatement)
-  );
-
-  const existingElements = returnStatement
-    ?.getFirstDescendantByKind(SyntaxKind.JsxOpeningFragment)
-    ?.getParentIfKind(SyntaxKind.JsxFragment)
-    ?.getFirstDescendantByKind(SyntaxKind.SyntaxList)
-    ?.getText();
-
-  if (!existingElements) {
+function addToSafeActionClient(sourceFile?: SourceFile) {
+  if (!sourceFile) {
     console.log(
-      `Failed to inject into header slot at ${slotSourceFile.getFilePath()}`
+      chalk.yellow(
+        "Failed to inject into safe-action-client. Did you move the safe-action.ts file?"
+      )
     );
     return;
   }
 
-  returnStatement?.replaceWithText(
-    `return (<><Group>${existingElements}<UserMenu /></Group></>)`
-  );
-  returnStatement?.formatText();
-  slotSourceFile.saveSync();
-}
+  sourceFile.addImportDeclaration({
+    namedImports: [{ name: "auth" }],
+    moduleSpecifier: "@/server/auth",
+  });
 
-// TODO move to utils
-function ensureReturnStatementIsWrappedInFragment(
-  returnStatement: ReturnStatement | undefined
-) {
-  const expression =
-    returnStatement
-      ?.getExpressionIfKind(SyntaxKind.ParenthesizedExpression)
-      ?.getExpression() ?? returnStatement?.getExpression();
-
-  if (expression?.isKind(SyntaxKind.JsxFragment)) {
-    return returnStatement;
+  // add to end of file
+  sourceFile.addStatements((writer) =>
+    writer.writeLine(`export const authedActionClient = createSafeActionClient().use(
+  async ({ next, ctx }) => {
+    const session = await auth();
+    if (!session) {
+      throw new Error("Unauthorized");
+    }
+    return next({ ctx: { ...ctx, session } });
   }
+);
+`)
+  );
 
-  returnStatement?.replaceWithText(`return <>${expression}</>;`);
-  return returnStatement;
+  sourceFile.formatText();
+  sourceFile.saveSync();
 }

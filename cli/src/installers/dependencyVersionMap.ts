@@ -45,6 +45,7 @@ export const dependencyVersionMap = {
 
   // Clerk
   "@clerk/nextjs": "^5.6.0",
+  "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
   "@proofgeist/fmdapi": "^4",

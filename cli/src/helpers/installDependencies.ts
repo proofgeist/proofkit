@@ -92,20 +92,27 @@ export const installDependencies = async ({
 export const runExecCommand = async ({
   command,
   projectDir,
+  successMessage,
 }: {
   command: string[];
   projectDir: string;
+  successMessage?: string;
 }) => {
   const spinner = await _runExecCommand({ projectDir, command });
 
   // If the spinner was used to show the progress, use succeed method on it
   // If not, use the succeed on a new spinner
-  (spinner ?? ora()).succeed(chalk.green("Successfully ran command!\n"));
+  (spinner ?? ora()).succeed(
+    chalk.green(
+      successMessage
+        ? `${successMessage}\n`
+        : `Successfully ran ${command.join(" ")}!\n`
+    )
+  );
 };
 
 const _runExecCommand = async ({
   projectDir,
-
   command,
 }: {
   projectDir: string;

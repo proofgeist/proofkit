@@ -5,7 +5,7 @@ import { Command } from "commander";
 import dotenv from "dotenv";
 import { z } from "zod";
 
-import { addLayout, getExistingSchemas } from "~/generators/fmdpai.js";
+import { addLayout, getExistingSchemas } from "~/generators/fmdapi.js";
 import { type Settings } from "~/utils/parseSettings.js";
 import { commonFileMakerLayoutPrefixes, getLayouts } from "../fmdapi.js";
 
@@ -15,7 +15,7 @@ export const runAddSchemaAction = async ({
   settings: Settings;
 }) => {
   const spinner = p.spinner();
-  spinner.start("Loading layouts...");
+  spinner.start("Loading layouts from your FileMaker file...");
   if (settings.envFile) {
     dotenv.config({ path: settings.envFile });
   }
@@ -31,12 +31,12 @@ export const runAddSchemaAction = async ({
   });
 
   const existingSchemas = getExistingSchemas({});
-  spinner.stop("Loaded layouts");
+  spinner.stop("Loaded layouts from your FileMaker file");
 
   if (existingSchemas.length > 0) {
     p.note(
       existingSchemas.join("\n"),
-      "Detected existing layouts in your config"
+      "Detected existing layouts in your project"
     );
   }
 

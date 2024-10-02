@@ -1,14 +1,19 @@
 import path from "path";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { Project, SyntaxKind, type SourceFile } from "ts-morph";
+import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
+import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 
-export const clerkInstaller = ({ projectDir }: { projectDir: string }) => {
+export const clerkInstaller = async ({
+  projectDir,
+}: {
+  projectDir: string;
+}) => {
   addPackageDependency({
     projectDir,
     dependencies: ["@clerk/nextjs", "@clerk/themes"],
@@ -46,9 +51,7 @@ export const clerkInstaller = ({ projectDir }: { projectDir: string }) => {
 
   // add ClerkProvider to app layout
   const layoutFile = path.join(projectDir, "src/app/layout.tsx");
-  const project = new Project({
-    tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
-  });
+  const project = getNewProject(projectDir);
   addClerkProvider(project.addSourceFileAtPath(layoutFile));
 
   // inject signin/signout components to header slots
@@ -77,6 +80,7 @@ export const clerkInstaller = ({ projectDir }: { projectDir: string }) => {
   // add envs to .env and .env.schema
   addToEnv({
     projectDir,
+    project,
     envs: [
       {
         name: "CLERK_SECRET_KEY",
@@ -105,7 +109,7 @@ export const clerkInstaller = ({ projectDir }: { projectDir: string }) => {
       "Hosted auth with Clerk. Set up a new app at https://dashboard.clerk.com/apps/new to get these values.",
   });
 
-  // maybe add Clerk login/out button to header?
+  await formatAndSaveSourceFiles(project);
 };
 
 export function addClerkProvider(sourceFile: SourceFile) {
@@ -139,27 +143,6 @@ export function addClerkProvider(sourceFile: SourceFile) {
       ${childrenText}
     </ClerkAuthProvider>`
   );
-
-  // if (returnStatement) {
-  //   // get the return statement's JSX element
-  //   const returnExpression =
-  //     returnStatement
-  //       .getFirstDescendantByKind(SyntaxKind.ParenthesizedExpression)
-  //       ?.getExpression() ??
-  //     returnStatement.getFirstDescendantByKind(SyntaxKind.JsxElement);
-
-  //   const returnElementText = returnExpression?.getText() ?? "";
-  //   returnStatement.replaceWithText((writer) => {
-  //     writer.write("return (");
-  //     writer.writeLine("<ClerkProvider>");
-  //     writer.writeLine(returnElementText);
-  //     writer.writeLine("</ClerkProvider>");
-  //     writer.write(");");
-  //   });
-  // }
-
-  sourceFile.formatText();
-  sourceFile.saveSync();
 }
 
 function addToSafeActionClient(sourceFile?: SourceFile) {
@@ -189,7 +172,4 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 
 `)
   );
-
-  sourceFile.formatText();
-  sourceFile.saveSync();
 }

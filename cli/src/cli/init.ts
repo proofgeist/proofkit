@@ -14,7 +14,7 @@ import {
   addLayout,
   initFmdapi,
   runCodegenCommand,
-} from "~/generators/fmdpai.js";
+} from "~/generators/fmdapi.js";
 import { createProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";

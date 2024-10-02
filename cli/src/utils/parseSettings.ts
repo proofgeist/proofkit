@@ -16,7 +16,7 @@ const authSchema = z.discriminatedUnion("type", [
 
 const settingsSchema = z.object({
   auth: authSchema,
-  envFile: z.string().optional(),
+  envFile: z.string().default(".env"),
 });
 
 export const parseSettings = (projectDir?: string) => {

@@ -1,13 +1,13 @@
 import path from "path";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { Project, SyntaxKind, type SourceFile } from "ts-morph";
+import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { runExecCommand } from "~/helpers/installDependencies.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
-import { ensureReturnStatementIsWrappedInFragment } from "~/utils/ts-morph.js";
+import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 
 export const nextAuthInstaller = async ({
@@ -72,9 +72,7 @@ export const nextAuthInstaller = async ({
     path.join(projectDir, "src/components/next-auth")
   );
 
-  const project = new Project({
-    tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
-  });
+  const project = getNewProject(projectDir);
 
   // modify root layout to wrap with session provider
   addNextAuthProviderToRootLayout(
@@ -114,6 +112,7 @@ export const nextAuthInstaller = async ({
   // add envs to .env and .env.schema
   addToEnv({
     projectDir,
+    project,
     envs: [
       {
         name: "AUTH_SECRET",
@@ -123,6 +122,8 @@ export const nextAuthInstaller = async ({
       },
     ],
   });
+
+  await formatAndSaveSourceFiles(project);
 };
 
 function addNextAuthProviderToRootLayout(rootLayoutSource: SourceFile) {
@@ -197,7 +198,4 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 );
 `)
   );
-
-  sourceFile.formatText();
-  sourceFile.saveSync();
 }

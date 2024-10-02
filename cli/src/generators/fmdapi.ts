@@ -1,10 +1,13 @@
 import path from "path";
 import { type GenerateSchemaOptions } from "@proofgeist/fmdapi/dist/utils/codegen.d.ts";
 import fs from "fs-extra";
-import { Project, SyntaxKind, type SourceFile } from "ts-morph";
+import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
+import { runExecCommand } from "~/helpers/installDependencies.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
+import { parseSettings } from "~/utils/parseSettings.js";
+import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
 export function initFmdapi({ projectDir }: { projectDir: string }) {
   addPackageDependency({
@@ -31,9 +34,11 @@ export async function addLayout({
   runCodegen?: boolean;
 }) {
   const fmschemaConfig = path.join(projectDir, "fmschema.config.mjs");
-  const project = new Project({
-    tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
-  });
+  if (!fs.existsSync(fmschemaConfig)) {
+    throw new Error("fmschema.config.mjs not found");
+  }
+  const project = getNewProject(projectDir);
+
   const sourceFile = project.addSourceFileAtPath(fmschemaConfig);
   const schemasArray = getSchemasArray(sourceFile);
   schemas.forEach((schema) => {
@@ -44,17 +49,20 @@ export async function addLayout({
     await runCodegenCommand({ projectDir });
   }
 
-  sourceFile.saveSync();
+  await formatAndSaveSourceFiles(project);
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
 export async function runCodegenCommand({
   projectDir,
 }: {
   projectDir: string;
 }) {
-  // to do this without installing fmdapi (which may be required if running before running install) I need to change the fmdapi package to use ts-morph so it doesn't depend on typescript
-  console.warn("TODO: run codegen");
+  const settings = parseSettings(projectDir);
+  await runExecCommand({
+    projectDir,
+    command: ["@proofgeist/fmdapi@latest", `--env-path=${settings.envFile}`],
+    successMessage: "Successfully generated types from your layout",
+  });
 }
 
 function getSchemasArray(sourceFile: SourceFile) {
@@ -89,19 +97,27 @@ export function getExistingSchemas({
   projectDir?: string;
 }) {
   const fmschemaConfig = path.join(projectDir, "fmschema.config.mjs");
-  const project = new Project({
-    tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
-  });
+  const project = getNewProject(projectDir);
   const sourceFile = project.addSourceFileAtPath(fmschemaConfig);
   const schemasArray = getSchemasArray(sourceFile);
 
   const existingSchemas = schemasArray
     ?.getChildrenOfKind(SyntaxKind.ObjectLiteralExpression)
     .map((element) => {
-      const layout = element
-        .getProperty("layout")
-        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral);
-      return layout?.getLiteralText();
+      const layoutProperty = element
+        .getDescendantsOfKind(SyntaxKind.PropertyAssignment)
+        .find((pa) => {
+          const name = pa.getName();
+          return name === "layout" || name === '"layout"';
+        });
+
+      const layoutName = layoutProperty?.getInitializer()?.getText();
+
+      // remove the quotes from the layout name
+      const cleanedLayoutName = layoutName?.replace(/"/g, "");
+
+      return cleanedLayoutName;
     });
+
   return existingSchemas ?? [];
 }

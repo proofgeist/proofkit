@@ -1,7 +1,4 @@
-import {
-  envVariablesInstaller,
-  type FMAuthKeys,
-} from "~/installers/envVars.js";
+import { initEnvFile } from "~/installers/envVars.js";
 import { type PackageManager } from "~/utils/getUserPkgManager.js";
 import { dynamicEslintInstaller } from "./eslint.js";
 
@@ -22,13 +19,9 @@ export interface InstallerOptions {
   projectDir: string;
   pkgManager: PackageManager;
   noInstall: boolean;
-  keys: FMAuthKeys;
   packages?: PkgInstallerMap;
   projectName: string;
   scopedAppName: string;
-  fileName: string;
-  dataApiKey: string;
-  fmServerURL: string;
 }
 
 export type Installer = (opts: InstallerOptions) => void;
@@ -43,7 +36,7 @@ export type PkgInstallerMap = {
 export const buildPkgInstallerMap = (): PkgInstallerMap => ({
   envVariables: {
     inUse: true,
-    installer: envVariablesInstaller,
+    installer: initEnvFile,
   },
   eslint: {
     inUse: true,

@@ -14,9 +14,28 @@ const authSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+export const dataSourceSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("fm"),
+    name: z.string(),
+    envNames: z
+      .object({
+        database: z.string().default("FM_DATABASE"),
+        server: z.string().default("FM_SERVER"),
+        apiKey: z.string().default("OTTO_API_KEY"),
+      })
+      .default({}),
+  }),
+  z.object({
+    type: z.literal("supabase"),
+    name: z.string(),
+  }),
+]);
+
 const settingsSchema = z.object({
   auth: authSchema,
   envFile: z.string().default(".env"),
+  dataSources: z.array(dataSourceSchema).default([]),
 });
 
 export const parseSettings = (projectDir?: string) => {
@@ -36,4 +55,5 @@ export function setSettings(settings: Settings, projectDir?: string) {
       spaces: 2,
     }
   );
+  return settings;
 }

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import * as p from "@clack/prompts";
+import chalk from "chalk";
 import { Command } from "commander";
 
 import { makeInitCommand, runInit } from "~/cli/init.js";
 import { logger } from "~/utils/logger.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 import { makeAddCommand, runAdd } from "./cli/add/index.js";
+import { makeTypegenCommand } from "./cli/typegen/index.js";
 import { npmName } from "./consts.js";
 import { getVersion } from "./utils/getProofKitVersion.js";
 import { parseSettings, type Settings } from "./utils/parseSettings.js";
@@ -34,10 +36,17 @@ const main = async () => {
         );
         await runInit();
       }
-    });
+    })
+    .addHelpText(
+      "afterAll",
+      `\n The ProofKit CLI was inspired by the ${chalk
+        .hex("#E8DCFF")
+        .bold("t3 stack")}\n`
+    );
 
   program.addCommand(makeInitCommand());
   program.addCommand(makeAddCommand());
+  program.addCommand(makeTypegenCommand());
 
   await program.parseAsync(process.argv);
   process.exit(0);

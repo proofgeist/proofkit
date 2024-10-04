@@ -1,47 +1,15 @@
-import path from "path";
 import * as p from "@clack/prompts";
-import chalk from "chalk";
 import { Command } from "commander";
-import fs from "fs-extra";
-import { ZodError } from "zod";
 
-import { npmName } from "~/consts.js";
-import { parseSettings, type Settings } from "~/utils/parseSettings.js";
+import { type Settings } from "~/utils/parseSettings.js";
+import { ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
+import {
+  makeAddDataSourceCommand,
+  runAddDataSourceCommand,
+} from "./data-source/index.js";
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page.js";
-
-/**
- * Runs before any add command is run. Checks if the user is in a ProofKit project and if the
- * proofkit.json file is valid.
- */
-const preAction = () => {
-  const settingsExists = fs.existsSync(
-    path.join(process.cwd(), "proofkit.json")
-  );
-  if (!settingsExists) {
-    console.log(
-      chalk.yellow(
-        `The "add" command requires an existing ProofKit project.
-Please run " ${npmName} init" first, or try this command again when inside a ProofKit project.`
-      )
-    );
-    process.exit(1);
-  }
-
-  try {
-    return parseSettings();
-  } catch (error) {
-    console.log(chalk.red("Error parsing ProofKit settings file:"));
-    if (error instanceof ZodError) {
-      console.log(error.errors);
-    } else {
-      console.log(error);
-    }
-
-    process.exit(1);
-  }
-};
 
 export const runAdd = async (opts: { settings: Settings }) => {
   const settings = opts.settings;
@@ -51,6 +19,7 @@ export const runAdd = async (opts: { settings: Settings }) => {
     options: [
       { label: "Page", value: "page" },
       { label: "Schema", value: "schema" },
+      { label: "Data Source", value: "data" },
       ...(settings.auth.type === "none"
         ? [{ label: "Auth", value: "auth" }]
         : []),
@@ -59,11 +28,11 @@ export const runAdd = async (opts: { settings: Settings }) => {
 
   if (addType === "auth") {
     await runAddAuthAction();
-  }
-  if (addType === "page") {
-    await runAddPageAction();
-  }
-  if (addType === "schema") {
+  } else if (addType === "data") {
+    await runAddDataSourceCommand({ settings });
+  } else if (addType === "page") {
+    await runAddPageAction({ settings });
+  } else if (addType === "schema") {
     await runAddSchemaAction({ settings });
   }
 };
@@ -74,16 +43,17 @@ export const makeAddCommand = () => {
     .action(runAdd);
 
   addCommand.hook("preAction", (_thisCommand, actionCommand) => {
-    const settings = preAction();
+    const settings = ensureProofKitProject({ commandName: "add" });
     actionCommand.setOptionValue("settings", settings);
   });
   addCommand.hook("preSubcommand", (_thisCommand, actionCommand) => {
-    const settings = preAction();
+    const settings = ensureProofKitProject({ commandName: "add" });
     actionCommand.setOptionValue("settings", settings);
   });
 
   addCommand.addCommand(makeAddAuthCommand());
   addCommand.addCommand(makeAddPageCommand());
   addCommand.addCommand(makeAddSchemaCommand());
+  addCommand.addCommand(makeAddDataSourceCommand());
   return addCommand;
 };

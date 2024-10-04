@@ -1,10 +1,12 @@
 "use client";
-import { Route } from "@/app/navigation";
-import classes from "./Header.module.css";
-import React from "react";
-import { usePathname } from "next/navigation";
 
-export default function HeaderNavLink(route: Route) {
+import { type ProofKitRoute } from "@proofgeist/kit";
+import { usePathname } from "next/navigation";
+import React from "react";
+
+import classes from "./Header.module.css";
+
+export default function HeaderNavLink(route: ProofKitRoute) {
   const pathname = usePathname();
 
   if (route.type === "function") {

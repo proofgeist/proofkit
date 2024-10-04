@@ -3,7 +3,11 @@ import { Command } from "commander";
 
 import { type Settings } from "~/utils/parseSettings.js";
 
-export const runAddPageAction = async () => {
+export const runAddPageAction = async ({
+  settings,
+}: {
+  settings: Settings;
+}) => {
   const pageName = await p.text({
     message: "What is the name of the page you want to add?",
   });
@@ -15,7 +19,7 @@ export const makeAddPageCommand = () => {
     .description("Add a new page to your project")
     .action(async (opts: { settings: Settings }) => {
       const settings = opts.settings;
-      await runAddPageAction();
+      await runAddPageAction({ settings });
     });
 
   return addPageCommand;

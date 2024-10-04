@@ -5,6 +5,7 @@ import { SyntaxKind, type Project } from "ts-morph";
 interface EnvSchema {
   name: string;
   zodValue: string;
+  /** This value will be added to the .env file, unless `addToRuntimeEnv` is set to `false`. */
   defaultValue?: string;
   type: "server" | "client";
   addToRuntimeEnv?: boolean;
@@ -21,7 +22,7 @@ export function addToEnv({
   envs: EnvSchema[];
   envFileDescription?: string;
 }) {
-  const envSchemaFile = path.join(projectDir, "src/env.ts");
+  const envSchemaFile = path.join(projectDir, "src/config/env.ts");
 
   const schemaFile = project.addSourceFileAtPath(envSchemaFile);
 

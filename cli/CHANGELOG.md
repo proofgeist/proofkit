@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 0.0.3
+
+### Patch Changes
+
+- add typegen command for fm
+
 ## 0.0.2
 
 ### Patch Changes

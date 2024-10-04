@@ -161,8 +161,9 @@ export function addToFmschemaConfig({
     const extrasDir = path.join(PKG_ROOT, "template/extras");
     fs.copySync(
       path.join(extrasDir, "config/fmschema.config.mjs"),
-      path.join(projectDir, configFilePath)
+      path.join(configFilePath)
     );
+
     const sourceFile = project.addSourceFileAtPath(configFilePath);
     const configObj = getConfigObject(sourceFile, dataSourceName);
     configObj

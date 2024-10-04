@@ -143,7 +143,7 @@ export async function promptForFileMakerDataSource({
 
   const project = getNewProject(projectDir);
 
-  addToEnv({
+  const schemaFile = addToEnv({
     projectDir,
     project,
     envs: [
@@ -161,12 +161,28 @@ export async function promptForFileMakerDataSource({
       },
       {
         name: newDataSource.envNames.apiKey,
-        zodValue: `z.string().startsWith("dk_")`,
+        zodValue: `z.string().startsWith("dk_") as z.ZodType<OttoAPIKey>`,
         type: "server",
         defaultValue: dataApiKey,
       },
     ],
   });
+
+  const fmdapiImport = schemaFile.getImportDeclaration(
+    (imp) => imp.getModuleSpecifierValue() === "@proofgeist/fmdapi"
+  );
+  if (fmdapiImport) {
+    fmdapiImport
+      .getNamedImports()
+      .find((imp) => imp.getName() === "OttoAPIKey")
+      ?.remove();
+    fmdapiImport.addNamedImport({ name: "OttoAPIKey", isTypeOnly: true });
+  } else {
+    schemaFile.addImportDeclaration({
+      namedImports: [{ name: "OttoAPIKey", isTypeOnly: true }],
+      moduleSpecifier: "@proofgeist/fmdapi",
+    });
+  }
 
   addPackageDependency({
     projectDir,

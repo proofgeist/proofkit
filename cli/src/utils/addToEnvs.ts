@@ -86,4 +86,6 @@ export function addToEnv({
 ${envFileDescription ? `# ${envFileDescription}\n${envsString}` : envsString}
     `
   );
+
+  return schemaFile;
 }

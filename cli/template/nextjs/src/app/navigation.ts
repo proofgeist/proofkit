@@ -1,18 +1,6 @@
-export type Route =
-  | {
-      label: string;
-      type: "link";
-      href: string;
-      icon?: React.ReactNode;
-    }
-  | {
-      label: string;
-      type: "function";
-      icon?: React.ReactNode;
-      onClick: () => void;
-    };
+import { type ProofKitRoute } from "@proofgeist/kit";
 
-export const primaryRoutes: Route[] = [
+export const primaryRoutes: ProofKitRoute[] = [
   {
     label: "Dashboard",
     type: "link",
@@ -20,4 +8,4 @@ export const primaryRoutes: Route[] = [
   },
 ];
 
-export const secondaryRoutes: Route[] = [];
+export const secondaryRoutes: ProofKitRoute[] = [];

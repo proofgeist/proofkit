@@ -7,7 +7,7 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
 import "mantine-react-table/styles.css";
-import "@/config/theme/global.css";
+import "@/config/theme/globals.css";
 
 import { type Metadata } from "next";
 

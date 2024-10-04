@@ -14,7 +14,7 @@ import { commonFileMakerLayoutPrefixes, getLayouts } from "../fmdapi.js";
 export const runAddSchemaAction = async ({
   projectDir = process.cwd(),
   settings,
-  sourceName = "filemaker",
+
   ...opts
 }: {
   projectDir?: string;
@@ -24,6 +24,28 @@ export const runAddSchemaAction = async ({
   schemaName?: string;
   valueLists?: ValueListsOptions;
 }) => {
+  let sourceName = opts.sourceName;
+  if (!sourceName) {
+    // if there is more than one fm data source, we need to prompt for which one to add the layout to
+    if (settings.dataSources.filter((s) => s.type === "fm").length > 1) {
+      const dataSourceName = await p.select({
+        message: "Which FileMaker data source do you want to add a layout to?",
+        options: settings.dataSources
+          .filter((s) => s.type === "fm")
+          .map((s) => ({ label: s.name, value: s.name })),
+      });
+      if (p.isCancel(dataSourceName)) {
+        p.cancel();
+        process.exit(0);
+      }
+      sourceName = z.string().parse(dataSourceName);
+    }
+  } else {
+    sourceName = opts.sourceName;
+  }
+
+  if (!sourceName) sourceName = "filemaker";
+
   const dataSource = settings.dataSources
     .filter((s) => s.type === "fm")
     .find((s) => s.name === sourceName);
@@ -132,6 +154,7 @@ export const makeAddSchemaCommand = () => {
     .description("Add a new layout to your fmschema file")
     .action(async (opts: { settings: Settings }) => {
       const settings = opts.settings;
+
       await runAddSchemaAction({ settings });
     });
 

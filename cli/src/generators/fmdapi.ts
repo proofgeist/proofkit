@@ -7,10 +7,15 @@ import {
   type Project,
   type SourceFile,
 } from "ts-morph";
+import { type z } from "zod";
 
 import { PKG_ROOT } from "~/consts.js";
 import { runExecCommand } from "~/helpers/installDependencies.js";
-import { parseSettings } from "~/utils/parseSettings.js";
+import {
+  parseSettings,
+  type dataSourceSchema,
+  type envNamesSchema,
+} from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
 type Schema = GenerateSchemaOptions["schemas"][number];
@@ -52,8 +57,9 @@ export async function runCodegenCommand({
   const settings = parseSettings(projectDir);
   await runExecCommand({
     projectDir,
-    command: ["@proofgeist/fmdapi@latest", `--env-path=${settings.envFile}`],
-    successMessage: "Successfully generated types from your layout",
+    command: ["@proofgeist/fmdapi", `--env-path=${settings.envFile}`],
+    successMessage:
+      "Successfully generated types from your FileMaker layout(s)",
   });
 }
 
@@ -95,7 +101,9 @@ function getConfigObject(sourceFile: SourceFile, dataSourceName: string) {
           ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment)
           .find((pa) => pa.getName() === "path")
           ?.getInitializerIfKind(SyntaxKind.StringLiteral)
-          ?.getText();
+          ?.getText()
+          ?.replace(/"/g, ""); // remove the quotes from the path, if they exist
+
         return pathString?.endsWith(dataSourceName);
       })
       ?.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
@@ -105,9 +113,13 @@ function getConfigObject(sourceFile: SourceFile, dataSourceName: string) {
 
 function getSchemasArray(sourceFile: SourceFile, dataSourceName: string) {
   const configObj = getConfigObject(sourceFile, dataSourceName);
+  if (!configObj) {
+    throw new Error("could not find config object in fmschema.config.mjs");
+  }
+
   // for each schema passed in, add to the schemas property of the config object
   const schemasArray = configObj
-    ?.getPropertyOrThrow("schemas")
+    .getPropertyOrThrow("schemas")
     .getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression);
 
   return schemasArray;
@@ -150,10 +162,12 @@ export function addToFmschemaConfig({
   projectDir,
   dataSourceName,
   project,
+  envNames,
 }: {
   projectDir: string;
   dataSourceName: string;
   project: Project;
+  envNames?: z.infer<typeof envNamesSchema>;
 }) {
   const configFilePath = path.join(projectDir, "fmschema.config.mjs");
   const alreadyExists = fs.existsSync(configFilePath);
@@ -201,6 +215,34 @@ export function addToFmschemaConfig({
           .newLine();
         writer.quote("schemas").write(": [],").newLine();
         writer.quote("clearOldFiles").write(": true,").newLine();
+        if (envNames) {
+          writer
+            .quote("envNames")
+            .write(": ")
+            .block(() => {
+              writer
+                .quote("auth")
+                .write(": {")
+                .quote("apiKey")
+                .write(`: `)
+                .quote(envNames.apiKey)
+                .write(" },")
+                .newLine();
+              writer
+                .quote("database")
+                .write(`: `)
+                .quote(envNames.database)
+                .write(",")
+                .newLine();
+              writer
+                .quote("server")
+                .write(`: `)
+                .quote(envNames.server)
+                .write(",")
+                .newLine();
+            })
+            .write(",");
+        }
         writer
           .quote("path")
           .write(": ")

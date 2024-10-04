@@ -14,17 +14,16 @@ const authSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+export const envNamesSchema = z.object({
+  database: z.string().default("FM_DATABASE"),
+  server: z.string().default("FM_SERVER"),
+  apiKey: z.string().default("OTTO_API_KEY"),
+});
 export const dataSourceSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("fm"),
     name: z.string(),
-    envNames: z
-      .object({
-        database: z.string().default("FM_DATABASE"),
-        server: z.string().default("FM_SERVER"),
-        apiKey: z.string().default("OTTO_API_KEY"),
-      })
-      .default({}),
+    envNames: envNamesSchema,
   }),
   z.object({
     type: z.literal("supabase"),

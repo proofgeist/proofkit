@@ -6,15 +6,22 @@ import { ensureProofKitProject } from "../utils.js";
 
 async function runTypegen(opts: { settings: Settings }) {
   const dataSources = opts.settings.dataSources;
+  let generateFmTypes = false;
   for await (const db of dataSources) {
     if (db.type === "supabase") {
       throw new Error("Supabase is not supported yet");
     } else if (db.type === "fm") {
-      console.log("Detected FileMaker database, generating types...");
-      await generateFmTypes({ dbSettings: db });
+      console.log(
+        `Detected FileMaker database, generating types for ${db.name}...`
+      );
+      generateFmTypes = true;
     } else {
       throw new Error("Unable to generate types for unknown database type");
     }
+  }
+
+  if (generateFmTypes) {
+    await runCodegenCommand({ projectDir: process.cwd() });
   }
 }
 
@@ -30,9 +37,3 @@ export const makeTypegenCommand = () => {
 
   return typegenCommand;
 };
-
-async function generateFmTypes(_opts: {
-  dbSettings: Extract<Settings["dataSources"][number], { type: "fm" }>;
-}) {
-  await runCodegenCommand({ projectDir: process.cwd() });
-}

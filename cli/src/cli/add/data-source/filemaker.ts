@@ -197,6 +197,7 @@ export async function promptForFileMakerDataSource({
     projectDir,
     dataSourceName: name,
     project,
+    envNames: name === "filemaker" ? undefined : newDataSource.envNames,
   });
 
   await formatAndSaveSourceFiles(project);

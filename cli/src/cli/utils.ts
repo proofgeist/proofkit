@@ -1,4 +1,6 @@
 import path from "path";
+import { isCancel } from "@clack/core";
+import { cancel } from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
 import { ZodError } from "zod";
@@ -41,3 +43,11 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
     process.exit(1);
   }
 };
+
+export function abortIfCancel(value: string | symbol): string {
+  if (isCancel(value)) {
+    cancel();
+    process.exit(0);
+  }
+  return value;
+}

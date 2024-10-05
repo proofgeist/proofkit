@@ -30,6 +30,7 @@ export const dataSourceSchema = z.discriminatedUnion("type", [
     name: z.string(),
   }),
 ]);
+export type DataSource = z.infer<typeof dataSourceSchema>;
 
 const settingsSchema = z.object({
   auth: authSchema,

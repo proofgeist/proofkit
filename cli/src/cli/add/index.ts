@@ -9,7 +9,7 @@ import {
   runAddDataSourceCommand,
 } from "./data-source/index.js";
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
-import { makeAddPageCommand, runAddPageAction } from "./page.js";
+import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
 
 export const runAdd = async (opts: { settings: Settings }) => {
   const settings = opts.settings;

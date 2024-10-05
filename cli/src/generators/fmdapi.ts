@@ -82,7 +82,10 @@ function getConfigVarStatement(sourceFile: SourceFile) {
     ?.getFirstDescendantByKind(SyntaxKind.VariableDeclaration);
 }
 
-function getConfigObject(sourceFile: SourceFile, dataSourceName: string) {
+export function getConfigObject(
+  sourceFile: SourceFile,
+  dataSourceName: string
+) {
   const configExpression = getConfigVarStatement(sourceFile)?.getInitializer();
   let configObj: ObjectLiteralExpression | undefined = undefined;
 
@@ -125,6 +128,27 @@ function getSchemasArray(sourceFile: SourceFile, dataSourceName: string) {
   return schemasArray;
 }
 
+export function getClientSuffix({
+  projectDir = process.cwd(),
+  dataSourceName,
+}: {
+  projectDir?: string;
+  dataSourceName: string;
+}) {
+  const fmschemaConfig = path.join(projectDir, "fmschema.config.mjs");
+  const project = getNewProject(projectDir);
+  const sourceFile = project.addSourceFileAtPath(fmschemaConfig);
+  const configObj = getConfigObject(sourceFile, dataSourceName);
+  const clientSuffix = configObj
+    ?.getProperty("clientSuffix")
+    ?.asKind(SyntaxKind.PropertyAssignment)
+    ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+    ?.getText()
+    .replace(/"/g, "");
+
+  return clientSuffix ?? "Client";
+}
+
 export function getExistingSchemas({
   projectDir = process.cwd(),
   dataSourceName,
@@ -143,16 +167,27 @@ export function getExistingSchemas({
       const layoutProperty = element
         .getDescendantsOfKind(SyntaxKind.PropertyAssignment)
         .find((pa) => {
-          const name = pa.getName();
-          return name === "layout" || name === '"layout"';
+          const name = pa.getName()?.replace(/"/g, "");
+          return name === "layout";
         });
 
-      const layoutName = layoutProperty?.getInitializer()?.getText();
+      const layout = layoutProperty
+        ?.getInitializer()
+        ?.getText()
+        ?.replace(/"/g, "");
+      const schemaNameProperty = element
+        .getDescendantsOfKind(SyntaxKind.PropertyAssignment)
+        .find((pa) => {
+          const name = pa.getName()?.replace(/"/g, "");
+          return name === "schemaName";
+        });
 
-      // remove the quotes from the layout name
-      const cleanedLayoutName = layoutName?.replace(/"/g, "");
+      const schemaName = schemaNameProperty
+        ?.getInitializer()
+        ?.getText()
+        ?.replace(/"/g, "");
 
-      return cleanedLayoutName;
+      return { layout, schemaName };
     });
 
   return existingSchemas ?? [];

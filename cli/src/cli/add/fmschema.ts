@@ -72,15 +72,17 @@ export const runAddSchemaAction = async ({
     server,
   });
 
-  const existingSchemas = getExistingSchemas({
+  const existingLayouts = getExistingSchemas({
     projectDir,
     dataSourceName: sourceName,
-  });
+  })
+    .map((s) => s.layout)
+    .filter(Boolean);
   spinner.stop("Loaded layouts from your FileMaker file");
 
-  if (existingSchemas.length > 0) {
+  if (existingLayouts.length > 0) {
     p.note(
-      existingSchemas.join("\n"),
+      existingLayouts.join("\n"),
       "Detected existing layouts in your project"
     );
   }
@@ -91,7 +93,7 @@ export const runAddSchemaAction = async ({
       message: `Select a new layout to read data from`,
       maxItems: 10,
       options: layouts
-        .filter((layout) => !existingSchemas.includes(layout))
+        .filter((layout) => !existingLayouts.includes(layout))
         .map((layout) => ({
           label: layout,
           value: layout,

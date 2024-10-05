@@ -1,0 +1,33 @@
+---
+title: Folder Structure
+description: The guide that explains the purpose behind the files and folders within a ProofKit project.
+---
+
+import { FileTree } from "@astrojs/starlight/components";
+
+<FileTree>
+
+- src
+  - app/ next.js app directory
+    - (main)/
+    - navigation.tsx route definitions for menus
+  - components/
+  - config/
+    - schemas/
+    - theme/
+  - server/
+    - data/
+    - services/
+  - utils/
+- ...
+- proofkit.json
+
+</FileTree>
+
+# Conventions
+
+The ProofKit CLI expects a certain structure for it to be able to inject code into your project. Pay attention to these special file/folder names
+
+Wherever you see an internal folder, you should never touch the code inside. The ProofKit CLI may overwrite its contents when adding a new component or switching layouts.
+
+Any file that begins with `slot-` is designed to be edited, but you should never rename the functions or delete the file. If you don't want to render anything in the slot, simply return null from the Slot function

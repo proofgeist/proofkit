@@ -1,36 +1,39 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
+title: Welcome to ProofKit
+description: The fastest way to build your next web project.
 template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  tagline: The fastest way to build your next web project.
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/proofkit.svg
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Get Started
+      link: /guides/getting-started/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+    - text: Browse Templates
+      link: /templates
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import {
+  Card,
+  CardGrid,
+  Code,
+  Tabs,
+  TabItem,
+} from "@astrojs/starlight/components";
 
-## Next steps
+## QuickStart
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
-</CardGrid>
+<Tabs syncKey="packageManager">
+  <TabItem label="pnpm">
+    <Code code="pnpx @proofgeist/kit" lang="bash" frame="terminal" />
+  </TabItem>
+  <TabItem label="npm">
+    <Code code="npx @proofgeist/kit" lang="bash" frame="terminal" />
+  </TabItem>
+  <TabItem label="yarn">
+    <Code code="yarn dlx @proofgeist/kit" lang="bash" frame="terminal" />
+  </TabItem>
+</Tabs>

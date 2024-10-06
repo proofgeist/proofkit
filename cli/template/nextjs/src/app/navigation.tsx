@@ -5,6 +5,7 @@ export const primaryRoutes: ProofKitRoute[] = [
     label: "Dashboard",
     type: "link",
     href: "/",
+    exactMatch: true,
   },
 ];
 

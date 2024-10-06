@@ -287,3 +287,53 @@ export function addToFmschemaConfig({
     });
   }
 }
+
+export function getFieldNamesForSchema({
+  projectDir,
+  schemaName,
+  dataSourceName,
+}: {
+  projectDir: string;
+  schemaName: string;
+  dataSourceName: string;
+}) {
+  const project = getNewProject(projectDir);
+  const sourceFile = project.addSourceFileAtPath(
+    path.join(
+      projectDir,
+      `src/config/schemas/${dataSourceName}/${schemaName}.ts`
+    )
+  );
+  const zodSchema = sourceFile.getVariableDeclaration(`Z${schemaName}`);
+
+  if (zodSchema) {
+    // parse from the zod object
+    const properties = zodSchema
+      .getInitializer()
+      ?.getFirstDescendantByKind(SyntaxKind.ObjectLiteralExpression)
+      ?.getProperties();
+
+    const fieldNames =
+      properties
+        ?.map((pr) =>
+          pr.asKind(SyntaxKind.PropertyAssignment)?.getName()?.replace(/"/g, "")
+        )
+        .filter(Boolean) ?? [];
+
+    return fieldNames;
+  } else {
+    const typeAlias = sourceFile.getTypeAlias(`T${schemaName}`);
+    const properties = typeAlias
+      ?.getFirstDescendantByKind(SyntaxKind.TypeLiteral)
+      ?.getProperties();
+
+    const fieldNames =
+      properties
+        ?.map((pr) =>
+          pr.asKind(SyntaxKind.PropertySignature)?.getName()?.replace(/"/g, "")
+        )
+        .filter(Boolean) ?? [];
+
+    return fieldNames;
+  }
+}

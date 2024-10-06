@@ -13,12 +13,16 @@ export default function HeaderNavLink(route: ProofKitRoute) {
     return <a className={classes.link}>{route.label}</a>;
   }
 
+  const isActive = route.exactMatch
+    ? pathname === route.href
+    : pathname.startsWith(route.href);
+
   if (route.type === "link") {
     return (
       <a
         href={route.href}
         className={classes.link}
-        data-active={pathname.startsWith(route.href) || undefined}
+        data-active={isActive || undefined}
       >
         {route.label}
       </a>

@@ -2,9 +2,9 @@ import path from "path";
 import { type RouteLink } from "index.js";
 import { SyntaxKind } from "ts-morph";
 
-import { getNewProject } from "~/utils/ts-morph.js";
+import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
-export function addRouteToNav({
+export async function addRouteToNav({
   projectDir,
   navType,
   ...route
@@ -31,4 +31,6 @@ export function addRouteToNav({
         })
         .write(",")
     );
+
+  await formatAndSaveSourceFiles(project);
 }

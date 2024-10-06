@@ -1,15 +1,14 @@
 "use client";
-import { TContacts } from "@/config/schemas/filemaker/Contacts";
+import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
 import {
   MantineReactTable,
   MRT_ColumnDef,
   useMantineReactTable,
 } from "mantine-react-table";
 
-type TData = TContacts;
+type TData = __TYPE_NAME__;
 
 const columns: MRT_ColumnDef<TData>[] = [
-  { header: "First Name", accessorKey: "First Name" },
 ];
 
 import React from "react";

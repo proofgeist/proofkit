@@ -110,10 +110,10 @@ export const runAddPageAction = async ({
     pageTemplate.templatePath
   );
   const destPath = path.join(projectDir, "src/app/(main)", routeName);
-  fs.copySync(templatePath, destPath);
+  await fs.copy(templatePath, destPath);
 
   if (pageName !== "") {
-    addRouteToNav({
+    await addRouteToNav({
       projectDir: process.cwd(),
       navType: "primary",
       label: pageName,
@@ -123,6 +123,7 @@ export const runAddPageAction = async ({
 
   // call post-install function
   await pageTemplate.postIntallFn?.({
+    projectDir,
     pageDir: destPath,
     dataSource,
     schemaName,

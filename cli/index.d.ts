@@ -3,6 +3,8 @@ export interface RouteLink {
   type: "link";
   href: string;
   icon?: React.ReactNode;
+  /** If true, the route will only be considered active if the path is exactly this value. */
+  exactMatch?: boolean;
 }
 
 export interface RouteFunction {
@@ -10,6 +12,8 @@ export interface RouteFunction {
   type: "function";
   icon?: React.ReactNode;
   onClick: () => void;
+  /** If true, the route will only be considered active if the path is exactly this value. */
+  exactMatch?: boolean;
 }
 
 export type ProofKitRoute = RouteLink | RouteFunction;

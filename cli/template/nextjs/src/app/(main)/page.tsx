@@ -21,7 +21,7 @@ export default function Home() {
         <Stack gap="xl" ta="center">
           <Image
             style={{ marginRight: "auto", marginLeft: "auto" }}
-            src="https://raw.githubusercontent.com/proofgeist/proofkit/320a74c7d5597013a3f344218f8cc9fe3802e2d1/www/public/images/proofkit.svg"
+            src="https://github.com/proofgeist/proofkit/blob/dde6366c529104658dfba67a8fc2910a8644fc64/docs/src/assets/proofkit.png"
             alt="ProofKit"
             width={500}
             height={300}

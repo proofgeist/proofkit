@@ -9,7 +9,6 @@ import {
 
 export async function addAuth({
   type,
-
   noInstall = false,
   projectDir = process.cwd(),
 }: {
@@ -23,7 +22,7 @@ export async function addAuth({
   }
 
   if (type === "clerk") {
-    addClerkAuth({ settings, projectDir });
+    await addClerkAuth({ settings, projectDir });
   } else if (type === "next-auth") {
     await addNextAuth({ settings, projectDir });
   }
@@ -33,14 +32,14 @@ export async function addAuth({
   }
 }
 
-function addClerkAuth({
+async function addClerkAuth({
   settings,
   projectDir = process.cwd(),
 }: {
   settings: Settings;
   projectDir?: string;
 }) {
-  clerkInstaller({ projectDir });
+  await clerkInstaller({ projectDir });
   setSettings({ ...settings, auth: { type: "clerk" } }, projectDir);
 }
 

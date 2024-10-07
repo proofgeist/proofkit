@@ -1,10 +1,13 @@
 import path from "path";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { SyntaxKind, type SourceFile } from "ts-morph";
+import { SyntaxKind, type Project, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
-import { runExecCommand } from "~/helpers/installDependencies.js";
+import {
+  generateRandomSecret,
+  runExecCommand,
+} from "~/helpers/installDependencies.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
@@ -74,6 +77,8 @@ export const nextAuthInstaller = async ({
 
   const project = getNewProject(projectDir);
 
+  injectBcryptIntoNextConfig(project, projectDir);
+
   // modify root layout to wrap with session provider
   addNextAuthProviderToRootLayout(
     project.addSourceFileAtPath(path.join(projectDir, "src/app/layout.tsx"))
@@ -103,11 +108,17 @@ export const nextAuthInstaller = async ({
     )
   );
 
-  // TODO do this part in-house, maybe with execa directly
-  await runExecCommand({
-    command: ["auth", "secret"],
-    projectDir,
-  });
+  // // TODO do this part in-house, maybe with execa directly
+  // await runExecCommand({
+  //   command: ["auth", "secret"],
+  //   projectDir,
+  // });
+
+  // add middleware
+  fs.copySync(
+    path.join(extrasDir, "src/middleware/next-auth.ts"),
+    path.join(projectDir, "src/middleware.ts")
+  );
 
   // add envs to .env and .env.schema
   addToEnv({
@@ -117,8 +128,8 @@ export const nextAuthInstaller = async ({
       {
         name: "AUTH_SECRET",
         zodValue: "z.string().min(1)",
+        defaultValue: generateRandomSecret(),
         type: "server",
-        addToRuntimeEnv: false,
       },
     ],
   });
@@ -198,4 +209,23 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 );
 `)
   );
+}
+
+function injectBcryptIntoNextConfig(project: Project, projectDir: string) {
+  const nextConfig = project.addSourceFileAtPathIfExists(
+    path.join(projectDir, "next.config.mjs")
+  );
+
+  const configObj = nextConfig
+    ?.getVariableDeclaration("nextConfig")
+    ?.getInitializerIfKind(SyntaxKind.ObjectLiteralExpression);
+
+  configObj?.addPropertyAssignment({
+    name: "webpack",
+    initializer: (writer) => {
+      writer.write(
+        "(config) => { config.externals = [...config.externals, 'bcrypt']; return config; }"
+      );
+    },
+  });
 }

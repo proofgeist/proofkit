@@ -158,3 +158,7 @@ const _runExecCommand = async ({
       });
   }
 };
+
+export function generateRandomSecret(): string {
+  return crypto.randomUUID().replace(/-/g, "");
+}

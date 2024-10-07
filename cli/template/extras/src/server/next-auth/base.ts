@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
-import { env } from "@/env";
+import { env } from "@/config/env";
 import { OttoAdapter } from "@proofgeist/fmdapi";
 import NextAuth, { type DefaultSession } from "next-auth";
 import { FilemakerAdapter } from "next-auth-adapter-filemaker";

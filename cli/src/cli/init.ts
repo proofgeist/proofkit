@@ -20,6 +20,7 @@ import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { promptForFileMakerDataSource } from "./add/data-source/filemaker.js";
+import { abortIfCancel } from "./utils.js";
 
 interface CliFlags {
   noGit: boolean;
@@ -136,7 +137,6 @@ async function askForAuth({ projectDir }: { projectDir: string }) {
       noInstall: true,
     });
   }
-  return "none";
 }
 
 type ProofKitPackageJSON = PackageJson & {
@@ -153,7 +153,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
 
   const projectName =
     name ||
-    (
+    abortIfCancel(
       await p.text({
         message: "What will your project be called?",
         defaultValue: DEFAULT_APP_NAME,

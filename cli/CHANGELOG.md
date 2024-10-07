@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 0.0.6
+
+### Patch Changes
+
+- Adding pages
+
 ## 0.0.3
 
 ### Patch Changes

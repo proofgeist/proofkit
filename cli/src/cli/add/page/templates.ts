@@ -25,7 +25,7 @@ export const pageTemplates: Record<string, Template> = {
   },
   table: {
     requireData: true,
-    label: "Table",
+    label: "Basic Table",
     hint: "Use to load and show multiple records",
     templatePath: "nextjs/table",
     postIntallFn: postInstallTable,

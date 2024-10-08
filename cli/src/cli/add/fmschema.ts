@@ -87,8 +87,13 @@ export const runAddSchemaAction = async ({
     );
   }
 
+  let passedInLayoutName: string | undefined = opts.layoutName;
+  if (passedInLayoutName === "") passedInLayoutName = undefined;
+  if (!existingLayouts.includes(passedInLayoutName ?? ""))
+    passedInLayoutName = undefined;
+
   const selectedLayout =
-    opts.layoutName ??
+    passedInLayoutName ??
     ((await p.select({
       message: `Select a new layout to read data from`,
       maxItems: 10,
@@ -102,7 +107,7 @@ export const runAddSchemaAction = async ({
 
   const defaultSchemaName = getDefaultSchemaName(selectedLayout);
   const schemaName =
-    opts.schemaName ??
+    opts.schemaName ||
     (
       await p.text({
         message: `Enter a friendly name for the new schema.\n${chalk.dim("This will the name by which you refer to this layout in your codebase")}`,

@@ -83,16 +83,6 @@ export const clerkInstaller = async ({
     project,
     envs: [
       {
-        name: "CLERK_SECRET_KEY",
-        zodValue: "z.string().startsWith('sk_')",
-        type: "server",
-      },
-      {
-        name: "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-        zodValue: "z.string().startsWith('pk_')",
-        type: "client",
-      },
-      {
         name: "NEXT_PUBLIC_CLERK_SIGN_IN_URL",
         zodValue: "z.string()",
         defaultValue: "/auth/signin",
@@ -102,6 +92,22 @@ export const clerkInstaller = async ({
         name: "NEXT_PUBLIC_CLERK_SIGN_UP_URL",
         zodValue: "z.string()",
         defaultValue: "/auth/signup",
+        type: "client",
+      },
+      {
+        name: "CLERK_SECRET_KEY",
+        zodValue: `z.string().startsWith('sk_').min(1, {
+        message:
+          "No Clerk Secret Key found. Did you create your Clerk app and copy the environment variables to you .env file?",
+      })`,
+        type: "server",
+      },
+      {
+        name: "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+        zodValue: `z.string().startsWith('pk_').min(1, {
+        message:
+          "No Clerk Public Key found. Did you create your Clerk app and copy the environment variables to you .env file?",
+      })`,
         type: "client",
       },
     ],

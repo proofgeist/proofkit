@@ -36,6 +36,7 @@ const settingsSchema = z.object({
   auth: authSchema,
   envFile: z.string().default(".env"),
   dataSources: z.array(dataSourceSchema).default([]),
+  tanstackQuery: z.boolean().catch(false),
 });
 
 export const parseSettings = (projectDir?: string) => {

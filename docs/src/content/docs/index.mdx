@@ -16,25 +16,9 @@ hero:
       variant: minimal
 ---
 
-import {
-  Card,
-  CardGrid,
-  Code,
-  Tabs,
-  TabItem,
-} from "@astrojs/starlight/components";
-// import { CliCommand } from "../../components/cli-command";
+import { Card, CardGrid } from "@astrojs/starlight/components";
+import CliCommand from "../../components/CliCommand.astro";
 
 ## QuickStart
 
-    <Tabs syncKey="packageManager">
-      <TabItem label="pnpm">
-        <Code code="pnpx @proofgeist/kit" lang="bash" frame="terminal" />
-      </TabItem>
-      <TabItem label="npm">
-        <Code code="npx @proofgeist/kit" lang="bash" frame="terminal" />
-      </TabItem>
-      <TabItem label="yarn">
-        <Code code="yarn dlx @proofgeist/kit" lang="bash" frame="terminal" />
-      </TabItem>
-    </Tabs>
+<CliCommand />

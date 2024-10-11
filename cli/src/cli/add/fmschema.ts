@@ -9,7 +9,9 @@ import { z } from "zod";
 
 import { addLayout, getExistingSchemas } from "~/generators/fmdapi.js";
 import { type Settings } from "~/utils/parseSettings.js";
+import { validateAppName } from "~/utils/validateAppName.js";
 import { commonFileMakerLayoutPrefixes, getLayouts } from "../fmdapi.js";
+import { abortIfCancel } from "../utils.js";
 
 export const runAddSchemaAction = async ({
   projectDir = process.cwd(),
@@ -77,7 +79,8 @@ export const runAddSchemaAction = async ({
     dataSourceName: sourceName,
   })
     .map((s) => s.layout)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((s) => s !== "-");
   spinner.stop("Loaded layouts from your FileMaker file");
 
   if (existingLayouts.length > 0) {
@@ -108,12 +111,20 @@ export const runAddSchemaAction = async ({
   const defaultSchemaName = getDefaultSchemaName(selectedLayout);
   const schemaName =
     opts.schemaName ||
-    (
+    abortIfCancel(
       await p.text({
         message: `Enter a friendly name for the new schema.\n${chalk.dim("This will the name by which you refer to this layout in your codebase")}`,
         // initialValue: selectedLayout,
         defaultValue: defaultSchemaName,
         placeholder: defaultSchemaName,
+        validate: (input) => {
+          if (input === "") return; // allow empty input for the default value
+          // ensure the input is a valid JS variable name
+          if (/^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(input)) {
+            return;
+          }
+          return "Name must consist of only alphanumeric characters, '_', and must not start with a number";
+        },
       })
     ).toString();
 
@@ -125,11 +136,20 @@ export const runAddSchemaAction = async ({
         "This will allow fields that contain a value list to be auto-completed in typescript and also validated to prevent incorrect values"
       )}`,
       options: [
-        { label: "No, ignore value lists", value: "ignore" },
-        { label: "Yes, but allow empty fields", value: "allowEmpty" },
+        {
+          label: "Yes, but allow empty fields",
+          value: "allowEmpty",
+          hint: "Empty fields or values that don't match the value list will be converted to an empty string",
+        },
         {
           label: "Yes; empty values should fail validation",
           value: "strict",
+          hint: "Empty fields or values that don't match the value list will cause validation to fail",
+        },
+        {
+          label: "No, ignore value lists",
+          value: "ignore",
+          hint: "Fields will just be typed as strings",
         },
       ],
     })) as ValueListsOptions);

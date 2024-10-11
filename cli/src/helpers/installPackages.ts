@@ -17,13 +17,13 @@ export const installPackages = (options: InstallPackagesOptions) => {
 
   for (const [name, pkgOpts] of Object.entries(packages)) {
     if (pkgOpts.inUse) {
-      const spinner = ora(`Boilerplating ${name}...`).start();
+      // const spinner = ora(`Boilerplating ${name}...`).start();
       pkgOpts.installer(options);
-      spinner.succeed(
-        chalk.green(
-          `Successfully setup boilerplate for ${chalk.green.bold(name)}`
-        )
-      );
+      // spinner.succeed(
+      //   chalk.green(
+      //     `Successfully setup boilerplate for ${chalk.green.bold(name)}`
+      //   )
+      // );
     }
   }
 

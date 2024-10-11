@@ -3,7 +3,7 @@ title: Getting Started
 description: How to start a new project with the ProofKit CLI
 ---
 
-import {} from "@astrojs/starlight/components";
+import CliCommand from "../../../components/CliCommand.astro";
 
 This guide walks you through how to get up and running with a new ProofKit project.
 
@@ -12,8 +12,10 @@ This guide walks you through how to get up and running with a new ProofKit proje
 If you're brand new to web development, you'll want to make sure these basics are installed on your system
 
 - [Node](https://nodejs.org/en)
+  - To check if you have already have Node installed, run `node -v` in your terminal
 - [Visual Studio Code](https://code.visualstudio.com/download) (or similar IDE)
 - git (download [GitHub Desktop](https://github.com/apps/desktop) if you've never used git before)
+  - To check if you have git installed, run `git -v` in your terminal
 - _(suggested)_ [pnpm](https://pnpm.io/installation)
   - Otherwise you can also use npm, which comes bundled when you install Node
 
@@ -26,8 +28,12 @@ Additional prerequisites apply depending on which data source you intend to conn
 To connect to FileMaker data, you'll need a FileMaker server (19.6+) running OttoFMS (4.7+). Your server should be accessible via port 443
 _Older OttoFMS versions may be supported, but require you to manually provide an Admin API key via the `--adminApiKey` flag_
 
-Your hosted FileMaker file must have an account with the `fmrest` priviledge set enabled. During setup, you'll be asked for either the account namd and password for that file, or a Data API key from OttoFMS. (If you provide credentials, a Data API key will be created for you)
+Your hosted FileMaker file must have an account with the `fmrest` priviledge set enabled. During setup, you'll be asked for either the account namd and password for that file, or select a Data API key previously generated from OttoFMS. (If you provide credentials, a Data API key will be created for you)
 
 #### Supabase
 
 Coming Soon
+
+## Install
+
+<CliCommand />

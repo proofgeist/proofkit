@@ -39,7 +39,6 @@ export const dependencyVersionMap = {
   "@trpc/server": "^11.0.0-rc.446",
   "@trpc/react-query": "^11.0.0-rc.446",
   "@trpc/next": "^11.0.0-rc.446",
-  "@tanstack/react-query": "^5.50.0",
   superjson: "^2.2.1",
   "server-only": "^0.0.1",
 
@@ -52,5 +51,10 @@ export const dependencyVersionMap = {
 
   // ProofKit
   "@proofgeist/kit": getVersion(),
+
+  // Tanstack Query
+  "@tanstack/react-query": "^5.59.0",
+  "@tanstack/react-query-devtools": "^5.59.0",
+  "@tanstack/eslint-plugin-query": "^5.59.1",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

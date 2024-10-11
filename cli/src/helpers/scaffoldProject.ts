@@ -75,7 +75,7 @@ export const scaffoldProject = async ({
 
       if (overwriteDir === "clear") {
         spinner.info(
-          `Emptying ${chalk.cyan.bold(projectName)} and creating fm app..\n`
+          `Emptying ${chalk.cyan.bold(projectName)} and creating new ProofKit app..\n`
         );
         fs.emptyDirSync(projectDir);
       }

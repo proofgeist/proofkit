@@ -9,6 +9,7 @@ import {
   listAPIKeys,
   listFiles,
 } from "~/cli/ottofms.js";
+import { abortIfCancel } from "~/cli/utils.js";
 import { addToFmschemaConfig } from "~/generators/fmdapi.js";
 import { fetchServerVersions } from "~/helpers/version-fetcher.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
@@ -80,7 +81,7 @@ export async function promptForFileMakerDataSource({
         ...thisFileApiKeys.map((key) => ({
           value: key.key,
           label: `${chalk.bold(key.label)} - ${key.user}`,
-          hint: key.key,
+          hint: `${key.key.slice(0, 5)}...${key.key.slice(-4)}`,
         })),
         {
           value: "create",
@@ -211,8 +212,6 @@ export async function promptForFileMakerDataSource({
     schemaName: opts.schemaName,
     valueLists: "allowEmpty",
   });
-
-  console.log("done");
 }
 
 async function getValidFileMakerServerUrl(
@@ -229,28 +228,25 @@ async function getValidFileMakerServerUrl(
   while (fmsVersion === null) {
     const serverUrl =
       defaultServerUrl ??
-      (await p.text({
-        message: "What is the URL of your FileMaker Server?",
-        validate: (value) => {
-          try {
-            if (!value.startsWith("http"))
-              return "URL must start with https://";
-            const url = new URL(value);
-            p.log.info(url.protocol);
-            return;
-          } catch {
-            return "Please enter a valid URL";
-          }
-        },
-      }));
-
-    if (p.isCancel(serverUrl)) {
-      p.cancel("Cancelled");
-      process.exit(1);
-    }
+      abortIfCancel(
+        await p.text({
+          message: "What is the URL of your FileMaker Server?",
+          validate: (value) => {
+            try {
+              if (!value.startsWith("http"))
+                return "URL must start with https://";
+              const url = new URL(value);
+              p.log.info(url.protocol);
+              return;
+            } catch {
+              return "Please enter a valid URL";
+            }
+          },
+        })
+      );
 
     try {
-      url = new URL(serverUrl.toString());
+      url = new URL(serverUrl);
     } catch {
       p.log.error(`Invalid URL: ${serverUrl.toString()}`);
       continue;
@@ -269,12 +265,6 @@ async function getValidFileMakerServerUrl(
 
   p.note(`🎉 FileMaker Server version ${fmsVersion} detected \n
     ${!!ottoVersion ? `🎉 OttoFMS version ${ottoVersion} detected` : "❌ OttoFMS not detected"}`);
-
-  if (ottoVersion === null) {
-    p.log.warn(
-      "OttoFMS is strongly reccommended for the best experience integrating with web apps"
-    );
-  }
 
   return { url, ottoVersion, fmsVersion };
 }

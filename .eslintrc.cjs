@@ -14,8 +14,10 @@ const config = {
     tsconfigRootDir: __dirname,
     project: [
       "./tsconfig.json",
+      "./docs/tsconfig.json",
       "./cli/tsconfig.eslint.json", // separate eslint config for the CLI since we want to lint and typecheck differently due to template files
     ],
+    extraFileExtensions: [".astro"],
   },
   overrides: [
     // Template files don't have reliable type information

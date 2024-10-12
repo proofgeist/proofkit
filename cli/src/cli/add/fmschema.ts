@@ -9,14 +9,12 @@ import { z } from "zod";
 
 import { addLayout, getExistingSchemas } from "~/generators/fmdapi.js";
 import { type Settings } from "~/utils/parseSettings.js";
-import { validateAppName } from "~/utils/validateAppName.js";
 import { commonFileMakerLayoutPrefixes, getLayouts } from "../fmdapi.js";
 import { abortIfCancel } from "../utils.js";
 
 export const runAddSchemaAction = async ({
   projectDir = process.cwd(),
   settings,
-
   ...opts
 }: {
   projectDir?: string;
@@ -74,13 +72,22 @@ export const runAddSchemaAction = async ({
     server,
   });
 
-  const existingLayouts = getExistingSchemas({
+  const existingConfigResults = getExistingSchemas({
     projectDir,
     dataSourceName: sourceName,
-  })
+  });
+
+  const existingLayouts = existingConfigResults
     .map((s) => s.layout)
-    .filter(Boolean)
-    .filter((s) => s !== "-");
+    .filter(Boolean);
+
+  const existingSchemas = existingConfigResults
+    .map((s) => s.schemaName)
+    .filter(Boolean);
+
+  // list other common layout names to exclude
+  existingLayouts.push("-");
+
   spinner.stop("Loaded layouts from your FileMaker file");
 
   if (existingLayouts.length > 0) {
@@ -120,10 +127,13 @@ export const runAddSchemaAction = async ({
         validate: (input) => {
           if (input === "") return; // allow empty input for the default value
           // ensure the input is a valid JS variable name
-          if (/^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(input)) {
-            return;
+          if (!/^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(input)) {
+            return "Name must consist of only alphanumeric characters, '_', and must not start with a number";
           }
-          return "Name must consist of only alphanumeric characters, '_', and must not start with a number";
+          if (existingSchemas.includes(input)) {
+            return "Schema name must be unique";
+          }
+          return;
         },
       })
     ).toString();

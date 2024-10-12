@@ -48,7 +48,7 @@ export async function promptForFileMakerDataSource({
     server.ottoVersion && server.ottoVersion.compare(new SemVer("4.7.0")) > 0;
 
   if (!canDoBrowserLogin && !opts.adminApiKey) {
-    p.log.error(
+    return p.cancel(
       "OttoFMS 4.7.0 or later is required to auto-login with this CLI. Please install/upgrade OttoFMS on your server, or pass an Admin API key with the --adminApiKey flag then try again"
     );
   }
@@ -221,6 +221,7 @@ async function getValidFileMakerServerUrl(
   fmsVersion: SemVer;
   ottoVersion: SemVer | null;
 }> {
+  const spinner = p.spinner();
   let url: URL | null = null;
   let fmsVersion: SemVer | null = null;
   let ottoVersion: SemVer | null = null;
@@ -235,8 +236,7 @@ async function getValidFileMakerServerUrl(
             try {
               if (!value.startsWith("http"))
                 return "URL must start with https://";
-              const url = new URL(value);
-              p.log.info(url.protocol);
+              new URL(value);
               return;
             } catch {
               return "Please enter a valid URL";
@@ -252,10 +252,15 @@ async function getValidFileMakerServerUrl(
       continue;
     }
 
+    spinner.start("Validating Server URL...");
+
     // check for FileMaker and Otto versions
     const { fmsInfo, ottoInfo } = await fetchServerVersions({
       url: url.origin,
     });
+
+    spinner.stop();
+
     fmsVersion = new SemVer(fmsInfo.ServerVersion.split(" ")[0]!) ?? null;
     ottoVersion = new SemVer(ottoInfo?.Otto.version ?? "") ?? null;
     defaultServerUrl = undefined;

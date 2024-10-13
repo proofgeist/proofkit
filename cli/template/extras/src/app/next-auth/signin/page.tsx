@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-import { signIn, providerMap } from "@/server/auth";
-import { AuthError } from "next-auth";
+import { providerMap, signIn } from "@/server/auth";
 import {
   Button,
   Card,
@@ -10,7 +8,9 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { AuthError } from "next-auth";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default async function SignInPage(props: {
   searchParams: { callbackUrl: string | undefined };

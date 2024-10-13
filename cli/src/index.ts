@@ -29,7 +29,7 @@ const main = async () => {
         p.intro(
           `Found ${proofGradient("ProofKit")} project, running \`add\`...`
         );
-        await runAdd({ settings });
+        await runAdd(undefined, { settings });
       } else {
         p.intro(
           `No ${proofGradient("ProofKit")} project found, running \`init\``

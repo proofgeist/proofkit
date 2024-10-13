@@ -1,7 +1,7 @@
-import React from "react";
-import { Center, Card } from "@mantine/core";
 import { auth } from "@/server/auth";
+import { Card, Center } from "@mantine/core";
 import { redirect } from "next/navigation";
+import React from "react";
 
 export default async function Layout({
   children,

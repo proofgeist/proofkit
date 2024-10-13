@@ -1,6 +1,7 @@
 "use client";
-import { Menu } from "@mantine/core";
+
 import { primaryRoutes } from "@/app/navigation";
+import { Menu } from "@mantine/core";
 import { useRouter } from "next/navigation";
 
 /**

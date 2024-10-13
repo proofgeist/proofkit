@@ -1,10 +1,11 @@
-import { Container, Group, Box } from "@mantine/core";
-import classes from "./Header.module.css";
-import SlotHeaderLeft from "../slot-header-left";
+import { Box, Container, Group } from "@mantine/core";
+
 import SlotHeaderCenter from "../slot-header-center";
+import SlotHeaderLeft from "../slot-header-left";
 import SlotHeaderRight from "../slot-header-right";
-import HeaderMobileMenu from "./HeaderMobileMenu";
 import { headerHeight } from "./config";
+import classes from "./Header.module.css";
+import HeaderMobileMenu from "./HeaderMobileMenu";
 
 export function Header() {
   return (

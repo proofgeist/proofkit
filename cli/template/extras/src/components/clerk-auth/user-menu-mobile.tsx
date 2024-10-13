@@ -1,4 +1,5 @@
 "use client";
+
 import { useClerk, useUser } from "@clerk/nextjs";
 import { Menu } from "@mantine/core";
 import { useRouter } from "next/navigation";

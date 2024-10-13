@@ -1,6 +1,8 @@
 "use client";
+
 import { Burger, Menu } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+
 import SlotHeaderMobileMenuContent from "../slot-header-mobile-content";
 
 export default function HeaderMobileMenu() {

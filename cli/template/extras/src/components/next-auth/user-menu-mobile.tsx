@@ -1,4 +1,5 @@
 "use client";
+
 import { Menu } from "@mantine/core";
 import { signIn, signOut, useSession } from "next-auth/react";
 import React from "react";

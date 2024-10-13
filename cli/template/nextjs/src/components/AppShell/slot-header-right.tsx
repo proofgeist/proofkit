@@ -1,5 +1,6 @@
-import { Group } from "@mantine/core";
 import { primaryRoutes } from "@/app/navigation";
+import { Group } from "@mantine/core";
+
 import HeaderNavLink from "./internal/HeaderNavLink";
 
 /**

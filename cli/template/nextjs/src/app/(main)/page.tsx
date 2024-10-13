@@ -6,11 +6,11 @@ import {
   Code,
   Container,
   Group,
+  Image,
   px,
   Stack,
   Text,
   Title,
-  Image,
 } from "@mantine/core";
 import { IconBrandGithub, IconExternalLink } from "@tabler/icons-react";
 

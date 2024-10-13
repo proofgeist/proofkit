@@ -2,10 +2,7 @@ import * as p from "@clack/prompts";
 import { Command } from "commander";
 
 import { type Settings } from "~/utils/parseSettings.js";
-import {
-  makeAddTanstackQueryCommand,
-  runAddTanstackQueryCommand,
-} from "../tanstack-query.js";
+import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
 import {

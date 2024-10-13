@@ -1,6 +1,8 @@
 ---
 title: Folder Structure
 description: The guide that explains the purpose behind the files and folders within a ProofKit project.
+sidebar:
+  order: 3
 ---
 
 import { FileTree, Aside } from "@astrojs/starlight/components";
@@ -60,8 +62,17 @@ Code in this folder should only ever run on the server. It's where you can write
 
 ## The `src/components` directory
 
-A folder for your application's UI components. Components may also exist in the `app` directory if they are only used on a single page, but this folder is for components that are used across multiple pages.
+A folder for your application's UI components. Components may also exist in the `app` directory if they are only used on a single page, but this folder is for components that may be used across multiple pages. Subfolders may be used within this folder to group components by feature, theme, or similar.
 
 ## The `src/config` directory
 
+A place to store app-wide configuration and types. This is where you'll find the theme settings for the Mantine components, as well as the generated types and Zod schemas used for data validation from your data sources.
+
+<Aside type="caution">
+  The `config` directory contains a lot of generated code. Be careful not to
+  modify these generated files directly as they may be overwritten.
+</Aside>
+
 ## The `src/utils` directory
+
+A folder for helper functions to be used throughout your application.

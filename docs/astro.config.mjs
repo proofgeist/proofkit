@@ -8,26 +8,25 @@ import react from "@astrojs/react";
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [starlight({
-    title: "ProofKit CLI",
-    social: {
-      github: "https://github.com/proofgeist/kit",
-    },
-    sidebar: [
-      {
-        label: "Guides",
-        items: [
-          { label: "Getting Started", slug: "guides/getting-started" },
-          { label: "Motivation", slug: "guides/motivation" },
-          { label: "Project Structure", slug: "guides/folder-structure" },
-        ],
+  integrations: [
+    starlight({
+      title: "ProofKit CLI",
+      social: {
+        github: "https://github.com/proofgeist/kit",
       },
-      {
-        label: "Templates",
-        autogenerate: { directory: "templates" },
-      },
-    ],
-  }), react()],
+      sidebar: [
+        {
+          label: "Guides",
+          autogenerate: { directory: "guides" },
+        },
+        {
+          label: "Templates",
+          autogenerate: { directory: "templates" },
+        },
+      ],
+    }),
+    react(),
+  ],
 
   output: "server",
   adapter: vercel(),

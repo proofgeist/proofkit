@@ -7,7 +7,7 @@ interface Props {
   frame?: Parameters<typeof Code>[0]["frame"];
 }
 
-const { command, type = "local", frame = "terminal" } = Astro.props;
+const { command, type = "local", frame = "none" } = Astro.props;
 ---
 
 <Tabs syncKey="packageManager">

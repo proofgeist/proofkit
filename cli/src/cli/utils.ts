@@ -44,10 +44,12 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
   }
 };
 
+export class UserAbortedError extends Error {}
+
 export function abortIfCancel(value: string | symbol): string {
   if (isCancel(value)) {
     cancel();
-    process.exit(0);
+    throw new UserAbortedError();
   }
   return value;
 }

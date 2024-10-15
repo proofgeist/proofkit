@@ -1,6 +1,8 @@
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { getVersion } from "./utils/getProofKitVersion.js";
+
 // With the move to TSUP as a build tool, this keeps path routes in other files (installers, loaders, etc) in check more easily.
 // Path is in relation to a single index.js file inside ./dist
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +20,7 @@ export const TITLE_TEXT = `
   |  ___/[ \`/'\`\\]/ .'\`\\ \\/ .'\`\\ \\'-| |-'   |  __'.   [  | | |  
  _| |_    | |    | \\__. || \\__. |  | |    _| | \\  \\_  | | | |, 
 |_____|  [___]    '.__.'  '.__.'  [___]  |____||____|[___]\\__/ 
+                                                       v${getVersion()}
 `;
 export const DEFAULT_APP_NAME = "my-proofkit-app";
 export const CREATE_FM_APP = cliName;

@@ -35,7 +35,7 @@ export default function Home() {
             This is the base template home page. To add more pages, components,
             or other features, run the ProofKit CLI from within your project.
           </Text>
-          <Code block>pnpm proofkit</Code>
+          <Code block>__PNPM_COMMAND__ proofkit</Code>
 
           <Text style={{ textWrap: "balance" }}>
             To change this page, open <Code>src/app/(main)/page.tsx</Code>

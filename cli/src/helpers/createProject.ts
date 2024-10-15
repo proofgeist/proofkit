@@ -4,6 +4,7 @@ import { installPackages } from "~/helpers/installPackages.js";
 import { scaffoldProject } from "~/helpers/scaffoldProject.js";
 import { type PkgInstallerMap } from "~/installers/index.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
+import { replaceTextInFiles } from "./replaceText.js";
 
 interface CreateProjectOptions {
   projectName: string;
@@ -40,6 +41,18 @@ export const createBareProject = async ({
     packages,
     noInstall,
   });
+
+  replaceTextInFiles(
+    projectDir,
+    "__PNPM_COMMAND__",
+    pkgManager === "pnpm"
+      ? "pnpm"
+      : pkgManager === "bun"
+        ? "bun"
+        : pkgManager === "yarn"
+          ? "yarn"
+          : "npm run"
+  );
 
   return projectDir;
 };

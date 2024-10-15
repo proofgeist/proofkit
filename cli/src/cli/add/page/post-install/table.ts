@@ -68,9 +68,14 @@ export const postInstallTable: TPostInstallFn = async ({
   for await (const fieldName of fieldNames) {
     columns?.addElement((writer) =>
       writer
-        .inlineBlock(() =>
-          writer.write(`accessorKey: "${fieldName}", header: "${fieldName}",`)
-        )
+        .inlineBlock(() => {
+          if (fieldName.includes(".")) {
+            writer.write(`accessorFn: (row) => row["${fieldName}"],`);
+          } else {
+            writer.write(`accessorKey: "${fieldName}",`);
+          }
+          writer.write(`header: "${fieldName}",`);
+        })
         .write(",")
         .newLine()
     );

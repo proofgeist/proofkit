@@ -59,15 +59,16 @@ export async function promptForFileMakerDataSource({
   const fileList = await listFiles({ url: server.url, token });
   const selectedFile =
     opts.fileName ||
-    (await p.select({
-      message: `Which file would you like to connect to? ${chalk.dim(`(TIP: Select the file where your data is stored)`)}`,
-      maxItems: 10,
-      options: fileList.map((file) => ({
-        value: file.filename,
-        label: file.filename,
-      })),
-    }));
-  if (typeof selectedFile !== "string") throw new Error("Invalid file");
+    abortIfCancel(
+      await p.select({
+        message: `Which file would you like to connect to? ${chalk.dim(`(TIP: Select the file where your data is stored)`)}`,
+        maxItems: 10,
+        options: fileList.map((file) => ({
+          value: file.filename,
+          label: file.filename,
+        })),
+      })
+    );
   const fmFile = selectedFile;
 
   const allApiKeys = await listAPIKeys({ url: server.url, token });
@@ -75,21 +76,23 @@ export async function promptForFileMakerDataSource({
 
   let dataApiKey = opts.dataApiKey;
   if (!dataApiKey && thisFileApiKeys.length > 0) {
-    const selectedKey = await p.select({
-      message: "Which API key would you like to use?",
-      options: [
-        ...thisFileApiKeys.map((key) => ({
-          value: key.key,
-          label: `${chalk.bold(key.label)} - ${key.user}`,
-          hint: `${key.key.slice(0, 5)}...${key.key.slice(-4)}`,
-        })),
-        {
-          value: "create",
-          label: "Create a new API key",
-          hint: "Requires FileMaker credentials for this file",
-        },
-      ],
-    });
+    const selectedKey = abortIfCancel(
+      await p.select({
+        message: "Which API key would you like to use?",
+        options: [
+          ...thisFileApiKeys.map((key) => ({
+            value: key.key,
+            label: `${chalk.bold(key.label)} - ${key.user}`,
+            hint: `${key.key.slice(0, 5)}...${key.key.slice(-4)}`,
+          })),
+          {
+            value: "create",
+            label: "Create a new API key",
+            hint: "Requires FileMaker credentials for this file",
+          },
+        ],
+      })
+    );
     if (typeof selectedKey !== "string") throw new Error("Invalid key");
     if (selectedKey !== "create") dataApiKey = selectedKey;
   }

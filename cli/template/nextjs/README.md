@@ -6,7 +6,11 @@ This is a [NextJS](https://nextjs.org/) project bootstrapped with `@proofgeist/k
 
 While this template is designed to be a minimal starting point, the proofkit CLI will guide you through adding additional features and pages.
 
-To add new things to your project, simply run `pnpm proofkit` from the project's root directory.
+To add new things to your project, simply run the `proofkit` script from the project's root directory.
+
+e.g. `npm run proofkit` or `pnpm proofkit` etc.
+
+For more information, see the full [ProofKit documentation](https://proofkit.proofgeist.com).
 
 ## Project Structure
 

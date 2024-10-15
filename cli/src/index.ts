@@ -8,16 +8,20 @@ import { logger } from "~/utils/logger.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 import { makeAddCommand, runAdd } from "./cli/add/index.js";
 import { makeTypegenCommand } from "./cli/typegen/index.js";
+import { UserAbortedError } from "./cli/utils.js";
 import { npmName } from "./consts.js";
 import { getVersion } from "./utils/getProofKitVersion.js";
 import { parseSettings, type Settings } from "./utils/parseSettings.js";
 
+const version = getVersion();
+
 const main = async () => {
   const program = new Command();
   renderTitle();
+
   program
     .name(npmName)
-    .version(getVersion())
+    .version(version)
     .command("default", { hidden: true, isDefault: true })
     .action(async () => {
       let settings: Settings | undefined;
@@ -53,8 +57,10 @@ const main = async () => {
 };
 
 main().catch((err) => {
-  logger.error("Aborting installation...");
-  if (err instanceof Error) {
+  if (err instanceof UserAbortedError) {
+    process.exit(0);
+  } else if (err instanceof Error) {
+    logger.error("Aborting installation...");
     logger.error(err);
   } else {
     logger.error(

@@ -112,7 +112,7 @@ export const runAddPageAction = async ({
   const destPath = path.join(projectDir, "src/app/(main)", routeName);
   await fs.copy(templatePath, destPath);
 
-  if (pageName !== "") {
+  if (pageName && pageName !== "") {
     await addRouteToNav({
       projectDir: process.cwd(),
       navType: "primary",

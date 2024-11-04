@@ -1,5 +1,6 @@
 import path from "path";
 import { type GenerateSchemaOptions } from "@proofgeist/fmdapi/dist/utils/codegen.d.ts";
+import { execa } from "execa";
 import fs from "fs-extra";
 import {
   SyntaxKind,
@@ -11,6 +12,7 @@ import { type z } from "zod";
 
 import { PKG_ROOT } from "~/consts.js";
 import { runExecCommand } from "~/helpers/installDependencies.js";
+import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import {
   parseSettings,
   type dataSourceSchema,
@@ -55,12 +57,25 @@ export async function runCodegenCommand({
   projectDir: string;
 }) {
   const settings = parseSettings(projectDir);
-  await runExecCommand({
-    projectDir,
-    command: ["@proofgeist/fmdapi", `--env-path=${settings.envFile}`],
-    successMessage:
-      "Successfully generated types from your FileMaker layout(s)",
-  });
+  const pkgManager = getUserPkgManager();
+  const { failed } = await execa(
+    pkgManager === "npm"
+      ? "npx"
+      : pkgManager === "pnpm"
+        ? "pnpx"
+        : pkgManager === "bun"
+          ? "bunx"
+          : pkgManager,
+    ["@proofgeist/fmdapi", `--env-path=${settings.envFile}`],
+    {
+      cwd: projectDir,
+      stderr: "inherit",
+      stdout: "inherit",
+    }
+  );
+  if (failed) {
+    throw new Error("Failed to run codegen command");
+  }
 }
 
 function getConfigVarStatement(sourceFile: SourceFile) {

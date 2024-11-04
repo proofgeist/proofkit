@@ -1,22 +1,7 @@
-import { type DataSource } from "~/utils/parseSettings.js";
+import { postInstallTableInfinite } from "./post-install/table-infinite.js";
 import { postInstallTable } from "./post-install/table.js";
+import { type Template } from "./types.js";
 
-export type TPostInstallFn = (args: {
-  projectDir: string;
-  /** Path in the project where the pages were copyied to. */
-  pageDir: string;
-  dataSource?: DataSource;
-  schemaName?: string;
-}) => void | Promise<void>;
-export interface Template {
-  requireData: boolean;
-  label: string;
-  hint?: string;
-  /** Path from the template/pages directory to the template files to copy. */
-  templatePath: string;
-  /** Will be run after the page contents is created and copied into the project. */
-  postIntallFn?: TPostInstallFn;
-}
 export const pageTemplates: Record<string, Template> = {
   blank: {
     requireData: false,
@@ -29,5 +14,12 @@ export const pageTemplates: Record<string, Template> = {
     hint: "Use to load and show multiple records",
     templatePath: "nextjs/table",
     postIntallFn: postInstallTable,
+  },
+  tableInfinite: {
+    requireData: true,
+    label: "Infinite Table",
+    hint: "Use to load and show multiple records",
+    templatePath: "nextjs/table-infinite",
+    postIntallFn: postInstallTableInfinite,
   },
 };

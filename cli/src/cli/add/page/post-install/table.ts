@@ -6,8 +6,9 @@ import {
   getClientSuffix,
   getFieldNamesForSchema,
 } from "~/generators/fmdapi.js";
+import { parseSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
-import { type TPostInstallFn } from "../templates.js";
+import { type TPostInstallFn } from "../types.js";
 
 export const postInstallTable: TPostInstallFn = async ({
   projectDir,
@@ -28,11 +29,22 @@ export const postInstallTable: TPostInstallFn = async ({
     dataSourceName: dataSource.name,
   });
 
+  const allFieldNames = getFieldNamesForSchema({
+    projectDir,
+    schemaName,
+    dataSourceName: dataSource.name,
+  });
+
+  const { auth } = parseSettings(projectDir);
+
   const substitutions = {
     __SOURCE_NAME__: dataSource.name,
     __TYPE_NAME__: `T${schemaName}`,
     __CLIENT_NAME__: `${schemaName}${clientSuffix}`,
     __SCHEMA_NAME__: schemaName,
+    __ACTION_CLIENT__:
+      auth.type === "none" ? "actionClient" : "authedActionClient",
+    __FIRST_FIELD_NAME__: allFieldNames[0] ?? "NO_FIELDS_ON_YOUR_LAYOUT",
   };
 
   // read all files in pageDir and loop over them
@@ -57,13 +69,7 @@ export const postInstallTable: TPostInstallFn = async ({
     .getVariableDeclaration("columns")
     ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
 
-  const fieldNames = filterOutCommonFieldNames(
-    getFieldNamesForSchema({
-      projectDir,
-      schemaName,
-      dataSourceName: dataSource.name,
-    })
-  );
+  const fieldNames = filterOutCommonFieldNames(allFieldNames);
 
   for await (const fieldName of fieldNames) {
     columns?.addElement((writer) =>

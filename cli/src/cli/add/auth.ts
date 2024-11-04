@@ -4,15 +4,25 @@ import { z } from "zod";
 
 import { addAuth } from "~/generators/auth.js";
 import { type Settings } from "~/utils/parseSettings.js";
+import { abortIfCancel } from "../utils.js";
 
-export async function runAddAuthAction() {
-  const authType = await p.select({
-    message: "What auth provider do you want to use?",
-    options: [
-      { label: "Clerk", value: "clerk" },
-      { label: "NextAuth", value: "next-auth" },
-    ],
-  });
+interface AddAuthOpts {
+  settings: Settings;
+  authType?: "clerk" | "next-auth";
+}
+
+export async function runAddAuthAction(opts?: AddAuthOpts) {
+  const authType =
+    opts?.authType ??
+    abortIfCancel(
+      await p.select({
+        message: "What auth provider do you want to use?",
+        options: [
+          { label: "Clerk", value: "clerk" },
+          { label: "NextAuth", value: "next-auth" },
+        ],
+      })
+    );
 
   const type = z.enum(["clerk", "next-auth"]).parse(authType);
 
@@ -22,13 +32,17 @@ export async function runAddAuthAction() {
 export const makeAddAuthCommand = () => {
   const addAuthCommand = new Command("auth")
     .description("Add authentication to your project")
+    .option("--authType <authType>", "Type of auth provider to use", [
+      "clerk",
+      "next-auth",
+    ])
 
-    .action(async (opts: { settings: Settings }) => {
+    .action(async (opts: AddAuthOpts) => {
       const settings = opts.settings;
       if (settings.auth.type !== "none") {
         throw new Error("Auth already exists");
       }
-      await runAddAuthAction();
+      await runAddAuthAction(opts);
     });
 
   return addAuthCommand;

@@ -98,9 +98,12 @@ export const runAddSchemaAction = async ({
   }
 
   let passedInLayoutName: string | undefined = opts.layoutName;
-  if (passedInLayoutName === "") passedInLayoutName = undefined;
-  if (!existingLayouts.includes(passedInLayoutName ?? ""))
+  if (
+    passedInLayoutName === "" ||
+    !layouts.includes(passedInLayoutName ?? "")
+  ) {
     passedInLayoutName = undefined;
+  }
 
   const selectedLayout =
     passedInLayoutName ??

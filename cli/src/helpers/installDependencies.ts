@@ -19,6 +19,10 @@ const execWithSpinner = async (
 ) => {
   const { onDataHandle, args = ["install"], stdout = "pipe" } = options;
 
+  if (process.env.PROOFKIT_ENV === "development") {
+    args.push("--prefer-offline");
+  }
+
   const spinner = ora(`Running ${pkgManager} ${args.join(" ")} ...`).start();
   const subprocess = execa(pkgManager, args, { cwd: projectDir, stdout });
 

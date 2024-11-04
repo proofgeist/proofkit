@@ -89,6 +89,5 @@ export const makeAddCommand = () => {
   addCommand.addCommand(makeAddPageCommand());
   addCommand.addCommand(makeAddSchemaCommand());
   addCommand.addCommand(makeAddDataSourceCommand());
-  // addCommand.addCommand(makeAddTanstackQueryCommand());
   return addCommand;
 };

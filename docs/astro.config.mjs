@@ -20,6 +20,10 @@ export default defineConfig({
           autogenerate: { directory: "guides" },
         },
         {
+          label: "Auth",
+          autogenerate: { directory: "auth" },
+        },
+        {
           label: "Templates",
           autogenerate: { directory: "templates" },
         },

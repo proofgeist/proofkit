@@ -1,17 +1,23 @@
 import path from "path";
 import chalk from "chalk";
+import { execa } from "execa";
 import fs from "fs-extra";
+import ora from "ora";
 import { SyntaxKind, type Project, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
+import { getExistingSchemas } from "~/generators/fmdapi.js";
 import {
+  _runExecCommand,
   generateRandomSecret,
   runExecCommand,
 } from "~/helpers/installDependencies.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
+import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
+import { dependencyVersionMap } from "./dependencyVersionMap.js";
 
 export const nextAuthInstaller = async ({
   projectDir,
@@ -134,6 +140,8 @@ export const nextAuthInstaller = async ({
     ],
   });
 
+  await checkForNextAuthLayouts(projectDir);
+
   await formatAndSaveSourceFiles(project);
 };
 
@@ -228,4 +236,46 @@ function injectBcryptIntoNextConfig(project: Project, projectDir: string) {
       );
     },
   });
+}
+
+async function checkForNextAuthLayouts(projectDir: string) {
+  const existingLayouts = getExistingSchemas({
+    projectDir,
+    dataSourceName: "filemaker",
+  });
+  const nextAuthLayouts = [
+    "nextauth_user",
+    "nextauth_account",
+    "nextauth_session",
+    "nextauth_verificationToken",
+  ];
+
+  const allNextAuthLayoutsExist = nextAuthLayouts.every((layout) =>
+    existingLayouts.some((l) => l.schemaName === layout)
+  );
+
+  if (allNextAuthLayoutsExist) return;
+
+  const spinner = await _runExecCommand({
+    command: [
+      `next-auth-adapter-filemaker@${dependencyVersionMap["next-auth-adapter-filemaker"]}`,
+      "install-addon",
+    ],
+    projectDir,
+  });
+
+  // If the spinner was used to show the progress, use succeed method on it
+  // If not, use the succeed on a new spinner
+  (spinner ?? ora()).succeed(
+    chalk.green("Successfully installed next-auth addon for FileMaker")
+  );
+
+  console.log("");
+  console.log(chalk.bgYellow(" ACTION REQUIRED: "));
+  console.log(
+    `${chalk.yellowBright(
+      "You must now install the NextAuth addon in your FileMaker file."
+    )}
+Learn more: https://proofkit.proofgeist.com/auth/next-auth\n`
+  );
 }

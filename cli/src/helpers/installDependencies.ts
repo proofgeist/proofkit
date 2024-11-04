@@ -115,7 +115,7 @@ export const runExecCommand = async ({
   );
 };
 
-const _runExecCommand = async ({
+export const _runExecCommand = async ({
   projectDir,
   command,
 }: {

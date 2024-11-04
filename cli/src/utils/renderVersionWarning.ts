@@ -14,11 +14,6 @@ export const renderVersionWarning = (npmVersion: string) => {
   if (currentVersion.includes("beta")) {
     logger.warn(`  You are using a beta version of ${cliName}.`);
     logger.warn("  Please report any bugs you encounter.");
-  } else if (currentVersion.includes("next")) {
-    logger.warn(
-      "  You are running proofkit with the @next tag which is no longer maintained."
-    );
-    logger.warn("  Please run the CLI with @latest instead.");
   } else if (currentVersion !== npmVersion) {
     logger.warn(`  You are using an outdated version of ${cliName}.`);
     logger.warn(

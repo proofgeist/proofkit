@@ -1,0 +1,9 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "@proofgeist/kit": "0.0.9",
+    "docs": "0.0.1"
+  },
+  "changesets": []
+}

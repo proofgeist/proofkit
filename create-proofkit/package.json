@@ -1,6 +1,6 @@
 {
   "name": "create-proofkit",
-  "version": "0.0.5-beta.2",
+  "version": "0.0.6",
   "description": "Create a new ProofKit project",
   "type": "module",
   "bin": "./src/index.js",

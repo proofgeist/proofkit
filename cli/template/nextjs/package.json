@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -16,29 +16,35 @@
     "next-safe-action": "^7.9.3",
     "react-hook-form": "^7.53.0",
     "@tabler/icons-react": "^3.17.0",
-    "@mantine/core": "^7.12.2",
-    "@mantine/dates": "^7.12.2",
-    "@mantine/hooks": "^7.12.2",
-    "@mantine/modals": "^7.12.2",
-    "@mantine/notifications": "^7.12.2",
+    "@mantine/core": "^7.13.4",
+    "@mantine/dates": "^7.13.4",
+    "@mantine/hooks": "^7.13.4",
+    "@mantine/modals": "^7.13.4",
+    "@mantine/notifications": "^7.13.4",
     "mantine-react-table": "^2.0.0-beta.6",
     "@t3-oss/env-nextjs": "^0.11.0",
     "dayjs": "^1.11.12",
     "jiti": "^1.21.6",
-    "next": "14.2.14",
-    "react": "^18",
-    "react-dom": "^18",
+    "next": "15.0.2",
+    "react": "19.0.0-rc-02c0e824-20241028",
+    "react-dom": "19.0.0-rc-02c0e824-20241028",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.5",
+    "@types/react": "npm:types-react@19.0.0-rc.1",
+    "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "15.0.2",
     "postcss": "^8.4.41",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "npm:types-react@19.0.0-rc.1",
+      "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1"
+    }
   }
 }

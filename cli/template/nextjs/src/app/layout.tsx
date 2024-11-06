@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { theme } from "@/config/theme/mantine-theme";
 import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <ColorSchemeScript defaultColorScheme="auto" />
+        <Suspense>
+          <ColorSchemeScript defaultColorScheme="auto" />
+        </Suspense>
       </head>
       <body>
         <MantineProvider defaultColorScheme="auto" theme={theme}>

@@ -10,7 +10,7 @@ import { signUpAction } from "./action";
 import { signUpSchema } from "./validation";
 
 export default function SignUpPage(props: {
-  searchParams: { callbackUrl: string | undefined };
+  searchParams: Promise<{ callbackUrl: string | undefined }>;
 }) {
   const { form, action, handleSubmitWithAction, resetFormAndAction } =
     useHookFormAction(signUpAction, zodResolver(signUpSchema), {

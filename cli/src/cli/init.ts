@@ -124,9 +124,9 @@ export const makeInitCommand = () => {
 
 async function askForAuth({ projectDir }: { projectDir: string }) {
   const authType = "none" as string;
-  if (authType === "next-auth") {
+  if (authType === "proofkit") {
     await addAuth({
-      type: "next-auth",
+      type: "proofkit",
       projectDir,
       noInstall: true,
     });

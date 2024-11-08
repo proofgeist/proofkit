@@ -1,20 +1,17 @@
 import path from "path";
 import chalk from "chalk";
-import { execa } from "execa";
 import fs from "fs-extra";
 import ora from "ora";
-import { SyntaxKind, type Project, type SourceFile } from "ts-morph";
+import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import {
   _runExecCommand,
   generateRandomSecret,
-  runExecCommand,
 } from "~/helpers/installDependencies.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
-import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { dependencyVersionMap } from "./dependencyVersionMap.js";
@@ -26,14 +23,8 @@ export const nextAuthInstaller = async ({
 }) => {
   addPackageDependency({
     projectDir,
-    dependencies: ["next-auth", "bcrypt", "next-auth-adapter-filemaker"],
+    dependencies: ["next-auth", "next-auth-adapter-filemaker"],
     devMode: false,
-  });
-
-  addPackageDependency({
-    projectDir,
-    dependencies: ["@types/bcrypt"],
-    devMode: true,
   });
 
   const extrasDir = path.join(PKG_ROOT, "template/extras");
@@ -82,8 +73,6 @@ export const nextAuthInstaller = async ({
   );
 
   const project = getNewProject(projectDir);
-
-  injectBcryptIntoNextConfig(project, projectDir);
 
   // modify root layout to wrap with session provider
   addNextAuthProviderToRootLayout(
@@ -206,7 +195,7 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 
   // add to end of file
   sourceFile.addStatements((writer) =>
-    writer.writeLine(`export const authedActionClient = createSafeActionClient().use(
+    writer.writeLine(`export const authedActionClient = actionClient.use(
   async ({ next, ctx }) => {
     const session = await auth();
     if (!session) {
@@ -217,25 +206,6 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 );
 `)
   );
-}
-
-function injectBcryptIntoNextConfig(project: Project, projectDir: string) {
-  const nextConfig = project.addSourceFileAtPathIfExists(
-    path.join(projectDir, "next.config.mjs")
-  );
-
-  const configObj = nextConfig
-    ?.getVariableDeclaration("nextConfig")
-    ?.getInitializerIfKind(SyntaxKind.ObjectLiteralExpression);
-
-  configObj?.addPropertyAssignment({
-    name: "webpack",
-    initializer: (writer) => {
-      writer.write(
-        "(config) => { config.externals = [...config.externals, 'bcrypt']; return config; }"
-      );
-    },
-  });
 }
 
 async function checkForNextAuthLayouts(projectDir: string) {

@@ -1,5 +1,6 @@
 import path from "path";
 import { type GenerateSchemaOptions } from "@proofgeist/fmdapi/dist/utils/codegen.d.ts";
+import { type GenerateSchemaOptionsSingle } from "@proofgeist/fmdapi/utils/typegen/types.js";
 import { execa } from "execa";
 import fs from "fs-extra";
 import {
@@ -13,30 +14,29 @@ import { type z } from "zod";
 import { PKG_ROOT } from "~/consts.js";
 import { runExecCommand } from "~/helpers/installDependencies.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
-import {
-  parseSettings,
-  type dataSourceSchema,
-  type envNamesSchema,
-} from "~/utils/parseSettings.js";
+import { parseSettings, type envNamesSchema } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
-type Schema = GenerateSchemaOptions["schemas"][number];
+type Schema = GenerateSchemaOptionsSingle["schemas"][number];
 export async function addLayout({
   projectDir = process.cwd(),
   schemas,
   runCodegen = true,
   dataSourceName,
+
+  ...args
 }: {
   projectDir?: string;
   schemas: Schema[];
   runCodegen?: boolean;
   dataSourceName: string;
+  project?: Project;
 }) {
   const fmschemaConfig = path.join(projectDir, "fmschema.config.mjs");
   if (!fs.existsSync(fmschemaConfig)) {
     throw new Error("fmschema.config.mjs not found");
   }
-  const project = getNewProject(projectDir);
+  const project = args.project ?? getNewProject(projectDir);
 
   const sourceFile = project.addSourceFileAtPath(fmschemaConfig);
   const schemasArray = getSchemasArray(sourceFile, dataSourceName);
@@ -44,7 +44,54 @@ export async function addLayout({
     schemasArray?.addElement(JSON.stringify(schema));
   });
 
-  await formatAndSaveSourceFiles(project);
+  if (!args.project) {
+    await formatAndSaveSourceFiles(project);
+  }
+
+  if (runCodegen) {
+    await runCodegenCommand({ projectDir });
+  }
+}
+
+export async function addConfig({
+  config,
+  projectDir,
+  runCodegen = true,
+  ...args
+}: {
+  config: GenerateSchemaOptionsSingle;
+  projectDir: string;
+  project?: Project;
+  runCodegen?: boolean;
+}) {
+  const fmschemaConfig = path.join(projectDir, "fmschema.config.mjs");
+  if (!fs.existsSync(fmschemaConfig)) {
+    throw new Error("fmschema.config.mjs not found");
+  }
+  const project = args.project ?? getNewProject(projectDir);
+  const sourceFile = project.addSourceFileAtPath(fmschemaConfig);
+  const configVar = getConfigVarStatement(sourceFile);
+
+  if (
+    configVar?.getInitializer()?.getKind() ===
+    SyntaxKind.ObjectLiteralExpression
+  ) {
+    // convert it to an array
+    const existingText = configVar.getInitializer()?.getText();
+    configVar.setInitializer(`[${existingText}]`);
+  }
+
+  const configArray = configVar?.getInitializerIfKindOrThrow(
+    SyntaxKind.ArrayLiteralExpression
+  );
+
+  configArray?.addElement((writer) => {
+    writer.writeLine(JSON.stringify(config));
+  });
+
+  if (!args.project) {
+    await formatAndSaveSourceFiles(project);
+  }
 
   if (runCodegen) {
     await runCodegenCommand({ projectDir });
@@ -237,7 +284,7 @@ export function addToFmschemaConfig({
         writer.quote("./src/config/schemas/filemaker")
       );
   } else {
-    // since the file a®eady existed, we need to ensure the config variable is an array now before we proceed
+    // since the file already existed, we need to ensure the config variable is an array now before we proceed
 
     const sourceFile = project.addSourceFileAtPath(configFilePath);
     const configVar = getConfigVarStatement(sourceFile);

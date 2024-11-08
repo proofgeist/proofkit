@@ -27,7 +27,7 @@ export const fetchData = __ACTION_CLIENT__
 
     if (sorting.length > 0) {
       getOptions.sort = sorting.map(({ id, desc }) => ({
-        fieldName: __FIRST_FIELD_NAME__ as keyof __TYPE_NAME__,
+        fieldName: "__FIRST_FIELD_NAME__" as keyof __TYPE_NAME__,
         sortOrder: desc ? "descend" : "ascend",
       }));
     }

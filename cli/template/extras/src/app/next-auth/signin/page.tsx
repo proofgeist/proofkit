@@ -13,8 +13,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function SignInPage(props: {
-  searchParams: { callbackUrl: string | undefined };
+  searchParams: Promise<{ callbackUrl: string | undefined }>;
 }) {
+  const searchParams = await props.searchParams;
   return (
     <Stack>
       <form
@@ -42,11 +43,12 @@ export default async function SignInPage(props: {
           <Divider label="Or" />
           {Object.values(providerMap).map((provider) => (
             <form
+              key={provider.id}
               action={async () => {
                 "use server";
                 try {
                   await signIn(provider.id, {
-                    redirectTo: props.searchParams?.callbackUrl ?? "",
+                    redirectTo: searchParams.callbackUrl ?? "",
                   });
                 } catch (error) {
                   // Signin can fail for a number of reasons, such as the user
@@ -73,7 +75,7 @@ export default async function SignInPage(props: {
       )}
 
       <Text size="sm" c="dimmed">
-        Don't have an account? <Link href="/auth/signup">Sign up</Link>
+        {"Don't have an account? "}<Link href="/auth/signup">Sign up</Link>
       </Text>
     </Stack>
   );

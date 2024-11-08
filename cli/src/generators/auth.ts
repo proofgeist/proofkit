@@ -1,6 +1,6 @@
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { clerkInstaller } from "~/installers/clerk.js";
-import { nextAuthInstaller } from "~/installers/nextAuth.js";
+import { proofkitAuthInstaller } from "~/installers/proofkit-auth.js";
 import {
   parseSettings,
   setSettings,
@@ -12,7 +12,7 @@ export async function addAuth({
   noInstall = false,
   projectDir = process.cwd(),
 }: {
-  type: "clerk" | "next-auth";
+  type: "clerk" | "proofkit";
   projectDir?: string;
   noInstall?: boolean;
 }) {
@@ -23,8 +23,8 @@ export async function addAuth({
 
   if (type === "clerk") {
     await addClerkAuth({ settings, projectDir });
-  } else if (type === "next-auth") {
-    await addNextAuth({ settings, projectDir });
+  } else if (type === "proofkit") {
+    await addProofkitAuth({ settings, projectDir });
   }
 
   if (!noInstall) {
@@ -43,13 +43,13 @@ async function addClerkAuth({
   setSettings({ ...settings, auth: { type: "clerk" } }, projectDir);
 }
 
-async function addNextAuth({
+async function addProofkitAuth({
   settings,
   projectDir = process.cwd(),
 }: {
   settings: Settings;
   projectDir?: string;
 }) {
-  await nextAuthInstaller({ projectDir });
-  setSettings({ ...settings, auth: { type: "next-auth" } }, projectDir);
+  await proofkitAuthInstaller({ projectDir });
+  setSettings({ ...settings, auth: { type: "proofkit" } }, projectDir);
 }

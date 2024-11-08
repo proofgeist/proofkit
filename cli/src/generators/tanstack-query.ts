@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import { SyntaxKind } from "ts-morph";
+import { SyntaxKind, type Project } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
@@ -17,6 +17,7 @@ export async function injectTanstackQuery({
 }: {
   settings?: Settings;
   projectDir: string;
+  project?: Project;
 }) {
   const settings = args.settings ?? parseSettings(projectDir);
   if (settings.tanstackQuery) return;
@@ -46,7 +47,7 @@ export async function injectTanstackQuery({
   );
 
   // inject query provider into the root layout
-  const project = getNewProject(projectDir);
+  const project = args.project ?? getNewProject(projectDir);
   const rootLayout = project.addSourceFileAtPath(
     path.join(projectDir, "src/app/layout.tsx")
   );
@@ -77,7 +78,9 @@ export async function injectTanstackQuery({
     </QueryProvider>`
   );
 
-  await formatAndSaveSourceFiles(project);
+  if (!args.project) {
+    await formatAndSaveSourceFiles(project);
+  }
 
   setSettings({ ...settings, tanstackQuery: true }, projectDir);
 }

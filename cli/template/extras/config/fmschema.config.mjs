@@ -4,6 +4,6 @@ export const config = {
   schemas: [
     // add your layouts and name schemas here
   ],
-  cleanOldFiles: true,
+  clearOldFiles: true,
   path: "./src/config/schemas/filemaker",
 };

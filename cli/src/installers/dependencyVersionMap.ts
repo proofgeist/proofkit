@@ -7,9 +7,7 @@ import { getVersion } from "~/utils/getProofKitVersion.js";
 export const dependencyVersionMap = {
   // NextAuth.js
   "next-auth": "beta",
-  bcrypt: "^5.1.1",
   "next-auth-adapter-filemaker": "beta",
-  "@types/bcrypt": "^5.0.0",
 
   "@auth/prisma-adapter": "^1.6.0",
   "@auth/drizzle-adapter": "^1.1.0",
@@ -47,7 +45,7 @@ export const dependencyVersionMap = {
   "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
-  "@proofgeist/fmdapi": "^4.1.5",
+  "@proofgeist/fmdapi": "^4.2.0",
 
   // ProofKit
   "@proofgeist/kit": getVersion(),
@@ -56,5 +54,11 @@ export const dependencyVersionMap = {
   "@tanstack/react-query": "^5.59.0",
   "@tanstack/react-query-devtools": "^5.59.0",
   "@tanstack/eslint-plugin-query": "^5.59.1",
+
+  // ProofKit Auth
+  "@node-rs/argon2": "^2.0.0",
+  "@oslojs/binary": "^1.0.0",
+  "@oslojs/crypto": "^1.0.1",
+  "@oslojs/encoding": "^1.1.0",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

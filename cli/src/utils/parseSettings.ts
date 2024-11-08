@@ -10,6 +10,9 @@ const authSchema = z.discriminatedUnion("type", [
     type: z.literal("next-auth"),
   }),
   z.object({
+    type: z.literal("proofkit"),
+  }),
+  z.object({
     type: z.literal("none"),
   }),
 ]);

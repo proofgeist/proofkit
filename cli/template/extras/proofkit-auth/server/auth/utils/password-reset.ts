@@ -6,6 +6,7 @@ import { passwordResetLayout } from "../db/client";
 import { TpasswordReset } from "../db/passwordReset";
 
 import type { User } from "./user";
+import { sendEmail } from "../email";
 type PasswordResetSession = Omit<
   TpasswordReset,
   | "proofkit_auth_users::email"
@@ -137,7 +138,7 @@ export async function sendPasswordResetEmail(
   email: string,
   code: string
 ): Promise<void> {
-  console.log(`To ${email}: Your reset code is ${code}`);
+  await sendEmail({ to: email, code, type: "password-reset" });
 }
 
 export type PasswordResetSessionValidationResult =

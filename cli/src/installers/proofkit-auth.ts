@@ -167,7 +167,14 @@ async function checkForProofKitLayouts(projectDir: string) {
     existingLayouts.some((l) => l === layout)
   );
 
-  if (allProofkitAuthLayoutsExist) return;
+  if (allProofkitAuthLayoutsExist) {
+    console.log(
+      chalk.green(
+        "Successfully detected all required layouts for ProofKit Auth in your FileMaker file."
+      )
+    );
+    return;
+  }
 
   // TODO install the addon
   // const spinner = await _runExecCommand({
@@ -188,7 +195,7 @@ async function checkForProofKitLayouts(projectDir: string) {
   console.log(chalk.bgYellow(" ACTION REQUIRED: "));
   console.log(
     `${chalk.yellowBright(
-      "You must now install the ProofKit Auth addon in your FileMaker file."
+      "You must install the ProofKit Auth addon in your FileMaker file."
     )}
 Learn more: https://proofkit.proofgeist.com/auth/proofkit\n`
   );

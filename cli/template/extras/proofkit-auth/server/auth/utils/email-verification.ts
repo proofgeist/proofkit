@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getCurrentSession } from "./session";
 import { emailVerificationLayout } from "../db/client";
 import { TemailVerification } from "../db/emailVerification";
+import { sendEmail } from "../email";
 
 export async function getUserEmailVerificationRequest(
   userId: string,
@@ -57,7 +58,7 @@ export async function sendVerificationEmail(
   email: string,
   code: string
 ): Promise<void> {
-  console.log(`To ${email}: Your verification code is ${code}`);
+  await sendEmail({ to: email, code, type: "verification" });
 }
 
 export async function setEmailVerificationRequestCookie(

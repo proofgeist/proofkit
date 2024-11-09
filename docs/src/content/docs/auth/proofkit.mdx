@@ -1,0 +1,52 @@
+---
+title: ProofKit Auth
+description: How to add ProofKit Auth to your FileMaker file
+---
+
+import CliCommand from "../../../components/CliCommand.astro";
+
+ProofKit Auth is a self-hosted authentication solution that is built to be flexible and easy to customize. Rather than using a third-party library or authentication service, the ProofKit CLI installs all of the neccesary functions into your project and then you just have to install the ProofKit Auth addon in your FileMaker file to get the neccesary tables in your database.
+
+While ProofKit Auth is built to be secure, it is more advanced than a typical third-party authentication service and does warrant a good understanding of how it works before you customize it. For more details about the security principles behind it, see the [Lucia documentation](https://lucia-auth.com/)
+
+## Installing
+
+From within a ProofKit project, run the following command:
+
+<CliCommand command="proofkit add auth --type=proofkit" frame="none" />
+
+ProofKit Auth requires that some specific tables and layouts exist in your FileMaker file. The CLI will detect if these layouts and not in your file, and notify you to install the ProofKit Auth addon if they are missing. The FileMaker addon encapsulates all of the changes needed and makes it easy to add the requirements to your file.
+
+To easily install the addon, enter Layout mode on any layout and open the "Add-ons" tab in the left pane. Click the + icon in the lower left corner, then select the "ProofKit Auth" addon from the list.
+
+:::caution[Troubleshooting]
+If you don't see the addon, try one of these options:
+
+- Quit and re-open FileMaker Pro.
+  {/* - Re-download the addon using the CLI: <CliCommand command="next-auth-adapter-filemaker@beta install-addon" frame="terminal" type="execute" /> */}
+
+:::
+
+After you install the addon for the first time, make sure you re-run the `typegen` command to add the types in your project.
+
+<CliCommand command="proofkit typegen" frame="none" />
+
+## Email Verification Setup
+
+By default, ProofKit Auth works with an email/password based login and asks users to verify their email address when they change their email and when they first sign up. However, you must implement the email sending functionality with the third-party service of your choice. During development, the email verification codes are printed to the server's console logs for your testing.
+
+## Customizing
+
+Once the addon is installed, you can customize the tables and layouts to better fit your solution. For example, if you already have a users table, you may wish to use that instead of the new one created by the addon.
+
+The easiest way to customize is to use the tables from ProofKit Auth and create a one-to-one relationship with your existing table(s). You can also add new fields to the ProofKit tables to extend their functionality.
+
+After you've made your modifications, run the `typegen` command again to update the types in your project.
+
+<CliCommand command="proofkit typegen" frame="none" />
+
+Then, we suggest running the `tsc` command to check for any errors in the ProofKit Auth code.
+
+<CliCommand command="tsc" frame="none" />
+
+For example, if you added new fields to the session or user layouts, you will likely need to update the functions that create records in those tables and provide some default values.

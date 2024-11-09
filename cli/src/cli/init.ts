@@ -126,13 +126,13 @@ async function askForAuth({ projectDir }: { projectDir: string }) {
   const authType = "none" as string;
   if (authType === "proofkit") {
     await addAuth({
-      type: "proofkit",
+      options: { type: "proofkit" },
       projectDir,
       noInstall: true,
     });
   } else if (authType === "clerk") {
     await addAuth({
-      type: "clerk",
+      options: { type: "clerk" },
       projectDir,
       noInstall: true,
     });

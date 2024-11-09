@@ -13,11 +13,14 @@ import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { parseSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
+import { installReactEmail } from "./react-email.js";
 
 export const proofkitAuthInstaller = async ({
   projectDir,
+  emailProvider,
 }: {
   projectDir: string;
+  emailProvider?: "plunk" | "resend";
 }) => {
   addPackageDependency({
     projectDir,
@@ -97,6 +100,7 @@ export const proofkitAuthInstaller = async ({
     projectDir,
     runCodegen: false,
   });
+  await installReactEmail({ projectDir, project, emailProvider });
 
   await formatAndSaveSourceFiles(project);
 

@@ -147,7 +147,7 @@ export async function promptForFileMakerDataSource({
 
   const project = getNewProject(projectDir);
 
-  const schemaFile = addToEnv({
+  const schemaFile = await addToEnv({
     projectDir,
     project,
     envs: [

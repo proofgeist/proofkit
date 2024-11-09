@@ -8,11 +8,13 @@ import {
 } from "~/utils/parseSettings.js";
 
 export async function addAuth({
-  type,
+  options,
   noInstall = false,
   projectDir = process.cwd(),
 }: {
-  type: "clerk" | "proofkit";
+  options:
+    | { type: "clerk" }
+    | { type: "proofkit"; emailProvider?: "plunk" | "resend" };
   projectDir?: string;
   noInstall?: boolean;
 }) {
@@ -21,10 +23,14 @@ export async function addAuth({
     throw new Error("Auth already exists");
   }
 
-  if (type === "clerk") {
+  if (options.type === "clerk") {
     await addClerkAuth({ settings, projectDir });
-  } else if (type === "proofkit") {
-    await addProofkitAuth({ settings, projectDir });
+  } else if (options.type === "proofkit") {
+    await addProofkitAuth({
+      settings,
+      projectDir,
+      emailProvider: options.emailProvider,
+    });
   }
 
   if (!noInstall) {
@@ -46,10 +52,12 @@ async function addClerkAuth({
 async function addProofkitAuth({
   settings,
   projectDir = process.cwd(),
+  emailProvider,
 }: {
   settings: Settings;
   projectDir?: string;
+  emailProvider?: "plunk" | "resend";
 }) {
-  await proofkitAuthInstaller({ projectDir });
+  await proofkitAuthInstaller({ projectDir, emailProvider });
   setSettings({ ...settings, auth: { type: "proofkit" } }, projectDir);
 }

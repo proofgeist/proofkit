@@ -116,7 +116,7 @@ export const nextAuthInstaller = async ({
   );
 
   // add envs to .env and .env.schema
-  addToEnv({
+  await addToEnv({
     projectDir,
     project,
     envs: [

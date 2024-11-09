@@ -60,5 +60,13 @@ export const dependencyVersionMap = {
   "@oslojs/binary": "^1.0.0",
   "@oslojs/crypto": "^1.0.1",
   "@oslojs/encoding": "^1.1.0",
+
+  // React Email
+  "@react-email/components": "^0.0.28",
+  "@react-email/render": "1.0.2",
+  "@plunk/node": "^3.0.3",
+  "react-email": "^3.0.2",
+  resend: "^4.0.0",
+  "@sendgrid/mail": "^8.1.4",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

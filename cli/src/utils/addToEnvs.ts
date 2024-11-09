@@ -2,6 +2,8 @@ import path from "path";
 import fs from "fs-extra";
 import { SyntaxKind, type Project } from "ts-morph";
 
+import { formatAndSaveSourceFiles, getNewProject } from "./ts-morph.js";
+
 interface EnvSchema {
   name: string;
   zodValue: string;
@@ -11,19 +13,20 @@ interface EnvSchema {
   addToRuntimeEnv?: boolean;
 }
 
-export function addToEnv({
+export async function addToEnv({
   projectDir,
-  project,
   envs,
   envFileDescription,
+  ...args
 }: {
   projectDir: string;
-  project: Project;
+  project?: Project;
   envs: EnvSchema[];
   envFileDescription?: string;
 }) {
   const envSchemaFile = path.join(projectDir, "src/config/env.ts");
 
+  const project = args.project ?? getNewProject(projectDir);
   const schemaFile = project.addSourceFileAtPath(envSchemaFile);
 
   if (!schemaFile) throw new Error("Schema file not found");
@@ -86,6 +89,10 @@ export function addToEnv({
 ${envFileDescription ? `# ${envFileDescription}\n${envsString}` : envsString}
     `
   );
+
+  if (!args.project) {
+    await formatAndSaveSourceFiles(project);
+  }
 
   return schemaFile;
 }

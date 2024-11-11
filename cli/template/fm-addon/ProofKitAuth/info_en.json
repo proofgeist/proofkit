@@ -1,0 +1,11 @@
+﻿{
+  "Title": "ProofKitAuth",
+  "Description": "ProofKitAuth - User authentication with ProofKit Web apps",
+  "Category": "Web",
+  "Features": [],
+  "Optimized": [
+    "Desktop",
+    "Tablet",
+    "Mobile"
+  ]
+}

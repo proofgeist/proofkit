@@ -1,3 +1,4 @@
+import os from "os";
 import path from "path";
 import { type OttoAPIKey } from "@proofgeist/fmdapi";
 import chalk from "chalk";
@@ -11,6 +12,7 @@ import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
+import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
@@ -104,9 +106,11 @@ export const proofkitAuthInstaller = async ({
 
   await formatAndSaveSourceFiles(project);
 
-  await checkForProofKitLayouts(projectDir);
+  const hasProofKitLayouts = await checkForProofKitLayouts(projectDir);
 
-  await runCodegenCommand({ projectDir });
+  if (hasProofKitLayouts) {
+    await runCodegenCommand({ projectDir });
+  }
 };
 
 function addToSafeActionClient(sourceFile?: SourceFile) {
@@ -138,14 +142,14 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
   );
 }
 
-async function checkForProofKitLayouts(projectDir: string) {
+async function checkForProofKitLayouts(projectDir: string): Promise<boolean> {
   const settings = getSettings();
 
   const dataSource = settings.dataSources
     .filter((s) => s.type === "fm")
     .find((s) => s.name === "filemaker");
 
-  if (!dataSource) return;
+  if (!dataSource) return false;
   if (settings.envFile) {
     dotenv.config({
       path: path.join(projectDir, settings.envFile),
@@ -177,23 +181,41 @@ async function checkForProofKitLayouts(projectDir: string) {
         "Successfully detected all required layouts for ProofKit Auth in your FileMaker file."
       )
     );
-    return;
+    return true;
+  }
+  let targetDir: string | null = null;
+  if (process.platform === "win32") {
+    targetDir = path.join(
+      os.homedir(),
+      "AppData",
+      "Local",
+      "FileMaker",
+      "Extensions",
+      "AddonModules"
+    );
+  } else if (process.platform === "darwin") {
+    targetDir = path.join(
+      os.homedir(),
+      "Library",
+      "Application Support",
+      "FileMaker",
+      "Extensions",
+      "AddonModules"
+    );
   }
 
-  // TODO install the addon
-  // const spinner = await _runExecCommand({
-  //   command: [
-  //     `next-auth-adapter-filemaker@${dependencyVersionMap["next-auth-adapter-filemaker"]}`,
-  //     "install-addon",
-  //   ],
-  //   projectDir,
-  // });
+  if (!targetDir) {
+    logger.warn(
+      "Could not install the ProofKit Auth addon. You will need to do this manually."
+    );
+    return false;
+  }
 
-  // // If the spinner was used to show the progress, use succeed method on it
-  // // If not, use the succeed on a new spinner
-  // (spinner ?? ora()).succeed(
-  //   chalk.green("Successfully installed next-auth addon for FileMaker")
-  // );
+  await fs.copy(
+    path.join(PKG_ROOT, "template/fm-addon/ProofKitAuth"),
+    path.join(targetDir, "ProofKitAuth"),
+    { overwrite: true }
+  );
 
   console.log("");
   console.log(chalk.bgYellow(" ACTION REQUIRED: "));
@@ -201,6 +223,7 @@ async function checkForProofKitLayouts(projectDir: string) {
     `${chalk.yellowBright(
       "You must install the ProofKit Auth addon in your FileMaker file."
     )}
-Learn more: https://proofkit.proofgeist.com/auth/proofkit\n`
+Learn more: https://proofkit.dev/auth/proofkit\n`
   );
+  return false;
 }

@@ -24,7 +24,7 @@ export async function createSession(
   const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
   const session: Session = {
     id: sessionId,
-    user_id: userId,
+    id_user: userId,
     expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
   };
 
@@ -32,7 +32,7 @@ export async function createSession(
   await sessionsLayout.create({
     fieldData: {
       id: session.id,
-      user_id: session.user_id,
+      id_user: session.id_user,
       expiresAt: Math.floor(session.expiresAt.getTime() / 1000),
     },
   });
@@ -66,14 +66,14 @@ export async function validateSessionToken(
   const recordId = result.data.recordId;
   const session: Session = {
     id: fmResult.id,
-    user_id: fmResult.user_id,
+    id_user: fmResult.id_user,
     expiresAt: fmResult.expiresAt
       ? new Date(fmResult.expiresAt * 1000)
       : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
   };
 
   const user: User = {
-    id: session.user_id,
+    id: session.id_user,
     email: fmResult["proofkit_auth_users::email"],
     emailVerified: Boolean(fmResult["proofkit_auth_users::emailVerified"]),
     username: fmResult["proofkit_auth_users::username"],
@@ -107,7 +107,7 @@ export const getCurrentSession = cache(
 
 export async function invalidateUserSessions(userId: string): Promise<void> {
   const sessions = await sessionsLayout.findAll({
-    query: { user_id: `==${userId}` },
+    query: { id_user: `==${userId}` },
   });
   for await (const session of sessions) {
     await sessionsLayout.delete({ recordId: session.recordId });
@@ -142,7 +142,7 @@ export interface SessionFlags {}
 export interface Session extends SessionFlags {
   id: string;
   expiresAt: Date;
-  user_id: string;
+  id_user: string;
 }
 
 type SessionValidationResult =

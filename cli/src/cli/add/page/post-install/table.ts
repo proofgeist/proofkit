@@ -6,7 +6,7 @@ import {
   getClientSuffix,
   getFieldNamesForSchema,
 } from "~/generators/fmdapi.js";
-import { parseSettings } from "~/utils/parseSettings.js";
+import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { type TPostInstallFn } from "../types.js";
 
@@ -35,7 +35,7 @@ export const postInstallTable: TPostInstallFn = async ({
     dataSourceName: dataSource.name,
   });
 
-  const { auth } = parseSettings(projectDir);
+  const { auth } = getSettings();
 
   const substitutions = {
     __SOURCE_NAME__: dataSource.name,

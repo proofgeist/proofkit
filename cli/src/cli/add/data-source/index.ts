@@ -3,15 +3,10 @@ import { Command } from "commander";
 import { z } from "zod";
 
 import { ensureProofKitProject } from "~/cli/utils.js";
-import { type Settings } from "~/utils/parseSettings.js";
 import { promptForFileMakerDataSource } from "./filemaker.js";
 
 const dataSourceType = z.enum(["fm", "supabase"]);
-export const runAddDataSourceCommand = async ({
-  settings,
-}: {
-  settings: Settings;
-}) => {
+export const runAddDataSourceCommand = async () => {
   const dataSource = dataSourceType.parse(
     await p.select({
       message: "Which data souce do you want to add?",

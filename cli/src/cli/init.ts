@@ -227,6 +227,5 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   await logNextSteps({
     projectName: appDir,
     noInstall: cliOptions.noInstall,
-    projectDir,
   });
 };

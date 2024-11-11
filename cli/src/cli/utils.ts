@@ -6,7 +6,7 @@ import fs from "fs-extra";
 import { ZodError } from "zod";
 
 import { npmName } from "~/consts.js";
-import { parseSettings } from "~/utils/parseSettings.js";
+import { getSettings } from "~/utils/parseSettings.js";
 
 /**
  * Runs before any add command is run. Checks if the user is in a ProofKit project and if the
@@ -31,7 +31,7 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
   }
 
   try {
-    return parseSettings();
+    return getSettings();
   } catch (error) {
     console.log(chalk.red("Error parsing ProofKit settings file:"));
     if (error instanceof ZodError) {

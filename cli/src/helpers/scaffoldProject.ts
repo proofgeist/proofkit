@@ -6,15 +6,16 @@ import ora from "ora";
 
 import { PKG_ROOT } from "~/consts.js";
 import { type InstallerOptions } from "~/installers/index.js";
+import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 
 // This bootstraps the base Next.js application
 export const scaffoldProject = async ({
   projectName,
-  projectDir,
   pkgManager,
   noInstall,
 }: InstallerOptions) => {
+  const projectDir = state.projectDir;
   const srcDir = path.join(PKG_ROOT, "template/nextjs");
 
   if (!noInstall) {

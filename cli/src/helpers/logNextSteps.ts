@@ -2,6 +2,7 @@ import chalk from "chalk";
 
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { type InstallerOptions } from "~/installers/index.js";
+import { state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { logger } from "~/utils/logger.js";
 import { isInsideGitRepo, isRootGitRepo } from "./git.js";
@@ -10,8 +11,7 @@ import { isInsideGitRepo, isRootGitRepo } from "./git.js";
 export const logNextSteps = async ({
   projectName = DEFAULT_APP_NAME,
   noInstall,
-  projectDir,
-}: Pick<InstallerOptions, "projectName" | "noInstall" | "projectDir">) => {
+}: Pick<InstallerOptions, "projectName" | "noInstall">) => {
   const pkgManager = getUserPkgManager();
 
   logger.info(chalk.bold("Next steps:"));
@@ -31,7 +31,10 @@ export const logNextSteps = async ({
     }
   }
 
-  if (!(await isInsideGitRepo(projectDir)) && !isRootGitRepo(projectDir)) {
+  if (
+    !(await isInsideGitRepo(state.projectDir)) &&
+    !isRootGitRepo(state.projectDir)
+  ) {
     logger.dim(`\nInitialize a git repository:`);
     logger.info(`  git init`);
   }

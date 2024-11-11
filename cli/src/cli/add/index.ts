@@ -3,9 +3,11 @@ import chalk from "chalk";
 import { Command } from "commander";
 
 import { cliName, npmName } from "~/consts.js";
+import { ciOption, debugOption } from "~/globalOptions.js";
+import { initProgramState } from "~/state.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
-import { type Settings } from "~/utils/parseSettings.js";
+import { getSettings } from "~/utils/parseSettings.js";
 import { getNpmVersion } from "~/utils/renderVersionWarning.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { ensureProofKitProject } from "../utils.js";
@@ -17,10 +19,7 @@ import {
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
 
-export const runAdd = async (
-  name: string | undefined,
-  opts: { settings: Settings }
-) => {
+export const runAdd = async (name: string | undefined) => {
   const npmVersion = await getNpmVersion();
   const currentVersion = getVersion();
   if (currentVersion !== npmVersion) {
@@ -29,12 +28,11 @@ export const runAdd = async (
       `${chalk.yellow(
         `You are using an outdated version of ${cliName}.`
       )} Your version: ${currentVersion}. Latest version: ${npmVersion}.
-Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the latest updates.`
+      Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the latest updates.`
     );
   }
 
-  const settings = opts.settings;
-
+  const settings = getSettings();
   if (name === "tanstack-query") {
     return await runAddTanstackQueryCommand({ settings });
   }
@@ -62,11 +60,11 @@ Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the 
   if (addType === "auth") {
     await runAddAuthAction();
   } else if (addType === "data") {
-    await runAddDataSourceCommand({ settings });
+    await runAddDataSourceCommand();
   } else if (addType === "page") {
-    await runAddPageAction({ settings });
+    await runAddPageAction();
   } else if (addType === "schema") {
-    await runAddSchemaAction({ settings });
+    await runAddSchemaAction();
   }
 };
 
@@ -74,15 +72,19 @@ export const makeAddCommand = () => {
   const addCommand = new Command("add")
     .description("Add a new component to your project")
     .argument("name", "Type of component to add", undefined)
+    .addOption(ciOption)
+    .addOption(debugOption)
     .action(runAdd);
 
-  addCommand.hook("preAction", (_thisCommand, actionCommand) => {
-    const settings = ensureProofKitProject({ commandName: "add" });
-    actionCommand.setOptionValue("settings", settings);
+  addCommand.hook("preAction", (_thisCommand, _actionCommand) => {
+    // console.log("preAction", _actionCommand.opts());
+    initProgramState(_actionCommand.opts());
+    ensureProofKitProject({ commandName: "add" });
   });
-  addCommand.hook("preSubcommand", (_thisCommand, actionCommand) => {
-    const settings = ensureProofKitProject({ commandName: "add" });
-    actionCommand.setOptionValue("settings", settings);
+  addCommand.hook("preSubcommand", (_thisCommand, _subCommand) => {
+    // console.log("preSubcommand", _subCommand.opts());
+    initProgramState(_subCommand.opts());
+    ensureProofKitProject({ commandName: "add" });
   });
 
   addCommand.addCommand(makeAddAuthCommand());

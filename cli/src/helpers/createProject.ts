@@ -3,6 +3,7 @@ import path from "path";
 import { installPackages } from "~/helpers/installPackages.js";
 import { scaffoldProject } from "~/helpers/scaffoldProject.js";
 import { type PkgInstallerMap } from "~/installers/index.js";
+import { state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { replaceTextInFiles } from "./replaceText.js";
 
@@ -21,12 +22,11 @@ export const createBareProject = async ({
   noInstall,
 }: CreateProjectOptions) => {
   const pkgManager = getUserPkgManager();
-  const projectDir = path.resolve(process.cwd(), projectName);
+  state.projectDir = path.resolve(process.cwd(), projectName);
 
   // Bootstraps the base Next.js application
   await scaffoldProject({
     projectName,
-    projectDir,
     pkgManager,
     scopedAppName,
     noInstall,
@@ -36,14 +36,13 @@ export const createBareProject = async ({
   installPackages({
     projectName,
     scopedAppName,
-    projectDir,
     pkgManager,
     packages,
     noInstall,
   });
 
   replaceTextInFiles(
-    projectDir,
+    state.projectDir,
     "__PNPM_COMMAND__",
     pkgManager === "pnpm"
       ? "pnpm"
@@ -54,5 +53,5 @@ export const createBareProject = async ({
           : "npm run"
   );
 
-  return projectDir;
+  return state.projectDir;
 };

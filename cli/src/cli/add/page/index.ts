@@ -7,24 +7,21 @@ import fs from "fs-extra";
 import { PKG_ROOT } from "~/consts.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
-import { type DataSource, type Settings } from "~/utils/parseSettings.js";
+import { state } from "~/state.js";
+import { getSettings, type DataSource } from "~/utils/parseSettings.js";
 import { abortIfCancel } from "../../utils.js";
 import { pageTemplates } from "./templates.js";
 
-export const runAddPageAction = async ({
-  settings,
-  ...opts
-}: {
-  settings: Settings;
+export const runAddPageAction = async (opts?: {
   routeName?: string;
   pageName?: string;
   dataSourceName?: string;
   schemaName?: string;
   template?: string;
 }) => {
-  const projectDir = process.cwd();
+  const projectDir = state.projectDir;
   let routeName =
-    opts.routeName ??
+    opts?.routeName ??
     abortIfCancel(
       await p.text({
         message:
@@ -44,7 +41,7 @@ export const runAddPageAction = async ({
   }
 
   const pageName =
-    opts.pageName ??
+    opts?.pageName ??
     abortIfCancel(
       await p.text({
         message: `Enter page name:\n${chalk.dim("This title will show in the nav menu, unless left blank")}`,
@@ -53,7 +50,7 @@ export const runAddPageAction = async ({
     );
 
   const template =
-    opts.template ??
+    opts?.template ??
     abortIfCancel(
       await p.select({
         message: "What template should be used for this page?",
@@ -67,6 +64,7 @@ export const runAddPageAction = async ({
 
   const pageTemplate = pageTemplates[template];
   if (!pageTemplate) return p.cancel(`Page template ${template} not found`);
+  const settings = getSettings();
 
   let dataSource: DataSource | undefined;
   let schemaName: string | undefined;
@@ -77,7 +75,8 @@ export const runAddPageAction = async ({
       );
 
     const dataSourceName =
-      opts.dataSourceName ?? settings.dataSources.length > 1
+      opts?.dataSourceName ??
+      (settings.dataSources.length > 1
         ? abortIfCancel(
             await p.select({
               message: "Which data source should be used for this page?",
@@ -87,7 +86,7 @@ export const runAddPageAction = async ({
               })),
             })
           )
-        : settings.dataSources[0]?.name;
+        : settings.dataSources[0]?.name);
 
     dataSource = settings.dataSources.find(
       (dataSource) => dataSource.name === dataSourceName
@@ -135,9 +134,8 @@ export const runAddPageAction = async ({
 export const makeAddPageCommand = () => {
   const addPageCommand = new Command("page")
     .description("Add a new page to your project")
-    .action(async (opts: { settings: Settings }) => {
-      const settings = opts.settings;
-      await runAddPageAction({ settings });
+    .action(async () => {
+      await runAddPageAction();
     });
 
   return addPageCommand;

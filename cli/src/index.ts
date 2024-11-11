@@ -10,8 +10,10 @@ import { makeAddCommand, runAdd } from "./cli/add/index.js";
 import { makeTypegenCommand } from "./cli/typegen/index.js";
 import { UserAbortedError } from "./cli/utils.js";
 import { npmName } from "./consts.js";
+import { ciOption } from "./globalOptions.js";
+import { initProgramState, state } from "./state.js";
 import { getVersion } from "./utils/getProofKitVersion.js";
-import { parseSettings, type Settings } from "./utils/parseSettings.js";
+import { getSettings, type Settings } from "./utils/parseSettings.js";
 
 const version = getVersion();
 
@@ -23,17 +25,24 @@ const main = async () => {
     .name(npmName)
     .version(version)
     .command("default", { hidden: true, isDefault: true })
-    .action(async () => {
+    .addOption(ciOption)
+    .action(async (args) => {
+      initProgramState(args);
+
       let settings: Settings | undefined;
       try {
-        settings = parseSettings();
+        settings = getSettings();
       } catch {}
+
+      if (state.ci) {
+        logger.warn("Running in CI mode");
+      }
 
       if (settings) {
         p.intro(
           `Found ${proofGradient("ProofKit")} project, running \`add\`...`
         );
-        await runAdd(undefined, { settings });
+        await runAdd(undefined);
       } else {
         p.intro(
           `No ${proofGradient("ProofKit")} project found, running \`init\``

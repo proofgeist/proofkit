@@ -9,19 +9,19 @@ import { getLayouts } from "~/cli/fmdapi.js";
 import { PKG_ROOT } from "~/consts.js";
 import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
+import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
-import { parseSettings } from "~/utils/parseSettings.js";
+import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { installReactEmail } from "./react-email.js";
 
 export const proofkitAuthInstaller = async ({
-  projectDir,
   emailProvider,
 }: {
-  projectDir: string;
   emailProvider?: "plunk" | "resend";
 }) => {
+  const projectDir = state.projectDir;
   addPackageDependency({
     projectDir,
     dependencies: [
@@ -100,7 +100,7 @@ export const proofkitAuthInstaller = async ({
     projectDir,
     runCodegen: false,
   });
-  await installReactEmail({ projectDir, project, emailProvider });
+  await installReactEmail({ project });
 
   await formatAndSaveSourceFiles(project);
 
@@ -139,7 +139,7 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 }
 
 async function checkForProofKitLayouts(projectDir: string) {
-  const settings = parseSettings(projectDir);
+  const settings = getSettings();
 
   const dataSource = settings.dataSources
     .filter((s) => s.type === "fm")

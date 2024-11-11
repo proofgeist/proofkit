@@ -8,15 +8,12 @@ import dotenv from "dotenv";
 import { z } from "zod";
 
 import { addLayout, getExistingSchemas } from "~/generators/fmdapi.js";
-import { type Settings } from "~/utils/parseSettings.js";
+import { state } from "~/state.js";
+import { getSettings, type Settings } from "~/utils/parseSettings.js";
 import { commonFileMakerLayoutPrefixes, getLayouts } from "../fmdapi.js";
 import { abortIfCancel } from "../utils.js";
 
-export const runAddSchemaAction = async ({
-  projectDir = process.cwd(),
-  settings,
-  ...opts
-}: {
+export const runAddSchemaAction = async (opts?: {
   projectDir?: string;
   settings: Settings;
   sourceName?: string;
@@ -24,7 +21,9 @@ export const runAddSchemaAction = async ({
   schemaName?: string;
   valueLists?: ValueListsOptions;
 }) => {
-  let sourceName = opts.sourceName;
+  const settings = getSettings();
+  const projectDir = state.projectDir;
+  let sourceName = opts?.sourceName;
   if (!sourceName) {
     // if there is more than one fm data source, we need to prompt for which one to add the layout to
     if (settings.dataSources.filter((s) => s.type === "fm").length > 1) {
@@ -41,7 +40,7 @@ export const runAddSchemaAction = async ({
       sourceName = z.string().parse(dataSourceName);
     }
   } else {
-    sourceName = opts.sourceName;
+    sourceName = opts?.sourceName;
   }
 
   if (!sourceName) sourceName = "filemaker";
@@ -97,7 +96,7 @@ export const runAddSchemaAction = async ({
     );
   }
 
-  let passedInLayoutName: string | undefined = opts.layoutName;
+  let passedInLayoutName: string | undefined = opts?.layoutName;
   if (
     passedInLayoutName === "" ||
     !layouts.includes(passedInLayoutName ?? "")
@@ -120,7 +119,7 @@ export const runAddSchemaAction = async ({
 
   const defaultSchemaName = getDefaultSchemaName(selectedLayout);
   const schemaName =
-    opts.schemaName ||
+    opts?.schemaName ||
     abortIfCancel(
       await p.text({
         message: `Enter a friendly name for the new schema.\n${chalk.dim("This will the name by which you refer to this layout in your codebase")}`,
@@ -143,7 +142,7 @@ export const runAddSchemaAction = async ({
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const valueLists =
-    opts.valueLists ??
+    opts?.valueLists ??
     ((await p.select({
       message: `Should we use value lists on this layout?\n${chalk.dim(
         "This will allow fields that contain a value list to be auto-completed in typescript and also validated to prevent incorrect values"

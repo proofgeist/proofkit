@@ -14,7 +14,7 @@ import { type z } from "zod";
 import { PKG_ROOT } from "~/consts.js";
 import { runExecCommand } from "~/helpers/installDependencies.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
-import { parseSettings, type envNamesSchema } from "~/utils/parseSettings.js";
+import { getSettings, type envNamesSchema } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
 type Schema = GenerateSchemaOptionsSingle["schemas"][number];
@@ -103,7 +103,7 @@ export async function runCodegenCommand({
 }: {
   projectDir: string;
 }) {
-  const settings = parseSettings(projectDir);
+  const settings = getSettings();
   const pkgManager = getUserPkgManager();
   const { failed } = await execa(
     pkgManager === "npm"

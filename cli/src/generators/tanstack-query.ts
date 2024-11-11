@@ -5,7 +5,7 @@ import { SyntaxKind, type Project } from "ts-morph";
 import { PKG_ROOT } from "~/consts.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import {
-  parseSettings,
+  getSettings,
   setSettings,
   type Settings,
 } from "~/utils/parseSettings.js";
@@ -19,7 +19,7 @@ export async function injectTanstackQuery({
   projectDir: string;
   project?: Project;
 }) {
-  const settings = args.settings ?? parseSettings(projectDir);
+  const settings = args.settings ?? getSettings();
   if (settings.tanstackQuery) return;
 
   addPackageDependency({
@@ -82,5 +82,5 @@ export async function injectTanstackQuery({
     await formatAndSaveSourceFiles(project);
   }
 
-  setSettings({ ...settings, tanstackQuery: true }, projectDir);
+  setSettings({ ...settings, tanstackQuery: true });
 }

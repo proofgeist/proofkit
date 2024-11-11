@@ -3,12 +3,12 @@ import fs from "fs-extra";
 
 import { PKG_ROOT } from "~/consts.js";
 import { type InstallerOptions } from "~/installers/index.js";
+import { state } from "~/state.js";
 
-type SelectBoilerplateProps = Required<
-  Pick<InstallerOptions, "packages" | "projectDir">
->;
+type SelectBoilerplateProps = Required<Pick<InstallerOptions, "packages">>;
 
-export const selectLayoutFile = ({ projectDir }: SelectBoilerplateProps) => {
+export const selectLayoutFile = ({}: SelectBoilerplateProps) => {
+  const projectDir = state.projectDir;
   const layoutFileDir = path.join(PKG_ROOT, "template/extras/src/app/layout");
 
   const layoutFile = "base.tsx";
@@ -23,7 +23,8 @@ export const selectLayoutFile = ({ projectDir }: SelectBoilerplateProps) => {
   );
 };
 
-export const selectPageFile = ({ projectDir }: SelectBoilerplateProps) => {
+export const selectPageFile = ({}: SelectBoilerplateProps) => {
+  const projectDir = state.projectDir;
   const indexFileDir = path.join(PKG_ROOT, "template/extras/src/app/page");
 
   const indexFile = "base.tsx";

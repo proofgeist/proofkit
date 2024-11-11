@@ -2,20 +2,24 @@ import path from "path";
 import fs from "fs-extra";
 import { z } from "zod";
 
-const authSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("clerk"),
-  }),
-  z.object({
-    type: z.literal("next-auth"),
-  }),
-  z.object({
-    type: z.literal("proofkit"),
-  }),
-  z.object({
-    type: z.literal("none"),
-  }),
-]);
+import { state } from "~/state.js";
+
+const authSchema = z
+  .discriminatedUnion("type", [
+    z.object({
+      type: z.literal("clerk"),
+    }),
+    z.object({
+      type: z.literal("next-auth"),
+    }),
+    z.object({
+      type: z.literal("proofkit"),
+    }),
+    z.object({
+      type: z.literal("none"),
+    }),
+  ])
+  .default({ type: "none" });
 
 export const envNamesSchema = z.object({
   database: z.string().default("FM_DATABASE"),
@@ -42,22 +46,32 @@ const settingsSchema = z.object({
   tanstackQuery: z.boolean().catch(false),
 });
 
-export const parseSettings = (projectDir?: string) => {
-  const settings: Settings = fs.readJSONSync(
-    path.join(projectDir ?? process.cwd(), "proofkit.json")
-  ) as Settings;
-  return settingsSchema.parse(settings);
+export const defaultSettings = settingsSchema.parse({ auth: { type: "none" } });
+
+let settings: Settings | undefined;
+export const getSettings = () => {
+  if (settings) return settings;
+
+  const settingsFile: unknown = fs.readJSONSync(
+    path.join(state.projectDir, "proofkit.json")
+  );
+
+  const parsed = settingsSchema.parse(settingsFile);
+  settings = parsed;
+  return settings;
 };
 
 export type Settings = z.infer<typeof settingsSchema>;
 
-export function setSettings(settings: Settings, projectDir?: string) {
-  fs.writeJSONSync(
-    path.join(projectDir ?? process.cwd(), "proofkit.json"),
-    settings,
-    {
-      spaces: 2,
-    }
-  );
+export function mergeSettings(_settings: Partial<Settings>) {
+  const settings = getSettings();
+  setSettings({ ...settings, ..._settings });
+}
+
+export function setSettings(_settings: Settings) {
+  fs.writeJSONSync(path.join(state.projectDir, "proofkit.json"), _settings, {
+    spaces: 2,
+  });
+  settings = _settings;
   return settings;
 }

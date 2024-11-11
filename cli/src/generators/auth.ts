@@ -1,11 +1,7 @@
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { clerkInstaller } from "~/installers/clerk.js";
 import { proofkitAuthInstaller } from "~/installers/proofkit-auth.js";
-import {
-  parseSettings,
-  setSettings,
-  type Settings,
-} from "~/utils/parseSettings.js";
+import { getSettings, mergeSettings } from "~/utils/parseSettings.js";
 
 export async function addAuth({
   options,
@@ -14,23 +10,23 @@ export async function addAuth({
 }: {
   options:
     | { type: "clerk" }
-    | { type: "proofkit"; emailProvider?: "plunk" | "resend" };
+    | {
+        type: "proofkit";
+        emailProvider?: "plunk" | "resend";
+        apiKey?: string;
+      };
   projectDir?: string;
   noInstall?: boolean;
 }) {
-  const settings = parseSettings(projectDir);
+  const settings = getSettings();
   if (settings.auth.type !== "none") {
     throw new Error("Auth already exists");
   }
 
   if (options.type === "clerk") {
-    await addClerkAuth({ settings, projectDir });
+    await addClerkAuth({ projectDir });
   } else if (options.type === "proofkit") {
-    await addProofkitAuth({
-      settings,
-      projectDir,
-      emailProvider: options.emailProvider,
-    });
+    await addProofkitAuth(options);
   }
 
   if (!noInstall) {
@@ -39,25 +35,19 @@ export async function addAuth({
 }
 
 async function addClerkAuth({
-  settings,
   projectDir = process.cwd(),
 }: {
-  settings: Settings;
   projectDir?: string;
 }) {
   await clerkInstaller({ projectDir });
-  setSettings({ ...settings, auth: { type: "clerk" } }, projectDir);
+  mergeSettings({ auth: { type: "clerk" } });
 }
 
 async function addProofkitAuth({
-  settings,
-  projectDir = process.cwd(),
   emailProvider,
 }: {
-  settings: Settings;
-  projectDir?: string;
   emailProvider?: "plunk" | "resend";
 }) {
-  await proofkitAuthInstaller({ projectDir, emailProvider });
-  setSettings({ ...settings, auth: { type: "proofkit" } }, projectDir);
+  await proofkitAuthInstaller({ emailProvider });
+  mergeSettings({ auth: { type: "proofkit" } });
 }

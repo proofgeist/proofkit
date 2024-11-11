@@ -15,7 +15,7 @@ import { fetchServerVersions } from "~/helpers/version-fetcher.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
 import {
-  parseSettings,
+  getSettings,
   setSettings,
   type dataSourceSchema,
 } from "~/utils/parseSettings.js";
@@ -36,7 +36,7 @@ export async function promptForFileMakerDataSource({
   layoutName?: string;
   schemaName?: string;
 }) {
-  const settings = parseSettings(projectDir);
+  const settings = getSettings();
 
   const existingFmDataSourceNames = settings.dataSources
     .filter((ds) => ds.type === "fm")
@@ -195,7 +195,7 @@ export async function promptForFileMakerDataSource({
   });
 
   settings.dataSources.push(newDataSource);
-  setSettings(settings, projectDir);
+  setSettings(settings);
 
   addToFmschemaConfig({
     projectDir,

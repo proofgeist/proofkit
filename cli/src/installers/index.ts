@@ -16,7 +16,6 @@ export const availablePackages = [
 export type AvailablePackages = (typeof availablePackages)[number];
 
 export interface InstallerOptions {
-  projectDir: string;
   pkgManager: PackageManager;
   noInstall: boolean;
   packages?: PkgInstallerMap;

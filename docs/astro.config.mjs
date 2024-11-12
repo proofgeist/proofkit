@@ -12,7 +12,7 @@ export default defineConfig({
     starlight({
       title: "ProofKit CLI",
       social: {
-        github: "https://github.com/proofgeist/kit",
+        github: "https://github.com/proofgeist/proofkit",
       },
       sidebar: [
         {

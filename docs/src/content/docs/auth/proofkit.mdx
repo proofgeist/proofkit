@@ -35,6 +35,8 @@ By default, ProofKit Auth works with an email/password based login and asks user
 
 To customize the email sent to your users, edit the `src/server/auth/email.tsx` file. The actual email is rendered to HTML using the [React Email](https://react.email/docs/introduction) library and can be sent with any email service you choose, but ProofKit has built-in support for [Resend](https://resend.com/) and [Plunk](https://www.useplunk.com/).
 
+## Usage
+
 ## Customizing
 
 :::danger[Security Considerations]
@@ -55,9 +57,9 @@ Then, we suggest running the `tsc` command to check for any errors in the ProofK
 
 For example, if you added new fields to the session or user layouts, you will likely need to update the functions that create records in those tables and provide some default values.
 
-### Expiration Timestamps
-
-For all expiration timestamps, they are stored as number fields representing the number of milliseconds since the Unix Epoch and these are a bit easier to work with in JavaScript. Any record with an expiration timestamp in the past can be safely deleted, as it simply represents an abandonded session, email verification, or password reset request.
+:::tip[A quick note on field types]
+All expiration timestamps are stored as number fields representing the number of milliseconds since the Unix Epoch and these are a bit easier to work with in JavaScript. Any record with an expiration timestamp in the past can be safely deleted, as it simply represents an abandonded session, email verification, or password reset request.
+:::
 
 ### Session Table
 
@@ -86,3 +88,7 @@ By default, the layout for the verification table should be named `proofkit_auth
 The purpose of this table is to store a request for a user to reset their password until they have successfully reset their password by entering the code sent to their email address.
 
 By default, the layout for the password reset table should be named `proofkit_auth_password_reset` but this can be customized in the fmschema.config.mjs file.
+
+### Alternative Authentication Methods
+
+At this time, ProofKit Auth will only setup email/password authentication for you, but any other authentication methods can be added by modifying the code yourself. Guides for integrating OAuth providers, passkeys (WebAuthn), two-factor, and more are available in the [Lucia documentation](https://lucia-auth.com/). Just keep in mind that you'll likely need to add more fields to the tables and layouts as mentioned above to support those additional features.

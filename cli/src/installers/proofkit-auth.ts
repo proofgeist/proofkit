@@ -3,6 +3,7 @@ import path from "path";
 import { type OttoAPIKey } from "@proofgeist/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
+import { execa } from "execa";
 import fs from "fs-extra";
 import { type SourceFile } from "ts-morph";
 
@@ -12,6 +13,7 @@ import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
+import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
@@ -217,13 +219,25 @@ async function checkForProofKitLayouts(projectDir: string): Promise<boolean> {
     { overwrite: true }
   );
 
+  const steps = [
+    "Restart FileMaker Pro (if it's currently running)",
+    "Open your FileMaker file, go to layout mode, and install the ProofKit Auth addon to the file ",
+    "Run the typegen command to add the types into your project:",
+  ];
+
   console.log("");
   console.log(chalk.bgYellow(" ACTION REQUIRED: "));
   console.log(
     `${chalk.yellowBright(
       "You must install the ProofKit Auth addon in your FileMaker file."
-    )}
-Learn more: https://proofkit.dev/auth/proofkit\n`
+    )} ${chalk.dim("(Learn more: https://proofkit.dev/auth/proofkit)")}`
   );
+  steps.forEach((step, index) => {
+    console.log(`${index + 1}. ${step}`);
+  });
+
+  console.log(chalk.cyan(`     ${getUserPkgManager()} typegen`));
+  console.log("");
+
   return false;
 }

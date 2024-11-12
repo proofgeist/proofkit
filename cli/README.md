@@ -16,4 +16,4 @@
   Get started with a new ProofKit project by running <code>pnpx @proofgeist/kit@latest</code>
 </p>
 
-View full documentation at [proofkit.proofgeist.com](https://proofkit.proofgeist.com)
+View full documentation at [proofkit.dev](https://proofkit.dev)

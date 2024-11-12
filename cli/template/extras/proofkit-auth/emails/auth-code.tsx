@@ -22,7 +22,7 @@ export const AuthCodeEmail = ({ validationCode, type }: AuthCodeEmailProps) => (
       <Container style={container}>
         <Img
           // TODO: Replace with your logo
-          src="https://proofkit.proofgeist.com/_astro/proofkit.DNcFg0_B_1JN3Dz.webp"
+          src="https://proofkit.dev/_astro/proofkit.DNcFg0_B_1JN3Dz.webp"
           width="238"
           height="175"
           alt="ProofKit"

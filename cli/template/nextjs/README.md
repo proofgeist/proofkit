@@ -10,7 +10,7 @@ To add new things to your project, simply run the `proofkit` script from the pro
 
 e.g. `npm run proofkit` or `pnpm proofkit` etc.
 
-For more information, see the full [ProofKit documentation](https://proofkit.proofgeist.com).
+For more information, see the full [ProofKit documentation](https://proofkit.dev).
 
 ## Project Structure
 

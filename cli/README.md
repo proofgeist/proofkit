@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Get started with a new ProofKit project by running <code>pnpx @proofgeist/kit@latest</code>
+  Get started with a new ProofKit project by running <code>pnpm create proofkit</code>
 </p>
 
 View full documentation at [proofkit.dev](https://proofkit.dev)

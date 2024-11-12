@@ -35,6 +35,11 @@ export async function createPasswordResetSession(
   return session;
 }
 
+/**
+ * Validate a password reset session token.
+ * @param token - The password reset session token.
+ * @returns The password reset session, or null if it doesn't exist.
+ */
 export async function validatePasswordResetSessionToken(
   token: string
 ): Promise<PasswordResetSessionValidationResult> {

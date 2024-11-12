@@ -6,9 +6,19 @@ import { emailVerificationLayout } from "../db/client";
 import { TemailVerification } from "../db/emailVerification";
 import { sendEmail } from "../email";
 
+/**
+ * An Email Verification Request is a record in the email verification table that is created when a user requests to change their email address. It's like a temporary session which can expire if the user doesn't verify the new email address within a certain amount of time.
+ */
+
+/**
+ * Get a user's email verification request.
+ * @param userId - The ID of the user.
+ * @param id - The ID of the email verification request.
+ * @returns The email verification request, or null if it doesn't exist.
+ */
 export async function getUserEmailVerificationRequest(
   userId: string,
-  id: string
+  id: string,
 ): Promise<TemailVerification | null> {
   const result = await emailVerificationLayout.maybeFindFirst({
     query: { id_user: `==${userId}`, id: `==${id}` },
@@ -16,9 +26,15 @@ export async function getUserEmailVerificationRequest(
   return result?.data.fieldData ?? null;
 }
 
+/**
+ * Create a new email verification request for a user.
+ * @param id_user - The ID of the user.
+ * @param email - The email address to verify.
+ * @returns The email verification request.
+ */
 export async function createEmailVerificationRequest(
   id_user: string,
-  email: string
+  email: string,
 ): Promise<TemailVerification> {
   deleteUserEmailVerificationRequest(id_user);
   const idBytes = new Uint8Array(20);
@@ -43,8 +59,12 @@ export async function createEmailVerificationRequest(
   return request;
 }
 
+/**
+ * Delete a user's email verification request.
+ * @param id_user - The ID of the user.
+ */
 export async function deleteUserEmailVerificationRequest(
-  id_user: string
+  id_user: string,
 ): Promise<void> {
   const result = await emailVerificationLayout.maybeFindFirst({
     query: { id_user: `==${id_user}` },
@@ -54,15 +74,24 @@ export async function deleteUserEmailVerificationRequest(
   await emailVerificationLayout.delete({ recordId: result.data.recordId });
 }
 
+/**
+ * Send a verification email to a user.
+ * @param email - The email address to send the verification email to.
+ * @param code - The verification code to send to the user.
+ */
 export async function sendVerificationEmail(
   email: string,
-  code: string
+  code: string,
 ): Promise<void> {
   await sendEmail({ to: email, code, type: "verification" });
 }
 
+/**
+ * Set a cookie for a user's email verification request.
+ * @param request - The email verification request.
+ */
 export async function setEmailVerificationRequestCookie(
-  request: TemailVerification
+  request: TemailVerification,
 ): Promise<void> {
   (await cookies()).set("email_verification", request.id, {
     httpOnly: true,
@@ -75,6 +104,9 @@ export async function setEmailVerificationRequestCookie(
   });
 }
 
+/**
+ * Delete the cookie for a user's email verification request.
+ */
 export async function deleteEmailVerificationRequestCookie(): Promise<void> {
   (await cookies()).set("email_verification", "", {
     httpOnly: true,
@@ -85,6 +117,10 @@ export async function deleteEmailVerificationRequestCookie(): Promise<void> {
   });
 }
 
+/**
+ * Get a user's email verification request from the cookie.
+ * @returns The email verification request, or null if it doesn't exist.
+ */
 export async function getUserEmailVerificationRequestFromRequest(): Promise<TemailVerification | null> {
   const { user } = await getCurrentSession();
   if (user === null) {

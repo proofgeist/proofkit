@@ -10,6 +10,10 @@ import type { User } from "./user";
 import { sessionsLayout } from "../db/client";
 import { Tsessions as _Session } from "../db/sessions";
 
+/**
+ * Generate a random session token with sufficient entropy for a session ID.
+ * @returns The session token.
+ */
 export function generateSessionToken(): string {
   const bytes = new Uint8Array(20);
   crypto.getRandomValues(bytes);
@@ -17,9 +21,15 @@ export function generateSessionToken(): string {
   return token;
 }
 
+/**
+ * Create a new session for a user and save it to the database.
+ * @param token - The session token.
+ * @param userId - The ID of the user.
+ * @returns The session.
+ */
 export async function createSession(
   token: string,
-  userId: string
+  userId: string,
 ): Promise<Session> {
   const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
   const session: Session = {
@@ -40,6 +50,10 @@ export async function createSession(
   return session;
 }
 
+/**
+ * Invalidate a session by deleting it from the database.
+ * @param sessionId - The ID of the session to invalidate.
+ */
 export async function invalidateSession(sessionId: string): Promise<void> {
   const fmResult = await sessionsLayout.maybeFindFirst({
     query: { id: `==${sessionId}` },
@@ -50,8 +64,13 @@ export async function invalidateSession(sessionId: string): Promise<void> {
   await sessionsLayout.delete({ recordId: fmResult.data.recordId });
 }
 
+/**
+ * Validate a session token to make sure it still exists in the database and hasn't expired.
+ * @param token - The session token.
+ * @returns The session, or null if it doesn't exist.
+ */
 export async function validateSessionToken(
-  token: string
+  token: string,
 ): Promise<SessionValidationResult> {
   const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 
@@ -78,10 +97,15 @@ export async function validateSessionToken(
     emailVerified: Boolean(fmResult["proofkit_auth_users::emailVerified"]),
     username: fmResult["proofkit_auth_users::username"],
   };
+
+  // delete session if it has expired
   if (Date.now() >= session.expiresAt.getTime()) {
     await sessionsLayout.delete({ recordId });
     return { session: null, user: null };
   }
+
+  // extend session if it's going to expire soon
+  // You may want to customize this logic to better suit your app's requirements
   if (Date.now() >= session.expiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
     session.expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
     await sessionsLayout.update({
@@ -91,9 +115,16 @@ export async function validateSessionToken(
       },
     });
   }
+
   return { session, user };
 }
 
+/**
+ * Get the current session from the cookie.
+ * Wrapped in a React cache to avoid calling the database more than once per request
+ * This function can be used in server components, server actions, and route handlers (but importantly not middleware).
+ * @returns The session, or null if it doesn't exist.
+ */
 export const getCurrentSession = cache(
   async (): Promise<SessionValidationResult> => {
     const token = (await cookies()).get("session")?.value ?? null;
@@ -102,9 +133,13 @@ export const getCurrentSession = cache(
     }
     const result = await validateSessionToken(token);
     return result;
-  }
+  },
 );
 
+/**
+ * Invalidate all sessions for a user by deleting them from the database.
+ * @param userId - The ID of the user.
+ */
 export async function invalidateUserSessions(userId: string): Promise<void> {
   const sessions = await sessionsLayout.findAll({
     query: { id_user: `==${userId}` },
@@ -114,9 +149,14 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Set a cookie for a session.
+ * @param token - The session token.
+ * @param expiresAt - The expiration date of the session.
+ */
 export async function setSessionTokenCookie(
   token: string,
-  expiresAt: Date
+  expiresAt: Date,
 ): Promise<void> {
   (await cookies()).set("session", token, {
     httpOnly: true,
@@ -127,6 +167,9 @@ export async function setSessionTokenCookie(
   });
 }
 
+/**
+ * Delete the session cookie.
+ */
 export async function deleteSessionTokenCookie(): Promise<void> {
   (await cookies()).set("session", "", {
     httpOnly: true,
@@ -137,9 +180,7 @@ export async function deleteSessionTokenCookie(): Promise<void> {
   });
 }
 
-export interface SessionFlags {}
-
-export interface Session extends SessionFlags {
+export interface Session {
   id: string;
   expiresAt: Date;
   id_user: string;

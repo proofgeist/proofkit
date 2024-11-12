@@ -16,11 +16,22 @@ export function encrypt(data: Uint8Array): Uint8Array {
   return encrypted.bytes();
 }
 
+/**
+ * Encrypt a string for storage in the database.
+ * Here we're returning a base64 encoded string since FileMaker doesn't store binary data.
+ * @param data - The string to encrypt.
+ * @returns The encrypted string.
+ */
 export function encryptString(data: string): string {
   const encrypted = encrypt(new TextEncoder().encode(data));
   return Buffer.from(encrypted).toString("base64");
 }
 
+/**
+ * Decrypt a string stored in the database.
+ * @param encrypted - The encrypted string to decrypt.
+ * @returns The decrypted string.
+ */
 export function decrypt(encrypted: Uint8Array): Uint8Array {
   if (encrypted.byteLength < 33) {
     throw new Error("Invalid data");

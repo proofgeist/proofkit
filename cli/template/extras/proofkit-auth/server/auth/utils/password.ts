@@ -2,6 +2,11 @@ import { hash, verify } from "@node-rs/argon2";
 import { sha1 } from "@oslojs/crypto/sha1";
 import { encodeHexLowerCase } from "@oslojs/encoding";
 
+/**
+ * Hash a password using Argon2.
+ * @param password - The password to hash.
+ * @returns The hashed password.
+ */
 export async function hashPassword(password: string): Promise<string> {
   return await hash(password, {
     memoryCost: 19456,
@@ -11,6 +16,12 @@ export async function hashPassword(password: string): Promise<string> {
   });
 }
 
+/**
+ * Verify that a password matches a hash.
+ * @param hash - The hash to verify against.
+ * @param password - The password to verify.
+ * @returns True if the password matches the hash, false otherwise.
+ */
 export async function verifyPasswordHash(
   hash: string,
   password: string,
@@ -18,6 +29,11 @@ export async function verifyPasswordHash(
   return await verify(hash, password);
 }
 
+/**
+ * Verify that a password is strong enough.
+ * @param password - The password to verify.
+ * @returns True if the password is strong enough, false otherwise.
+ */
 export async function verifyPasswordStrength(
   password: string,
 ): Promise<boolean> {
@@ -34,6 +50,9 @@ export async function verifyPasswordStrength(
   for (const item of items) {
     const hashSuffix = item.slice(0, 35).toLowerCase();
     if (hash === hashPrefix + hashSuffix) {
+      console.log(
+        "User's new password was found in list of compromised passwords, reject",
+      );
       return false;
     }
   }

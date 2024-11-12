@@ -1,15 +1,17 @@
 import { usersLayout } from "../db/client";
 import { Tusers as _User } from "../db/users";
 
-export type User = Omit<
-  _User,
-  "password_hash" | "recovery_code" | "emailVerified"
+export type User = Partial<
+  Omit<_User, "id" | "password_hash" | "recovery_code" | "emailVerified">
 > & {
+  id: string;
+  email: string;
   emailVerified: boolean;
 };
 
 import { hashPassword, verifyPasswordHash } from "./password";
 
+/** An internal helper function to fetch a user from the database. */
 async function fetchUser(userId: string) {
   const { data } = await usersLayout.findOne({
     query: { id: `==${userId}` },
@@ -17,6 +19,7 @@ async function fetchUser(userId: string) {
   return data;
 }
 
+/** Create a new user in the database. */
 export async function createUser(
   email: string,
   password: string
@@ -41,6 +44,7 @@ export async function createUser(
   return user;
 }
 
+/** Update a user's password in the database. */
 export async function updateUserPassword(
   userId: string,
   password: string
@@ -98,6 +102,12 @@ export async function getUserFromEmail(email: string): Promise<User | null> {
   return user;
 }
 
+/**
+ * Validate a user's email/password combination.
+ * @param email - The user's email.
+ * @param password - The user's password.
+ * @returns The user, or null if the login is invalid.
+ */
 export async function validateLogin(
   email: string,
   password: string

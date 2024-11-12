@@ -41,14 +41,14 @@ export const dependencyVersionMap = {
   "server-only": "^0.0.1",
 
   // Clerk
-  "@clerk/nextjs": "^5.6.0",
+  "@clerk/nextjs": "^6.3.1",
   "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
   "@proofgeist/fmdapi": "^4.2.0",
 
   // ProofKit
-  "@proofgeist/kit": getVersion(),
+  "@proofgeist/kit": `^${getVersion()}`,
 
   // Tanstack Query
   "@tanstack/react-query": "^5.59.0",

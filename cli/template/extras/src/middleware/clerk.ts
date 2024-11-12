@@ -4,9 +4,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // to restrict public access to the home page, remove "/" from the array
 const isPublicRoute = createRouteMatcher(["/auth/(.*)", "/"]);
 
-export default clerkMiddleware((auth, request) => {
+export default clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {
-    auth().protect();
+    await auth.protect();
   }
 });
 

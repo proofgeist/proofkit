@@ -63,10 +63,12 @@ export async function promptForFileMakerDataSource({
       await p.select({
         message: `Which file would you like to connect to? ${chalk.dim(`(TIP: Select the file where your data is stored)`)}`,
         maxItems: 10,
-        options: fileList.map((file) => ({
-          value: file.filename,
-          label: file.filename,
-        })),
+        options: fileList
+          .sort((a, b) => a.filename.localeCompare(b.filename))
+          .map((file) => ({
+            value: file.filename,
+            label: file.filename,
+          })),
       })
     );
   const fmFile = selectedFile;

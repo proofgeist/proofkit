@@ -96,6 +96,7 @@ export async function invalidateUserPasswordResetSessions(
 ): Promise<void> {
   const sessions = await passwordResetLayout.find({
     query: { id_user: `==${userId}` },
+    ignoreEmptyResult: true,
   });
   for (const session of sessions.data) {
     await passwordResetLayout.delete({ recordId: session.recordId });

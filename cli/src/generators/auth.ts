@@ -48,6 +48,6 @@ async function addProofkitAuth({
 }: {
   emailProvider?: "plunk" | "resend";
 }) {
-  await proofkitAuthInstaller({ emailProvider });
+  await proofkitAuthInstaller();
   mergeSettings({ auth: { type: "proofkit" } });
 }

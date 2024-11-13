@@ -42,6 +42,7 @@ export default function UpdatePasswordForm() {
           label="Password"
           style={{ flexGrow: 1 }}
           value="••••••••"
+          readOnly
         />
         <Button
           size="sm"

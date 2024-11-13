@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { execa, type StdoutStderrOption } from "execa";
 import ora, { type Ora } from "ora";
 
+import { state } from "~/state.js";
 import {
   getUserPkgManager,
   type PackageManager,
@@ -77,9 +78,9 @@ const runInstallCommand = async (
 };
 
 export const installDependencies = async ({
-  projectDir,
+  projectDir = state.projectDir,
 }: {
-  projectDir: string;
+  projectDir?: string;
 }) => {
   logger.info("Installing dependencies...");
   const pkgManager = getUserPkgManager();

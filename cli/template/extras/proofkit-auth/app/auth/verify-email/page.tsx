@@ -3,12 +3,8 @@ import { Anchor, Container, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
 import EmailVerificationForm from "./email-verification-form";
 import ResendButton from "./resend-button";
-import {
-  createEmailVerificationRequest,
-  getUserEmailVerificationRequestFromRequest,
-  sendVerificationEmail,
-  setEmailVerificationRequestCookie,
-} from "@/server/auth/utils/email-verification";
+import { getUserEmailVerificationRequestFromRequest } from "@/server/auth/utils/email-verification";
+import { getRedirectCookie } from "@/server/auth/utils/redirect";
 
 export default async function Page() {
   const { user } = await getCurrentSession();
@@ -21,7 +17,8 @@ export default async function Page() {
   // but we can't set cookies inside server components.
   let verificationRequest = await getUserEmailVerificationRequestFromRequest();
   if (verificationRequest === null && user.emailVerified) {
-    return redirect("/");
+    const redirectTo = await getRedirectCookie();
+    return redirect(redirectTo);
   }
 
   return (

@@ -1,8 +1,10 @@
 import * as clack from "@clack/prompts";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import chalk from "chalk";
 import open from "open";
 import randomstring from "randomstring";
+
+import { abortIfCancel } from "./utils.js";
 
 interface WizardResponse {
   token: string;
@@ -144,23 +146,70 @@ export async function createDataAPIKey({
   clack.log.info(
     `${chalk.cyan("Creating a Data API Key")}\nEnter FileMaker credentials for ${chalk.bold(filename)}.\n${chalk.dim(`The account must have the fmrest extended privilege enabled.`)}`
   );
-  const username = await clack.text({
-    message: `Enter the account name for ${chalk.bold(filename)}`,
-  });
 
-  const password = await clack.password({
-    message: `Enter the password for ${chalk.bold(filename)}`,
-  });
+  while (true) {
+    const username = abortIfCancel(
+      await clack.text({
+        message: `Enter the account name for ${chalk.bold(filename)}`,
+      })
+    );
 
-  const response = await axios.post<CreateAPIKeyResponse>(
-    `${url.origin}/otto/api/api-key/create-only`,
-    {
-      database: filename,
-      label: "For FM Web App",
-      user: username,
-      pass: password,
+    const password = abortIfCancel(
+      await clack.password({
+        message: `Enter the password for ${chalk.bold(username)}`,
+      })
+    );
+
+    try {
+      const response = await axios.post<CreateAPIKeyResponse>(
+        `${url.origin}/otto/api/api-key/create-only`,
+        {
+          database: filename,
+          label: "For FM Web App",
+          user: username,
+          pass: password,
+        }
+      );
+
+      return { apiKey: response.data.response.key };
+    } catch (error) {
+      if (!(error instanceof AxiosError)) {
+        clack.log.error(
+          `${chalk.red("Error creating Data API key:")} Unknown error`
+        );
+      } else {
+        const respMsg =
+          error.response?.data && "messages" in error.response.data
+            ? (error.response.data as { messages?: { text?: string }[] })
+                .messages?.[0]?.text
+            : undefined;
+
+        clack.log.error(
+          `${chalk.red("Error creating Data API key:")} ${
+            respMsg ?? `Error code ${error.response?.status}`
+          }
+${chalk.dim(
+  error.response?.status === 400 &&
+    `Common reasons this might happen:
+- The provided credentials are incorrect.
+- The account does not have the fmrest extended privilege enabled.
+
+You may also want to try to create an API directly in the OttoFMS dashboard:
+${url.origin}/otto/app/api-keys`
+)}
+        `
+        );
+      }
+      const tryAgain = abortIfCancel(
+        await clack.confirm({
+          message: "Do you want to try and enter credentials again?",
+          active: "Yes, try again",
+          inactive: "No, abort",
+        })
+      );
+      if (!tryAgain) {
+        throw new Error("User cancelled");
+      }
     }
-  );
-
-  return { apiKey: response.data.response.key };
+  }
 }

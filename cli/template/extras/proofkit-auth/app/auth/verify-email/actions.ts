@@ -16,6 +16,7 @@ import {
 import { invalidateUserPasswordResetSessions } from "@/server/auth/utils/password-reset";
 import { updateUserEmailAndSetEmailAsVerified } from "@/server/auth/utils/user";
 import { redirect } from "next/navigation";
+import { getRedirectCookie } from "@/server/auth/utils/redirect";
 
 export const verifyEmailAction = actionClient
   .schema(emailVerificationSchema)
@@ -67,7 +68,9 @@ export const verifyEmailAction = actionClient
       verificationRequest.email
     );
     await deleteEmailVerificationRequestCookie();
-    return redirect("/");
+
+    const redirectTo = await getRedirectCookie();
+    return redirect(redirectTo);
   });
 
 export const resendEmailVerificationAction = actionClient.action(async () => {

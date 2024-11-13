@@ -9,6 +9,7 @@ import {
   setSessionTokenCookie,
 } from "@/server/auth/utils/session";
 import { redirect } from "next/navigation";
+import { getRedirectCookie } from "@/server/auth/utils/redirect";
 
 export const loginAction = actionClient
   .schema(loginSchema)
@@ -28,5 +29,6 @@ export const loginAction = actionClient
       return redirect("/auth/verify-email");
     }
 
-    return redirect("/");
+    const redirectTo = await getRedirectCookie();
+    return redirect(redirectTo);
   });

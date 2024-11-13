@@ -45,7 +45,7 @@ export const dependencyVersionMap = {
   "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
-  "@proofgeist/fmdapi": "^4.2.0",
+  "@proofgeist/fmdapi": "^4.2.1",
 
   // ProofKit
   "@proofgeist/kit": `^${getVersion()}`,
@@ -60,6 +60,8 @@ export const dependencyVersionMap = {
   "@oslojs/binary": "^1.0.0",
   "@oslojs/crypto": "^1.0.1",
   "@oslojs/encoding": "^1.1.0",
+  "js-cookie": "^3.0.5",
+  "@types/js-cookie": "^3.0.6",
 
   // React Email
   "@react-email/components": "^0.0.28",

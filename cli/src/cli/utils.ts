@@ -45,8 +45,11 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
 };
 
 export class UserAbortedError extends Error {}
-
-export function abortIfCancel(value: string | symbol): string {
+export function abortIfCancel(value: symbol | string): string;
+export function abortIfCancel<T extends boolean>(value: symbol | T): T;
+export function abortIfCancel<T extends string | boolean>(
+  value: T | symbol
+): T {
   if (isCancel(value)) {
     cancel();
     throw new UserAbortedError();

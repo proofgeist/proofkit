@@ -3,9 +3,8 @@ import path from "path";
 import { type OttoAPIKey } from "@proofgeist/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
-import { execa } from "execa";
 import fs from "fs-extra";
-import { type SourceFile } from "ts-morph";
+import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { getLayouts } from "~/cli/fmdapi.js";
 import { PKG_ROOT } from "~/consts.js";
@@ -20,11 +19,7 @@ import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { installReactEmail } from "./react-email.js";
 
-export const proofkitAuthInstaller = async ({
-  emailProvider,
-}: {
-  emailProvider?: "plunk" | "resend";
-}) => {
+export const proofkitAuthInstaller = async () => {
   const projectDir = state.projectDir;
   addPackageDependency({
     projectDir,
@@ -33,8 +28,15 @@ export const proofkitAuthInstaller = async ({
       "@oslojs/binary",
       "@oslojs/crypto",
       "@oslojs/encoding",
+      "js-cookie",
     ],
     devMode: false,
+  });
+
+  addPackageDependency({
+    projectDir,
+    dependencies: ["@types/js-cookie"],
+    devMode: true,
   });
 
   // copy all files from template/extras/proofkit-auth to projectDir/src
@@ -106,6 +108,12 @@ export const proofkitAuthInstaller = async ({
   });
   await installReactEmail({ project });
 
+  protectMainLayout(
+    project.addSourceFileAtPath(
+      path.join(projectDir, "src/app/(main)/layout.tsx")
+    )
+  );
+
   await formatAndSaveSourceFiles(project);
 
   const hasProofKitLayouts = await checkForProofKitLayouts(projectDir);
@@ -141,6 +149,27 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
   return next({ ctx: { ...ctx, session, user } });
 });
 `)
+  );
+}
+
+function protectMainLayout(sourceFile: SourceFile) {
+  sourceFile.addImportDeclaration({
+    defaultImport: "Protect",
+    moduleSpecifier: "@/components/auth/protect",
+  });
+
+  // inject query provider into the root layout
+
+  const exportDefault = sourceFile.getFunction((dec) => dec.isDefaultExport());
+  const bodyElement = exportDefault
+    ?.getBody()
+    ?.getFirstDescendantByKind(SyntaxKind.ReturnStatement)
+    ?.getFirstDescendantByKind(SyntaxKind.JsxElement);
+
+  bodyElement?.replaceWithText(
+    `<Protect>
+      ${bodyElement?.getText()}
+    </Protect>`
   );
 }
 

@@ -23,6 +23,9 @@ export default function VerifyEmailForm() {
             {...form.register("code")}
             onChange={(value) => {
               form.setValue("code", value);
+              if (value.length === 8) {
+                handleSubmitWithAction();
+              }
             }}
             error={!!form.formState.errors.code?.message}
             autoFocus
@@ -30,13 +33,11 @@ export default function VerifyEmailForm() {
           {form.formState.errors.code?.message && (
             <Text>{form.formState.errors.code.message}</Text>
           )}
-
           {action.result.data?.error ? (
             <Text c="red">{action.result.data.error}</Text>
           ) : action.hasErrored ? (
             <Text c="red">An error occured</Text>
           ) : null}
-
           <Button fullWidth type="submit" loading={action.isPending}>
             Continue
           </Button>

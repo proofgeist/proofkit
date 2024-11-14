@@ -3,7 +3,7 @@ import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hoo
 import { emailVerificationSchema } from "./schema";
 import { verifyEmailAction } from "./actions";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Anchor, Button, Group, Paper, PinInput, Text } from "@mantine/core";
+import { Button, Paper, PinInput, Text } from "@mantine/core";
 import { Stack } from "@mantine/core";
 
 export default function LoginForm() {
@@ -22,7 +22,12 @@ export default function LoginForm() {
             autoFocus
             oneTimeCode
             {...form.register("code")}
-            onChange={(value) => form.setValue("code", value)}
+            onChange={(value) => {
+              form.setValue("code", value);
+              if (value.length === 8) {
+                handleSubmitWithAction();
+              }
+            }}
           />
 
           {action.result.data?.error ? (

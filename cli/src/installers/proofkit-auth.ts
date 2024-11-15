@@ -17,6 +17,7 @@ import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
+import { installFmAddon } from "./install-fm-addon.js";
 import { installReactEmail } from "./react-email.js";
 
 export const proofkitAuthInstaller = async () => {
@@ -214,59 +215,8 @@ async function checkForProofKitLayouts(projectDir: string): Promise<boolean> {
     );
     return true;
   }
-  let targetDir: string | null = null;
-  if (process.platform === "win32") {
-    targetDir = path.join(
-      os.homedir(),
-      "AppData",
-      "Local",
-      "FileMaker",
-      "Extensions",
-      "AddonModules"
-    );
-  } else if (process.platform === "darwin") {
-    targetDir = path.join(
-      os.homedir(),
-      "Library",
-      "Application Support",
-      "FileMaker",
-      "Extensions",
-      "AddonModules"
-    );
-  }
 
-  if (!targetDir) {
-    logger.warn(
-      "Could not install the ProofKit Auth addon. You will need to do this manually."
-    );
-    return false;
-  }
-
-  await fs.copy(
-    path.join(PKG_ROOT, "template/fm-addon/ProofKitAuth"),
-    path.join(targetDir, "ProofKitAuth"),
-    { overwrite: true }
-  );
-
-  const steps = [
-    "Restart FileMaker Pro (if it's currently running)",
-    "Open your FileMaker file, go to layout mode, and install the ProofKit Auth addon to the file ",
-    "Run the typegen command to add the types into your project:",
-  ];
-
-  console.log("");
-  console.log(chalk.bgYellow(" ACTION REQUIRED: "));
-  console.log(
-    `${chalk.yellowBright(
-      "You must install the ProofKit Auth addon in your FileMaker file."
-    )} ${chalk.dim("(Learn more: https://proofkit.dev/auth/proofkit)")}`
-  );
-  steps.forEach((step, index) => {
-    console.log(`${index + 1}. ${step}`);
-  });
-
-  console.log(chalk.cyan(`     ${getUserPkgManager()} typegen`));
-  console.log("");
+  await installFmAddon({ addonName: "auth" });
 
   return false;
 }

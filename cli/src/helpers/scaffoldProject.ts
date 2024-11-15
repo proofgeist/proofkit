@@ -16,7 +16,11 @@ export const scaffoldProject = async ({
   noInstall,
 }: InstallerOptions) => {
   const projectDir = state.projectDir;
-  const srcDir = path.join(PKG_ROOT, "template/nextjs");
+
+  const srcDir = path.join(
+    PKG_ROOT,
+    state.appType === "browser" ? "template/nextjs" : "template/vite-wv"
+  );
 
   if (!noInstall) {
     logger.info(`\nUsing: ${chalk.cyan.bold(pkgManager)}\n`);

@@ -1,0 +1,46 @@
+{
+  "name": "wv",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "build:upload": "pnpm build && pnpm upload",
+    "dev": "vite",
+    "launch-fm": "./scripts/launch-fm.sh",
+    "serve": "vite preview",
+    "start": "vite",
+    "typecheck": "tsc --noEmit",
+    "upload": "node scripts/upload.js"
+  },
+  "dependencies": {
+    "@mantine/core": "^7.14.0",
+    "@mantine/hooks": "^7.14.0",
+    "@mantine/modals": "^7.14.0",
+    "@mantine/notifications": "^7.14.0",
+    "@proofgeist/fmdapi": "^4.2.1",
+    "@t3-oss/env-core": "^0.11.1",
+    "@tabler/icons-react": "^3.22.0",
+    "@tanstack/react-router": "^1.81.6",
+    "@tanstack/router-devtools": "^1.81.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite-plugin-singlefile": "^2.0.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@proofgeist/kit": "^0.0.12",
+    "@tanstack/router-plugin": "^1.81.6",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "dotenv": "^16.4.5",
+    "open": "^10.1.0",
+    "postcss": "^8.4.49",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
+    "typescript": "^5",
+    "vite": "^5.4.8"
+  }
+}

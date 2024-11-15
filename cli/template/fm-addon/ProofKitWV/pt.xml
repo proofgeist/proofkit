@@ -119,13 +119,6 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.calculation.text.36E701077A66E92D65B8B5EAB9EB8FE4</StringID>
-	<SourceText>http://localhost:5173/#</SourceText>
-	<TargetText>http://localhost:5173/#</TargetText>
-	<Comment>com.fmi.calculation.text.http://localhost:5173/#</Comment>
-</DynamicTemplateString>
-
-<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.3A4BEA1DEFD16FE6EB3D2A6C9093EAE2</StringID>
 	<SourceText>  &lt;/script&gt;</SourceText>
 	<TargetText>  &lt;/script&gt;</TargetText>
@@ -252,6 +245,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.8C487FA0558ABEF4B27C8E95726D4A03</StringID>
+	<SourceText>http://localhost:5175/#</SourceText>
+	<TargetText>http://localhost:5175/#</TargetText>
+	<Comment>com.fmi.calculation.text.http://localhost:5175/#</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.919523ABFEC76214004FCD3B43FCD75F</StringID>
 	<SourceText>      try {</SourceText>
 	<TargetText>      try {</TargetText>
@@ -298,6 +298,13 @@
 	<SourceText>    &lt;iframe</SourceText>
 	<TargetText>    &lt;iframe</TargetText>
 	<Comment>com.fmi.calculation.text.    &lt;iframe</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.9E74DA039DD583AC685F460954E4241E</StringID>
+	<SourceText>// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/>WvUrl ( Case ( <CR/><CR/>// If this var is true, we want to see the changes from our dev server<CR/>$$WebDevMode ; &quot;http://localhost:5175&quot; ;<CR/><CR/>// otherwise, load the HTML from the field<CR/>&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML<CR/><CR/>) ; 1 )</SourceText>
+	<TargetText>// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/>WvUrl ( Case ( <CR/><CR/>// If this var is true, we want to see the changes from our dev server<CR/>$$WebDevMode ; &quot;http://localhost:5175&quot; ;<CR/><CR/>// otherwise, load the HTML from the field<CR/>&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML<CR/><CR/>) ; 1 )</TargetText>
+	<Comment>com.fmi.calculation.text.// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)_CR/_WvUrl ( Case ( _CR/__CR/_// If this var is true, we want to see the changes from our dev server_CR/_$$WebDevMode ; &quot;http://localhost:5175&quot; ;_CR/__CR/_// otherwise, load the HTML from the field_CR/_&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML_CR/__CR/_) ; 1 )</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -480,13 +487,6 @@
 	<SourceText>      false</SourceText>
 	<TargetText>      false</TargetText>
 	<Comment>com.fmi.calculation.text.      false</Comment>
-</DynamicTemplateString>
-
-<DynamicTemplateString>
-	<StringID>com.fmi.calculation.text.E7C41538B0AFF29D5E4C7089D06F97E9</StringID>
-	<SourceText>// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/>WvUrl ( Case ( <CR/><CR/>// If this var is true, we want to see the changes from our dev server<CR/>$$WebDevMode ; &quot;http://localhost:5173&quot; ;<CR/><CR/>// otherwise, load the HTML from the field<CR/>&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML<CR/><CR/>) ; 1 )</SourceText>
-	<TargetText>// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/>WvUrl ( Case ( <CR/><CR/>// If this var is true, we want to see the changes from our dev server<CR/>$$WebDevMode ; &quot;http://localhost:5173&quot; ;<CR/><CR/>// otherwise, load the HTML from the field<CR/>&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML<CR/><CR/>) ; 1 )</TargetText>
-	<Comment>com.fmi.calculation.text.// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)_CR/_WvUrl ( Case ( _CR/__CR/_// If this var is true, we want to see the changes from our dev server_CR/_$$WebDevMode ; &quot;http://localhost:5173&quot; ;_CR/__CR/_// otherwise, load the HTML from the field_CR/_&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML_CR/__CR/_) ; 1 )</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>

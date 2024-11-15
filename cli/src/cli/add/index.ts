@@ -4,7 +4,7 @@ import { Command } from "commander";
 
 import { cliName, npmName } from "~/consts.js";
 import { ciOption, debugOption } from "~/globalOptions.js";
-import { initProgramState } from "~/state.js";
+import { initProgramState, state } from "~/state.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { getSettings } from "~/utils/parseSettings.js";
@@ -79,11 +79,13 @@ export const makeAddCommand = () => {
   addCommand.hook("preAction", (_thisCommand, _actionCommand) => {
     // console.log("preAction", _actionCommand.opts());
     initProgramState(_actionCommand.opts());
+    state.baseCommand = "add";
     ensureProofKitProject({ commandName: "add" });
   });
   addCommand.hook("preSubcommand", (_thisCommand, _subCommand) => {
     // console.log("preSubcommand", _subCommand.opts());
     initProgramState(_subCommand.opts());
+    state.baseCommand = "add";
     ensureProofKitProject({ commandName: "add" });
   });
 

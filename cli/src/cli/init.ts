@@ -8,12 +8,15 @@ import { type PackageJson } from "type-fest";
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { addAuth } from "~/generators/auth.js";
 import { runCodegenCommand } from "~/generators/fmdapi.js";
+import { ciOption, debugOption } from "~/globalOptions.js";
 import { createBareProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
 import { buildPkgInstallerMap } from "~/installers/index.js";
+import { installFmAddon } from "~/installers/install-fm-addon.js";
+import { initProgramState, state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
@@ -76,6 +79,7 @@ export const makeInitCommand = () => {
       "[dir]",
       "The name of the application, as well as the name of the directory to create"
     )
+    .option("--appType [type]", "The type of app to create", undefined)
     .option("--server [url]", "The URL of your FileMaker Server", undefined)
     .option(
       "--adminApiKey [key]",
@@ -117,7 +121,14 @@ export const makeInitCommand = () => {
       "Explicitly tell the CLI to not run the package manager's install command",
       false
     )
+    .addOption(ciOption)
+    .addOption(debugOption)
     .action(runInit);
+
+  initCommand.hook("preAction", (cmd) => {
+    initProgramState(cmd.opts());
+    state.baseCommand = "init";
+  });
 
   return initCommand;
 };
@@ -161,6 +172,28 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
       })
     ).toString();
 
+  if (!state.appType) {
+    state.appType = state.ci
+      ? "browser"
+      : (abortIfCancel(
+          await p.select({
+            message: "What kind of app do you want to build?",
+            options: [
+              {
+                value: "browser",
+                label: "Web App for Browsers",
+                hint: "Uses Next.js, will require hosting",
+              },
+              {
+                value: "webviewer",
+                label: "FileMaker Web Viewer",
+                hint: "Uses Vite, can be embedded in FileMaker or hosted",
+              },
+            ],
+          })
+        ) as "browser" | "webviewer");
+  }
+
   const usePackages = buildPkgInstallerMap();
 
   // e.g. dir/@mono/app returns ["@mono/app", "dir/app"]
@@ -185,6 +218,10 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     layoutName: cliOptions.layoutName,
     schemaName: cliOptions.schemaName,
   });
+
+  if (state.appType === "webviewer") {
+    await installFmAddon({ addonName: "wv" });
+  }
 
   await askForAuth({ projectDir });
 

@@ -186,7 +186,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
               },
               {
                 value: "webviewer",
-                label: "FileMaker Web Viewer",
+                label: "FileMaker Web Viewer (beta)",
                 hint: "Uses Vite, can be embedded in FileMaker or hosted",
               },
             ],

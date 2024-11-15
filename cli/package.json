@@ -1,6 +1,6 @@
 {
   "name": "@proofgeist/kit",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Create web application with the ProofKit stack",
   "license": "MIT",
   "repository": {

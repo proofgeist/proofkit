@@ -203,6 +203,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.729D67BCA45FB5FAE50567FE17377BE6</StringID>
+	<SourceText>data:text/html;charset=UTF-8,</SourceText>
+	<TargetText>data:text/html;charset=UTF-8,</TargetText>
+	<Comment>com.fmi.calculation.text.data:text/html;charset=UTF-8,</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.7939AE436E09B3990F24176D655909BB</StringID>
 	<SourceText>&lt;html&gt;</SourceText>
 	<TargetText>&lt;html&gt;</TargetText>
@@ -242,6 +249,13 @@
 	<SourceText>The new version was uploaded.</SourceText>
 	<TargetText>The new version was uploaded.</TargetText>
 	<Comment>com.fmi.calculation.text.The new version was uploaded.</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.8941760420115B72B31334BA82F15A8B</StringID>
+	<SourceText> otherwise, load the HTML from the field<CR/></SourceText>
+	<TargetText> otherwise, load the HTML from the field<CR/></TargetText>
+	<Comment>com.fmi.calculation.text. otherwise, load the HTML from the field_CR/_</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -298,13 +312,6 @@
 	<SourceText>    &lt;iframe</SourceText>
 	<TargetText>    &lt;iframe</TargetText>
 	<Comment>com.fmi.calculation.text.    &lt;iframe</Comment>
-</DynamicTemplateString>
-
-<DynamicTemplateString>
-	<StringID>com.fmi.calculation.text.9E74DA039DD583AC685F460954E4241E</StringID>
-	<SourceText>// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/>WvUrl ( Case ( <CR/><CR/>// If this var is true, we want to see the changes from our dev server<CR/>$$WebDevMode ; &quot;http://localhost:5175&quot; ;<CR/><CR/>// otherwise, load the HTML from the field<CR/>&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML<CR/><CR/>) ; 1 )</SourceText>
-	<TargetText>// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/>WvUrl ( Case ( <CR/><CR/>// If this var is true, we want to see the changes from our dev server<CR/>$$WebDevMode ; &quot;http://localhost:5175&quot; ;<CR/><CR/>// otherwise, load the HTML from the field<CR/>&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML<CR/><CR/>) ; 1 )</TargetText>
-	<Comment>com.fmi.calculation.text.// wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)_CR/_WvUrl ( Case ( _CR/__CR/_// If this var is true, we want to see the changes from our dev server_CR/_$$WebDevMode ; &quot;http://localhost:5175&quot; ;_CR/__CR/_// otherwise, load the HTML from the field_CR/_&quot;data:text/html;charset=UTF-8,&quot; &amp; Interface::HTML_CR/__CR/_) ; 1 )</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -399,6 +406,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.BC60F87E4D78046DC14562853A562493</StringID>
+	<SourceText> wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/></SourceText>
+	<TargetText> wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/></TargetText>
+	<Comment>com.fmi.calculation.text. wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)_CR/_</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.BF260A0069D595A9F6A99BF63FE49CBA</StringID>
 	<SourceText>webViewerName</SourceText>
 	<TargetText>webViewerName</TargetText>
@@ -417,6 +431,13 @@
 	<SourceText>world</SourceText>
 	<TargetText>world</TargetText>
 	<Comment>com.fmi.calculation.text.world</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.C5937366DE87E3BE8DFFC600BCAF1C52</StringID>
+	<SourceText>http://localhost:5175</SourceText>
+	<TargetText>http://localhost:5175</TargetText>
+	<Comment>com.fmi.calculation.text.http://localhost:5175</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -529,6 +550,13 @@
 	<SourceText>        } else {</SourceText>
 	<TargetText>        } else {</TargetText>
 	<Comment>com.fmi.calculation.text.        } else {</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.FEBA1CAF0ACFE35666E2420EFA48E0DE</StringID>
+	<SourceText> If this var is true, we want to see the changes from our dev server<CR/></SourceText>
+	<TargetText> If this var is true, we want to see the changes from our dev server<CR/></TargetText>
+	<Comment>com.fmi.calculation.text. If this var is true, we want to see the changes from our dev server_CR/_</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -851,6 +879,13 @@
 	<SourceText>ProofKitWV</SourceText>
 	<TargetText>ProofKitWV</TargetText>
 	<Comment>com.fmi.tableoccurrence.ProofKitWV</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.tableoccurrence.field.ProofKitWV::8C0EC245B43DB2131C17BF7825C4CCAF</StringID>
+	<SourceText>ProofKitWV::HTML</SourceText>
+	<TargetText>ProofKitWV::HTML</TargetText>
+	<Comment>com.fmi.tableoccurrence.field.ProofKitWV::ProofKitWV::HTML</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>

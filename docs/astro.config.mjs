@@ -20,6 +20,10 @@ export default defineConfig({
           autogenerate: { directory: "guides" },
         },
         {
+          label: "Webviewer",
+          autogenerate: { directory: "webviewer" },
+        },
+        {
           label: "Auth",
           autogenerate: { directory: "auth" },
         },

@@ -1,4 +1,5 @@
 import * as p from "@clack/prompts";
+import chalk from "chalk";
 import { Command } from "commander";
 import { z } from "zod";
 
@@ -41,7 +42,9 @@ export async function runAddAuthAction() {
           : undefined) ??
       abortIfCancel(
         await p.select({
-          message: "What email provider do you want to use?",
+          message: `What email provider do you want to use?\n${chalk.dim(
+            "Used to send email verification codes. If you skip this, the codes will be displayed in your terminal."
+          )}`,
           options: [
             {
               label: "Resend",

@@ -32,7 +32,7 @@ function getAllLayoutNames(layout: LayoutOrFolder): string[] {
   return [layout.name];
 }
 
-export const commonFileMakerLayoutPrefixes = ["API_", "API ", "dapi"];
+export const commonFileMakerLayoutPrefixes = ["API_", "API ", "dapi_", "dapi"];
 
 export function transformLayoutList(layouts: LayoutOrFolder[]): string[] {
   const flatList = layouts.flatMap(getAllLayoutNames);

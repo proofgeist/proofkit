@@ -20,7 +20,7 @@ export async function injectTanstackQuery({
   project?: Project;
 }) {
   const settings = args.settings ?? getSettings();
-  if (settings.tanstackQuery) return;
+  if (settings.tanstackQuery) return false;
 
   addPackageDependency({
     projectDir,
@@ -83,4 +83,5 @@ export async function injectTanstackQuery({
   }
 
   setSettings({ ...settings, tanstackQuery: true });
+  return true;
 }

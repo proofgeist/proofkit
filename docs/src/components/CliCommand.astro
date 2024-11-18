@@ -2,34 +2,47 @@
 import { Code, Tabs, TabItem } from "@astrojs/starlight/components";
 
 interface Props {
-  command: string;
+  command: string | string[];
   type?: "local" | "execute" | "create";
   frame?: Parameters<typeof Code>[0]["frame"];
 }
 
-const { command, type = "local", frame = "none" } = Astro.props;
+const { type = "local", frame = "none", ...rest } = Astro.props;
+const command = Array.isArray(rest.command) ? rest.command : [rest.command];
 ---
 
 <Tabs syncKey="packageManager">
-  <TabItem label="npm">
-    <Code
-      code={`${type === "local" ? "npm run" : type === "create" ? "npm" : "npx"} ${command}`}
-      lang="bash"
-      frame={frame}
-    />
-  </TabItem>
   <TabItem label="pnpm">
-    <Code
-      code={`${type === "local" || type === "create" ? "pnpm" : "pnpx"} ${command}`}
-      lang="bash"
-      frame={frame}
-    />
+    {
+      command.map((cmd) => (
+        <Code
+          code={`${type === "local" || type === "create" ? "pnpm" : "pnpx"} ${cmd}`}
+          lang="bash"
+          frame={frame}
+        />
+      ))
+    }
+  </TabItem>
+  <TabItem label="npm">
+    {
+      command.map((cmd) => (
+        <Code
+          code={`${type === "local" ? "npm run" : type === "create" ? "npm" : "npx"} ${cmd}`}
+          lang="bash"
+          frame={frame}
+        />
+      ))
+    }
   </TabItem>
   <TabItem label="yarn">
-    <Code
-      code={`${type === "local" || type === "create" ? "yarn" : "yarn dlx"} ${command}`}
-      lang="bash"
-      frame={frame}
-    />
+    {
+      command.map((cmd) => (
+        <Code
+          code={`${type === "local" || type === "create" ? "yarn" : "yarn dlx"} ${cmd}`}
+          lang="bash"
+          frame={frame}
+        />
+      ))
+    }
   </TabItem>
 </Tabs>

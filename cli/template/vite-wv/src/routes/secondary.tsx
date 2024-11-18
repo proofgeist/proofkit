@@ -12,8 +12,8 @@ function RouteComponent() {
       <Stack gap="xl" ta="center">
         <Title order={1}>Secondary Page</Title>
         <Text>
-          Use hidden pages like this to embedd multiple webviewer widgets into a
-          single HTML bundle of your FileMaker solution.
+          Use hidden pages like this to embed multiple webviewer widgets into a
+          single HTML bundle for your FileMaker solution.
         </Text>
         <Text>
           See how to navigate via a FileMaker script in the{" "}

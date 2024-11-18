@@ -8,21 +8,11 @@ sidebar:
 import { Aside, Steps, Code } from "@astrojs/starlight/components";
 import InitCommand from "../../../components/InitCommand.astro";
 import CliCommand from "../../../components/CliCommand.astro";
+import Prerequisites from "../../../components/Prerequisites.mdx";
 
 This guide walks you through how to get up and running with a new ProofKit project.
 
-## Prerequisites
-
-If you're brand new to web development, you'll want to make sure these basics are installed on your system
-
-- [Node](https://nodejs.org/en)
-  - To check if you have already have Node installed, run `node -v`
-- [Visual Studio Code](https://code.visualstudio.com/download) (or similar IDE)
-- git (download [GitHub Desktop](https://github.com/apps/desktop) if you've never used git before)
-  - To check if you have git installed, run `git -v`
-- _(suggested)_ [pnpm](https://pnpm.io/installation)
-  - If you skip this step, just follow the guides for `npm` instead, which comes with Node
-  - To check if you already have pnpm instaled, run `pnpm -v`
+<Prerequisites />
 
 ### Data Sources
 
@@ -38,7 +28,11 @@ To connect to FileMaker data, you'll need a FileMaker server (19.6+) running Ott
   <CliCommand command="@proofgeist/kit init --adminApiKey=<YourAdminApiKey>" type="execute" />
 </Aside>
 
-Your hosted FileMaker file must have an account with the `fmrest` priviledge set enabled. During setup, you'll be asked for either the account namd and password for that file, or select a Data API key previously generated from OttoFMS. (If you provide credentials, a Data API key will be created for you)
+Your hosted FileMaker file must have an account with the `fmrest` priviledge set enabled. During setup, you'll be asked for either the account name and password for that file, or select a Data API key previously generated from OttoFMS. (If you provide credentials, a Data API key will be created for you)
+
+#### FileMaker Web Viewer
+
+If you intend to build for the FileMaker Web Viewer, the same requirements apply for FileMaker Server and OttoFMS as above. You will also need to make sure that your Full Access account has the `fmurlscript` priviledge enabled so the web code can trigger FileMaker scripts, making development a lot easier. For more details, see the [WebViewer Getting Started Guide](/webviewer/getting-started).
 
 #### Supabase
 
@@ -51,6 +45,8 @@ Now you can scaffold a new ProofKit project! Follow the prompts to setup your pr
 <InitCommand />
 
 **Project Name** - must be lowercase letters, numbers, `_` and `-` characters only. This will also be the folder name where your project will get created.
+
+**Project Type** - Either a Web App for Browsers or FileMaker Web Viewer. This section of the docs focuses mostly on the browser-based projects using Next.js. For more details about the WebViewer option, see the [WebViewer Getting Started Guide](/webviewer/getting-started).
 
 **Server URL** - Enter the URL of your FileMaker server. It must start with https:// but can be any path on the server (such as https://myserver.com/otto/app) to make it easier to copy/paste
 
@@ -67,15 +63,18 @@ If you get an error while creating a Data API key, it's most often one of these 
 
 </Aside>
 
-Now you can select a **layout** to load data from, and a name for the **schema** that will be created. This is a friendly name that you can use in your code whenever you want to access the data on this layout. Schema names must be valid JavsScript variable names and unique within each data source (FileMaker file)
+Now you can select a **layout** to load data from, and a name for the **schema** that will be created. This is a friendly name that you can use in your code whenever you want to access the data on this layout. Schema names must be valid JavaScript variable names and unique within each data source (FileMaker file).
+
+For FileMaker developers, "layout" and "schema" are effectively interchangeable. What you may see referred to as "schemas" is just a more generic term for a specific set of fields (and/or related fields)
 
 <Aside type="tip">
-  If your layout name starts with `API` it will appear at the top of this list!
+  If your layout name starts with `API` or `dapi` it will appear at the top of
+  this list!
 </Aside>
 
 ## Launching Your Web App
 
-Once you're project is created, you'll see a few **next steps** printed to the console.
+Once your project is created, you'll see a few **next steps** printed to the console.
 
 <Steps>
 
@@ -106,7 +105,7 @@ Once you're project is created, you'll see a few **next steps** printed to the c
 
    <CliCommand command="dev" frame="none" />
 
-   The result of this command will print a localhost URL to your console, such as [`http://localhost:3000`](http://localhost:3000), where you can view your ProofKit app.
+   The result of this command will display a localhost URL in your console, such as [`http://localhost:3000`](http://localhost:3000), where you can view your ProofKit app.
 
    This is a long-running command, so sometimes you'll want to stop the dev server using `ctrl+C` so that you can enter another terminal command.
 

@@ -236,7 +236,7 @@ async function getValidFileMakerServerUrl(
       defaultServerUrl ??
       abortIfCancel(
         await p.text({
-          message: "What is the URL of your FileMaker Server?",
+          message: `What is the URL of your FileMaker Server?\n${chalk.cyan("TIP: You can copy any valid path on the server and paste it here.")}`,
           validate: (value) => {
             try {
               if (!value.startsWith("http"))

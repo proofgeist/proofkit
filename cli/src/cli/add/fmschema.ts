@@ -184,7 +184,9 @@ export const runAddSchemaAction = async (opts?: {
     ],
   });
 
-  p.outro("Layout added");
+  p.outro(
+    `Layout "${selectedLayout}" added to your project as "${schemaName}"`
+  );
 };
 
 export const makeAddSchemaCommand = () => {

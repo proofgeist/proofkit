@@ -18,7 +18,7 @@ export const pageTemplates: Record<string, Template> = {
   tableInfinite: {
     requireData: true,
     label: "Infinite Table",
-    hint: "Use to load and show multiple records",
+    hint: "Automatically load more records when the user scrolls to the bottom",
     templatePath: "nextjs/table-infinite",
     postIntallFn: postInstallTableInfinite,
   },

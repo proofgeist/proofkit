@@ -7,9 +7,9 @@ sidebar:
 
 import CliCommand from "../../../components/CliCommand.astro";
 
-ProofKit Auth is a self-hosted authentication solution that is built to be flexible and easy to customize. Rather than using a third-party library or authentication service, the ProofKit CLI installs all of the neccesary functions into your project and then you just have to install the ProofKit Auth addon in your FileMaker file to get the neccesary tables in your database.
+ProofKit Auth is a self-hosted authentication solution that is built to be flexible and easy to customize. Rather than using a third-party library or authentication service, the ProofKit CLI installs all of the necessary functions into your project and then you just have to install the ProofKit Auth addon in your FileMaker file to get the necessary tables in your database.
 
-While ProofKit Auth is built to be secure, it is more advanced than a typical third-party authentication service and does warrant a good understanding of how it works before you customize it. For more details about the security principles behind it, see the [Lucia documentation](https://lucia-auth.com/)
+While ProofKit Auth is built to be secure, it is more advanced than a typical third-party authentication service and does warrant a good understanding of how it works before you customize it. For more details about the security principles behind it, see the [Lucia documentation](https://lucia-auth.com/).
 
 ## Installing
 
@@ -31,7 +31,7 @@ After you install the addon for the first time, make sure you re-run the `typege
 
 ## Email Verification Setup
 
-By default, ProofKit Auth works with an email/password based login and asks users to verify their email address when they change their email and when they first sign up. However, you must implement the email sending functionality with the third-party service of your choice. If you skipped the email provider question during the setup, the email verification codes are printed to the server's console logs for your testing.
+By default, ProofKit Auth works with an email/password based login and asks users to verify their email address when they change their email and when they first sign up. However, you must implement the email sending functionality with the third-party service of your choice. If you skipped the email provider question during the setup, the email verification codes will be displayed in the terminal of your running dev server for your testing.
 
 To customize the email sent to your users, edit the `src/server/auth/email.tsx` file. The actual email is rendered to HTML using the [React Email](https://react.email/docs/introduction) library and can be sent with any email service you choose, but ProofKit has built-in support for [Resend](https://resend.com/) and [Plunk](https://www.useplunk.com/).
 

@@ -39,7 +39,10 @@ export const dataSourceSchema = z.discriminatedUnion("type", [
 ]);
 export type DataSource = z.infer<typeof dataSourceSchema>;
 
+export const appTypes = ["browser", "webviewer"] as const;
+
 const settingsSchema = z.object({
+  appType: z.enum(appTypes).default("browser"),
   auth: authSchema,
   envFile: z.string().default(".env"),
   dataSources: z.array(dataSourceSchema).default([]),

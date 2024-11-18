@@ -1,1 +1,1 @@
-{ "auth": { "type": "none" }, "envFile": ".env" }
+{ "auth": { "type": "none" }, "envFile": ".env", "appType": "webviewer" }

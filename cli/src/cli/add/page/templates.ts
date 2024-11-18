@@ -6,12 +6,14 @@ export const pageTemplates: Record<string, Template> = {
   blank: {
     requireData: false,
     label: "Blank",
+    supportedAppTypes: ["browser"],
     templatePath: "nextjs/blank",
   },
   table: {
     requireData: true,
     label: "Basic Table",
     hint: "Use to load and show multiple records",
+    supportedAppTypes: ["browser"],
     templatePath: "nextjs/table",
     postIntallFn: postInstallTable,
   },
@@ -19,6 +21,7 @@ export const pageTemplates: Record<string, Template> = {
     requireData: true,
     label: "Infinite Table",
     hint: "Automatically load more records when the user scrolls to the bottom",
+    supportedAppTypes: ["browser"],
     templatePath: "nextjs/table-infinite",
     postIntallFn: postInstallTableInfinite,
   },

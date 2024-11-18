@@ -20,6 +20,17 @@ export const runAddPageAction = async (opts?: {
   template?: string;
 }) => {
   const projectDir = state.projectDir;
+
+  const settings = getSettings();
+
+  const supportedTemplates = Object.entries(pageTemplates).filter(
+    ([_, template]) => template.supportedAppTypes.includes(settings.appType)
+  );
+
+  if (supportedTemplates.length === 0) {
+    return p.cancel(`No templates found for your app type. Check back soon!`);
+  }
+
   let routeName =
     opts?.routeName ??
     abortIfCancel(
@@ -54,7 +65,7 @@ export const runAddPageAction = async (opts?: {
     abortIfCancel(
       await p.select({
         message: "What template should be used for this page?",
-        options: Object.entries(pageTemplates).map(([key, value]) => ({
+        options: supportedTemplates.map(([key, value]) => ({
           value: key,
           label: value.label,
           hint: value.hint,
@@ -64,7 +75,6 @@ export const runAddPageAction = async (opts?: {
 
   const pageTemplate = pageTemplates[template];
   if (!pageTemplate) return p.cancel(`Page template ${template} not found`);
-  const settings = getSettings();
 
   let dataSource: DataSource | undefined;
   let schemaName: string | undefined;

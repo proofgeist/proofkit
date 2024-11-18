@@ -10,7 +10,7 @@ import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { getNpmVersion } from "~/utils/renderVersionWarning.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
-import { ensureProofKitProject } from "../utils.js";
+import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
 import {
   makeAddDataSourceCommand,
@@ -37,25 +37,31 @@ export const runAdd = async (name: string | undefined) => {
     return await runAddTanstackQueryCommand({ settings });
   }
 
-  const addType = await p.select({
-    message: "What do you want to add to your project?",
-    options: [
-      { label: "Page", value: "page" },
-      {
-        label: "Schema",
-        value: "schema",
-        hint: "load data from a new table or layout from an existing data source",
-      },
-      {
-        label: "Data Source",
-        value: "data",
-        hint: "to connect to a new database or FileMaker file",
-      },
-      ...(settings.auth.type === "none"
-        ? [{ label: "Auth", value: "auth" }]
-        : []),
-    ],
-  });
+  const addType = abortIfCancel(
+    await p.select({
+      message: "What do you want to add to your project?",
+      options: [
+        { label: "Page", value: "page" },
+        {
+          label: "Schema",
+          value: "schema",
+          hint: "load data from a new table or layout from an existing data source",
+        },
+        ...(settings.appType === "browser"
+          ? [
+              {
+                label: "Data Source",
+                value: "data",
+                hint: "to connect to a new database or FileMaker file",
+              },
+            ]
+          : []),
+        ...(settings.auth.type === "none" && settings.appType === "browser"
+          ? [{ label: "Auth", value: "auth" }]
+          : []),
+      ],
+    })
+  );
 
   if (addType === "auth") {
     await runAddAuthAction();

@@ -54,11 +54,10 @@ To implement this method with a ProofKit-initialized WebViewer project, you'll n
 
 - Remove the `viteSingleFile` plugin from your `vite.config.ts` file and package.json file
   - This plugin is not needed when deploying it as a standard web app, and will cause performance issues when loaded from a server
-- Remove the "upload" and "build:upload" scripts in your package.json file
-- (optional) Remove the `HashHistory` override for the router in the `main.tsx` file so that your URLs behave more like a traditional web app
+- Remove the `upload` and `build:upload` scripts in your package.json file
+- _(optional)_ Remove the `HashHistory` override for the router in the `main.tsx` file so that your URLs behave more like a traditional web app
 - Deploy the code to a host like Vercel. Vercel will automatically detect that this is a Vite project and build it as you expect.
-  - This step will give you a URL that you can use in future steps
-- Edit the WebViewer object to load from your production URL instead of the `ProofKitWV::HTML` field
+- Edit the WebViewer object to load from your production URL (from Vercel) instead of the `ProofKitWV::HTML` field
   - You may also want to add more steps to the case statement to load different URLs based on the environment, such as `development`, `staging`, and `production`
 
 Alternatively, you can just install the `fm-webviewer-fetch` library into a standard Next.js web app if you're going to use the Hosted method.

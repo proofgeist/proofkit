@@ -1,5 +1,4 @@
 import path from "path";
-import { type GenerateSchemaOptions } from "@proofgeist/fmdapi/dist/utils/codegen.d.ts";
 import { type GenerateSchemaOptionsSingle } from "@proofgeist/fmdapi/utils/typegen/types.js";
 import { execa } from "execa";
 import fs from "fs-extra";
@@ -12,7 +11,7 @@ import {
 import { type z } from "zod";
 
 import { PKG_ROOT } from "~/consts.js";
-import { runExecCommand } from "~/helpers/installDependencies.js";
+import { state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { getSettings, type envNamesSchema } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
@@ -283,6 +282,13 @@ export function addToFmschemaConfig({
       ?.setInitializer((writer) =>
         writer.quote("./src/config/schemas/filemaker")
       );
+
+    if (state.appType === "webviewer") {
+      configObj?.addPropertyAssignment({
+        name: "webviewerScriptName",
+        initializer: (writer) => writer.quote("ExecuteDataApi"),
+      });
+    }
   } else {
     // since the file already existed, we need to ensure the config variable is an array now before we proceed
 

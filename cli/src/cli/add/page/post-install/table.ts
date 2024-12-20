@@ -1,11 +1,14 @@
 import path from "path";
 import fs from "fs-extra";
-import { Project, SyntaxKind } from "ts-morph";
+import { SyntaxKind } from "ts-morph";
 
 import {
   getClientSuffix,
   getFieldNamesForSchema,
 } from "~/generators/fmdapi.js";
+import { injectTanstackQuery } from "~/generators/tanstack-query.js";
+import { installDependencies } from "~/helpers/installDependencies.js";
+import { state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { type TPostInstallFn } from "../types.js";
@@ -63,7 +66,7 @@ export const postInstallTable: TPostInstallFn = async ({
   // add the schemas to the columns array
   const project = getNewProject(projectDir);
   const sourceFile = project.addSourceFileAtPath(
-    path.join(pageDir, "table.tsx")
+    path.join(pageDir, state.appType === "browser" ? "table.tsx" : "index.tsx")
   );
   const columns = sourceFile
     .getVariableDeclaration("columns")
@@ -85,6 +88,11 @@ export const postInstallTable: TPostInstallFn = async ({
         .write(",")
         .newLine()
     );
+  }
+
+  if (state.appType === "webviewer") {
+    const didInject = await injectTanstackQuery({ project });
+    if (didInject) await installDependencies();
   }
 
   await formatAndSaveSourceFiles(project);

@@ -10,6 +10,11 @@ import { getSettings } from "~/utils/parseSettings.js";
 import { abortIfCancel } from "../utils.js";
 
 export async function runAddAuthAction() {
+  const settings = getSettings();
+  if (settings.appType !== "browser") {
+    return p.cancel(`Auth is not supported for your app type.`);
+  }
+
   const authType =
     state.authType ??
     abortIfCancel(

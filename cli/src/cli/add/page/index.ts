@@ -1,16 +1,21 @@
 import path from "path";
 import * as p from "@clack/prompts";
-import chalk from "chalk";
 import { Command } from "commander";
+import { capitalize } from "es-toolkit";
 import fs from "fs-extra";
 
 import { PKG_ROOT } from "~/consts.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
-import { state } from "~/state.js";
-import { getSettings, type DataSource } from "~/utils/parseSettings.js";
-import { abortIfCancel } from "../../utils.js";
-import { pageTemplates } from "./templates.js";
+import { ciOption, debugOption } from "~/globalOptions.js";
+import { initProgramState, state } from "~/state.js";
+import {
+  getSettings,
+  mergeSettings,
+  type DataSource,
+} from "~/utils/parseSettings.js";
+import { abortIfCancel, ensureProofKitProject } from "../../utils.js";
+import { nextjsTemplates, wvTemplates } from "./templates.js";
 
 export const runAddPageAction = async (opts?: {
   routeName?: string;
@@ -23,57 +28,78 @@ export const runAddPageAction = async (opts?: {
 
   const settings = getSettings();
 
-  const supportedTemplates = Object.entries(pageTemplates).filter(
-    ([_, template]) => template.supportedAppTypes.includes(settings.appType)
-  );
+  const templates =
+    state.appType === "browser"
+      ? Object.entries(nextjsTemplates)
+      : Object.entries(wvTemplates);
 
-  if (supportedTemplates.length === 0) {
+  if (templates.length === 0) {
     return p.cancel(`No templates found for your app type. Check back soon!`);
   }
 
-  let routeName =
-    opts?.routeName ??
-    abortIfCancel(
+  let routeName = opts?.routeName;
+  let replacedMainPage = settings.replacedMainPage;
+
+  if (
+    state.appType === "webviewer" &&
+    !replacedMainPage &&
+    !state.ci &&
+    !routeName
+  ) {
+    const replaceMainPage = abortIfCancel(
+      await p.select({
+        message: "Do you want to replace the default page?",
+        options: [
+          { label: "Yes", value: "yes" },
+          { label: "No, maybe later", value: "no" },
+          { label: "No, don't ask again", value: "never" },
+        ],
+      })
+    );
+    if (replaceMainPage === "never" || replaceMainPage === "yes") {
+      replacedMainPage = true;
+    }
+
+    if (replaceMainPage === "yes") {
+      routeName = "/";
+    }
+  }
+
+  if (!routeName) {
+    routeName = abortIfCancel(
       await p.text({
-        message:
-          "What should be the route for this new page? This will show in the URL",
+        message: `Enter the URL PATH for your new page`,
         placeholder: "/my-page",
         validate: (value) => {
           if (value.length === 0) {
-            return "Route name is required";
+            return "URL path is required";
           }
           return;
         },
       })
     );
+  }
 
   if (!routeName.startsWith("/")) {
     routeName = `/${routeName}`;
   }
 
-  const pageName =
-    opts?.pageName ??
-    abortIfCancel(
-      await p.text({
-        message: `Enter page name:\n${chalk.dim("This title will show in the nav menu, unless left blank")}`,
-        initialValue: routeName.replace("/", ""),
-      })
-    );
+  const pageName = capitalize(routeName.replace("/", "").trim());
 
   const template =
     opts?.template ??
     abortIfCancel(
       await p.select({
         message: "What template should be used for this page?",
-        options: supportedTemplates.map(([key, value]) => ({
+        options: templates.map(([key, value]) => ({
           value: key,
-          label: value.label,
+          label: `${value.label}`,
           hint: value.hint,
         })),
       })
     );
 
-  const pageTemplate = pageTemplates[template];
+  const pageTemplate = templates.find(([key]) => key === template)?.[1];
   if (!pageTemplate) return p.cancel(`Page template ${template} not found`);
 
   let dataSource: DataSource | undefined;
@@ -118,18 +144,26 @@ export const runAddPageAction = async (opts?: {
     "template/pages",
     pageTemplate.templatePath
   );
-  const destPath = path.join(projectDir, "src/app/(main)", routeName);
+
+  const destPath =
+    state.appType === "browser"
+      ? path.join(projectDir, "src/app/(main)", routeName)
+      : path.join(projectDir, "src/routes", routeName);
+
   await fs.copy(templatePath, destPath);
 
-  if (pageName && pageName !== "") {
-    await addRouteToNav({
-      projectDir: process.cwd(),
-      navType: "primary",
-      label: pageName,
-      href: routeName,
-    });
+  if (state.appType === "browser") {
+    if (pageName && pageName !== "") {
+      await addRouteToNav({
+        projectDir: process.cwd(),
+        navType: "primary",
+        label: pageName,
+        href: routeName,
+      });
+    }
+  } else if (state.appType === "webviewer") {
+    // TODO: implement
   }
-
   // call post-install function
   await pageTemplate.postIntallFn?.({
     projectDir,
@@ -137,6 +171,11 @@ export const runAddPageAction = async (opts?: {
     dataSource,
     schemaName,
   });
+
+  if (replacedMainPage !== settings.replacedMainPage) {
+    // avoid changing this until the end since the user could cancel early
+    mergeSettings({ replacedMainPage });
+  }
 
   spinner.stop("Added page!");
 };
@@ -147,6 +186,15 @@ export const makeAddPageCommand = () => {
     .action(async () => {
       await runAddPageAction();
     });
+
+  addPageCommand.addOption(ciOption);
+  addPageCommand.addOption(debugOption);
+
+  addPageCommand.hook("preAction", () => {
+    initProgramState(addPageCommand.opts());
+    state.baseCommand = "add";
+    ensureProofKitProject({ commandName: "add" });
+  });
 
   return addPageCommand;
 };

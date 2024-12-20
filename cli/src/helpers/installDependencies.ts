@@ -77,11 +77,8 @@ const runInstallCommand = async (
   }
 };
 
-export const installDependencies = async ({
-  projectDir = state.projectDir,
-}: {
-  projectDir?: string;
-}) => {
+export const installDependencies = async (args?: { projectDir?: string }) => {
+  const { projectDir = state.projectDir } = args ?? {};
   logger.info("Installing dependencies...");
   const pkgManager = getUserPkgManager();
 

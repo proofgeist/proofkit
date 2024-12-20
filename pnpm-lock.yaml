@@ -232,12 +232,6 @@ importers:
         specifier: ^3.23.8
         version: 3.23.8
 
-  create-proofkit:
-    dependencies:
-      execa:
-        specifier: ^9.5.1
-        version: 9.5.1
-
   docs:
     dependencies:
       '@astrojs/check':
@@ -3719,7 +3713,6 @@ packages:
 
   libsql@0.3.16:
     resolution: {integrity: sha512-pIv3hP+W0bHTyjg56H5O3D45RP1BGcs0jnSOCk8PQ41nlPpVG3+sG9AG9Vc2NcnvFKuL02gGPFLzvbBe8AQjgg==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lilconfig@2.1.0:

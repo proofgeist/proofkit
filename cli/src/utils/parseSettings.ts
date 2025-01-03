@@ -47,6 +47,7 @@ const settingsSchema = z.object({
   envFile: z.string().default(".env"),
   dataSources: z.array(dataSourceSchema).default([]),
   tanstackQuery: z.boolean().catch(false),
+  replacedMainPage: z.boolean().catch(false),
 });
 
 export const defaultSettings = settingsSchema.parse({ auth: { type: "none" } });
@@ -61,6 +62,7 @@ export const getSettings = () => {
 
   const parsed = settingsSchema.parse(settingsFile);
   settings = parsed;
+  state.appType = parsed.appType;
   return settings;
 };
 

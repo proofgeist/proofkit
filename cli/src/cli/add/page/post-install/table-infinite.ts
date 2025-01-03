@@ -5,10 +5,8 @@ import { postInstallTable } from "./table.js";
 
 export const postInstallTableInfinite: TPostInstallFn = async (args) => {
   await postInstallTable(args);
-
-  const { projectDir } = args;
-  const didInject = await injectTanstackQuery({ projectDir });
+  const didInject = await injectTanstackQuery();
   if (didInject) {
-    await installDependencies({});
+    await installDependencies();
   }
 };

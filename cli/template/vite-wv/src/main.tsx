@@ -10,6 +10,7 @@ import { MantineProvider } from "@mantine/core";
 import { theme } from "./config/theme/mantine-theme";
 
 import "@mantine/core/styles.css";
+import "mantine-react-table/styles.css";
 import "./config/theme/globals.css";
 
 // Hash history is used since we are using a single file build

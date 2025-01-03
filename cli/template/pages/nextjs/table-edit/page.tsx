@@ -17,9 +17,9 @@ export default async function TablePage() {
           This table allows editing. Double-click on a cell to edit the value.
         </Text>
         <Text size="sm" c="dimmed">
-          This feature requries a primary key field on your API layout. If your
-          primary key field is not named <Code>{idFieldName}</Code>, update the
-          <Code>idFieldName</Code> variable in the code.
+          NOTE: This feature requires a primary key field on your API layout. If your
+          primary key field is not <Code>{idFieldName}</Code>, update the
+          <Code>idFieldName</Code> variable in the <Code>schema.ts</Code> file.
         </Text>
       </div>
       <TableContent data={data.map((d) => d.fieldData)} />

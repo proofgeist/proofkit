@@ -25,7 +25,7 @@ type TData = ReturnType<typeof Route.useLoaderData>;
 const columns: MRT_ColumnDef<TData>[] = [];
 
 // TODO: Make sure this variable is properly set to your primary key field
-const idFieldName: keyof __TYPE_NAME__ = "id";
+const idFieldName: keyof __TYPE_NAME__ = "__FIRST_FIELD_NAME__";
 async function handleSaveCell(cell: MRT_Cell<TData>, value: unknown) {
   const {
     data: { recordId },
@@ -61,8 +61,8 @@ function RouteComponent() {
           This table allows editing. Double-click on a cell to edit the value.
         </Text>
         <Text size="sm" c="dimmed">
-          This feature requries a primary key field on your API layout. If your
-          primary key field is not named <Code>{idFieldName}</Code>, update the
+          NOTE: This feature requires a primary key field on your API layout. If your
+          primary key field is not <Code>{idFieldName}</Code>, update the
           <Code>idFieldName</Code> variable in the code.
         </Text>
       </div>

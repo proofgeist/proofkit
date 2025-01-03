@@ -1,9 +1,5 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@2.1.1/schema.json",
-  "changelog": [
-    "@changesets/changelog-github",
-    { "repo": "proofgeist/proofkit" }
-  ],
   "commit": false,
   "fixed": [],
   "linked": [],

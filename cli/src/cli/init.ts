@@ -199,6 +199,25 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   // e.g. dir/@mono/app returns ["@mono/app", "dir/app"]
   const [scopedAppName, appDir] = parseNameAndPath(projectName);
 
+  const dataSource = abortIfCancel(
+    await p.select({
+      message: "Do you want to connect to a FileMaker Database now?",
+      options: [
+        {
+          value: "filemaker",
+          label: "Yes",
+          hint: "Requires OttoFMS and Admin Server credentials",
+        },
+        // { value: "supabase", label: "Supabase" },
+        {
+          value: "later",
+          label: "No",
+          hint: "You'll be able to add a new data source later",
+        },
+      ],
+    })
+  );
+
   const projectDir = await createBareProject({
     projectName: appDir,
     scopedAppName,
@@ -206,21 +225,36 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     noInstall: cliOptions.noInstall,
     appRouter: cliOptions.appRouter,
   });
-
-  // later will split this flow to ask for which kind of data souce, but for now it's just FM
-  await promptForFileMakerDataSource({
-    projectDir,
-    name: "filemaker",
-    adminApiKey: cliOptions.adminApiKey,
-    dataApiKey: cliOptions.dataApiKey,
-    server: cliOptions.server,
-    fileName: cliOptions.fileName,
-    layoutName: cliOptions.layoutName,
-    schemaName: cliOptions.schemaName,
-  });
+  setImportAlias(projectDir, "@/");
 
   if (state.appType === "webviewer") {
+    await promptForFileMakerDataSource({
+      projectDir,
+      name: "filemaker",
+      adminApiKey: cliOptions.adminApiKey,
+      dataApiKey: cliOptions.dataApiKey,
+      server: cliOptions.server,
+      fileName: cliOptions.fileName,
+      layoutName: cliOptions.layoutName,
+      schemaName: cliOptions.schemaName,
+    });
     await installFmAddon({ addonName: "wv" });
+  } else if (state.appType === "browser") {
+    if (dataSource === "filemaker") {
+      // later will split this flow to ask for which kind of data souce, but for now it's just FM
+      await promptForFileMakerDataSource({
+        projectDir,
+        name: "filemaker",
+        adminApiKey: cliOptions.adminApiKey,
+        dataApiKey: cliOptions.dataApiKey,
+        server: cliOptions.server,
+        fileName: cliOptions.fileName,
+        layoutName: cliOptions.layoutName,
+        schemaName: cliOptions.schemaName,
+      });
+    } else if (dataSource === "supabase") {
+      // TODO: add supabase
+    }
   }
 
   await askForAuth({ projectDir });
@@ -249,8 +283,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   fs.writeJSONSync(path.join(projectDir, "package.json"), pkgJson, {
     spaces: 2,
   });
-
-  setImportAlias(projectDir, "@/");
 
   if (!cliOptions.noInstall) {
     await installDependencies({ projectDir });

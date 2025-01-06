@@ -103,24 +103,35 @@ export async function runCodegenCommand({
   projectDir: string;
 }) {
   const settings = getSettings();
+  if (settings.dataSources.length === 0) {
+    console.log("no data sources found, skipping typegen");
+    return;
+  }
   const pkgManager = getUserPkgManager();
-  const { failed } = await execa(
-    pkgManager === "npm"
-      ? "npx"
-      : pkgManager === "pnpm"
-        ? "pnpx"
-        : pkgManager === "bun"
-          ? "bunx"
-          : pkgManager,
-    ["@proofgeist/fmdapi", `--env-path=${settings.envFile}`],
-    {
-      cwd: projectDir,
-      stderr: "inherit",
-      stdout: "inherit",
-    }
+
+  const hasFileMakerDataSources = settings.dataSources.some(
+    (ds) => ds.type === "fm"
   );
-  if (failed) {
-    throw new Error("Failed to run codegen command");
+
+  if (hasFileMakerDataSources) {
+    const { failed } = await execa(
+      pkgManager === "npm"
+        ? "npx"
+        : pkgManager === "pnpm"
+          ? "pnpx"
+          : pkgManager === "bun"
+            ? "bunx"
+            : pkgManager,
+      ["@proofgeist/fmdapi", `--env-path=${settings.envFile}`],
+      {
+        cwd: projectDir,
+        stderr: "inherit",
+        stdout: "inherit",
+      }
+    );
+    if (failed) {
+      throw new Error("Failed to run codegen command");
+    }
   }
 }
 

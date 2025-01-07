@@ -4,7 +4,7 @@ const schema = z
   .object({
     ci: z.boolean().default(false),
     debug: z.boolean().default(false),
-    baseCommand: z.enum(["add", "init"]).optional().catch(undefined),
+    baseCommand: z.enum(["add", "init", "deploy"]).optional().catch(undefined),
     appType: z.enum(["browser", "webviewer"]).optional().catch(undefined),
     projectDir: z.string().default(process.cwd()),
     authType: z.enum(["clerk", "proofkit"]).optional(),

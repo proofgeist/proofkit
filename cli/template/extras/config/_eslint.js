@@ -21,5 +21,6 @@ export const _initialConfig = {
       "error",
       { checksVoidReturn: { attributes: false } },
     ],
+    "@typescript-eslint/no-floating-promises": "warn",
   },
 };

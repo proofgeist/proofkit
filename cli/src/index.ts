@@ -7,6 +7,7 @@ import { makeInitCommand, runInit } from "~/cli/init.js";
 import { logger } from "~/utils/logger.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 import { makeAddCommand, runAdd } from "./cli/add/index.js";
+import { makeDeployCommand } from "./cli/deploy/index.js";
 import { makeTypegenCommand } from "./cli/typegen/index.js";
 import { UserAbortedError } from "./cli/utils.js";
 import { npmName } from "./consts.js";
@@ -60,6 +61,7 @@ const main = async () => {
   program.addCommand(makeInitCommand());
   program.addCommand(makeAddCommand());
   program.addCommand(makeTypegenCommand());
+  program.addCommand(makeDeployCommand());
 
   await program.parseAsync(process.argv);
   process.exit(0);

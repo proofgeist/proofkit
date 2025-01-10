@@ -7,7 +7,7 @@ const schema = z
     baseCommand: z.enum(["add", "init", "deploy"]).optional().catch(undefined),
     appType: z.enum(["browser", "webviewer"]).optional().catch(undefined),
     projectDir: z.string().default(process.cwd()),
-    authType: z.enum(["clerk", "proofkit"]).optional(),
+    authType: z.enum(["clerk", "fmaddon"]).optional(),
     emailProvider: z.enum(["plunk", "resend", "none"]).optional(),
   })
   .passthrough();

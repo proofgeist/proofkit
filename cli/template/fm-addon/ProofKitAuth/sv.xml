@@ -162,9 +162,9 @@
 
 <DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.1F27E3E6452F6E3D407EC45CDFF933C3</StringID>
-	<SourceText>https://proofkit.dev/auth/proofkit/</SourceText>
-	<TargetText>https://proofkit.dev/auth/proofkit/</TargetText>
-	<Comment>com.fmi.calculation.text.https://proofkit.dev/auth/proofkit/</Comment>
+	<SourceText>https://proofkit.dev/auth/fm-addon/</SourceText>
+	<TargetText>https://proofkit.dev/auth/fm-addon/</TargetText>
+	<Comment>com.fmi.calculation.text.https://proofkit.dev/auth/fm-addon/</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>

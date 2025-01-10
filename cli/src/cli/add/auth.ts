@@ -22,23 +22,23 @@ export async function runAddAuthAction() {
         message: "What auth provider do you want to use?",
         options: [
           {
-            label: "Clerk",
-            value: "clerk",
-            hint: "Easy to setup and use, may required a paid plan",
+            value: "fmaddon",
+            label: "FM Add-on Auth",
+            hint: "Self-hosted auth with email/password",
           },
           {
-            label: "ProofKit Auth",
-            value: "proofkit",
-            hint: "More advanced, but self-hosted and customizable",
+            value: "clerk",
+            label: "Clerk",
+            hint: "Hosted auth service with many providers",
           },
         ],
       })
     );
 
-  const type = z.enum(["clerk", "proofkit"]).parse(authType);
+  const type = z.enum(["clerk", "fmaddon"]).parse(authType);
   state.authType = type;
 
-  if (type === "proofkit") {
+  if (type === "fmaddon") {
     const emailProviderAnswer =
       (state.emailProvider
         ? state.emailProvider
@@ -89,11 +89,11 @@ export const makeAddAuthCommand = () => {
     .option("--authType <authType>", "Type of auth provider to use")
     .option(
       "--emailProvider <emailProvider>",
-      "Email provider to use (only for ProofKit Auth)"
+      "Email provider to use (only for FM Add-on Auth)"
     )
     .option(
       "--apiKey <apiKey>",
-      "API key to use for the email provider (only for ProofKit Auth)"
+      "API key to use for the email provider (only for FM Add-on Auth)"
     )
     .addOption(ciOption)
     .addOption(debugOption)

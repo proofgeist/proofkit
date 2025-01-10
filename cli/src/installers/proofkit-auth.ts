@@ -1,4 +1,3 @@
-import os from "os";
 import path from "path";
 import { type OttoAPIKey } from "@proofgeist/fmdapi";
 import chalk from "chalk";
@@ -12,8 +11,6 @@ import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
-import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
-import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
@@ -40,16 +37,16 @@ export const proofkitAuthInstaller = async () => {
     devMode: true,
   });
 
-  // copy all files from template/extras/proofkit-auth to projectDir/src
+  // copy all files from template/extras/fmaddon-auth to projectDir/src
   await fs.copy(
-    path.join(PKG_ROOT, "template/extras/proofkit-auth"),
+    path.join(PKG_ROOT, "template/extras/fmaddon-auth"),
     path.join(projectDir, "src")
   );
 
   const project = getNewProject(projectDir);
 
   // ensure tanstack query is installed
-  await injectTanstackQuery({ projectDir, project });
+  await injectTanstackQuery({ project });
 
   // inject signin/signout components to header slots
   addToHeaderSlot(
@@ -210,7 +207,7 @@ async function checkForProofKitLayouts(projectDir: string): Promise<boolean> {
   if (allProofkitAuthLayoutsExist) {
     console.log(
       chalk.green(
-        "Successfully detected all required layouts for ProofKit Auth in your FileMaker file."
+        "Successfully detected all required layouts for FM Add-on Auth in your FileMaker file."
       )
     );
     return true;

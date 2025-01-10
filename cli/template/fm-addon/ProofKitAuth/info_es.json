@@ -1,5 +1,5 @@
 ﻿{
-	"Title" : "ProofKit Auth",
+	"Title" : "FileMaker Add-on Auth",
 
 	"Description" : "*** DESCRIPTION MISSING *** - DNL",
 
@@ -8,7 +8,7 @@
 	"Features" :
 		[
 			
-		],
+			],
 
 	"Optimized" :
 		[

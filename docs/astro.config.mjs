@@ -35,6 +35,9 @@ export default defineConfig({
     }),
     react(),
   ],
+  redirects: {
+    "/auth/proofkit": "/auth/fm-addon",
+  },
 
   output: "server",
   adapter: vercel(),

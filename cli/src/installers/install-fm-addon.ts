@@ -12,8 +12,8 @@ export async function installFmAddon({
 }: {
   addonName: "auth" | "wv";
 }) {
-  const friendlyName =
-    addonName === "auth" ? "ProofKit Auth" : "ProofKit WebViewer";
+  const addonDisplayName =
+    addonName === "auth" ? "FM Add-on Auth" : "ProofKit WebViewer";
 
   let targetDir: string | null = null;
   if (process.platform === "win32") {
@@ -38,7 +38,7 @@ export async function installFmAddon({
 
   if (!targetDir) {
     logger.warn(
-      `Could not install the ${friendlyName} addon. You will need to do this manually.`
+      `Could not install the ${addonDisplayName} addon. You will need to do this manually.`
     );
     return;
   }
@@ -62,8 +62,8 @@ export async function installFmAddon({
   if (addonName === "auth") {
     console.log(
       `${chalk.yellowBright(
-        "You must install the ProofKit Auth addon in your FileMaker file."
-      )} ${chalk.dim("(Learn more: https://proofkit.dev/auth/proofkit)")}`
+        "You must install the FM Add-on Auth addon in your FileMaker file."
+      )} ${chalk.dim("(Learn more: https://proofkit.dev/auth/fm-addon)")}`
     );
   } else {
     console.log(
@@ -74,7 +74,7 @@ export async function installFmAddon({
   }
   const steps = [
     "Restart FileMaker Pro (if it's currently running)",
-    `Open your FileMaker file, go to layout mode, and install the ${friendlyName} addon to the file`,
+    `Open your FileMaker file, go to layout mode, and install the ${addonDisplayName} addon to the file`,
     "Run the typegen command to add the types into your project:",
   ];
   steps.forEach((step, index) => {
@@ -84,5 +84,7 @@ export async function installFmAddon({
   console.log(chalk.cyan(`     ${getUserPkgManager()} typegen`));
   console.log("");
 
-  return;
+  throw new Error(
+    "You must install the FM Add-on Auth addon in your FileMaker file."
+  );
 }

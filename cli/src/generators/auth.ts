@@ -11,7 +11,7 @@ export async function addAuth({
   options:
     | { type: "clerk" }
     | {
-        type: "proofkit";
+        type: "fmaddon";
         emailProvider?: "plunk" | "resend";
         apiKey?: string;
       };
@@ -25,8 +25,8 @@ export async function addAuth({
 
   if (options.type === "clerk") {
     await addClerkAuth({ projectDir });
-  } else if (options.type === "proofkit") {
-    await addProofkitAuth(options);
+  } else if (options.type === "fmaddon") {
+    await addFmaddonAuth(options);
   }
 
   if (!noInstall) {
@@ -43,11 +43,11 @@ async function addClerkAuth({
   mergeSettings({ auth: { type: "clerk" } });
 }
 
-async function addProofkitAuth({
+async function addFmaddonAuth({
   emailProvider,
 }: {
   emailProvider?: "plunk" | "resend";
 }) {
   await proofkitAuthInstaller();
-  mergeSettings({ auth: { type: "proofkit" } });
+  mergeSettings({ auth: { type: "fmaddon" } });
 }

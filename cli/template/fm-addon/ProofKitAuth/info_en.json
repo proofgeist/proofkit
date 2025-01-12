@@ -1,11 +1,7 @@
 ﻿{
-  "Title": "ProofKit Auth",
-  "Description": "ProofKit Auth - User authentication with ProofKit Web apps",
-  "Category": "Web",
-  "Features": [],
-  "Optimized": [
-    "Desktop",
-    "Tablet",
-    "Mobile"
-  ]
+  "Title": "FileMaker Add-on Auth",
+  "Description": "FileMaker Add-on Auth - User authentication with FileMaker web apps",
+  "Version": "1.0",
+  "Type": "fmaddon",
+  "RequiredFMPVersion": "20.0.0"
 }

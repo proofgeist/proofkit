@@ -13,7 +13,10 @@ const authSchema = z
       type: z.literal("next-auth"),
     }),
     z.object({
-      type: z.literal("proofkit"),
+      type: z.literal("proofkit").transform(() => "fmaddon"),
+    }),
+    z.object({
+      type: z.literal("fmaddon"),
     }),
     z.object({
       type: z.literal("none"),

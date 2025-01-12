@@ -22,7 +22,7 @@ jobs:
             const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: context.payload.workflow_run.id,
+              run_id: context.payload.workflow_run.id
             });
 
             for (const artifact of allArtifacts.data.artifacts) {
@@ -48,7 +48,12 @@ jobs:
             A new proofkit prerelease is available for testing. You can install this latest build in your project with:
 
             ```sh
-            pnpm create t3-app@${{ env.BETA_PACKAGE_VERSION }}
+            pnpm update @proofgeist/kit@${{ env.BETA_PACKAGE_VERSION }}
+            ```
+
+            or to create a new project:
+            ```sh
+            pnpx @proofgeist/kit@${{ env.BETA_PACKAGE_VERSION }}
             ```
 
       - name: "Remove the autorelease label once published"
@@ -56,9 +61,10 @@ jobs:
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            github.rest.issues.removeLabel({
+            const issueNumber = process.env.WORKFLOW_RUN_PR;
+            await github.rest.issues.removeLabel({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: ${{ env.WORKFLOW_RUN_PR }},
-              name: '🚀 autorelease',
+              issue_number: issueNumber,
+              name: '🚀 autorelease'
             });

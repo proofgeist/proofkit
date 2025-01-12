@@ -61,9 +61,10 @@ jobs:
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            github.rest.issues.removeLabel({
+            const issueNumber = process.env.WORKFLOW_RUN_PR;
+            await github.rest.issues.removeLabel({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: ${{ env.WORKFLOW_RUN_PR }},
+              issue_number: issueNumber,
               name: '🚀 autorelease'
             });

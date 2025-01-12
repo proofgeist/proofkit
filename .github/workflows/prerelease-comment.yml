@@ -65,5 +65,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: ${{ env.WORKFLOW_RUN_PR }},
-              name: '🚀 autorelease',
+              name: '🚀 autorelease'
             });

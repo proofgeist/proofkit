@@ -1,5 +1,15 @@
 # @proofgeist/kit
 
+## 0.1.0
+
+### Minor Changes
+
+- c019363: Add Deploy command for Vercel
+
+### Patch Changes
+
+- 0b7bf78: Allow setup without any data sources
+
 ## 0.0.15
 
 ### Patch Changes

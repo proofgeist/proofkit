@@ -6,6 +6,8 @@ import vercel from "@astrojs/vercel/serverless";
 
 import react from "@astrojs/react";
 
+import tailwind from "@astrojs/tailwind";
+
 // https://astro.build/config
 export default defineConfig({
   integrations: [
@@ -34,6 +36,7 @@ export default defineConfig({
       ],
     }),
     react(),
+    tailwind(),
   ],
   redirects: {
     "/auth/proofkit": "/auth/fm-addon",

@@ -72,7 +72,8 @@
     "randomstring": "^1.3.0",
     "semver": "^7.6.3",
     "sort-package-json": "^2.10.0",
-    "ts-morph": "^23.0.0"
+    "ts-morph": "^23.0.0",
+    "@proofkit/shared": "workspace:*"
   },
   "devDependencies": {
     "@auth/drizzle-adapter": "^1.1.0",

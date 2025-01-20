@@ -16,6 +16,9 @@ export default defineConfig({
       social: {
         github: "https://github.com/proofgeist/proofkit",
       },
+      components: {
+        Header: "./src/components/Header.astro",
+      },
       sidebar: [
         {
           label: "Guides",

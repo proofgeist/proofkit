@@ -38,6 +38,7 @@ interface CliFlags {
   dataApiKey: string;
   fmServerURL: string;
   auth: "none" | "next-auth" | "clerk";
+  dataSource?: "filemaker" | "none";
   /** @internal Used in CI. */
   CI: boolean;
   /** @internal Used in CI. */
@@ -70,6 +71,7 @@ const defaultOptions: CliFlags = {
   schemaName: "",
   dataApiKey: "",
   fmServerURL: "",
+  dataSource: undefined,
 };
 
 export const makeInitCommand = () => {
@@ -112,6 +114,11 @@ export const makeInitCommand = () => {
       undefined
     )
     .option(
+      "--dataSource [type]",
+      "The data source to use for the web app (filemaker or none)",
+      undefined
+    )
+    .option(
       "--noGit",
       "Explicitly tell the CLI to not initialize a new git repo in the project",
       false
@@ -134,16 +141,16 @@ export const makeInitCommand = () => {
 };
 
 async function askForAuth({ projectDir }: { projectDir: string }) {
-  const authType = "none" as string;
-  if (authType === "proofkit") {
+  const authType = "none" as "none" | "clerk" | "fmaddon";
+  if (authType === "clerk") {
     await addAuth({
-      options: { type: "proofkit" },
+      options: { type: "clerk" },
       projectDir,
       noInstall: true,
     });
-  } else if (authType === "clerk") {
+  } else if (authType === "fmaddon") {
     await addAuth({
-      options: { type: "clerk" },
+      options: { type: "fmaddon" },
       projectDir,
       noInstall: true,
     });
@@ -199,24 +206,26 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   // e.g. dir/@mono/app returns ["@mono/app", "dir/app"]
   const [scopedAppName, appDir] = parseNameAndPath(projectName);
 
-  const dataSource = abortIfCancel(
-    await p.select({
-      message: "Do you want to connect to a FileMaker Database now?",
-      options: [
-        {
-          value: "filemaker",
-          label: "Yes",
-          hint: "Requires OttoFMS and Admin Server credentials",
-        },
-        // { value: "supabase", label: "Supabase" },
-        {
-          value: "later",
-          label: "No",
-          hint: "You'll be able to add a new data source later",
-        },
-      ],
-    })
-  );
+  const dataSource =
+    cliOptions.dataSource ??
+    abortIfCancel(
+      await p.select({
+        message: "Do you want to connect to a FileMaker Database now?",
+        options: [
+          {
+            value: "filemaker",
+            label: "Yes",
+            hint: "Requires OttoFMS and Admin Server credentials",
+          },
+          // { value: "supabase", label: "Supabase" },
+          {
+            value: "none",
+            label: "No",
+            hint: "You'll be able to add a new data source later",
+          },
+        ],
+      })
+    );
 
   const projectDir = await createBareProject({
     projectName: appDir,

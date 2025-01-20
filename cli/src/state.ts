@@ -9,6 +9,7 @@ const schema = z
     projectDir: z.string().default(process.cwd()),
     authType: z.enum(["clerk", "fmaddon"]).optional(),
     emailProvider: z.enum(["plunk", "resend", "none"]).optional(),
+    dataSource: z.enum(["filemaker", "none"]).optional(),
   })
   .passthrough();
 

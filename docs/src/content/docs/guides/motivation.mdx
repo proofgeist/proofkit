@@ -5,6 +5,8 @@ sidebar:
   order: 2
 ---
 
+import { LinkCard, Aside } from "@astrojs/starlight/components";
+
 The ProofKit CLI aims to make web development easier for beginners and more efficient for experienced devs. It's _opinionated_ structure allows for more than just a starter template or bootstrapping tool, but code-mod scripts that can modify a project after the initial setup.
 
 ProofKit is **not** a JavaScript framework. It's also **not** the only way to build a web app. It's simply our experience of building web apps encapsulated into a CLI tool to help you structure your project and add to it over time. Each template is just a starting point, and you are free to modify any part of it as you see fit.
@@ -17,11 +19,17 @@ ProofKit assumes that you already have some basic programming skills, perhaps fr
 
 After you start a new ProofKit project, we encourage you to play around with it! Use git to commit the initial changes, then feel free to move files around, knowing you can always safely revert your changes to a known working state. We often learn best by doing, and a functional codebase is a great learning tool for you to dive into web development.
 
+<LinkCard
+  href="/guides/resources"
+  title="Learning Resources"
+  description="A list of subjects and tutorials to guide your web development journey."
+/>
+
 ## The ProofKit Tech Stack
 
 Here is a list of the frameworks and packages that you'll come accross in a ProofKit project, the reasons why we chose them, and links to their own docs.
 
-### Web Frameworks / Packages
+### Browser-based Frameworks / Packages
 
 #### Next.js
 
@@ -32,6 +40,10 @@ Here is a list of the frameworks and packages that you'll come accross in a Proo
 [Mantine](https://mantine.dev/) is a vast, themeable component library for React. We use their default components and styles to build apps very quickly, but with the option of adding custom styles or themes later if needed. Mantine also includes many helpful React hooks, and they provide a Modal and Notifcation system to ProofKit apps.
 
 Why not tailwind css and/or shadcn/ui? We've chosen to focus on Mantine because it has allowed our team to work much faster for the kinds of web apps that we build for our clients. When you're working on multiple projects at once, it's actually a benefit to **not** own the compoment code within an individual codebase, so that it can be more easily upgraded when the time comes. However, we have not ruled out other components and style systems and may add support for them in the future.
+
+#### Tanstack Query / React Query
+
+[Tanstack Query](https://tanstack.com/query) is a library for managing server state in React. It's used by ProofKit to fetch data from external sources, such as REST APIs, so we can be certain that the "shape" of our data matches what we expected during development.
 
 #### zod
 

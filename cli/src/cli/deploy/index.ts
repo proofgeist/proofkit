@@ -305,6 +305,40 @@ async function ensureCorrectNodeVersion() {
   }
 }
 
+async function checkVercelLogin(): Promise<boolean> {
+  try {
+    const result = await execa("vercel", ["whoami"], {
+      stdio: "pipe",
+      reject: false,
+    });
+
+    if (state.debug) {
+      console.log("\nDebug: Vercel whoami result:", result);
+    }
+
+    return result.exitCode === 0;
+  } catch (error) {
+    if (state.debug) {
+      console.error("Debug: Error checking Vercel login status:", error);
+    }
+    return false;
+  }
+}
+
+async function loginToVercel(): Promise<boolean> {
+  console.log(chalk.blue("\nYou need to log in to Vercel first."));
+
+  try {
+    await execa("vercel", ["login"], {
+      stdio: "inherit",
+    });
+    return true;
+  } catch (error) {
+    console.error(chalk.red("\nFailed to log in to Vercel:"), error);
+    return false;
+  }
+}
+
 async function runDeploy() {
   // Check if Vercel CLI is installed
   const hasVercelCLI = await checkVercelCLI();
@@ -318,6 +352,16 @@ async function runDeploy() {
         )
       );
       console.log(chalk.blue("\n  npm install -g vercel"));
+      return;
+    }
+  }
+
+  // Check if user is logged in
+  const isLoggedIn = await checkVercelLogin();
+  if (!isLoggedIn) {
+    const loginSuccessful = await loginToVercel();
+    if (!loginSuccessful) {
+      console.log(chalk.red("\nFailed to log in to Vercel. Please try again."));
       return;
     }
   }

@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 0.1.1
+
+### Patch Changes
+
+- f88583c: prompt user to login to Vercel if needed during deploy command
+
 ## 0.1.0
 
 ### Minor Changes

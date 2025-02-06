@@ -1,6 +1,6 @@
 {
   "name": "@proofgeist/kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Create web application with the ProofKit stack",
   "license": "MIT",
   "repository": {
@@ -72,8 +72,7 @@
     "randomstring": "^1.3.0",
     "semver": "^7.6.3",
     "sort-package-json": "^2.10.0",
-    "ts-morph": "^23.0.0",
-    "@proofkit/shared": "workspace:*"
+    "ts-morph": "^23.0.0"
   },
   "devDependencies": {
     "@auth/drizzle-adapter": "^1.1.0",

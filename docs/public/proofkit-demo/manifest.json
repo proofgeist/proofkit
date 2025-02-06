@@ -1,0 +1,101 @@
+{
+  "status": "completed",
+  "buildId": "proofkit-demo",
+  "zipArchive": "proofkit-demo.build.zip",
+  "files": [
+    {
+      "fileName": "ProofKitDemo.fmp12",
+      "clone": false,
+      "user": "admn",
+      "password": "admin",
+      "encryptionKey": "",
+      "size": 9904128
+    }
+  ],
+  "zipSize": 9912486,
+  "completedFiles": 1,
+  "message": "all files copied successfully",
+  "log": [
+    {
+      "level": "info",
+      "phase": "starting",
+      "message": "starting build \"proofkit-demo\" with 1 files",
+      "timeElapsed": 1
+    },
+    {
+      "level": "info",
+      "phase": "starting",
+      "message": "files are in valid statuses",
+      "timeElapsed": 720
+    },
+    {
+      "level": "info",
+      "phase": "pre-build script",
+      "message": "no pre build script to run",
+      "timeElapsed": 722
+    },
+    {
+      "level": "info",
+      "phase": "backing up",
+      "message": "starting backup",
+      "timeElapsed": 732,
+      "file": "ProofKitDemo.fmp12"
+    },
+    {
+      "level": "info",
+      "phase": "backing up",
+      "message": "backup of file ProofKitDemo.fmp12 is done",
+      "timeElapsed": 6837,
+      "file": "ProofKitDemo.fmp12"
+    },
+    {
+      "level": "info",
+      "phase": "moving files",
+      "message": "moving file to outbox folder",
+      "timeElapsed": 6838,
+      "file": "ProofKitDemo.fmp12"
+    },
+    {
+      "level": "info",
+      "phase": "zipping",
+      "message": "adding file to zip: ProofKitDemo.fmp12",
+      "timeElapsed": 6839,
+      "file": "ProofKitDemo.fmp12"
+    },
+    {
+      "level": "info",
+      "phase": "zipping",
+      "message": "adding file to zip: manifest.json",
+      "timeElapsed": 6841,
+      "file": "manifest.json"
+    },
+    {
+      "level": "info",
+      "phase": "zipping",
+      "message": "done adding to zip: ProofKitDemo.fmp12",
+      "timeElapsed": 7011,
+      "file": "ProofKitDemo.fmp12"
+    },
+    {
+      "level": "info",
+      "phase": "zipping",
+      "message": "done adding to zip: manifest.json",
+      "timeElapsed": 7022,
+      "file": "manifest.json"
+    },
+    {
+      "level": "info",
+      "phase": "zipping",
+      "message": "zip file finished: /mnt/backups/fmbackups/OttoFMS/outbox/proofkit-demo/proofkit-demo.build.zip",
+      "timeElapsed": 7031
+    },
+    {
+      "level": "info",
+      "phase": "done",
+      "message": "Build \"proofkit-demo\" completed.",
+      "timeElapsed": 9035
+    }
+  ],
+  "startedAt": "2025-02-06T19:57:47.758Z",
+  "lastUpdated": "2025-02-06T19:57:56.794Z"
+}

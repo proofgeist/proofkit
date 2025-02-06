@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 0.1.2
+
+### Patch Changes
+
+- 92cb423: fix: runtime error due to external shared package
+
 ## 0.1.1
 
 ### Patch Changes

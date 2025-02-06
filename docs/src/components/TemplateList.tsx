@@ -1,4 +1,4 @@
-import { type Template } from "@proofkit/shared";
+import { type Template } from "@config/templates";
 import { useState, useMemo, useEffect, useRef } from "react";
 import Fuse from "fuse.js";
 import { Tooltip } from "./Tooltip";

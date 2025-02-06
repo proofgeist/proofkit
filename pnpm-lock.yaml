@@ -74,9 +74,6 @@ importers:
       '@proofgeist/fmdapi':
         specifier: ^4.1.5
         version: 4.1.5(zod@3.23.8)
-      '@proofkit/shared':
-        specifier: workspace:*
-        version: link:../shared
       axios:
         specifier: ^1.7.3
         version: 1.7.3
@@ -221,7 +218,7 @@ importers:
         version: 3.4.3
       tsup:
         specifier: ^6.7.0
-        version: 6.7.0(postcss@8.5.1)(typescript@5.6.3)
+        version: 6.7.0(postcss@8.4.47)(typescript@5.6.3)
       type-fest:
         specifier: ^3.13.1
         version: 3.13.1
@@ -246,9 +243,6 @@ importers:
       '@astrojs/vercel':
         specifier: ^7.8.1
         version: 7.8.1(astro@4.15.11(@types/node@20.17.11)(rollup@4.24.0)(typescript@5.6.3))(next@14.2.4(@babel/core@7.25.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@proofkit/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.11
@@ -286,15 +280,6 @@ importers:
       tailwindcss:
         specifier: ^3.4.3
         version: 3.4.3
-
-  shared:
-    devDependencies:
-      tsup:
-        specifier: ^6.7.0
-        version: 6.7.0(postcss@8.5.1)(typescript@5.7.2)
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.2
 
 packages:
 
@@ -3903,7 +3888,6 @@ packages:
 
   libsql@0.3.16:
     resolution: {integrity: sha512-pIv3hP+W0bHTyjg56H5O3D45RP1BGcs0jnSOCk8PQ41nlPpVG3+sG9AG9Vc2NcnvFKuL02gGPFLzvbBe8AQjgg==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lilconfig@2.1.0:
@@ -11300,12 +11284,12 @@ snapshots:
       camelcase-css: 2.0.1
       postcss: 8.4.47
 
-  postcss-load-config@3.1.4(postcss@8.5.1):
+  postcss-load-config@3.1.4(postcss@8.4.47):
     dependencies:
       lilconfig: 2.1.0
       yaml: 1.10.2
     optionalDependencies:
-      postcss: 8.5.1
+      postcss: 8.4.47
 
   postcss-load-config@4.0.2(postcss@8.4.47):
     dependencies:
@@ -12331,7 +12315,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsup@6.7.0(postcss@8.5.1)(typescript@5.6.3):
+  tsup@6.7.0(postcss@8.4.47)(typescript@5.6.3):
     dependencies:
       bundle-require: 4.0.1(esbuild@0.17.19)
       cac: 6.7.14
@@ -12341,38 +12325,15 @@ snapshots:
       execa: 5.1.1
       globby: 11.1.0
       joycon: 3.1.1
-      postcss-load-config: 3.1.4(postcss@8.5.1)
+      postcss-load-config: 3.1.4(postcss@8.4.47)
       resolve-from: 5.0.0
       rollup: 3.21.0
       source-map: 0.8.0-beta.0
       sucrase: 3.32.0
       tree-kill: 1.2.2
     optionalDependencies:
-      postcss: 8.5.1
+      postcss: 8.4.47
       typescript: 5.6.3
-    transitivePeerDependencies:
-      - supports-color
-      - ts-node
-
-  tsup@6.7.0(postcss@8.5.1)(typescript@5.7.2):
-    dependencies:
-      bundle-require: 4.0.1(esbuild@0.17.19)
-      cac: 6.7.14
-      chokidar: 3.6.0
-      debug: 4.3.4
-      esbuild: 0.17.19
-      execa: 5.1.1
-      globby: 11.1.0
-      joycon: 3.1.1
-      postcss-load-config: 3.1.4(postcss@8.5.1)
-      resolve-from: 5.0.0
-      rollup: 3.21.0
-      source-map: 0.8.0-beta.0
-      sucrase: 3.32.0
-      tree-kill: 1.2.2
-    optionalDependencies:
-      postcss: 8.5.1
-      typescript: 5.7.2
     transitivePeerDependencies:
       - supports-color
       - ts-node

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@config/*": ["../config/*"]
     },
     "checkJs": true
   },
@@ -12,6 +13,7 @@
     "tsup.config.ts",
     "../reset.d.ts",
     "prettier.config.mjs",
-    "index.d.ts"
+    "index.d.ts",
+    "../config"
   ]
 }

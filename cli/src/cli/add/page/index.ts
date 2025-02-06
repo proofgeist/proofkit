@@ -1,5 +1,6 @@
 import path from "path";
 import * as p from "@clack/prompts";
+import { nextjsTemplates, wvTemplates } from "@config/templates.js";
 import { Command } from "commander";
 import { capitalize } from "es-toolkit";
 import fs from "fs-extra";
@@ -15,7 +16,6 @@ import {
   type DataSource,
 } from "~/utils/parseSettings.js";
 import { abortIfCancel, ensureProofKitProject } from "../../utils.js";
-import { nextjsTemplates, wvTemplates } from "./templates.js";
 
 export const runAddPageAction = async (opts?: {
   routeName?: string;

@@ -10,6 +10,4 @@ export default defineConfig({
   target: "esnext",
   outDir: "dist",
   onSuccess: isDev ? "node dist/index.js" : undefined,
-  bundle: true,
-  noExternal: [/@proofkit\/.*/],
 });

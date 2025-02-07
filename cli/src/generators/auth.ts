@@ -21,6 +21,13 @@ export async function addAuth({
   const settings = getSettings();
   if (settings.auth.type !== "none") {
     throw new Error("Auth already exists");
+  } else if (
+    !settings.dataSources.some((o) => o.type === "fm") &&
+    options.type === "fmaddon"
+  ) {
+    throw new Error(
+      "A FileMaker data source is required to use the FM Add-on Auth"
+    );
   }
 
   if (options.type === "clerk") {

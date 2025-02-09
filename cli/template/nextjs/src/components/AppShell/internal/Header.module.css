@@ -23,6 +23,8 @@
   font-size: var(--mantine-font-size-sm);
   font-weight: 500;
   cursor: pointer;
+  background: none;
+  border: none;
 
   @mixin hover {
     background-color: light-dark(

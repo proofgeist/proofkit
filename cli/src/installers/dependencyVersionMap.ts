@@ -45,7 +45,7 @@ export const dependencyVersionMap = {
   "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
-  "@proofgeist/fmdapi": "^4.2.1",
+  "@proofgeist/fmdapi": "^4.2.2",
 
   // ProofKit
   "@proofgeist/kit": `^${getVersion()}`,
@@ -56,7 +56,7 @@ export const dependencyVersionMap = {
   "@tanstack/eslint-plugin-query": "^5.59.1",
 
   // ProofKit Auth
-  "@node-rs/argon2": "^2.0.0",
+  "@node-rs/argon2": "^2.0.2",
   "@oslojs/binary": "^1.0.0",
   "@oslojs/crypto": "^1.0.1",
   "@oslojs/encoding": "^1.1.0",

@@ -3,6 +3,7 @@ import axios, { AxiosError } from "axios";
 import chalk from "chalk";
 import open from "open";
 import randomstring from "randomstring";
+import { z } from "zod";
 
 import { abortIfCancel } from "./utils.js";
 
@@ -161,17 +162,14 @@ export async function createDataAPIKey({
     );
 
     try {
-      const response = await axios.post<CreateAPIKeyResponse>(
-        `${url.origin}/otto/api/api-key/create-only`,
-        {
-          database: filename,
-          label: "For FM Web App",
-          user: username,
-          pass: password,
-        }
-      );
+      const response = await createDataAPIKeyWithCredentials({
+        url,
+        filename,
+        username,
+        password,
+      });
 
-      return { apiKey: response.data.response.key };
+      return response;
     } catch (error) {
       if (!(error instanceof AxiosError)) {
         clack.log.error(
@@ -212,4 +210,99 @@ ${url.origin}/otto/app/api-keys`
       }
     }
   }
+}
+
+export async function createDataAPIKeyWithCredentials({
+  url,
+  filename,
+  username,
+  password,
+}: {
+  url: URL;
+  filename: string;
+  username: string;
+  password: string;
+}) {
+  const response = await axios.post<CreateAPIKeyResponse>(
+    `${url.origin}/otto/api/api-key/create-only`,
+    {
+      database: filename,
+      label: "For FM Web App",
+      user: username,
+      pass: password,
+    }
+  );
+
+  return { apiKey: response.data.response.key };
+}
+
+export async function startDeployment({
+  payload,
+  url,
+  token,
+}: {
+  payload: any;
+  url: URL;
+  token: string;
+}) {
+  const responseSchema = z.object({
+    response: z.object({
+      started: z.boolean(),
+      batchId: z.number(),
+      subDeploymentIds: z.array(z.number()),
+    }),
+    messages: z.array(z.object({ code: z.number(), text: z.string() })),
+  });
+
+  const response = await axios.post(
+    `${url.origin}/otto/api/deployment`,
+    payload,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return responseSchema.parse(response.data);
+}
+
+export async function getDeploymentStatus({
+  url,
+  token,
+  deploymentId,
+}: {
+  url: URL;
+  token: string;
+  deploymentId: number;
+}) {
+  const schema = z.object({
+    response: z.object({
+      id: z.number(),
+      status: z.enum([
+        "queued",
+        "running",
+        "scheduled",
+        "complete",
+        "aborted",
+        "unknown",
+      ]),
+      running: z.coerce.boolean(),
+      created_at: z.string(),
+      started_at: z.string(),
+      updated_at: z.string(),
+    }),
+    messages: z.array(z.object({ code: z.number(), text: z.string() })),
+  });
+
+  const response = await axios.get(
+    `${url.origin}/otto/api/deployment/${deploymentId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return schema.parse(response.data);
 }

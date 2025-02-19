@@ -22,6 +22,7 @@ import {
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { runAddSchemaAction } from "../fmschema.js";
+import { deployDemoFile, filename } from "./deploy-demo-file.js";
 
 export async function promptForFileMakerDataSource({
   projectDir,
@@ -57,64 +58,106 @@ export async function promptForFileMakerDataSource({
     opts.adminApiKey || (await getOttoFMSToken({ url: server.url })).token;
 
   const fileList = await listFiles({ url: server.url, token });
-  const selectedFile =
-    opts.fileName ||
-    abortIfCancel(
-      await p.select({
-        message: `Which file would you like to connect to? ${chalk.dim(`(TIP: Select the file where your data is stored)`)}`,
-        maxItems: 10,
-        options: fileList
-          .sort((a, b) => a.filename.localeCompare(b.filename))
-          .map((file) => ({
-            value: file.filename,
-            label: file.filename,
-          })),
-      })
-    );
-  const fmFile = selectedFile;
+  const demoFileExists = fileList
+    .map((f) => f.filename.replace(".fmp12", ""))
+    .includes(filename.replace(".fmp12", ""));
+  let fmFile = opts.fileName;
+  while (true) {
+    fmFile =
+      opts.fileName ||
+      abortIfCancel(
+        await p.select({
+          message: `Which file would you like to connect to? ${chalk.dim(`(TIP: Select the file where your data is stored)`)}`,
+          maxItems: 10,
+          options: [
+            {
+              value: "$deployDemoFile",
+              label: "Deploy NEW ProofKit Demo File",
+              hint: "Use OttoFMS to deploy a new file for testing",
+            },
+            ...fileList
+              .sort((a, b) => a.filename.localeCompare(b.filename))
+              .map((file) => ({
+                value: file.filename,
+                label: file.filename,
+              })),
+          ],
+        })
+      );
 
-  const allApiKeys = await listAPIKeys({ url: server.url, token });
-  const thisFileApiKeys = allApiKeys.filter((key) => key.database === fmFile);
+    if (fmFile !== "$deployDemoFile") break;
+
+    if (demoFileExists) {
+      const replace = abortIfCancel(
+        await p.confirm({
+          message:
+            "The demo file already exists, do you want to replace it with a fresh copy?",
+          active: "Yes, replace",
+          inactive: "No, select another file",
+          initialValue: false,
+        })
+      );
+      if (replace) break;
+    } else {
+      break;
+    }
+  }
+
+  if (!fmFile) throw new Error("No file selected");
 
   let dataApiKey = opts.dataApiKey;
-  if (!dataApiKey && thisFileApiKeys.length > 0) {
-    const selectedKey = abortIfCancel(
-      await p.select({
-        message: "Which API key would you like to use?",
-        options: [
-          ...thisFileApiKeys.map((key) => ({
-            value: key.key,
-            label: `${chalk.bold(key.label)} - ${key.user}`,
-            hint: `${key.key.slice(0, 5)}...${key.key.slice(-4)}`,
-          })),
-          {
-            value: "create",
-            label: "Create a new API key",
-            hint: "Requires FileMaker credentials for this file",
-          },
-        ],
-      })
-    );
-    if (typeof selectedKey !== "string") throw new Error("Invalid key");
-    if (selectedKey !== "create") dataApiKey = selectedKey;
-  }
-
-  if (!dataApiKey) {
-    // data api was not provided, prompt to create a new one
-    const resp = await createDataAPIKey({
-      filename: fmFile,
+  if (fmFile === "$deployDemoFile") {
+    const { apiKey } = await deployDemoFile({
       url: server.url,
+      token,
+      operation: demoFileExists ? "replace" : "install",
     });
-    dataApiKey = resp.apiKey;
-  }
+    dataApiKey = apiKey;
+    fmFile = filename;
+    opts.layoutName = opts.layoutName ?? "API_Contacts";
+    opts.schemaName = opts.schemaName ?? "Contacts";
+  } else {
+    const allApiKeys = await listAPIKeys({ url: server.url, token });
+    const thisFileApiKeys = allApiKeys.filter((key) => key.database === fmFile);
 
+    if (!dataApiKey && thisFileApiKeys.length > 0) {
+      const selectedKey = abortIfCancel(
+        await p.select({
+          message: "Which API key would you like to use?",
+          options: [
+            ...thisFileApiKeys.map((key) => ({
+              value: key.key,
+              label: `${chalk.bold(key.label)} - ${key.user}`,
+              hint: `${key.key.slice(0, 5)}...${key.key.slice(-4)}`,
+            })),
+            {
+              value: "create",
+              label: "Create a new API key",
+              hint: "Requires FileMaker credentials for this file",
+            },
+          ],
+        })
+      );
+      if (typeof selectedKey !== "string") throw new Error("Invalid key");
+      if (selectedKey !== "create") dataApiKey = selectedKey;
+    }
+
+    if (!dataApiKey) {
+      // data api was not provided, prompt to create a new one
+      const resp = await createDataAPIKey({
+        filename: fmFile,
+        url: server.url,
+      });
+      dataApiKey = resp.apiKey;
+    }
+  }
   if (!dataApiKey) throw new Error("No API key");
 
   const name =
     existingFmDataSourceNames.length === 0
       ? "filemaker"
       : opts.name ??
-        (
+        abortIfCancel(
           await p.text({
             message: "What do you want to call this data source?",
             validate: (value) => {
@@ -128,7 +171,7 @@ export async function promptForFileMakerDataSource({
               return validateAppName(value);
             },
           })
-        ).toString();
+        );
 
   const newDataSource: z.infer<typeof dataSourceSchema> = {
     type: "fm",

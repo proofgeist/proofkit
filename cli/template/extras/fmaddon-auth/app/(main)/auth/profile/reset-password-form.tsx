@@ -14,7 +14,7 @@ import {
 import { TextInput } from "@mantine/core";
 import { Stack } from "@mantine/core";
 import { useState } from "react";
-import { showSuccessNotification } from "@/utils/notifcation-helpers";
+import { showSuccessNotification } from "@/utils/notification-helpers";
 
 export default function UpdatePasswordForm() {
   const [showForm, setShowForm] = useState(false);

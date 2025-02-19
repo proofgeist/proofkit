@@ -22,7 +22,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html suppressHydrationWarning lang="en">
       <head>
         <Suspense>
           <ColorSchemeScript defaultColorScheme="auto" />

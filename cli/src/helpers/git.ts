@@ -120,6 +120,9 @@ export const initializeGit = async (projectDir: string) => {
       });
     }
     await execa("git", ["add", "."], { cwd: projectDir });
+    await execa("git", ["commit", "-m", "Initial commit"], {
+      cwd: projectDir,
+    });
     spinner.succeed(
       `${chalk.green("Successfully initialized and staged")} ${chalk.green.bold(
         "git"

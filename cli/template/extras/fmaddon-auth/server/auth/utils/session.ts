@@ -144,7 +144,7 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
   const sessions = await sessionsLayout.findAll({
     query: { id_user: `==${userId}` },
   });
-  for await (const session of sessions) {
+  for (const session of sessions) {
     await sessionsLayout.delete({ recordId: session.recordId });
   }
 }

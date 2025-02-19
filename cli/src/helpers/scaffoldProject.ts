@@ -22,6 +22,8 @@ export const scaffoldProject = async ({
     state.appType === "browser" ? "template/nextjs" : "template/vite-wv"
   );
 
+  const extrasDir = path.join(PKG_ROOT, "template/extras");
+
   if (!noInstall) {
     logger.info(`\nUsing: ${chalk.cyan.bold(pkgManager)}\n`);
   } else {
@@ -89,7 +91,21 @@ export const scaffoldProject = async ({
 
   spinner.start();
 
+  // Copy the main template
   fs.copySync(srcDir, projectDir);
+
+  // Copy cursor rules file
+  const cursorRulesSrc = path.join(extrasDir, "_cursor/rules/cursor-rules.mdc");
+  const cursorRulesDest = path.join(
+    projectDir,
+    ".cursor/rules/cursor-rules.mdc"
+  );
+  if (fs.existsSync(cursorRulesSrc)) {
+    fs.ensureDirSync(path.dirname(cursorRulesDest));
+    fs.copySync(cursorRulesSrc, cursorRulesDest);
+  }
+
+  // Rename gitignore
   fs.renameSync(
     path.join(projectDir, "_gitignore"),
     path.join(projectDir, ".gitignore")

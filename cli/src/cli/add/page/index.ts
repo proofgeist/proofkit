@@ -183,7 +183,7 @@ export const runAddPageAction = async (opts?: {
   const pkgManager = getUserPkgManager();
 
   console.log(
-    `\n${chalk.green("Next steps:")}\nTo preview this page, restart your dev server using the ${chalk.cyan(`${pkgManager} dev`)} command\n`
+    `\n${chalk.green("Next steps:")}\nTo preview this page, restart your dev server using the ${chalk.cyan(`${pkgManager === "npm" ? "npm run" : pkgManager} dev`)} command\n`
   );
 };
 

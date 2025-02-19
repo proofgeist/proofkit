@@ -206,6 +206,15 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   // e.g. dir/@mono/app returns ["@mono/app", "dir/app"]
   const [scopedAppName, appDir] = parseNameAndPath(projectName);
 
+  const projectDir = await createBareProject({
+    projectName: appDir,
+    scopedAppName,
+    packages: usePackages,
+    noInstall: cliOptions.noInstall,
+    appRouter: cliOptions.appRouter,
+  });
+  setImportAlias(projectDir, "@/");
+
   const dataSource =
     cliOptions.dataSource ??
     abortIfCancel(
@@ -226,15 +235,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
         ],
       })
     );
-
-  const projectDir = await createBareProject({
-    projectName: appDir,
-    scopedAppName,
-    packages: usePackages,
-    noInstall: cliOptions.noInstall,
-    appRouter: cliOptions.appRouter,
-  });
-  setImportAlias(projectDir, "@/");
 
   if (state.appType === "webviewer") {
     await promptForFileMakerDataSource({

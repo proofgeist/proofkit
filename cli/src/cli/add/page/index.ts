@@ -1,6 +1,7 @@
 import path from "path";
 import * as p from "@clack/prompts";
 import { nextjsTemplates, wvTemplates } from "@config/templates.js";
+import chalk from "chalk";
 import { Command } from "commander";
 import { capitalize } from "es-toolkit";
 import fs from "fs-extra";
@@ -10,6 +11,7 @@ import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
+import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import {
   getSettings,
   mergeSettings,
@@ -178,6 +180,11 @@ export const runAddPageAction = async (opts?: {
   }
 
   spinner.stop("Added page!");
+  const pkgManager = getUserPkgManager();
+
+  console.log(
+    `\n${chalk.green("Next steps:")}\nTo preview this page, restart your dev server using the ${chalk.cyan(`${pkgManager} dev`)} command\n`
+  );
 };
 
 export const makeAddPageCommand = () => {

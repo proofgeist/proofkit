@@ -1,3 +1,7 @@
+import { postInstallTable } from "../cli/src/cli/add/page/post-install/table.js";
+import { postInstallTableInfinite } from "../cli/src/cli/add/page/post-install/table-infinite.js";
+import type { TPostInstallFn } from "../cli/src/cli/add/page/types.js";
+
 export interface Template {
   requireData: boolean;
   label: string;
@@ -5,12 +9,7 @@ export interface Template {
   templatePath: string;
   screenshot?: string;
   tags?: string[];
-  postIntallFn?: (args: {
-    projectDir: string;
-    pageDir: string;
-    dataSource?: unknown;
-    schemaName?: string;
-  }) => void | Promise<void>;
+  postIntallFn?: TPostInstallFn;
 }
 
 export const nextjsTemplates: Record<string, Template> = {
@@ -24,18 +23,21 @@ export const nextjsTemplates: Record<string, Template> = {
     label: "Basic Table",
     hint: "Use to load and show multiple records",
     templatePath: "nextjs/table",
+    postIntallFn: postInstallTable,
   },
   tableEdit: {
     requireData: true,
     label: "Basic Table (editable)",
     hint: "Use to load and show multiple records with inline edit functionality",
     templatePath: "nextjs/table-edit",
+    postIntallFn: postInstallTable,
   },
   tableInfinite: {
     requireData: true,
     label: "Infinite Table",
     hint: "Automatically load more records when the user scrolls to the bottom",
     templatePath: "nextjs/table-infinite",
+    postIntallFn: postInstallTableInfinite,
   },
 };
 
@@ -50,11 +52,13 @@ export const wvTemplates: Record<string, Template> = {
     label: "Basic Table",
     hint: "Use to load and show multiple records",
     templatePath: "vite-wv/table",
+    postIntallFn: postInstallTable,
   },
   tableEdit: {
     requireData: true,
     label: "Basic Table (editable)",
     hint: "Use to load and show multiple records with inline edit functionality",
     templatePath: "vite-wv/table-edit",
+    postIntallFn: postInstallTable,
   },
 };

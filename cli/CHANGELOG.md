@@ -1,5 +1,15 @@
 # @proofgeist/kit
 
+## 0.2.0
+
+### Minor Changes
+
+- 6073cfe: Allow deploying a demo file to your server instead of having to pick an existing file
+
+### Patch Changes
+
+- d0f5c6e: Fix: post-install template functions not running
+
 ## 0.1.2
 
 ### Patch Changes

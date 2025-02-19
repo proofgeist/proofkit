@@ -1,5 +1,16 @@
 # @proofgeist/kit
 
+## 0.2.1
+
+### Patch Changes
+
+- 6e44193: update helper text for npm after adding page
+- 6e44193: additional supression of hydration warning
+- 6e44193: move question about adding data source for new project
+- 183988b: fix import path for reset password helper
+- 6e44193: Make an initial commit when initializing git repo
+- e0682aa: Copy cursor rules.mdc file into the base project.
+
 ## 0.2.0
 
 ### Minor Changes

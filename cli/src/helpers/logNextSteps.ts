@@ -2,13 +2,11 @@ import chalk from "chalk";
 
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { type InstallerOptions } from "~/installers/index.js";
-import { state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { logger } from "~/utils/logger.js";
-import { isInsideGitRepo, isRootGitRepo } from "./git.js";
 
 // This logs the next steps that the user should take in order to advance the project
-export const logNextSteps = async ({
+export const logNextSteps = ({
   projectName = DEFAULT_APP_NAME,
   noInstall,
 }: Pick<InstallerOptions, "projectName" | "noInstall">) => {
@@ -30,16 +28,6 @@ export const logNextSteps = async ({
       logger.info(`  ${pkgManager} install`);
     }
   }
-
-  if (
-    !(await isInsideGitRepo(state.projectDir)) &&
-    !isRootGitRepo(state.projectDir)
-  ) {
-    logger.dim(`\nInitialize a git repository:`);
-    logger.info(`  git init`);
-  }
-  logger.dim(`\nMake your first commit:`);
-  logger.info(`  git commit -m "initial commit"`);
 
   logger.dim(`\nStart the dev server to view your app in a browser:`);
   if (["npm", "bun"].includes(pkgManager)) {

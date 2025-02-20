@@ -38,7 +38,7 @@ interface CliFlags {
   dataApiKey: string;
   fmServerURL: string;
   auth: "none" | "next-auth" | "clerk";
-  dataSource?: "filemaker" | "none";
+  dataSource?: "filemaker" | "none" | "supabase";
   /** @internal Used in CI. */
   CI: boolean;
   /** @internal Used in CI. */
@@ -214,60 +214,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     appRouter: cliOptions.appRouter,
   });
   setImportAlias(projectDir, "@/");
-
-  const dataSource =
-    cliOptions.dataSource ??
-    abortIfCancel(
-      await p.select({
-        message: "Do you want to connect to a FileMaker Database now?",
-        options: [
-          {
-            value: "filemaker",
-            label: "Yes",
-            hint: "Requires OttoFMS and Admin Server credentials",
-          },
-          // { value: "supabase", label: "Supabase" },
-          {
-            value: "none",
-            label: "No",
-            hint: "You'll be able to add a new data source later",
-          },
-        ],
-      })
-    );
-
-  if (state.appType === "webviewer") {
-    await promptForFileMakerDataSource({
-      projectDir,
-      name: "filemaker",
-      adminApiKey: cliOptions.adminApiKey,
-      dataApiKey: cliOptions.dataApiKey,
-      server: cliOptions.server,
-      fileName: cliOptions.fileName,
-      layoutName: cliOptions.layoutName,
-      schemaName: cliOptions.schemaName,
-    });
-    await installFmAddon({ addonName: "wv" });
-  } else if (state.appType === "browser") {
-    if (dataSource === "filemaker") {
-      // later will split this flow to ask for which kind of data souce, but for now it's just FM
-      await promptForFileMakerDataSource({
-        projectDir,
-        name: "filemaker",
-        adminApiKey: cliOptions.adminApiKey,
-        dataApiKey: cliOptions.dataApiKey,
-        server: cliOptions.server,
-        fileName: cliOptions.fileName,
-        layoutName: cliOptions.layoutName,
-        schemaName: cliOptions.schemaName,
-      });
-    } else if (dataSource === "supabase") {
-      // TODO: add supabase
-    }
-  }
-
-  await askForAuth({ projectDir });
-
   addPackageDependency({
     dependencies: ["@proofgeist/kit"],
     devMode: true,
@@ -293,6 +239,48 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     spaces: 2,
   });
 
+  // for webviewer apps FM is required, so don't ask
+  let dataSource =
+    state.appType === "webviewer" ? "filemaker" : cliOptions.dataSource;
+  if (!dataSource) {
+    dataSource = abortIfCancel(
+      await p.select({
+        message: "Do you want to connect to a FileMaker Database now?",
+        options: [
+          {
+            value: "filemaker",
+            label: "Yes",
+            hint: "Requires OttoFMS and Admin Server credentials",
+          },
+          // { value: "supabase", label: "Supabase" },
+          {
+            value: "none",
+            label: "No",
+            hint: "You'll be able to add a new data source later",
+          },
+        ],
+      })
+    ) as "filemaker" | "none" | "supabase";
+  }
+
+  if (dataSource === "filemaker") {
+    // later will split this flow to ask for which kind of data souce, but for now it's just FM
+    await promptForFileMakerDataSource({
+      projectDir,
+      name: "filemaker",
+      adminApiKey: cliOptions.adminApiKey,
+      dataApiKey: cliOptions.dataApiKey,
+      server: cliOptions.server,
+      fileName: cliOptions.fileName,
+      layoutName: cliOptions.layoutName,
+      schemaName: cliOptions.schemaName,
+    });
+  } else if (dataSource === "supabase") {
+    // TODO: add supabase
+  }
+
+  await askForAuth({ projectDir });
+
   if (!cliOptions.noInstall) {
     await installDependencies({ projectDir });
     await runCodegenCommand({ projectDir });
@@ -302,7 +290,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     await initializeGit(projectDir);
   }
 
-  await logNextSteps({
+  logNextSteps({
     projectName: appDir,
     noInstall: cliOptions.noInstall,
   });

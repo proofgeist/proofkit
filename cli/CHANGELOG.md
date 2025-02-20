@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 0.2.2
+
+### Patch Changes
+
+- af5feba: Fix the launch-fm script for web viewer
+
 ## 0.2.1
 
 ### Patch Changes

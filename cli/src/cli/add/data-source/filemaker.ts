@@ -282,8 +282,16 @@ async function getValidFileMakerServerUrl(
           message: `What is the URL of your FileMaker Server?\n${chalk.cyan("TIP: You can copy any valid path on the server and paste it here.")}`,
           validate: (value) => {
             try {
-              if (!value.startsWith("http"))
-                return "URL must start with https://";
+              // try to make sure the url is https
+              if (!value.startsWith("https://")) {
+                if (value.startsWith("http://")) {
+                  value = value.replace("http://", "https://");
+                } else {
+                  value = `https://${value}`;
+                }
+              }
+
+              // try to make sure the url is valid
               new URL(value);
               return;
             } catch {

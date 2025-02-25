@@ -70,7 +70,7 @@ async function getVercelTeams(): Promise<{ slug: string; name: string }[]> {
     const lines = (result.all ?? "").split("\n").filter(Boolean);
 
     // Find the index of the header line
-    const headerIndex = lines.findIndex((line) => line.trim().startsWith("id"));
+    const headerIndex = lines.findIndex((line) => line.includes("id"));
     if (headerIndex === -1) {
       return [];
     }
@@ -85,11 +85,15 @@ async function getVercelTeams(): Promise<{ slug: string; name: string }[]> {
 
     const teams = teamLines
       .map((line) => {
-        const match = line.match(/^(\S+)\s+(.+?)\s*$/);
-        if (!match) return null;
+        // Remove any leading symbols (✔ or spaces) and trim
+        const cleanLine = line.replace(/^[✔\s]+/, "").trim();
+        // Split on multiple spaces and take the first part as slug, rest as name
+        const [slug, ...nameParts] = cleanLine.split(/\s{2,}/);
+        if (!slug || nameParts.length === 0) return null;
+
         return {
-          slug: match[1],
-          name: match[2],
+          slug,
+          name: nameParts.join(" ").trim(),
         };
       })
       .filter((team): team is { slug: string; name: string } => team !== null);
@@ -340,6 +344,8 @@ async function loginToVercel(): Promise<boolean> {
 }
 
 async function runDeploy() {
+  console.log("Running deploy...");
+
   // Check if Vercel CLI is installed
   const hasVercelCLI = await checkVercelCLI();
 

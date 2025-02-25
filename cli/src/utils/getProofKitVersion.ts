@@ -11,3 +11,12 @@ export const getVersion = () => {
 
   return packageJsonContent.version ?? "1.0.0";
 };
+
+export const getNodeMajorVersion = () => {
+  const defaultVersion = "22";
+  try {
+    return process.versions.node.split(".")[0] ?? defaultVersion;
+  } catch {
+    return defaultVersion;
+  }
+};

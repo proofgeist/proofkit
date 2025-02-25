@@ -1,4 +1,4 @@
-import { getVersion } from "~/utils/getProofKitVersion.js";
+import { getNodeMajorVersion, getVersion } from "~/utils/getProofKitVersion.js";
 
 /*
  * This maps the necessary packages to a version.
@@ -70,5 +70,8 @@ export const dependencyVersionMap = {
   "react-email": "^3.0.2",
   resend: "^4.0.0",
   "@sendgrid/mail": "^8.1.4",
+
+  // Node
+  "@types/node": `^${getNodeMajorVersion()}`,
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

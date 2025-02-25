@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "proofkit": "proofkit",
-    "typegen": "proofkit typegen"
+    "typegen": "proofkit typegen",
+    "deploy": "proofkit deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

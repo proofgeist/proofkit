@@ -215,7 +215,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   });
   setImportAlias(projectDir, "@/");
   addPackageDependency({
-    dependencies: ["@proofgeist/kit"],
+    dependencies: ["@proofgeist/kit", "@types/node"],
     devMode: true,
     projectDir,
   });

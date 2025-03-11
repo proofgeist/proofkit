@@ -6,3 +6,11 @@ export function generateRandomOTP(): string {
   const code = encodeBase32UpperCaseNoPadding(bytes);
   return code;
 }
+
+export const options = {
+  password: {
+    minLength: 8,
+    maxLength: 255,
+    checkCompromised: false, // set to true to prevent known compromised passwords on signup
+  },
+};

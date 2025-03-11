@@ -123,7 +123,7 @@ export async function promptForFileMakerDataSource({
     if (!dataApiKey && thisFileApiKeys.length > 0) {
       const selectedKey = abortIfCancel(
         await p.select({
-          message: "Which API key would you like to use?",
+          message: `Which OttoFMS Data API key would you like to use? ${chalk.dim(`(This determines the access that you'll have to the data in this file)`)}`,
           options: [
             ...thisFileApiKeys.map((key) => ({
               value: key.key,

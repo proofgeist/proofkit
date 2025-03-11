@@ -9,6 +9,7 @@ import { getLayouts } from "~/cli/fmdapi.js";
 import { PKG_ROOT } from "~/consts.js";
 import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
+import { installDependencies } from "~/helpers/installDependencies.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getSettings } from "~/utils/parseSettings.js";
@@ -115,10 +116,11 @@ export const proofkitAuthInstaller = async () => {
   await formatAndSaveSourceFiles(project);
 
   const hasProofKitLayouts = await checkForProofKitLayouts(projectDir);
-
   if (hasProofKitLayouts) {
     await runCodegenCommand({ projectDir });
   }
+
+  await installDependencies({ projectDir });
 };
 
 function addToSafeActionClient(sourceFile?: SourceFile) {

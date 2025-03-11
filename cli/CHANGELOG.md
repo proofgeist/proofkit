@@ -1,5 +1,12 @@
 # @proofgeist/kit
 
+## 0.2.3
+
+### Patch Changes
+
+- 217eb5b: Fixed infinite table queries for other field names
+- 217eb5b: New infinite table editable template
+
 ## 0.2.2
 
 ### Patch Changes

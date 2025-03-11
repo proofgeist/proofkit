@@ -18,7 +18,7 @@ import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { installFmAddon } from "./install-fm-addon.js";
-import { installPlunk, installReactEmail } from "./react-email.js";
+import { installEmailProvider, installPlunk } from "./react-email.js";
 
 export const proofkitAuthInstaller = async () => {
   const projectDir = state.projectDir;
@@ -108,11 +108,8 @@ export const proofkitAuthInstaller = async () => {
     runCodegen: false,
   });
 
-  if (state.emailProvider === "resend") {
-    await installReactEmail({ project });
-  } else if (state.emailProvider === "plunk") {
-    await installPlunk({ project });
-  }
+  // install email files based on the email provider in state
+  await installEmailProvider({ project });
 
   protectMainLayout(
     project.addSourceFileAtPath(

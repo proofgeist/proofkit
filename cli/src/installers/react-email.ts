@@ -13,7 +13,7 @@ import { addToEnv } from "~/utils/addToEnvs.js";
 import { logger } from "~/utils/logger.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
-export async function installReactEmail({ ...args }: { project?: Project }) {
+export async function installEmailProvider({ ...args }: { project?: Project }) {
   const projectDir = state.projectDir;
   addPackageDependency({
     dependencies: ["@react-email/components", "@react-email/render"],

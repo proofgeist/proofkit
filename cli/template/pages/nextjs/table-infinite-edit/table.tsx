@@ -76,7 +76,7 @@ export default function MyTable() {
       return {
         h: table.getState().isFullScreen
           ? "100%"
-          : `calc(100vh - var(--app-shell-header-height) - 10rem)`, // may need to adjust this height if you have more elements on your page
+          : `calc(100vh - var(--app-shell-header-height) - 13rem)`, // may need to adjust this height if you have more elements on your page
         ref: tableContainerRef,
         onScroll: (
           event: UIEvent<HTMLDivElement> //add an event listener to the table container element

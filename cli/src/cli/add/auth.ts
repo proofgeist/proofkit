@@ -48,7 +48,7 @@ export async function runAddAuthAction() {
       abortIfCancel(
         await p.select({
           message: `What email provider do you want to use?\n${chalk.dim(
-            "Used to send email verification codes. If you skip this, the codes will be displayed in your terminal."
+            "Used to send email verification codes. If you skip this, the codes will be displayed here in your terminal."
           )}`,
           options: [
             {

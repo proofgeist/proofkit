@@ -84,9 +84,6 @@ export const runAddSchemaAction = async (opts?: {
     .map((s) => s.schemaName)
     .filter(Boolean);
 
-  // list other common layout names to exclude
-  existingLayouts.push("-");
-
   spinner.stop("Loaded layouts from your FileMaker file");
 
   if (existingLayouts.length > 0) {
@@ -95,6 +92,9 @@ export const runAddSchemaAction = async (opts?: {
       "Detected existing layouts in your project"
     );
   }
+
+  // list other common layout names to exclude
+  existingLayouts.push("-");
 
   let passedInLayoutName: string | undefined = opts?.layoutName;
   if (

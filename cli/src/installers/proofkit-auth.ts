@@ -1,4 +1,5 @@
 import path from "path";
+import * as p from "@clack/prompts";
 import { type OttoAPIKey } from "@proofgeist/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
@@ -6,6 +7,7 @@ import fs from "fs-extra";
 import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { getLayouts } from "~/cli/fmdapi.js";
+import { abortIfCancel, UserAbortedError } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";
 import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
@@ -16,7 +18,7 @@ import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { installFmAddon } from "./install-fm-addon.js";
-import { installReactEmail } from "./react-email.js";
+import { installPlunk, installReactEmail } from "./react-email.js";
 
 export const proofkitAuthInstaller = async () => {
   const projectDir = state.projectDir;
@@ -105,7 +107,12 @@ export const proofkitAuthInstaller = async () => {
     projectDir,
     runCodegen: false,
   });
-  await installReactEmail({ project });
+
+  if (state.emailProvider === "resend") {
+    await installReactEmail({ project });
+  } else if (state.emailProvider === "plunk") {
+    await installPlunk({ project });
+  }
 
   protectMainLayout(
     project.addSourceFileAtPath(
@@ -115,12 +122,25 @@ export const proofkitAuthInstaller = async () => {
 
   await formatAndSaveSourceFiles(project);
 
-  const hasProofKitLayouts = await checkForProofKitLayouts(projectDir);
-  if (hasProofKitLayouts) {
-    await runCodegenCommand({ projectDir });
-  }
+  let hasProofKitLayouts = false;
+  while (!hasProofKitLayouts) {
+    hasProofKitLayouts = await checkForProofKitLayouts(projectDir);
 
-  await installDependencies({ projectDir });
+    if (!hasProofKitLayouts) {
+      const shouldContinue = abortIfCancel<boolean>(
+        await p.confirm({
+          message:
+            "I have followed the above instructions, continue installing",
+          initialValue: true,
+          active: "Continue",
+          inactive: "Abort",
+        })
+      );
+
+      if (!shouldContinue) throw new UserAbortedError();
+    }
+  }
+  await runCodegenCommand({ projectDir });
 };
 
 function addToSafeActionClient(sourceFile?: SourceFile) {

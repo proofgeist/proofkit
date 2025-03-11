@@ -39,6 +39,13 @@ export const nextjsTemplates: Record<string, Template> = {
     templatePath: "nextjs/table-infinite",
     postIntallFn: postInstallTableInfinite,
   },
+  tableInfiniteEdit: {
+    requireData: true,
+    label: "Infinite Table (editable)",
+    hint: "Automatically load more records when the user scrolls to the bottom with inline edit functionality",
+    templatePath: "nextjs/table-infinite-edit",
+    postIntallFn: postInstallTableInfinite,
+  },
 };
 
 export const wvTemplates: Record<string, Template> = {

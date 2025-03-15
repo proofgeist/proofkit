@@ -14,8 +14,8 @@ export const makeUpgradeCommand = () => {
       copyCursorRules();
     });
 
-  upgradeCommand.hook("preAction", () => {
-    initProgramState(upgradeCommand.opts());
+  upgradeCommand.hook("preAction", (_thisCommand, _actionCommand) => {
+    initProgramState(_actionCommand.opts());
     state.baseCommand = "upgrade";
     ensureProofKitProject({ commandName: "upgrade" });
   });

@@ -8,6 +8,7 @@ import { PKG_ROOT } from "~/consts.js";
 import { type InstallerOptions } from "~/installers/index.js";
 import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
+import { copyCursorRules } from "./copyCursorRules.js";
 
 // This bootstraps the base Next.js application
 export const scaffoldProject = async ({
@@ -21,8 +22,6 @@ export const scaffoldProject = async ({
     PKG_ROOT,
     state.appType === "browser" ? "template/nextjs" : "template/vite-wv"
   );
-
-  const extrasDir = path.join(PKG_ROOT, "template/extras");
 
   if (!noInstall) {
     logger.info(`\nUsing: ${chalk.cyan.bold(pkgManager)}\n`);
@@ -94,16 +93,8 @@ export const scaffoldProject = async ({
   // Copy the main template
   fs.copySync(srcDir, projectDir);
 
-  // Copy cursor rules file
-  const cursorRulesSrc = path.join(extrasDir, "_cursor/rules/cursor-rules.mdc");
-  const cursorRulesDest = path.join(
-    projectDir,
-    ".cursor/rules/cursor-rules.mdc"
-  );
-  if (fs.existsSync(cursorRulesSrc)) {
-    fs.ensureDirSync(path.dirname(cursorRulesDest));
-    fs.copySync(cursorRulesSrc, cursorRulesDest);
-  }
+  // Copy cursor rules
+  copyCursorRules();
 
   // Rename gitignore
   fs.renameSync(

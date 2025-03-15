@@ -1,11 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
-
-import vercel from "@astrojs/vercel/serverless";
-
 import react from "@astrojs/react";
-
 import tailwind from "@astrojs/tailwind";
 
 // https://astro.build/config
@@ -52,6 +48,5 @@ export default defineConfig({
     "/auth/proofkit": "/auth/fm-addon",
   },
 
-  output: "server",
-  adapter: vercel(),
+  output: "static",
 });

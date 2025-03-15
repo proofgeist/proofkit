@@ -8,11 +8,11 @@ description: |
   5. Discussing alternative data storage solutions
   6. Working with server-side API routes or actions
 globs: 
-  - "src/server/**/*.ts"
-  - "src/server/**/*.tsx"
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
   - "**/fmschema.config.mjs"
   - "src/**/actions/*.ts"
-alwaysApply: false
+alwaysApply: true
 ---
 # FileMaker Data API Integration
 
@@ -38,12 +38,21 @@ data_source_policy:
     - "Direct file system storage"
   reason: "All data operations must go through FileMaker to maintain data integrity and business logic"
 
+troubleshooting:
+  priority_order:
+    - "ALWAYS run `{package-manager} typegen` first for ANY data loading issues"
+    - "DO NOT check environment variables unless you have a specific error message pointing to them"
+    - "Check for FileMaker schema changes"
+    - "Verify type definitions match current schema"
+    - "Review Zod validation errors"
+  rationale: "Most data loading issues are resolved by running typegen. Environment variables are rarely the cause of data loading problems and should not be investigated unless specific error messages indicate an authentication or connection issue."
+
 conventions:
   api_setup:
     - Uses @proofgeist/fmdapi package version ^4.2.2
     - Configuration in fmschema.config.mjs
     - Environment variables in .env for connection details
-    - Type generation via proofkit typegen command
+    - Type generation via `{package-manager} typegen` command
   
   data_access:
     - ALL data operations MUST use FileMaker Data API
@@ -87,18 +96,23 @@ conventions:
 
 type_generation:
   process:
-    - Run `pnpm typegen` after any FileMaker schema changes
-    - Types are generated from FileMaker database schema
-    - Generated types are used in server actions and components
-    - Zod schemas validate runtime data against types
+    - "IMPORTANT: Running `{package-manager} typegen` solves almost all data loading problems"
+    - "Run `{package-manager} typegen` after any FileMaker schema changes"
+    - "Run `{package-manager} typegen` as first step when troubleshooting data issues"
+    - "Types are generated from FileMaker database schema"
+    - "Generated types are used in server actions and components"
+    - "Zod schemas validate runtime data against types"
   
   common_issues:
     schema_changes:
       symptoms:
+        - "No data appearing in tables"
         - "ZodError during runtime"
         - "Missing or renamed fields"
         - "Type mismatches in responses"
-      solution: "Run `pnpm typegen && pnpm tsc`"
+        - "Empty query results"
+      solution: "ALWAYS run `{package-manager} typegen && {package-manager} tsc` first"
+      important_note: "Do NOT check environment variables as a cause for data loading problems unless you have a specific known error that points to environment variables. Most data loading issues are resolved by running typegen."
     
     field_types:
       symptoms:
@@ -106,6 +120,12 @@ type_generation:
         - "Type conversion errors"
         - "Invalid date formats"
       solution: "Update Zod schemas and type definitions"
+
+  security_notes:
+    - "Never display, log, or commit environment variables"
+    - "Never check environment variable values directly"
+    - "Keep .env files out of version control"
+    - "When troubleshooting, only verify if variables exist, never their values"
 
 patterns:
   - Server actions wrap FM API calls

@@ -4,7 +4,13 @@ type PackageManager = "npm" | "pnpm" | "yarn";
 
 function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" {...props}>
+    <svg
+      width="1.25rem"
+      height="1.25rem"
+      viewBox="0 0 16 16"
+      fill="none"
+      {...props}
+    >
       <path
         d="M4 6l4 4 4-4"
         stroke="currentColor"
@@ -97,17 +103,75 @@ export function PackageManagerSelect() {
   }, []);
 
   return (
-    <div className="flex items-center gap-1 text-sm">
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        position: "relative",
+        gap: "0.25rem",
+        color: "var(--sl-color-gray-1)",
+      }}
+    >
       <select
         value={packageManager}
         onChange={(e) => setPackageManager(e.target.value as PackageManager)}
-        className="appearance-none bg-transparent text-gray-100 hover:text-white focus:outline-none cursor-pointer"
+        className="sl-select"
+        style={{
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+          appearance: "none",
+          background: "transparent",
+          border: 0,
+          cursor: "pointer",
+          padding: "0.625rem",
+          paddingInlineEnd: "calc(1.25rem + 0.5rem + 0.25rem)",
+          margin: 0,
+          marginInline: "calc(0.5rem * -1)",
+          width: "6.25em",
+          font: "inherit",
+          color: "inherit",
+          opacity: 0.8,
+        }}
       >
-        <option value="pnpm">pnpm</option>
-        <option value="npm">npm</option>
-        <option value="yarn">yarn</option>
+        <option
+          value="pnpm"
+          style={{
+            color: "var(--sl-color-gray-1)",
+            background: "var(--sl-color-bg-nav)",
+          }}
+        >
+          pnpm
+        </option>
+        <option
+          value="npm"
+          style={{
+            color: "var(--sl-color-gray-1)",
+            background: "var(--sl-color-bg-nav)",
+          }}
+        >
+          npm
+        </option>
+        <option
+          value="yarn"
+          style={{
+            color: "var(--sl-color-gray-1)",
+            background: "var(--sl-color-bg-nav)",
+          }}
+        >
+          yarn
+        </option>
       </select>
-      <ChevronDownIcon className="text-gray-400" aria-hidden="true" />
+      <ChevronDownIcon
+        style={{
+          position: "absolute",
+          top: "50%",
+          transform: "translateY(-50%)",
+          right: 0,
+          pointerEvents: "none",
+          opacity: 0.8,
+        }}
+        aria-hidden="true"
+      />
     </div>
   );
 }

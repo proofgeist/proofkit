@@ -25,6 +25,10 @@ export default defineConfig({
           autogenerate: { directory: "guides" },
         },
         {
+          label: "Reference",
+          autogenerate: { directory: "reference" },
+        },
+        {
           label: "Webviewer",
           autogenerate: { directory: "webviewer" },
         },
@@ -39,7 +43,10 @@ export default defineConfig({
       ],
     }),
     react(),
-    tailwind(),
+    tailwind({
+      // Disable Tailwind's default reset styles
+      applyBaseStyles: false,
+    }),
   ],
   redirects: {
     "/auth/proofkit": "/auth/fm-addon",

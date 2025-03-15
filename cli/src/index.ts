@@ -9,6 +9,7 @@ import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 import { makeAddCommand, runAdd } from "./cli/add/index.js";
 import { makeDeployCommand } from "./cli/deploy/index.js";
 import { makeTypegenCommand } from "./cli/typegen/index.js";
+import { makeUpdateCommand } from "./cli/update/makeUpdateCommand.js";
 import { UserAbortedError } from "./cli/utils.js";
 import { npmName } from "./consts.js";
 import { ciOption } from "./globalOptions.js";
@@ -62,6 +63,7 @@ const main = async () => {
   program.addCommand(makeAddCommand());
   program.addCommand(makeTypegenCommand());
   program.addCommand(makeDeployCommand());
+  program.addCommand(makeUpdateCommand());
 
   await program.parseAsync(process.argv);
   process.exit(0);

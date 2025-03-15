@@ -1,0 +1,206 @@
+---
+description: |
+  This rule provides solutions for common issues and errors in the project. It should be included when:
+  1. Any data-related issues from the database
+  2. Encountering runtime errors or type mismatches
+  3. Dealing with ZodError or validation issues
+  4. Experiencing FileMaker connection problems
+  5. Updating FileMaker schemas or layouts
+  6. Troubleshooting data access issues
+  7. Performing maintenance tasks like type generation
+  8. Seeing error messages about missing fields or invalid types
+globs: 
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "**/fmschema.config.mjs"
+  - "src/**/actions/*.ts"
+  - "src/**/schema/*.ts"
+alwaysApply: false
+---
+# Troubleshooting and Maintenance Patterns
+
+This rule documents common issues, error patterns, and their solutions in the project.
+
+<rule>
+name: troubleshooting_patterns
+description: Documents common runtime errors, type errors, and solutions. All data operations MUST use FileMaker Data API exclusively.
+filters:
+  - type: file_extension
+    pattern: "\\.(ts|tsx)$"
+  - type: content
+    pattern: "(Error|error|ZodError|TypeError|ValidationError|@proofgeist/fmdapi)"
+
+data_source_validation:
+  requirement: "All data operations must use FileMaker Data API exclusively"
+  first_step_for_data_issues: "Always run `{package-manager} typegen` first and check for type errors before investigating other causes"
+  common_mistakes:
+    - "Attempting to use SQL queries"
+    - "Adding direct database connections"
+    - "Using local storage for persistent data"
+    - "Implementing alternative data stores"
+    - "Skipping typegen after FileMaker schema changes"
+  correct_approach:
+    - "Run typegen first when encountering any data-related issues"
+    - "Use @proofgeist/fmdapi for all data operations"
+    - "Follow FileMaker layout and field conventions"
+    - "Use layout.create, layout.find, layout.get, layout.update, layout.delete"
+    - "Use layout.maybeFindFirst for optional records"
+
+error_patterns:
+  zod_validation_errors:
+    symptoms:
+      - "Runtime ZodError: invalid_type"
+      - "Zod schema validation failed"
+      - "Property not found in schema"
+      - "Unexpected field in response"
+    cause: "FileMaker database schema changes not reflected in TypeScript types"
+    solution:
+      steps:
+        - "Run `{package-manager} typegen` to regenerate types from FileMaker schema"
+        - "Run `{package-manager} tsc` to identify type mismatches"
+        - "Update affected components and server actions"
+      commands:
+        - "{package-manager} typegen"
+        - "{package-manager} tsc"
+      files_to_check:
+        - "src/server/actions/*"
+        - "src/server/schema/*"
+        - "fmschema.config.mjs"
+
+  filemaker_connection:
+    symptoms:
+      - "ETIMEDOUT connecting to FileMaker"
+      - "Invalid FileMaker credentials"
+      - "Session token expired"
+      - "Layout not found"
+      - "Field not found in layout"
+      - "Invalid find criteria"
+    cause: "FileMaker connection, authentication, or query issues"
+    solution:
+      steps:
+        - "Verify .env configuration"
+        - "Check FileMaker Server status"
+        - "Validate credentials and permissions"
+        - "Verify layout names and field access"
+        - "Check FileMaker query syntax"
+      files_to_check:
+        - ".env"
+        - "src/server/lib/fm.ts"
+        - "fmschema.config.mjs"
+
+  data_access_errors:
+    symptoms:
+      - "Invalid operation on FileMaker record"
+      - "Record not found"
+      - "Insufficient permissions"
+      - "Invalid find request"
+    cause: "Incorrect FileMaker Data API usage or permissions"
+    solution:
+      steps:
+        - "Verify FileMaker layout privileges"
+        - "Check record existence before operations"
+        - "Validate find criteria format"
+        - "Use proper FM API methods"
+      files_to_check:
+        - "src/server/actions/*"
+        - "src/server/lib/fm.ts"
+
+  type_errors:
+    symptoms:
+      - "Type ... is not assignable to type ..."
+      - "Property ... does not exist on type ..."
+      - "Argument of type ... is not assignable"
+    cause: "Mismatch between FileMaker schema and TypeScript types"
+    solution:
+      steps:
+        - "Run type generation and checking"
+        - "Update type definitions if needed"
+        - "Check for null/undefined handling"
+      commands:
+        - "{package-manager} typegen && {package-manager} tsc"
+
+  data_sync_issues:
+    symptoms:
+      - "Missing fields in table"
+      - "Unexpected null values"
+      - "Fields showing as blank"
+      - "Type mismatches between FM and frontend"
+    first_step: "ALWAYS run `{package-manager} typegen` first"
+    cause: "Mismatch between FileMaker schema and TypeScript types, or outdated type definitions"
+    solution:
+      steps:
+        - "Run `{package-manager} typegen` to regenerate types from FileMaker schema"
+        - "Check for any type errors in the console"
+        - "Verify field names match exactly between FM and generated types"
+        - "Update components if field names have changed"
+      commands:
+        - "{package-manager} typegen"
+        - "{package-manager} tsc"
+      files_to_check:
+        - "src/config/schemas/filemaker/*.ts"
+        - "fmschema.config.mjs"
+
+maintenance_tasks:
+  schema_sync:
+    description: "Keep FileMaker schema and TypeScript types in sync"
+    frequency: "After any FileMaker schema changes"
+    steps:
+      - "Run typegen to update types"
+      - "Run TypeScript compiler"
+      - "Update affected components"
+    impact: "Prevents runtime errors and type mismatches"
+
+  type_checking:
+    description: "Regular type checking for early error detection"
+    frequency: "Before deployments and after schema changes"
+    commands:
+      - "{package-manager} tsc --noEmit"
+    impact: "Catches type errors before runtime"
+
+keywords:
+  errors:
+    - "ZodError"
+    - "TypeError"
+    - "ValidationError"
+    - "Schema mismatch"
+    - "Type mismatch"
+    - "Runtime error"
+    - "Database schema"
+    - "Type generation"
+    - "FileMaker fields"
+    - "Missing property"
+    - "Invalid type"
+    - "Layout not found"
+    - "Field not found"
+    - "Invalid find request"
+  solutions:
+    - "typegen"
+    - "tsc"
+    - "type checking"
+    - "schema update"
+    - "validation fix"
+    - "error handling"
+    - "FM API methods"
+    - "FileMaker layout"
+  operations:
+    - "layout.create"
+    - "layout.find"
+    - "layout.get"
+    - "layout.update"
+    - "layout.delete"
+    - "layout.maybeFindFirst"
+    - "recordId"
+    - "fieldData"
+    - "query parameters"
+    - "sort options"
+  data_source:
+    - "FileMaker only"
+    - "No SQL"
+    - "FM Data API"
+    - "Exclusive data source"
+    - "@proofgeist/fmdapi"
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

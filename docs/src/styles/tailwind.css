@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Restore list styles */
+  .sl-markdown-content ul {
+    @apply list-disc pl-6 my-4;
+  }
+
+  .sl-markdown-content ol {
+    @apply list-decimal pl-6 my-4;
+  }
+
+  .sl-markdown-content ul ul,
+  .sl-markdown-content ol ul {
+    @apply list-circle;
+  }
+
+  .sl-markdown-content ul ul ul,
+  .sl-markdown-content ol ul ul {
+    @apply list-square;
+  }
+
+  /* Nested list spacing */
+  .sl-markdown-content li > ul,
+  .sl-markdown-content li > ol {
+    @apply my-2;
+  }
+}

@@ -45,7 +45,7 @@ export const dependencyVersionMap = {
   "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
-  "@proofgeist/fmdapi": "^4.2.2",
+  "@proofgeist/fmdapi": "^4.3.2",
 
   // ProofKit
   "@proofgeist/kit": `^${getVersion()}`,

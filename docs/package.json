@@ -3,11 +3,12 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "npm run generate-templates && astro dev",
     "start": "astro dev",
-    "build": "astro check && astro build",
+    "build": "npm run generate-templates && astro check && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "generate-templates": "node --experimental-strip-types src/scripts/generate-templates.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -27,6 +28,8 @@
     "@astrojs/tailwind": "^5.1.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
-    "tailwindcss": "^3.4.3"
+    "tailwindcss": "^3.4.3",
+    "ts-morph": "^25.0.1",
+    "ts-node": "^10.9.2"
   }
 }

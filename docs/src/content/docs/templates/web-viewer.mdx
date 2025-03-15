@@ -6,6 +6,6 @@ sidebar:
 ---
 
 import { TemplateGrid } from "../../../components/TemplateList";
-import { wvTemplates } from "@config/templates";
+import data from "../../config/templates.json";
 
-<TemplateGrid templates={wvTemplates} client:load />
+<TemplateGrid templates={data.wv} client:load />

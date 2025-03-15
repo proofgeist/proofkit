@@ -6,6 +6,6 @@ sidebar:
 ---
 
 import { TemplateGrid } from "../../../components/TemplateList";
-import { nextjsTemplates } from "@config/templates";
+import data from "../../config/templates.json";
 
-<TemplateGrid templates={nextjsTemplates} client:load />
+<TemplateGrid templates={data.nextjs} client:load />

@@ -1,7 +1,15 @@
-import { type Template } from "@config/templates";
 import { useState, useMemo, useEffect, useRef } from "react";
 import Fuse from "fuse.js";
 import { Tooltip } from "./Tooltip";
+
+interface Template {
+  requireData: boolean;
+  label: string;
+  hint?: string;
+  templatePath: string;
+  screenshot?: string;
+  tags?: string[];
+}
 
 interface TemplateGridProps {
   templates: Record<string, Template>;

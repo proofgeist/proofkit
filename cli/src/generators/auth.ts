@@ -1,6 +1,11 @@
+import { readFileSync, writeFileSync } from "fs";
+import path from "path";
+import { glob } from "glob";
+
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { clerkInstaller } from "~/installers/clerk.js";
 import { proofkitAuthInstaller } from "~/installers/proofkit-auth.js";
+import { state } from "~/state.js";
 import { getSettings, mergeSettings } from "~/utils/parseSettings.js";
 
 export async function addAuth({
@@ -36,6 +41,9 @@ export async function addAuth({
     await addFmaddonAuth();
   }
 
+  // Replace actionClient with authedActionClient in all action files
+  await replaceActionClientWithAuthed();
+
   if (!noInstall) {
     await installDependencies({ projectDir });
   }
@@ -53,4 +61,21 @@ async function addClerkAuth({
 async function addFmaddonAuth() {
   await proofkitAuthInstaller();
   mergeSettings({ auth: { type: "fmaddon" } });
+}
+
+async function replaceActionClientWithAuthed() {
+  const projectDir = state.projectDir;
+  const actionFiles = await glob("src/app/(main)/**/actions.ts", {
+    cwd: projectDir,
+  });
+
+  for (const file of actionFiles) {
+    const fullPath = path.join(projectDir, file);
+    const content = readFileSync(fullPath, "utf-8");
+    const updatedContent = content.replace(
+      /actionClient/g,
+      "authedActionClient"
+    );
+    writeFileSync(fullPath, updatedContent);
+  }
 }

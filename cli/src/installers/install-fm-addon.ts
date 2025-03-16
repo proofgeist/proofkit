@@ -12,7 +12,7 @@ export async function installFmAddon({
   addonName: "auth" | "wv";
 }) {
   const addonDisplayName =
-    addonName === "auth" ? "FM Add-on Auth" : "ProofKit WebViewer";
+    addonName === "auth" ? "FM Auth Add-on" : "ProofKit WebViewer";
 
   let targetDir: string | null = null;
   if (process.platform === "win32") {
@@ -50,18 +50,12 @@ export async function installFmAddon({
     { overwrite: true }
   );
 
-  await fs.copy(
-    path.join(PKG_ROOT, "template/fm-addon/ProofKitAuth"),
-    path.join(targetDir, "ProofKitAuth"),
-    { overwrite: true }
-  );
-
   console.log("");
   console.log(chalk.bgYellow(" ACTION REQUIRED: "));
   if (addonName === "auth") {
     console.log(
       `${chalk.yellowBright(
-        "You must install the FM Add-on Auth addon in your FileMaker file to continue."
+        "You must install the FM Auth addon in your FileMaker file to continue."
       )} ${chalk.dim("(Learn more: https://proofkit.dev/auth/fm-addon)")}`
     );
   } else {

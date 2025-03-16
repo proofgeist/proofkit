@@ -15,7 +15,7 @@ import { installDependencies } from "~/helpers/installDependencies.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
 import { buildPkgInstallerMap } from "~/installers/index.js";
-import { installFmAddon } from "~/installers/install-fm-addon.js";
+import { ensureWebViewerAddonInstalled } from "~/installers/proofkit-webviewer.js";
 import { initProgramState, state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
@@ -167,8 +167,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   const pkgManager = getUserPkgManager();
   const cliOptions = opts ?? defaultOptions;
 
-  // Needs to be separated outside the if statement to correctly infer the type as string | undefined
-
   const projectName =
     name ||
     abortIfCancel(
@@ -275,6 +273,11 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
       layoutName: cliOptions.layoutName,
       schemaName: cliOptions.schemaName,
     });
+
+    // Now that we have the data source set up, check for webviewer layouts if needed
+    if (state.appType === "webviewer") {
+      await ensureWebViewerAddonInstalled();
+    }
   } else if (dataSource === "supabase") {
     // TODO: add supabase
   }

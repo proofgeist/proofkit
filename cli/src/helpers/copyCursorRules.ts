@@ -38,7 +38,7 @@ export const copyCursorRules = () => {
       const ruleDest = path.join(cursorRulesDestDir, "package-manager.mdc");
 
       if (fs.existsSync(ruleSrc)) {
-        fs.copySync(ruleSrc, ruleDest);
+        fs.copySync(ruleSrc, ruleDest, { overwrite: true });
       }
     }
   }

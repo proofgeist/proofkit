@@ -1,5 +1,15 @@
 # @proofgeist/kit
 
+## 0.3.0
+
+### Minor Changes
+
+- 846ae9a: Add new upgrade command to upgrade ProofKit components in an existing project. To start, this command only adds/updates the cursor rules in your project.
+
+### Patch Changes
+
+- e07341a: Always use accessorFn for tables for better type errors
+
 ## 0.2.3
 
 ### Patch Changes

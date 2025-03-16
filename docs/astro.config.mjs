@@ -1,11 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
-
-import vercel from "@astrojs/vercel/serverless";
-
 import react from "@astrojs/react";
-
 import tailwind from "@astrojs/tailwind";
 
 // https://astro.build/config
@@ -25,6 +21,10 @@ export default defineConfig({
           autogenerate: { directory: "guides" },
         },
         {
+          label: "Reference",
+          autogenerate: { directory: "reference" },
+        },
+        {
           label: "Webviewer",
           autogenerate: { directory: "webviewer" },
         },
@@ -39,12 +39,14 @@ export default defineConfig({
       ],
     }),
     react(),
-    tailwind(),
+    tailwind({
+      // Disable Tailwind's default reset styles
+      applyBaseStyles: false,
+    }),
   ],
   redirects: {
     "/auth/proofkit": "/auth/fm-addon",
   },
 
-  output: "server",
-  adapter: vercel(),
+  output: "static",
 });

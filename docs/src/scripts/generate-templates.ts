@@ -1,12 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  Project,
-  SyntaxKind,
-  ObjectLiteralExpression,
-  type Node,
-} from "ts-morph";
+import { Project, SyntaxKind, ObjectLiteralExpression, Node } from "ts-morph";
 
 // Get the absolute path to the script
 const __filename = fileURLToPath(import.meta.url);
@@ -30,32 +25,32 @@ function extractObjectLiteralValue(node: ObjectLiteralExpression): any {
   const obj: any = {};
 
   for (const property of node.getProperties()) {
-    if (property.getKind() !== SyntaxKind.PropertyAssignment) continue;
+    if (!Node.isPropertyAssignment(property)) continue;
 
-    const name = property.getName();
+    const name = property.getSymbol()?.getName() || "";
     const value = property.getInitializer();
 
     if (!value) continue;
 
     // Handle different value types
-    if (value.getKind() === SyntaxKind.StringLiteral) {
-      obj[name] = value.getLiteralValue();
+    if (Node.isStringLiteral(value)) {
+      obj[name] = value.getLiteralText();
     } else if (value.getKind() === SyntaxKind.TrueKeyword) {
       obj[name] = true;
     } else if (value.getKind() === SyntaxKind.FalseKeyword) {
       obj[name] = false;
-    } else if (value.getKind() === SyntaxKind.ArrayLiteralExpression) {
+    } else if (Node.isArrayLiteralExpression(value)) {
       obj[name] = value
         .getElements()
-        .map((e: Node) => {
-          if (e.getKind() === SyntaxKind.StringLiteral) {
-            return e.getLiteralValue();
+        .map((e) => {
+          if (Node.isStringLiteral(e)) {
+            return e.getLiteralText();
           }
           return undefined;
         })
         .filter(Boolean);
-    } else if (value.getKind() === SyntaxKind.ObjectLiteralExpression) {
-      obj[name] = extractObjectLiteralValue(value as ObjectLiteralExpression);
+    } else if (Node.isObjectLiteralExpression(value)) {
+      obj[name] = extractObjectLiteralValue(value);
     }
   }
 
@@ -64,12 +59,7 @@ function extractObjectLiteralValue(node: ObjectLiteralExpression): any {
 
 async function generateTemplatesJson() {
   // Initialize ts-morph project
-  const project = new Project({
-    compilerOptions: {
-      target: "ES2020",
-      module: "ESNext",
-    },
-  });
+  const project = new Project({});
 
   // Add the templates file to the project
   const templatesPath = path.join(workspaceRoot, "config", "templates.ts");

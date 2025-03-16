@@ -1,6 +1,18 @@
 ---
-description: Cursor Rules Location
-globs: *.mdc
+description: |
+  This rule documents how to manage and organize Cursor rules. It should be included when:
+  1. Creating or modifying Cursor rules
+  2. Organizing documentation for the codebase
+  3. Setting up new development patterns
+  4. Adding project-wide conventions
+  5. Managing rule file locations
+  6. Updating rule descriptions or globs
+  7. Working with .cursor directory structure
+globs:
+  - ".cursor/rules/*.mdc"
+  - ".cursor/config/*.json"
+  - ".cursor/settings/*.json"
+alwaysApply: true
 ---
 # Cursor Rules Location
 
@@ -57,6 +69,7 @@ actions:
          - In the project root
          - In subdirectories outside .cursor/rules
          - In any other location
+         - Inside of the cursor-rules.mdc file
 
 examples:
   - input: |

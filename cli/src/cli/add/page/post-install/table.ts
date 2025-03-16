@@ -79,10 +79,10 @@ export const postInstallTable: TPostInstallFn = async ({
     columns?.addElement((writer) =>
       writer
         .inlineBlock(() => {
-          if (fieldName.includes(".")) {
+          if (needsBracketNotation(fieldName)) {
             writer.write(`accessorFn: (row) => row["${fieldName}"],`);
           } else {
-            writer.write(`accessorKey: "${fieldName}",`);
+            writer.write(`accessorFn: (row) => row.${fieldName},`);
           }
           writer.write(`header: "${fieldName}",`);
         })
@@ -98,6 +98,12 @@ export const postInstallTable: TPostInstallFn = async ({
 
   await formatAndSaveSourceFiles(project);
 };
+
+// Function to check if a field name needs bracket notation
+function needsBracketNotation(fieldName: string): boolean {
+  // Check if it's a valid JavaScript identifier
+  return !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(fieldName);
+}
 
 const commonFieldNamesToExclude = [
   "id",

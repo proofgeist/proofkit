@@ -106,16 +106,18 @@ export const runAddSchemaAction = async (opts?: {
 
   const selectedLayout =
     passedInLayoutName ??
-    ((await p.select({
-      message: `Select a new layout to read data from`,
-      maxItems: 10,
-      options: layouts
-        .filter((layout) => !existingLayouts.includes(layout))
-        .map((layout) => ({
-          label: layout,
-          value: layout,
-        })),
-    })) as string);
+    abortIfCancel(
+      await p.select({
+        message: `Select a new layout to read data from`,
+        maxItems: 10,
+        options: layouts
+          .filter((layout) => !existingLayouts.includes(layout))
+          .map((layout) => ({
+            label: layout,
+            value: layout,
+          })),
+      })
+    );
 
   const defaultSchemaName = getDefaultSchemaName(selectedLayout);
   const schemaName =

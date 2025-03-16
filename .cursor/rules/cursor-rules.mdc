@@ -1,6 +1,7 @@
 ---
-description: Cursor Rules Location
-globs: *.mdc
+description: When creating or editing rules
+globs: 
+alwaysApply: false
 ---
 # Cursor Rules Location
 

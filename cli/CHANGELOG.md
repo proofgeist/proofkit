@@ -1,5 +1,12 @@
 # @proofgeist/kit
 
+## 0.3.1
+
+### Patch Changes
+
+- 6da944a: Ensure using authedActionClient in existing actions after adding auth
+- 39648a9: Fix: Webviewer addon installation flow
+
 ## 0.3.0
 
 ### Minor Changes

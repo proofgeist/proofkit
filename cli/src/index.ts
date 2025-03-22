@@ -15,6 +15,7 @@ import { makeUpgradeCommand } from "./cli/update/makeUpgradeCommand.js";
 import { UserAbortedError } from "./cli/utils.js";
 import { npmName } from "./consts.js";
 import { ciOption } from "./globalOptions.js";
+import { makeMcpCommand } from "./mcp/command.js";
 import { initProgramState, state } from "./state.js";
 import { getVersion } from "./utils/getProofKitVersion.js";
 import { getSettings, type Settings } from "./utils/parseSettings.js";
@@ -67,6 +68,7 @@ const main = async () => {
   program.addCommand(makeTypegenCommand());
   program.addCommand(makeDeployCommand());
   program.addCommand(makeUpgradeCommand());
+  program.addCommand(makeMcpCommand());
 
   await program.parseAsync(process.argv);
   process.exit(0);

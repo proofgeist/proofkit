@@ -1,5 +1,15 @@
 # @proofgeist/kit
 
+## 0.3.1
+
+### Patch Changes
+
+- 467d0f9: Add new menu command to expose all proofkit functions more easily
+- 6da944a: Ensure using authedActionClient in existing actions after adding auth
+- b211fbd: Deploy command: run build on Vercel instead of locally. Use flag --local-build to build locally like before
+- 39648a9: Fix: Webviewer addon installation flow
+- d0627b2: update base package versions
+
 ## 0.3.0
 
 ### Minor Changes

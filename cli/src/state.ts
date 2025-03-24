@@ -4,6 +4,7 @@ const schema = z
   .object({
     ci: z.boolean().default(false),
     debug: z.boolean().default(false),
+    localBuild: z.boolean().default(false),
     baseCommand: z
       .enum(["add", "init", "deploy", "upgrade"])
       .optional()

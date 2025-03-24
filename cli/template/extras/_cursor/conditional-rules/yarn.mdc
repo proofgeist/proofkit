@@ -28,8 +28,12 @@ configuration:
     build: "yarn build"
     dev: "yarn dev"
     typegen: "yarn typegen"
-    typecheck: "yarn typecheck"
+    typecheck: "yarn tsc"
   notes: "Always use yarn instead of npm or pnpm for consistency"
+  dev_server_guidelines:
+    - "Never relaunch the dev server command if it may already be running"
+    - "Use yarn dev only when explicitly needed to start the server for the first time"
+    - "For code changes, just save the files and the server will automatically reload"
 
 examples:
   - description: "Installing dependencies"

@@ -28,8 +28,12 @@ configuration:
     build: "npm run build"
     dev: "npm run dev"
     typegen: "npm run typegen"
-    typecheck: "npm run typecheck"
+    typecheck: "npm run tsc"
   notes: "Always use npm instead of yarn or pnpm for consistency"
+  dev_server_guidelines:
+    - "Never relaunch the dev server command if it may already be running"
+    - "Use npm run dev only when explicitly needed to start the server for the first time"
+    - "For code changes, just save the files and the server will automatically reload"
 
 examples:
   - description: "Installing dependencies"

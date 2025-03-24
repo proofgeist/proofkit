@@ -343,7 +343,7 @@ async function loginToVercel(): Promise<boolean> {
   }
 }
 
-async function runDeploy() {
+export async function runDeploy() {
   console.log("Running deploy...");
 
   // Check if Vercel CLI is installed

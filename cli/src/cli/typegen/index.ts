@@ -4,7 +4,7 @@ import { runCodegenCommand } from "~/generators/fmdapi.js";
 import { type Settings } from "~/utils/parseSettings.js";
 import { ensureProofKitProject } from "../utils.js";
 
-async function runTypegen(opts: { settings: Settings }) {
+export async function runTypegen(opts: { settings: Settings }) {
   const dataSources = opts.settings.dataSources;
   let generateFmTypes = false;
   for await (const db of dataSources) {

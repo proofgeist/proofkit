@@ -1,15 +1,15 @@
 import { execSync } from "child_process";
 import https from "https";
+import * as p from "@clack/prompts";
+import chalk from "chalk";
 
-import { cliName } from "~/consts.js";
+import { cliName, npmName } from "~/consts.js";
 import { getVersion } from "./getProofKitVersion.js";
+import { getUserPkgManager } from "./getUserPkgManager.js";
 import { logger } from "./logger.js";
 
 export const renderVersionWarning = (npmVersion: string) => {
   const currentVersion = getVersion();
-
-  //   console.log("current", currentVersion);
-  //   console.log("npm", npmVersion);
 
   if (currentVersion.includes("beta")) {
     logger.warn(`  You are using a beta version of ${cliName}.`);
@@ -62,7 +62,7 @@ function checkForLatestVersion(): Promise<string> {
   });
 }
 
-export const getNpmVersion = () =>
+export const getNpmVersion = async () =>
   // `fetch` to the registry is faster than `npm view` so we try that first
   checkForLatestVersion().catch(() => {
     try {
@@ -71,3 +71,18 @@ export const getNpmVersion = () =>
       return null;
     }
   });
+
+export const checkAndRenderVersionWarning = async () => {
+  const npmVersion = await getNpmVersion();
+  const currentVersion = getVersion();
+  if (currentVersion !== npmVersion) {
+    const pkgManager = getUserPkgManager();
+    p.log.warn(
+      `${chalk.yellow(
+        `You are using an outdated version of ${cliName}.`
+      )} Your version: ${currentVersion}. Latest version: ${npmVersion}.
+      Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the latest updates.`
+    );
+  }
+  return { npmVersion, currentVersion };
+};

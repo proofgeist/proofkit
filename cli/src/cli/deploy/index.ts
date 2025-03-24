@@ -1,7 +1,7 @@
 import path from "path";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { execa } from "execa";
 import fs from "fs-extra";
 import { type PackageJson } from "type-fest";
@@ -344,7 +344,7 @@ async function loginToVercel(): Promise<boolean> {
 }
 
 export async function runDeploy() {
-  console.log("Running deploy...");
+  if (state.debug) console.log("Running deploy...");
 
   // Check if Vercel CLI is installed
   const hasVercelCLI = await checkVercelCLI();
@@ -414,26 +414,74 @@ export async function runDeploy() {
     );
   }
 
-  // Build for Vercel
-  console.log(chalk.blue("\nPreparing build for Vercel..."));
-  try {
-    await execa("vercel", ["build"], {
-      stdio: "inherit",
-    });
-  } catch (error) {
-    console.error(chalk.red("\nVercel build failed:"), error);
-    return;
-  }
+  if (state.localBuild) {
+    // Build locally for Vercel
+    console.log(chalk.blue("\nPreparing local build for Vercel..."));
+    try {
+      const result = await execa("vercel", ["build"], {
+        stdio: "inherit",
+        reject: false,
+      });
+      if (result.exitCode === 0) {
+        console.log(chalk.green("\n✓ Local build successful!"));
+      } else {
+        console.error(chalk.red("\n✖ Local build failed"));
+        console.log(chalk.yellow("Fix the errors above and then try again."));
+        return;
+      }
+    } catch (error) {
+      console.error(chalk.red("\nVercel build failed:"), error);
+      return;
+    }
 
-  // Deploy the pre-built project
-  console.log(chalk.blue("\nDeploying to Vercel..."));
-  try {
-    await execa("vercel", ["deploy", "--prebuilt", "--yes"], {
+    // Deploy the pre-built project
+    console.log(chalk.blue("\nDeploying to Vercel..."));
+
+    const result = await execa("vercel", ["deploy", "--prebuilt", "--yes"], {
       stdio: "inherit",
+      reject: false,
     });
-    console.log(chalk.green("\n✓ Deployment successful!"));
-  } catch (error) {
-    console.error(chalk.red("\nDeployment failed:"), error);
+    if (result.exitCode === 0) {
+      console.log(chalk.green("\n✓ Deployment successful!"));
+    }
+  } else {
+    // Deploy and build on Vercel
+    console.log(chalk.blue("\nDeploying to Vercel..."));
+    try {
+      const result = await execa("vercel", ["deploy", "--yes"], {
+        stdio: "inherit",
+        reject: false,
+      });
+      if (result.exitCode === 0) {
+        console.log(chalk.green("\n✓ Deployment successful!"));
+      } else {
+        const pkgManager = getUserPkgManager();
+        const runCmd = pkgManager === "npm" ? "npm run" : pkgManager;
+        console.error(chalk.red("\n✖ Deployment failed"));
+
+        console.log(chalk.yellow("\nTroubleshooting Tips:"));
+        console.log(
+          chalk.dim(
+            "You can check for most errors before deploying for a faster iteration cycle"
+          )
+        );
+        console.log(
+          chalk.dim("Run") +
+            ` ${runCmd} tsc ` +
+            chalk.dim(
+              "to check for TypeScript errors (most common build errors)"
+            )
+        );
+        console.log(
+          chalk.dim("Run") +
+            ` ${runCmd} build ` +
+            chalk.dim("to run the full production build locally")
+        );
+      }
+    } catch {
+      // This catch block should rarely be hit since we're using reject: false
+      return;
+    }
   }
 }
 
@@ -442,6 +490,7 @@ export const makeDeployCommand = () => {
     .description("Deploy your ProofKit application to Vercel")
     .addOption(ciOption)
     .addOption(debugOption)
+    .addOption(new Option("--local-build", "Build locally before deploying"))
     .action(runDeploy);
 
   deployCommand.hook("preAction", (thisCommand) => {

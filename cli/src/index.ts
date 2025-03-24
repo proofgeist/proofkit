@@ -8,6 +8,7 @@ import { logger } from "~/utils/logger.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 import { makeAddCommand, runAdd } from "./cli/add/index.js";
 import { makeDeployCommand } from "./cli/deploy/index.js";
+import { runMenu } from "./cli/menu.js";
 import { makeTypegenCommand } from "./cli/typegen/index.js";
 import { makeUpgradeCommand } from "./cli/update/makeUpgradeCommand.js";
 import { UserAbortedError } from "./cli/utils.js";
@@ -16,12 +17,14 @@ import { ciOption } from "./globalOptions.js";
 import { initProgramState, state } from "./state.js";
 import { getVersion } from "./utils/getProofKitVersion.js";
 import { getSettings, type Settings } from "./utils/parseSettings.js";
+import { checkAndRenderVersionWarning } from "./utils/renderVersionWarning.js";
 
 const version = getVersion();
 
 const main = async () => {
   const program = new Command();
   renderTitle();
+  await checkAndRenderVersionWarning();
 
   program
     .name(npmName)
@@ -41,10 +44,8 @@ const main = async () => {
       }
 
       if (settings) {
-        p.intro(
-          `Found ${proofGradient("ProofKit")} project, running \`add\`...`
-        );
-        await runAdd(undefined);
+        p.intro(`Found ${proofGradient("ProofKit")} project`);
+        await runMenu();
       } else {
         p.intro(
           `No ${proofGradient("ProofKit")} project found, running \`init\``

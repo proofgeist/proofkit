@@ -12,34 +12,30 @@ export const copyCursorRules = () => {
   const cursorRulesSrcDir = path.join(extrasDir, "_cursor/rules");
   const cursorRulesDestDir = path.join(projectDir, ".cursor/rules");
 
+  if (!fs.existsSync(cursorRulesSrcDir)) return;
+
   const pkgManager = getUserPkgManager();
+  fs.ensureDirSync(cursorRulesDestDir);
+  fs.copySync(cursorRulesSrcDir, cursorRulesDestDir);
 
-  if (fs.existsSync(cursorRulesSrcDir)) {
-    fs.ensureDirSync(cursorRulesDestDir);
-    fs.copySync(cursorRulesSrcDir, cursorRulesDestDir);
+  // Copy package manager specific rules
+  const conditionalRulesDir = path.join(extrasDir, "_cursor/conditional-rules");
 
-    // Copy package manager specific rules
-    const conditionalRulesDir = path.join(
-      extrasDir,
-      "_cursor/conditional-rules"
-    );
+  const packageManagerRules = {
+    pnpm: "pnpm.mdc",
+    npm: "npm.mdc",
+    yarn: "yarn.mdc",
+  };
 
-    const packageManagerRules = {
-      pnpm: "pnpm.mdc",
-      npm: "npm.mdc",
-      yarn: "yarn.mdc",
-    };
+  const selectedRule =
+    packageManagerRules[pkgManager as keyof typeof packageManagerRules];
 
-    const selectedRule =
-      packageManagerRules[pkgManager as keyof typeof packageManagerRules];
+  if (selectedRule) {
+    const ruleSrc = path.join(conditionalRulesDir, selectedRule);
+    const ruleDest = path.join(cursorRulesDestDir, "package-manager.mdc");
 
-    if (selectedRule) {
-      const ruleSrc = path.join(conditionalRulesDir, selectedRule);
-      const ruleDest = path.join(cursorRulesDestDir, "package-manager.mdc");
-
-      if (fs.existsSync(ruleSrc)) {
-        fs.copySync(ruleSrc, ruleDest, { overwrite: true });
-      }
+    if (fs.existsSync(ruleSrc)) {
+      fs.copySync(ruleSrc, ruleDest, { overwrite: true });
     }
   }
 };

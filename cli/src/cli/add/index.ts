@@ -1,14 +1,9 @@
 import * as p from "@clack/prompts";
-import chalk from "chalk";
 import { Command } from "commander";
 
-import { cliName, npmName } from "~/consts.js";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
-import { getVersion } from "~/utils/getProofKitVersion.js";
-import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { getSettings } from "~/utils/parseSettings.js";
-import { getNpmVersion } from "~/utils/renderVersionWarning.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
@@ -20,19 +15,8 @@ import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
 
 export const runAdd = async (name: string | undefined) => {
-  const npmVersion = await getNpmVersion();
-  const currentVersion = getVersion();
-  if (currentVersion !== npmVersion) {
-    const pkgManager = getUserPkgManager();
-    p.log.warn(
-      `${chalk.yellow(
-        `You are using an outdated version of ${cliName}.`
-      )} Your version: ${currentVersion}. Latest version: ${npmVersion}.
-      Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the latest updates.`
-    );
-  }
-
   const settings = getSettings();
+
   if (name === "tanstack-query") {
     return await runAddTanstackQueryCommand({ settings });
   }

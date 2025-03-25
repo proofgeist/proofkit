@@ -46,6 +46,8 @@ export default defineConfig({
   ],
   redirects: {
     "/auth/proofkit": "/auth/fm-addon",
+    "/rate-session":
+      "https://platform.claris.com/form/3256/6?ShortText8=How%20to%20build%20next-level%20web%20apps%20with%20Claris%20FileMaker#s=bXN0XzJzZHFNVjdIMWpZaTlUVkZ1Q1FJVzV2ODJxM1YyRUowOjZlYmZlNWYzOWI5NmViNzI1NzRlZmJiNGM5NDdmYzdhYWZiZDM3N2I2M2ZlNjJmYTk2MTg2YTBmNzE5MzQ1Mjk=",
   },
 
   output: "static",

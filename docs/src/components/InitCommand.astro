@@ -1,5 +1,39 @@
 ---
-import CliCommand from "./CliCommand.astro";
+import { Code, Tabs, TabItem } from "@astrojs/starlight/components";
 ---
 
-<CliCommand command="create proofkit@latest" type="create" frame="terminal" />
+<Tabs syncKey="packageManager">
+  <TabItem label="pnpm">
+    {
+      (
+        <Code
+          code={`pnpm create proofkit@latest`}
+          lang="bash"
+          frame="terminal"
+        />
+      )
+    }
+  </TabItem>
+  <TabItem label="npm">
+    {
+      (
+        <Code
+          code={`npx create-proofkit@latest`}
+          lang="bash"
+          frame="terminal"
+        />
+      )
+    }
+  </TabItem>
+  <TabItem label="yarn">
+    {
+      (
+        <Code
+          code={`yarn create proofkit@latest`}
+          lang="bash"
+          frame="terminal"
+        />
+      )
+    }
+  </TabItem>
+</Tabs>

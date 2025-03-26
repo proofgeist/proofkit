@@ -1,5 +1,12 @@
 # @proofgeist/kit
 
+## 0.3.2
+
+### Patch Changes
+
+- 8986819: Fix: name argument in add command optional
+- 47aad62: Make the auth installer spinner good
+
 ## 0.3.1
 
 ### Patch Changes

@@ -4,6 +4,7 @@ import { type OttoAPIKey } from "@proofgeist/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import fs from "fs-extra";
+import ora, { type Ora } from "ora";
 import { SyntaxKind, type SourceFile } from "ts-morph";
 
 import { getLayouts } from "~/cli/fmdapi.js";
@@ -11,16 +12,17 @@ import { abortIfCancel, UserAbortedError } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";
 import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
-import { installDependencies } from "~/helpers/installDependencies.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { installFmAddon } from "./install-fm-addon.js";
-import { installEmailProvider, installPlunk } from "./react-email.js";
+import { installEmailProvider } from "./react-email.js";
 
 export const proofkitAuthInstaller = async () => {
+  const spinner = ora("Installing files for auth...").start();
+
   const projectDir = state.projectDir;
   addPackageDependency({
     projectDir,
@@ -121,7 +123,7 @@ export const proofkitAuthInstaller = async () => {
 
   let hasProofKitLayouts = false;
   while (!hasProofKitLayouts) {
-    hasProofKitLayouts = await checkForProofKitLayouts(projectDir);
+    hasProofKitLayouts = await checkForProofKitLayouts(projectDir, spinner);
 
     if (!hasProofKitLayouts) {
       const shouldContinue = abortIfCancel<boolean>(
@@ -135,9 +137,14 @@ export const proofkitAuthInstaller = async () => {
       );
 
       if (!shouldContinue) throw new UserAbortedError();
+    } else {
+      spinner.text =
+        "Successfully detected all required layouts in your FileMaker file.";
     }
   }
   await runCodegenCommand({ projectDir });
+
+  spinner.succeed("Auth installed successfully");
 };
 
 function addToSafeActionClient(sourceFile?: SourceFile) {
@@ -190,7 +197,10 @@ function protectMainLayout(sourceFile: SourceFile) {
   );
 }
 
-async function checkForProofKitLayouts(projectDir: string): Promise<boolean> {
+async function checkForProofKitLayouts(
+  projectDir: string,
+  spinner: Ora
+): Promise<boolean> {
   const settings = getSettings();
 
   const dataSource = settings.dataSources
@@ -223,15 +233,9 @@ async function checkForProofKitLayouts(projectDir: string): Promise<boolean> {
     existingLayouts.some((l) => l === layout)
   );
 
-  if (allProofkitAuthLayoutsExist) {
-    console.log(
-      chalk.green(
-        "Successfully detected all required layouts for FM Add-on Auth in your FileMaker file."
-      )
-    );
-    return true;
-  }
+  if (allProofkitAuthLayoutsExist) return true;
 
+  spinner.warn("Required layouts not found");
   await installFmAddon({ addonName: "auth" });
 
   return false;

@@ -1,6 +1,6 @@
-import { postInstallTable } from "../cli/src/cli/add/page/post-install/table.js";
-import { postInstallTableInfinite } from "../cli/src/cli/add/page/post-install/table-infinite.js";
-import type { TPostInstallFn } from "../cli/src/cli/add/page/types.js";
+import { postInstallTableInfinite } from "./post-install/table-infinite.js";
+import { postInstallTable } from "./post-install/table.js";
+import { type TPostInstallFn } from "./types.js";
 
 export interface Template {
   requireData: boolean;
@@ -68,4 +68,18 @@ export const wvTemplates: Record<string, Template> = {
     templatePath: "vite-wv/table-edit",
     postIntallFn: postInstallTable,
   },
+  // tableInfinite: {
+  //   requireData: true,
+  //   label: "Infinite Table",
+  //   hint: "Automatically load more records when the user scrolls to the bottom",
+  //   templatePath: "vite-wv/table-infinite",
+  //   postIntallFn: postInstallTableInfinite,
+  // },
+  // tableInfiniteEdit: {
+  //   requireData: true,
+  //   label: "Infinite Table (editable)",
+  //   hint: "Automatically load more records when the user scrolls to the bottom with inline edit functionality",
+  //   templatePath: "vite-wv/table-infinite-edit",
+  //   postIntallFn: postInstallTableInfinite,
+  // },
 };

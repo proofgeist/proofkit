@@ -62,7 +62,15 @@ async function generateTemplatesJson() {
   const project = new Project({});
 
   // Add the templates file to the project
-  const templatesPath = path.join(workspaceRoot, "config", "templates.ts");
+  const templatesPath = path.join(
+    workspaceRoot,
+    "cli",
+    "src",
+    "cli",
+    "add",
+    "page",
+    "templates.ts",
+  );
   const sourceFile = project.addSourceFileAtPath(templatesPath);
 
   // Find the template variable declarations

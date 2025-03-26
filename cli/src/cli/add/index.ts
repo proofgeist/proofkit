@@ -61,7 +61,7 @@ export const runAdd = async (name: string | undefined) => {
 export const makeAddCommand = () => {
   const addCommand = new Command("add")
     .description("Add a new component to your project")
-    .argument("name", "Type of component to add", undefined)
+    .argument("[name]", "Type of component to add")
     .addOption(ciOption)
     .addOption(debugOption)
     .action(runAdd);

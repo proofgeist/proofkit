@@ -5,6 +5,7 @@ import {
   useMantineReactTable,
 } from "mantine-react-table";
 import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
+import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
 import { Stack, Text } from "@mantine/core";
 import FullScreenLoader from "@/components/full-screen-loader";
 export const Route = createFileRoute("/")({
@@ -13,11 +14,11 @@ export const Route = createFileRoute("/")({
   loader: async () => {
     // this function is limited to 100 records by default. To load more, see the other table templates from the docs
     const { data } = await __CLIENT_NAME__.list();
-    return data.map((record) => record.fieldData);
+    return data.map((record) => record.fieldData) as __TYPE_NAME__[];
   },
 });
 
-type TData = ReturnType<typeof Route.useLoaderData>;
+type TData = __TYPE_NAME__;
 
 const columns: MRT_ColumnDef<TData>[] = [];
 

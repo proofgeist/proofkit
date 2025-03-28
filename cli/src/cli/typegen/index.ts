@@ -21,7 +21,7 @@ export async function runTypegen(opts: { settings: Settings }) {
   }
 
   if (generateFmTypes) {
-    await runCodegenCommand({ projectDir: process.cwd() });
+    await runCodegenCommand();
   }
 }
 

@@ -6,6 +6,7 @@ import { DOCS_URL } from "~/consts.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { runAdd } from "./add/index.js";
 import { runDeploy } from "./deploy/index.js";
+import { runRemove } from "./remove/index.js";
 import { runTypegen } from "./typegen/index.js";
 import { runUpgrade } from "./update/index.js";
 import { abortIfCancel } from "./utils.js";
@@ -21,6 +22,11 @@ export const runMenu = async () => {
           label: "Add Components",
           value: "add",
           hint: "Add new pages, schemas, data sources, etc.",
+        },
+        {
+          label: "Remove Components",
+          value: "remove",
+          hint: "Remove pages, schemas, data sources, etc.",
         },
         {
           label: "Generate Types",
@@ -49,6 +55,9 @@ export const runMenu = async () => {
   switch (menuChoice) {
     case "add":
       await runAdd(undefined);
+      break;
+    case "remove":
+      await runRemove(undefined);
       break;
     case "docs":
       p.log.info(`Opening ${chalk.cyan(DOCS_URL)} in your browser...`);

@@ -243,7 +243,6 @@ export async function promptForFileMakerDataSource({
   setSettings(settings);
 
   addToFmschemaConfig({
-    projectDir,
     dataSourceName: name,
     project,
     envNames: name === "filemaker" ? undefined : newDataSource.envNames,

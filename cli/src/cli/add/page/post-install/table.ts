@@ -33,7 +33,6 @@ export const postInstallTable: TPostInstallFn = async ({
   });
 
   const allFieldNames = getFieldNamesForSchema({
-    projectDir,
     schemaName,
     dataSourceName: dataSource.name,
   });

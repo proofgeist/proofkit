@@ -18,7 +18,7 @@ export const runAdd = async (name: string | undefined) => {
   const settings = getSettings();
 
   if (name === "tanstack-query") {
-    return await runAddTanstackQueryCommand({ settings });
+    return await runAddTanstackQueryCommand();
   }
 
   const addType = abortIfCancel(

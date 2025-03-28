@@ -2,6 +2,9 @@
   "name": "docs",
   "type": "module",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "npm run generate-templates && astro dev",
     "start": "astro dev",
@@ -12,12 +15,12 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
-    "@astrojs/react": "^3.6.2",
-    "@astrojs/starlight": "^0.28.2",
-    "@astrojs/vercel": "^7.8.1",
+    "@astrojs/react": "^4.2.2",
+    "@astrojs/starlight": "^0.32.5",
+    "@astrojs/vercel": "^8.1.3",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
-    "astro": "^4.15.3",
+    "astro": "^5.5.5",
     "fuse.js": "^7.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -25,7 +28,7 @@
     "typescript": "^5.6.3"
   },
   "devDependencies": {
-    "@astrojs/tailwind": "^5.1.4",
+    "@astrojs/tailwind": "^6.0.2",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.3",

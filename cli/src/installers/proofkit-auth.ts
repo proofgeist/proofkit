@@ -142,7 +142,7 @@ export const proofkitAuthInstaller = async () => {
         "Successfully detected all required layouts in your FileMaker file.";
     }
   }
-  await runCodegenCommand({ projectDir });
+  await runCodegenCommand();
 
   spinner.succeed("Auth installed successfully");
 };

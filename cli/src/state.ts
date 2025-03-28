@@ -6,7 +6,7 @@ const schema = z
     debug: z.boolean().default(false),
     localBuild: z.boolean().default(false),
     baseCommand: z
-      .enum(["add", "init", "deploy", "upgrade"])
+      .enum(["add", "init", "deploy", "upgrade", "remove"])
       .optional()
       .catch(undefined),
     appType: z.enum(["browser", "webviewer"]).optional().catch(undefined),

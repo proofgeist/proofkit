@@ -2,17 +2,11 @@ import * as p from "@clack/prompts";
 import { Command } from "commander";
 
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
-import { type Settings } from "~/utils/parseSettings.js";
 
-export const runAddTanstackQueryCommand = async ({
-  settings,
-}: {
-  settings: Settings;
-}) => {
-  const projectDir = process.cwd();
+export const runAddTanstackQueryCommand = async () => {
   const spinner = p.spinner();
   spinner.start("Adding Tanstack Query");
-  await injectTanstackQuery({ settings, projectDir });
+  await injectTanstackQuery();
   spinner.stop("Tanstack Query added");
 };
 

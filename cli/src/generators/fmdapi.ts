@@ -48,7 +48,7 @@ export async function addLayout({
   }
 
   if (runCodegen) {
-    await runCodegenCommand({ projectDir });
+    await runCodegenCommand();
   }
 }
 
@@ -93,15 +93,12 @@ export async function addConfig({
   }
 
   if (runCodegen) {
-    await runCodegenCommand({ projectDir });
+    await runCodegenCommand();
   }
 }
 
-export async function runCodegenCommand({
-  projectDir,
-}: {
-  projectDir: string;
-}) {
+export async function runCodegenCommand() {
+  const projectDir = state.projectDir;
   const settings = getSettings();
   if (settings.dataSources.length === 0) {
     console.log("no data sources found, skipping typegen");
@@ -266,16 +263,15 @@ export function getExistingSchemas({
 }
 
 export function addToFmschemaConfig({
-  projectDir,
   dataSourceName,
   project,
   envNames,
 }: {
-  projectDir: string;
   dataSourceName: string;
   project: Project;
   envNames?: z.infer<typeof envNamesSchema>;
 }) {
+  const projectDir = state.projectDir;
   const configFilePath = path.join(projectDir, "fmschema.config.mjs");
   const alreadyExists = fs.existsSync(configFilePath);
   if (!alreadyExists) {
@@ -368,14 +364,13 @@ export function addToFmschemaConfig({
 }
 
 export function getFieldNamesForSchema({
-  projectDir,
   schemaName,
   dataSourceName,
 }: {
-  projectDir: string;
   schemaName: string;
   dataSourceName: string;
 }) {
+  const projectDir = state.projectDir;
   const project = getNewProject(projectDir);
   const sourceFile = project.addSourceFileAtPath(
     path.join(
@@ -414,5 +409,155 @@ export function getFieldNamesForSchema({
         .filter(Boolean) ?? [];
 
     return fieldNames;
+  }
+}
+
+export function removeFromFmschemaConfig({
+  dataSourceName,
+  project,
+}: {
+  dataSourceName: string;
+  project?: Project;
+}) {
+  const projectDir = state.projectDir;
+  if (!project) project = getNewProject(projectDir);
+
+  const configFilePath = path.join(projectDir, "fmschema.config.mjs");
+  if (!fs.existsSync(configFilePath)) {
+    return;
+  }
+
+  const sourceFile = project.addSourceFileAtPath(configFilePath);
+  const configVar = getConfigVarStatement(sourceFile);
+
+  // Handle single config object case
+  if (
+    configVar?.getInitializer()?.getKind() ===
+    SyntaxKind.ObjectLiteralExpression
+  ) {
+    // If it's a single object and matches our data source, clear its schemas
+    const configObj = configVar
+      .getInitializer()
+      ?.asKind(SyntaxKind.ObjectLiteralExpression);
+    if (!configObj) return;
+
+    const pathProp = configObj
+      .getProperty("path")
+      ?.asKind(SyntaxKind.PropertyAssignment);
+    const pathValue = pathProp
+      ?.getInitializer()
+      ?.getText()
+      ?.replace(/['"]/g, "");
+
+    if (pathValue?.includes(dataSourceName)) {
+      const schemasArray = configObj
+        .getProperty("schemas")
+        ?.asKind(SyntaxKind.PropertyAssignment)
+        ?.getInitializer()
+        ?.asKind(SyntaxKind.ArrayLiteralExpression);
+
+      if (schemasArray) {
+        const emptyArray: string[] = [];
+        schemasArray.replaceWithText(`[${emptyArray.join(",")}]`);
+      }
+    }
+    return;
+  }
+
+  // Handle array of configs case
+  const configArray = configVar?.getInitializerIfKind(
+    SyntaxKind.ArrayLiteralExpression
+  );
+  if (configArray) {
+    const elements = configArray.getElements();
+    const newElements = elements.filter((element) => {
+      if (!element.asKind(SyntaxKind.ObjectLiteralExpression)) {
+        return true;
+      }
+      const pathProp = element
+        .asKind(SyntaxKind.ObjectLiteralExpression)
+        ?.getProperty("path")
+        ?.asKind(SyntaxKind.PropertyAssignment);
+      const pathValue = pathProp
+        ?.getInitializer()
+        ?.getText()
+        ?.replace(/['"]/g, "");
+      return !pathValue?.includes(dataSourceName);
+    });
+    configArray.replaceWithText(
+      `[${newElements.map((el) => el.getText()).join(",")}]`
+    );
+  }
+}
+
+export async function removeLayout({
+  projectDir = state.projectDir,
+  schemaName,
+  dataSourceName,
+  runCodegen = true,
+  ...args
+}: {
+  projectDir?: string;
+  schemaName: string;
+  dataSourceName: string;
+  runCodegen?: boolean;
+  project?: Project;
+}) {
+  const fmschemaConfig = path.join(projectDir, "fmschema.config.mjs");
+  if (!fs.existsSync(fmschemaConfig)) {
+    throw new Error("fmschema.config.mjs not found");
+  }
+  const project = args.project ?? getNewProject(projectDir);
+
+  const sourceFile = project.addSourceFileAtPath(fmschemaConfig);
+  const schemasArray = getSchemasArray(sourceFile, dataSourceName);
+  if (!schemasArray) {
+    throw new Error("Could not find schemas array in config");
+  }
+
+  // Find and remove the schema with matching schemaName
+  const elements = schemasArray.getElements();
+  if (!elements) {
+    throw new Error("Could not find schemas array in config");
+  }
+
+  const newElements = elements.filter((element) => {
+    if (!element.asKind(SyntaxKind.ObjectLiteralExpression)) {
+      return true;
+    }
+    const schemaNameProp = element
+      .asKind(SyntaxKind.ObjectLiteralExpression)
+      ?.getProperty("schemaName")
+      ?.asKind(SyntaxKind.PropertyAssignment);
+    const schemaNameValue = schemaNameProp
+      ?.getInitializer()
+      ?.getText()
+      ?.replace(/['"]/g, "");
+    return schemaNameValue !== schemaName;
+  });
+
+  schemasArray.replaceWithText(
+    `[${newElements.map((el) => el.getText()).join(",")}]`
+  );
+
+  // Clean up generated schema file
+  const schemaFilePath = path.join(
+    projectDir,
+    "src",
+    "config",
+    "schemas",
+    dataSourceName,
+    `${schemaName}.ts`
+  );
+  if (fs.existsSync(schemaFilePath)) {
+    fs.removeSync(schemaFilePath);
+  }
+
+  if (!args.project) {
+    await formatAndSaveSourceFiles(project);
+  }
+
+  if (runCodegen) {
+    await runCodegenCommand();
   }
 }

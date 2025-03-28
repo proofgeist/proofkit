@@ -286,7 +286,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
 
   if (!cliOptions.noInstall) {
     await installDependencies({ projectDir });
-    await runCodegenCommand({ projectDir });
+    await runCodegenCommand();
   }
 
   if (!cliOptions.noGit) {

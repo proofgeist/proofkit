@@ -3,11 +3,17 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
+import starlightLlmsTxt from "starlight-llms-txt";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://proofkit.dev",
   integrations: [
     starlight({
+      description:
+        "ProofKit is a CLI tool for quickly building JavaScript apps.",
+      // @ts-expect-error not sure why
+      plugins: [starlightLlmsTxt({ projectName: "ProofKit CLI" })],
       title: "ProofKit CLI",
       social: {
         github: "https://github.com/proofgeist/proofkit",
@@ -15,6 +21,7 @@ export default defineConfig({
       components: {
         Header: "./src/components/Header.astro",
       },
+      customCss: ["./src/tailwind.css"],
       sidebar: [
         {
           label: "Guides",

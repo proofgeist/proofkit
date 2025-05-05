@@ -98,7 +98,7 @@
           "type": "string"
         }
       },
-      "required": ["envNames", "layouts"]
+      "required": ["layouts"]
     }
   }
 }

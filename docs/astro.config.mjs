@@ -12,7 +12,6 @@ export default defineConfig({
     starlight({
       description:
         "ProofKit is a CLI tool for quickly building JavaScript apps.",
-      // @ts-expect-error not sure why
       plugins: [starlightLlmsTxt({ projectName: "ProofKit CLI" })],
       title: "ProofKit",
       social: {

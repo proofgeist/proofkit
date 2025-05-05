@@ -1,5 +1,15 @@
 # @proofgeist/kit
 
+## 0.4.0
+
+### Minor Changes
+
+- 53a0f25: New "remove" command to remove pages, schemas, and data sources via the CLI
+
+### Patch Changes
+
+- d0a87d2: Fix types in webviewer templates
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,0 +1,45 @@
+---
+title: Getting Started
+description: "@proofkit/webviewer"
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+
+## Purpose
+
+The goal of this package is to make it easy to work with FileMaker scripts and data when building a custom webviewer integration. @proofkit/webviewer works only inside of webviewer and allows you to interact with your FileMaker solution via local scripts.
+
+This is a **client-side** package, meant to run specifically in a FileMaker WebViewer, but it can still be used in a hosted web app, such as Next.js. However, it will cause errors if loaded in a standard browser. For more information about deployment strategies, see the [Deployment](/docs/deployment) page.
+
+For web-based applications where you're looking to interact with the Data API using a network request, check out the [@proofkit/fmdapi](/docs/fmdapi) package instead.
+
+## Automatic Installation
+
+We strongly recommend using the [ProofKit CLI](/docs/cli) to setup your project. It will also walk you through a FileMaker add-on that installs the neccesary layouts, scripts and custom functions to get you started.
+
+<Accordions type="single">
+  <Accordion title="Manual Installation">
+
+{" "}
+<Callout type="warn">
+  This demo file is a very simplified example. To see more features, use the
+  [ProofKit CLI](/docs/cli) to build a new app and follow the instructions to
+  install the FileMaker addon.
+</Callout>
+
+Use your preferred package manager to install the package.
+
+```package-install
+@proofkit/webviewer
+```
+
+### FileMaker File Setup
+
+Download this [Demo FileMaker file](/fmFetch-demo.fmp12) and copy the scripts folder named `fm-webviewer-fetch` into your own FileMaker solution.
+
+Demo file credentials: `admin` / `admin`
+
+</Accordion>
+</Accordions>

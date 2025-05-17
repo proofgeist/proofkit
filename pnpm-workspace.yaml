@@ -1,4 +1,3 @@
 packages:
-  - "cli"
-  - "docs"
-  - "shared"
+  - "apps/*"
+  - "packages/*"

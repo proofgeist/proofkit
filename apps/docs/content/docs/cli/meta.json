@@ -1,0 +1,6 @@
+{
+  "title": "ProofKit CLI",
+  "description": "@proofkit/cli",
+  "icon": "Terminal",
+  "root": true
+}

@@ -1,0 +1,95 @@
+---
+title: Quick Start
+description: "@proofkit/typegen"
+---
+
+import { Tabs, TabItem } from "fumadocs-ui/components/tabs";
+import { Callout } from "fumadocs-ui/components/callout";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+import { IconFileTypeTs } from "@tabler/icons-react";
+
+A utility for generating runtime validators and TypeScript files from your
+own FileMaker layouts.
+
+## Quick Start
+
+Run this command to initialize `@proofkit/typegen` in your project:
+
+```bash tab="pnpm"
+pnpm dlx @proofkit/typegen@latest
+```
+
+```bash tab="npm"
+npx @proofkit/typegen@latest
+```
+
+## Configuring Typegen
+
+The first time you run the command, you'll be prompted to create a config file. This is where you'll specifcy the layouts that you want to generate types for.
+
+To see all the options available, see the [Configuration](/docs/typegen/config) page.
+
+### Environment Variables
+
+This tool will connect to your FileMaker solution using the `@proofkit/fmdapi` package and read the layout metadata for each layout you specify in the config file. By default it will expect the following environment variables to be set:
+
+```bash
+FM_SERVER=https://your-server.com # must start with https://
+FM_DATABASE=MyFile.fmp12 # must end with .fmp12
+
+# If using OttoFMS
+OTTO_API_KEY=dk_123...abc
+
+# otherwise (fmrest privilege must be enabled on this account)
+FM_USERNAME=fmrest
+FM_PASSWORD=your-password
+```
+
+If you need to use different env variable names (i.e. for multiple FileMaker connections), set the `envNames` option in the [config](/docs/typegen/config) file.
+
+
+## Running Typegen
+Once you have a config file setup, you can run the command to generate the types:
+
+
+```bash tab="pnpm"
+pnpm dlx @proofkit/typegen@latest
+```
+
+```bash tab="npm"
+npx @proofkit/typegen@latest
+```
+
+<Callout type="info">
+We suggest adding a script to your `package.json` to run this command more easily
+</Callout>
+
+### Example Generated Files
+
+If your typegen config is setup with 2 layouts and the path set to `schema`, this is what the generated files will look like:
+
+<Files>
+  <Folder name="schema" defaultOpen >
+  <Folder name="client" >
+    <File name="Customers.ts" icon={<IconFileTypeTs />} />
+    <File name="Invoices.ts" icon={<IconFileTypeTs />} />
+    <File name="index.ts" icon={<IconFileTypeTs />} />
+  </Folder>
+
+  <Folder name="generated" >
+    <File name="Customers.ts" icon={<IconFileTypeTs />} />
+    <File name="Invoices.ts" icon={<IconFileTypeTs />} />
+  </Folder>
+
+
+     <File name="Customers.ts" type="ts" icon={<IconFileTypeTs />} />
+    <File name="Invoices.ts" type="ts" icon={<IconFileTypeTs />} />
+  </Folder>
+</Files>
+
+The `client` folder is where you'll import from in other files of your app to use the layout-specific clients.
+
+The `generated` folder is where the typegen will put the generated files. These files are auto-generated and should not be edited, since your changes would just be overwritten the next time you run an update to your schema.
+
+The other files in the root of the `schema` folder are what will be used in the generated clients, and can be safely modifed to allow for customizations.
+

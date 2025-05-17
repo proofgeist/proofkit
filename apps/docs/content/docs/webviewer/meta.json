@@ -1,0 +1,15 @@
+{
+  "title": "Webviewer",
+  "description": "@proofkit/webviewer",
+  "icon": "Globe",
+  "pages": [
+    "---Introduction---",
+    "index",
+    "---Usage---",
+    "fmFetch",
+    "callFmScript",
+    "fmdapi",
+    "troubleshooting"
+  ],
+  "root": true
+}

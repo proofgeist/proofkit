@@ -1,0 +1,89 @@
+---
+title: Data API Integration
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+
+We can use the `Execute FileMaker Data API` script step to harness the power of the [@proofkit/fmdapi](/docs/fmdapi) library in our webviewer integration.
+
+- ✅ Use the same code and functions as in a browsed-based app
+  - including typegen for a nice auto-complete experience and runtime validation for protection if field names are changed.
+- ✅ No authentication required (it runs in the process of the logged in user)
+- ✅ Works in offline FileMaker apps
+- ✅ Works even if the Data API is disabled on the server
+
+## Setup
+
+<Callout type="info">
+  If you used the [ProofKit CLI](/docs/cli) to create your project, these steps
+  are already done for you.
+</Callout>
+
+<Steps>
+  <Step>
+    ### Install both packages
+
+    ```package-install
+    @proofkit/fmdapi @proofkit/webviewer
+    ```
+
+  </Step>
+  <Step>
+  ### FileMaker Script Installation
+
+    Copy the `ExecuteDataAPI` and `SendCallback` scripts from the [demo file](/fmdapi-demo.fmp12) to your own FileMaker solution.
+
+  </Step>
+  <Step>
+    ### Initialize the DataAPI client
+
+    <Callout type="info">
+      For more details about this step, see the [@proofkit/fmdapi](/docs/fmdapi) documentation.
+    </Callout>
+
+    <Accordions defaultValue="typegen">
+      <Accordion title="Using Typegen (recommended)" value="typegen">
+        If you're using using [typegen](/docs/fmdapi/typegen), modify your `fmschema.config.mjs` file to include the script name that calls the `Execute FileMaker Data API` script step
+
+        ```js title="fmschema.config.mjs"
+        export const config = {
+          //  ...other config
+          webviewerScriptName: "ExecuteDataApi",
+        };
+        ```
+        Then simply run the typegen command to generate the client.
+      </Accordion>
+      <Accordion title="Manual Setup" value="manual">
+        If you're manually creating the client, use the webviewer adapter from the `@proofkit/webviewer` package.
+
+        ```ts title="client.ts"
+        import { DataApi } from "@proofkit/fmdapi";
+        import { WebViewerAdapter } from "@proofkit/webviewer/adapter";
+
+        export const client = DataApi({
+          adapter: new WebViewerAdapter({ scriptName: "ExecuteDataApi" }),
+          layout: "API_Customers", // put your layout name here
+        });
+
+        ```
+
+        Repeat this for each layout that you want to interact with.
+      </Accordion>
+    </Accordions>
+
+  </Step>
+</Steps>
+
+## Usage
+
+Now you can use the DataAPI client just as you would in a browsed-based app!
+
+```ts
+import { UsersClient } from "./schema/client";
+
+const users = await UsersClient.findOne({ query: { id: "===1234" } });
+```
+
+For examples of all methods, see the [@proofkit/fmdapi](/docs/fmdapi) documentation.

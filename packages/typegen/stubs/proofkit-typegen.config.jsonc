@@ -1,0 +1,17 @@
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": {
+    "clientSuffix": "Layout",
+    "layouts": [
+      // add your layouts and name schemas here
+      { "layoutName": "my_layout", "schemaName": "MySchema" }
+
+      // repeat as needed for each layout...
+      // { layoutName: "my_other_layout", schemaName: "MyOtherSchema" },
+    ],
+
+    // change this value to generate the files in a different directory
+    "path": "schema",
+    "clearOldFiles": true
+  }
+}

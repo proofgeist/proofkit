@@ -1,0 +1,66 @@
+---
+title: Adapters
+---
+
+Adapters are a new level of abstraction that allows you to reuse the same client API with any number of proxies, including via a FileMaker Webviewer using the [`@proofkit/webviewer`](/docs/webviewer) package and the Execute Data API script step. The adapter is responsible for handling the specifics of the connection to the FileMaker Data API, while the shared client exposes helper functions, schema validators, and other utilities to the developer.
+
+Choose the adapter that is right for your project, or view below for how to build your own custom adatper.
+
+## OttoFMS (recommended)
+
+To connect via the [OttoFMS](https://docs.ottofms.com/) [Data API Proxy](https://docs.ottofms.com/ottofms-features/api-proxy#data-api-proxy), use the `OttoAdapter` with a Data API key:
+
+```ts
+import { DataApi, OttoAdapter } from "@proofkit/fmdapi";
+```
+
+The OttoAdapter is compatible with API keys for both the Otto v3 and OttoFMS Data API Proxy. OttoFMS is available under a free license and is our recommended method for interacting with the Data API.
+
+#### Options
+
+| Option        | Type     | Description                                                                              |
+| ------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `auth.apiKey` | `string` | The Data API key from either Otto v3 (starts with `KEY_`) or OttoFMS (starts with `dk_`) |
+| `auth.port`   | `string` | _(optional)_ Only used for Otto v3. Defaults to 3030                                     |
+| `db`          | `string` | FileMaker database name                                                                  |
+| `server`      | `string` | FileMaker server URL (must start with include `https://`)                                |
+
+## FetchAdapter
+
+To connect directly to the FileMaker Data API, use the `FetchAdapter` with a username and password:
+
+```ts
+import { DataApi, FetchAdapter } from "@proofkit/fmdapi";
+```
+
+#### Options
+
+| Option       | Type         | Description                                                                                                        |
+| ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `auth`       | `object`     | Authentication object. Must contain `username` and `password`                                                      |
+| `db`         | `string`     | FileMaker database name                                                                                            |
+| `server`     | `string`     | FileMaker server URL (must include `https://`)                                                                     |
+| `tokenStore` | `TokenStore` | _(optional)_ If provided, will use the custom set of functions to store and retrieve the short-lived access token. |
+
+## WebViewerAdapter
+
+For rich webviewer experiences, use the `WebViewerAdapter` with the [`@proofkit/webviewer`](/docs/webviewer) package:
+
+```package-install
+@proofkit/webviewer
+```
+
+Then import the adapter like so:
+
+```ts
+import { DataApi } from "@proofkit/fmdapi";
+import { WebViewerAdapter } from "@proofkit/webviewer";
+```
+
+## Custom Adapters
+
+> **This is an advanced topic.** If you are just an application developer trying to connect to a FileMaker database, all you need to know is how you want to connect to the FileMaker server, then import the appropriate adapter. Type hint for the selected adapter will guide you through the rest.
+
+If you want to write you own adapter for your own proxy, or to override the root-level `request` method, you can write a custom adapter.
+
+All adapters must implement the `Adapter` interface. If you want to build a proxy similar to the `OttoAdapter`, you can extend the `BaseFetchAdapter` class and will likely only need to implement the `getToken` and `request` methods. View the source for the FetchAdapter for an example of this.

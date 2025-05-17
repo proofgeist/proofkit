@@ -1,0 +1,22 @@
+---
+title: Overview
+description: "@proofkit/fmdapi"
+---
+
+This package is designed to make working with the FileMaker Data API much easier. Here's just a few key features:
+
+- Handles token refresh for you automatically
+- [OttoFMS](https://ottofms.com/) Data API proxy support
+- TypeScript support for easy auto-completion of your field names
+- [Automated type generation](/docs/typegen) based on layout metadata
+- Protection against field name changes with [Standard Schema](https://standardschema.dev/) runtime validation
+- Supports both node and edge runtimes with a customizable token store
+- Customizable adapters allow usage even within the [FileMaker WebViewer](/docs/webviewer)
+
+## Edge Runtime Support
+
+This package is compatible with edge runtimes, but there are some additional considerations to avoid overwhelming your FileMaker server with too many connections. If you are developing for the edge, be sure to implement one of the following strategies:
+
+- ✅ Use a custom token store (see above) with a persistent storage method such as Upstash
+- ✅ Use a proxy such as the [Otto Data API Proxy](https://www.ottofms.com/docs/otto/working-with-otto/proxy-api-keys/data-api) which handles management of the access tokens itself.
+  - Providing an API key to the client instead of username/password will automatically use the Otto proxy

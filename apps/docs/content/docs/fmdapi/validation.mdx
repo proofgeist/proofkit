@@ -1,0 +1,38 @@
+---
+title: Validation & Transformation
+description: Protect your app from field name changes by validating the shape of the data returned from the FileMaker Data API.
+---
+
+import { File, Folder, Files } from "fumadocs-ui/components/files";
+import { IconFileTypeTs } from "@tabler/icons-react";
+
+## Why validate?
+
+One of the best features of the FileMaker platform is how you can easily add, remove, and rename fields in your database. However, when you make integrations that are beyond the scope of your database, you can run into serious issues if the field names change out from under you.
+
+This library supports validation using [Standard Schema](https://standardschema.dev/) out of the box, and will throw an error _early_ to prevent unexpected behavior in your app. We suggest using the [Zod](https://zod.dev) library by default, but any other validation library that supports Standard Schema will also work.
+
+## How does it work?
+
+When creating your layout client, add a `schema` property and define a Standard-Schema compliant schema definition for your `fieldData` and `portalData`. Your schema must be an object, and should represent a single record or portal row.
+
+Most validation libraries also support some kind of transformation, and you can use these to adjust how your FileMaker data is returned to your app.
+
+Try this interactive example that uses the [Zod](https://zod.dev/) library to validate and transform the data:
+
+<iframe
+  src="https://stackblitz.com/edit/proofkit-examples?embed=1&file=src%2Fvalidator.ts&hideExplorer=1&hideNavigation=1&view=editor&terminalHeight=0"
+  className="w-full"
+  width="100%"
+  height="500"
+/>
+
+## Handling errors
+
+If you define a schema, each method that you call may cause the API request to throw a validation error, thus no data returned to your application (even if the FileMaker Server gave an OK status code). You should always try/catch these methods and update your schemas when your field names change. The easiest way to keep your schemas up to date is with the [@proofkit/typegen](/docs/typegen) package.
+
+## Typegen Integration
+
+If you use [@proofkit/typegen](/docs/typegen) or [@proofkit/cli](/docs/cli) to generate the layout-specific clients, it will automatically generate zod validators also.
+
+These generated files should **never** be edited, since your changes would just be overwritten the next time you run an update to your schema. However, you can and should add overrides to the files at the root of your schemas, as only the files in the `client` and `generated` folders will be overwritten.

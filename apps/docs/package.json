@@ -1,0 +1,46 @@
+{
+  "name": "@proofkit/docs",
+  "version": "0.0.2",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev -p 3005",
+    "start": "next start",
+    "postinstall": "fumadocs-mdx"
+  },
+  "dependencies": {
+    "@proofkit/typegen": "workspace:*",
+    "@proofkit/webviewer": "workspace:*",
+    "@radix-ui/react-separator": "^1.1.4",
+    "@tabler/icons-react": "^3.31.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "fumadocs-core": "15.2.11",
+    "fumadocs-docgen": "^2.0.0",
+    "fumadocs-mdx": "11.6.1",
+    "fumadocs-twoslash": "^3.1.2",
+    "fumadocs-typescript": "^4.0.3",
+    "fumadocs-ui": "15.2.11",
+    "lucide-react": "^0.503.0",
+    "next": "15.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "shiki": "^3.3.0",
+    "tailwind-merge": "^3.2.0",
+    "twoslash": "^0.3.1",
+    "zod": "4.0.0-beta.20250505T012514"
+  },
+  "devDependencies": {
+    "@proofkit/fmdapi": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.4",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "next-transpile-modules": "^10.0.1",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4",
+    "tw-animate-css": "^1.2.8",
+    "typescript": "^5.8.3"
+  }
+}

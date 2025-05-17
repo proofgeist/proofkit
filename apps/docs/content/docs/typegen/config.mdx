@@ -1,0 +1,75 @@
+---
+title: Configuration
+---
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+import { typegenConfig } from "@proofkit/typegen/config";
+
+The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at the root of your project.
+
+<Callout type="info">
+  JSONC is just JSON with comments. `@proofkit/typegen` will also work with
+  standard JSON files.
+</Callout>
+
+```jsonc title="proofkit-typegen-config.jsonc"
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": {
+    // ... your config here
+    // can be an object (single config) or an array (multiple configs)
+  },
+}
+```
+
+## Config options
+
+<TypeTable
+  type={{
+    layouts: {
+      type: "array",
+      required: true,
+    },
+    envNames: {
+      type: "object",
+      required: false,
+      description:
+        "Set this key if you need to use different environment variable names for your FileMaker connection.",
+    },
+    path: {
+      type: "string",
+      default: `"schema"`,
+      description:
+        "The path to the directory where the generated files will be saved.",
+    },
+    clearOldFiles: {
+      type: "boolean",
+      default: "true",
+      description:
+        "If set to true, will delete all existing files in the output directory before generating new files.",
+    },
+    validator: { type: `"zod" | false`, default: "zod" },
+    clientSuffix: { type: "string", default: "Layout" },
+    webviewerScriptName: {
+      type: "string",
+      description:
+        "If set, will generate the client using the @proofkit/webviewer package",
+    },
+    generateClient: { type: "boolean", default: "true" },
+  }}
+/>
+
+## Layout options
+
+<TypeTable
+  type={{
+    layoutName: { type: "string", required: true },
+    schemaName: { type: "string", required: true },
+    valueLists: {
+      type: `"strict" | "allowEmpty" | "ignore"`,
+      default: `"ignore"`,
+    },
+    generateClient: { type: "boolean", default: "inherit" },
+    strictNumbers: { type: "boolean", default: false },
+  }}
+/>

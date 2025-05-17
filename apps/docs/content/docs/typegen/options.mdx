@@ -1,0 +1,47 @@
+---
+title: CLI Options
+---
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+Most configuration can be done with the [config file](/docs/typegen/config) in your project, but some options can be set a runtime.
+
+```bash
+npx @proofkit/typegen
+```
+
+## `generate` command
+
+```bash
+npx @proofkit/typegen generate
+```
+
+This is also the default command, so "generate" is optional. If this command is run without any config file detected, you will be prompted to create the config file (the `init` command)
+
+### `--config <filename>`
+
+Set a custom filename/path for where the config file is located. The file name must end with either `jsonc` or `json`.
+
+### `--env-path <path>`
+
+Set a custom path for where your environment variables are stored.
+
+### `--reset-overrides`
+
+Recreate the overrides file(s), even if they already exist.
+
+### `--skip-env-check`
+
+Ignore loading environment variables from a file. Use this option if you are injecting environment variables directly as the command runs.
+
+## `init` command
+
+```bash
+npx @proofkit/typegen init
+```
+
+Use this command to create a config file in the current directory.
+
+## `--config <filename>`
+
+Set a custom filename/path for where the config file will be created. The file name must end with either `jsonc` or `json`.

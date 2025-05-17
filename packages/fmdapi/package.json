@@ -1,0 +1,100 @@
+{
+  "name": "@proofkit/fmdapi",
+  "version": "5.0.0-beta.0",
+  "description": "FileMaker Data API client",
+  "repository": "git@github.com:proofgeist/fm-dapi.git",
+  "author": "Eric <37158449+eluce2@users.noreply.github.com>",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      }
+    },
+    "./utils/*": {
+      "import": {
+        "types": "./dist/esm/utils.d.ts",
+        "default": "./dist/esm/utils.js"
+      }
+    },
+    "./tokenStore/*": {
+      "import": {
+        "types": "./dist/esm/tokenStore/*.d.ts",
+        "default": "./dist/esm/tokenStore/*.js"
+      }
+    },
+    "./adapters/*": {
+      "import": {
+        "types": "./dist/esm/adapters/*.d.ts",
+        "default": "./dist/esm/adapters/*.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "prepublishOnly": "pnpm run ci",
+    "build": "tsc && vite build && publint --strict",
+    "build:watch": "tsc && vite build --watch",
+    "check-format": "prettier --check .",
+    "format": "prettier --write .",
+    "dev": "tsc --watch",
+    "ci": "pnpm build && pnpm check-format && pnpm publint --strict && pnpm test",
+    "test": "op inject -i op.env -o .env.local -f && vitest run",
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish --access public",
+    "knip": "knip"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "^1.0.0",
+    "@tanstack/vite-config": "^0.2.0",
+    "chalk": "4.1.2",
+    "commander": "^9.5.0",
+    "dotenv": "^16.4.7",
+    "fs-extra": "^11.3.0",
+    "ts-morph": "^25.0.1",
+    "vite": "^6.3.4",
+    "zod": "4.0.0-beta.20250505T012514"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.15.3",
+    "@typescript-eslint/eslint-plugin": "^8.29.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "@upstash/redis": "^1.34.6",
+    "eslint": "^9.23.0",
+    "eslint-plugin-react": "^7.37.4",
+    "knip": "^5.52.0",
+    "prettier": "^3.5.3",
+    "publint": "^0.3.12",
+    "ts-toolbelt": "^9.6.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src",
+    "dist",
+    "dist-browser",
+    "tokenStore",
+    "utils",
+    "stubs"
+  ],
+  "keywords": [
+    "filemaker",
+    "fms",
+    "fm",
+    "data api",
+    "dapi",
+    "fmrest",
+    "fmdapi",
+    "proofgeist",
+    "fm-dapi"
+  ]
+}

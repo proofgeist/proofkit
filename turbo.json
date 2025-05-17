@@ -1,32 +1,22 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
     "build": {
-      "outputs": ["dist/**", ".vercel/output/**", ".next/**"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
       "dependsOn": ["^build"]
     },
+    "test": {
+      "outputs": ["coverage/**"],
+      "dependsOn": []
+    },
+    "lint": {},
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "start": {
-      "dependsOn": ["^build"]
-    },
-    "lint": {
-      "cache": false
-    },
-    "lint:fix": {
-      "cache": false
-    },
-    "format": {
-      "cache": false
-    },
-    "format:check": {
-      "cache": false
-    },
     "clean": {
       "cache": false
-    },
-    "typecheck": {}
+    }
   }
 }

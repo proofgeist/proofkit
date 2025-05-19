@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import { state } from "~/state.js";
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { DataApi, OttoAdapter } from "../src";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { config } from "./setup";
 import { describe, expect, it } from "vitest";
 

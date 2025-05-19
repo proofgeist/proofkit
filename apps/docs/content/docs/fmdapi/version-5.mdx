@@ -41,7 +41,7 @@ Each method called will now also return the result of your validator, so you can
 Here's an example of how you might use zod to force a number field to a boolean, or a string to a JavaScript Date:
 
 ```ts title="schema/Customers.ts"
-import { z } from "zod";
+import { z } from "zod/v4";
 import { ZCustomers as ZCustomers_generated } from "./generated/Customers";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";

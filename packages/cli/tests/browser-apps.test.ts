@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import { verifyProjectBuilds } from "./test-utils";
 

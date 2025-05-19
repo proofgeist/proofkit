@@ -8,7 +8,7 @@ import {
   type Project,
   type SourceFile,
 } from "ts-morph";
-import { type z } from "zod";
+import { type z } from "zod/v4";
 
 import { PKG_ROOT } from "~/consts.js";
 import { state } from "~/state.js";

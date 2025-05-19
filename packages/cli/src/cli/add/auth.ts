@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import { addAuth } from "~/generators/auth.js";
 import { ciOption, debugOption } from "~/globalOptions.js";

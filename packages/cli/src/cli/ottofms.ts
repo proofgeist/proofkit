@@ -3,7 +3,7 @@ import axios, { AxiosError } from "axios";
 import chalk from "chalk";
 import open from "open";
 import randomstring from "randomstring";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import { abortIfCancel } from "./utils.js";
 

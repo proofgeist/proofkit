@@ -8,7 +8,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import { FilemakerAdapter } from "next-auth-adapter-filemaker";
 import { type Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import { verifyPassword } from "./password";
 

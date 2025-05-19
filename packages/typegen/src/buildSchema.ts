@@ -24,9 +24,9 @@ export function buildSchema(
     strictNumbers = false,
   } = args;
 
-  if (type === "zod") {
+  if (type === "zod/v4" || type === "zod/v3") {
     schemaFile.addImportDeclaration({
-      moduleSpecifier: "zod",
+      moduleSpecifier: type,
       namedImports: ["z"],
     });
   }
@@ -286,9 +286,9 @@ export function buildOverrideFile(
   schemaFile: SourceFile,
   { type, ...args }: BuildSchemaArgs,
 ) {
-  if (type === "zod") {
+  if (type === "zod/v4" || type === "zod/v3") {
     overrideFile.addImportDeclaration({
-      moduleSpecifier: "zod",
+      moduleSpecifier: type,
       namedImports: ["z"],
     });
   }
@@ -299,7 +299,7 @@ export function buildOverrideFile(
     .getExportSymbols()
     .map((symbol) => symbol.getName())
     .filter((name) => {
-      if (type === "zod") {
+      if (type === "zod/v4" || type === "zod/v3") {
         return name.startsWith("Z");
       } else {
         return name.startsWith("T");
@@ -317,7 +317,7 @@ export function buildOverrideFile(
   });
 
   namedExportNames.forEach((name) => {
-    if (type === "zod") {
+    if (type === "zod/v4" || type === "zod/v3") {
       overrideFile.addVariableStatement({
         isExported: true,
         declarationKind: VariableDeclarationKind.Const,

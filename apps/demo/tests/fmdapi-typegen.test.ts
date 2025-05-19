@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { generateTypedClients } from "@proofkit/typegen";
 import { typegenConfigSingle } from "@proofkit/typegen/config";
 import { OttoAPIKey } from "@proofkit/fmdapi";
-import { z } from "zod";
+import { z } from "zod/v4";
 import fs from "fs-extra";
 import path from "path";
 import { execSync } from "child_process";

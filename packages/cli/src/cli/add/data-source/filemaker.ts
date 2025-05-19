@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { SemVer } from "semver";
-import { type z } from "zod";
+import { type z } from "zod/v4";
 
 import {
   createDataAPIKey,

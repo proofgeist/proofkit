@@ -48,7 +48,7 @@ The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at
       description:
         "If set to true, will delete all existing files in the output directory before generating new files.",
     },
-    validator: { type: `"zod" | false`, default: "zod" },
+    validator: { type: `"zod/v4" | "zod/v3" | false`, default: "zod/v4" },
     clientSuffix: { type: "string", default: "Layout" },
     webviewerScriptName: {
       type: "string",

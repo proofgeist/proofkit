@@ -3,7 +3,7 @@ import { isCancel } from "@clack/core";
 import { cancel } from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { ZodError } from "zod";
+import { ZodError } from "zod/v4";
 
 import { npmName } from "~/consts.js";
 import { getSettings } from "~/utils/parseSettings.js";

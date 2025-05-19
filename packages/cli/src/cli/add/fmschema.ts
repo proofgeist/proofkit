@@ -5,7 +5,7 @@ import { type ValueListsOptions } from "@proofgeist/fmdapi/typegen/types.js";
 import chalk from "chalk";
 import { Command } from "commander";
 import dotenv from "dotenv";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import { addLayout, getExistingSchemas } from "~/generators/fmdapi.js";
 import { state } from "~/state.js";

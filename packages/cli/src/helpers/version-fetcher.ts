@@ -2,7 +2,7 @@
 import https from "https";
 import { TRPCError } from "@trpc/server";
 import axios from "axios";
-import z from "zod";
+import z from "zod/v4";
 
 export async function fetchServerVersions({
   url,

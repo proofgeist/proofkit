@@ -21,7 +21,7 @@ import {
 import { getLayoutMetadata } from "./getLayoutMetadata";
 import { buildOverrideFile, buildSchema } from "./buildSchema";
 import { buildLayoutClient } from "./buildLayoutClient";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
@@ -64,7 +64,7 @@ const generateTypedClientsSingle = async (
 
   const { resetOverrides = false } = options ?? {};
 
-  const validator = rest.validator ?? "zod";
+  const validator = rest.validator ?? "zod/v4";
 
   const rootDir = rest.path ?? "schema";
 
@@ -165,7 +165,7 @@ const generateTypedClientsSingle = async (
       layoutName: item.layoutName,
       portalSchema,
       valueLists,
-      type: validator === "zod" ? "zod" : "ts",
+      type: validator === "zod/v4" || validator === "zod/v3" ? validator : "ts",
       strictNumbers: item.strictNumbers,
       webviewerScriptName: config.webviewerScriptName,
       envNames: {

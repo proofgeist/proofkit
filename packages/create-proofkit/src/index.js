@@ -17,7 +17,7 @@ async function main() {
           : pkgManager;
 
   try {
-    await execa(pkgManagerCmd, ["@proofgeist/kit@latest", "init", ...args], {
+    await execa(pkgManagerCmd, ["@proofkit/cli@latest", "init", ...args], {
       stdio: "inherit",
       env: {
         ...process.env,

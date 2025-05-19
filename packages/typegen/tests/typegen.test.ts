@@ -11,7 +11,7 @@ import {
 import { generateTypedClients } from "../src/typegen";
 import { typegenConfigSingle } from "../src/types";
 import { OttoAPIKey } from "../../fmdapi/src";
-import { z } from "zod";
+import { z } from "zod/v4";
 import fs from "fs/promises";
 import path from "path";
 import { execSync } from "child_process";

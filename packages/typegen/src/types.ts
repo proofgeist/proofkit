@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 const valueListsOptions = z.enum(["strict", "allowEmpty", "ignore"]);
 export type ValueListsOptions = z.infer<typeof valueListsOptions>;
@@ -62,12 +62,12 @@ export const typegenConfigSingle = z.object({
       "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
   }),
   validator: z
-    .union([z.enum(["zod"]), z.literal(false)])
-    .default("zod")
+    .union([z.enum(["zod/v4", "zod/v3"]), z.literal(false)])
+    .default("zod/v4")
     .optional()
     .meta({
       description:
-        "If set to 'zod', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
+        "If set to 'zod/v4', or 'zod/v3', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
     }),
   clientSuffix: z.string().default("Layout").optional().meta({
     description: "The suffix to be added to the schema name for each layout",
@@ -97,7 +97,7 @@ export type TSchema = {
 export type BuildSchemaArgs = {
   schemaName: string;
   schema: Array<TSchema>;
-  type: "zod" | "ts";
+  type: "zod/v4" | "zod/v3" | "ts";
   portalSchema?: { schemaName: string; schema: Array<TSchema> }[];
   valueLists?: { name: string; values: string[] }[];
   envNames: NonNullable<z.infer<typeof envNames>>;

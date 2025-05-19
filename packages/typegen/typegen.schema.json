@@ -24,16 +24,10 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "apiKey",
-                        "baseUrl"
-                      ]
+                      "required": ["apiKey", "baseUrl"]
                     }
                   },
-                  "required": [
-                    "type",
-                    "envNames"
-                  ]
+                  "required": ["type", "envNames"]
                 },
                 {
                   "type": "object",
@@ -51,16 +45,10 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "apiKey",
-                        "baseUrl"
-                      ]
+                      "required": ["apiKey", "baseUrl"]
                     }
                   },
-                  "required": [
-                    "type",
-                    "envNames"
-                  ]
+                  "required": ["type", "envNames"]
                 },
                 {
                   "type": "object",
@@ -72,10 +60,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "type",
-                    "webviewerScriptName"
-                  ]
+                  "required": ["type", "webviewerScriptName"]
                 }
               ]
             },
@@ -91,11 +76,7 @@
                     "type": "string"
                   },
                   "valueLists": {
-                    "enum": [
-                      "strict",
-                      "allowEmpty",
-                      "ignore"
-                    ]
+                    "enum": ["strict", "allowEmpty", "ignore"]
                   },
                   "generateClient": {
                     "type": "boolean"
@@ -104,10 +85,7 @@
                     "type": "boolean"
                   }
                 },
-                "required": [
-                  "layoutName",
-                  "schemaName"
-                ]
+                "required": ["layoutName", "schemaName"]
               }
             },
             "path": {
@@ -121,25 +99,20 @@
             "validator": {
               "anyOf": [
                 {
-                  "enum": [
-                    "zod"
-                  ]
+                  "enum": ["zod/v4"]
                 },
                 {
                   "const": false
                 }
               ],
-              "default": "zod"
+              "default": "zod/v4"
             },
             "clientSuffix": {
               "type": "string",
               "default": "Client"
             }
           },
-          "required": [
-            "adapter",
-            "layouts"
-          ]
+          "required": ["adapter", "layouts"]
         },
         {
           "type": "array",
@@ -164,16 +137,10 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "apiKey",
-                          "baseUrl"
-                        ]
+                        "required": ["apiKey", "baseUrl"]
                       }
                     },
-                    "required": [
-                      "type",
-                      "envNames"
-                    ]
+                    "required": ["type", "envNames"]
                   },
                   {
                     "type": "object",
@@ -191,16 +158,10 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "apiKey",
-                          "baseUrl"
-                        ]
+                        "required": ["apiKey", "baseUrl"]
                       }
                     },
-                    "required": [
-                      "type",
-                      "envNames"
-                    ]
+                    "required": ["type", "envNames"]
                   },
                   {
                     "type": "object",
@@ -212,10 +173,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "type",
-                      "webviewerScriptName"
-                    ]
+                    "required": ["type", "webviewerScriptName"]
                   }
                 ]
               },
@@ -231,11 +189,7 @@
                       "type": "string"
                     },
                     "valueLists": {
-                      "enum": [
-                        "strict",
-                        "allowEmpty",
-                        "ignore"
-                      ]
+                      "enum": ["strict", "allowEmpty", "ignore"]
                     },
                     "generateClient": {
                       "type": "boolean"
@@ -244,10 +198,7 @@
                       "type": "boolean"
                     }
                   },
-                  "required": [
-                    "layoutName",
-                    "schemaName"
-                  ]
+                  "required": ["layoutName", "schemaName"]
                 }
               },
               "path": {
@@ -261,31 +212,24 @@
               "validator": {
                 "anyOf": [
                   {
-                    "enum": [
-                      "zod"
-                    ]
+                    "enum": ["zod/v4"]
                   },
                   {
                     "const": false
                   }
                 ],
-                "default": "zod"
+                "default": "zod/v4"
               },
               "clientSuffix": {
                 "type": "string",
                 "default": "Client"
               }
             },
-            "required": [
-              "adapter",
-              "layouts"
-            ]
+            "required": ["adapter", "layouts"]
           }
         }
       ]
     }
   },
-  "required": [
-    "config"
-  ]
+  "required": ["config"]
 }

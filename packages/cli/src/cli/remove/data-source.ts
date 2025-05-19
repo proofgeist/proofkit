@@ -3,7 +3,7 @@ import * as p from "@clack/prompts";
 import { Command } from "commander";
 import dotenv from "dotenv";
 import fs from "fs-extra";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 import {
   removeFromFmschemaConfig,

@@ -1,0 +1,59 @@
+---
+title: CLI Commands
+description: A comprehensive guide to ProofKit CLI commands
+sidebar:
+  label: CLI Commands
+  order: 1
+---
+
+import { CliCommand } from "@/components/CliCommand";
+import { Callout } from "fumadocs-ui/components/callout";
+
+ProofKit comes with a powerful CLI that helps you manage your project. Here's a comprehensive list of available commands.
+
+## Basic Commands
+
+### Initialize a New Project
+
+Create a new ProofKit project:
+
+<CliCommand command="proofkit init" />
+
+### Add Components
+
+Add new components to your project:
+
+<CliCommand command="proofkit add" />
+
+This will prompt you with options to add:
+
+- Pages
+- Data Sources
+- Schema
+- Authentication
+
+See [Adding Components](/guides/adding-components) for more details.
+
+## Maintenance Commands
+
+### Upgrade Components
+
+Keep your ProofKit components up to date with the upgrade command:
+
+<CliCommand command="proofkit upgrade" />
+
+This command helps you maintain your ProofKit project by:
+
+- Updating cursor rules to the latest version
+- Ensuring your project has the latest component configurations
+- Synchronizing project settings with the latest ProofKit standards
+
+Run this command periodically to ensure your project stays current with the latest ProofKit features and improvements.
+
+### Deploy
+
+Deploy your ProofKit application:
+
+<CliCommand command="proofkit deploy" />
+
+See [Deployment](/guides/deployment) for more details about deploying your application.

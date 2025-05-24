@@ -7,20 +7,21 @@ sidebar:
 
 import { File, Folder, Files } from 'fumadocs-ui/components/files';
 import { Callout } from 'fumadocs-ui/components/callout';
+import { IconBrandReact, IconBrandNodejs } from "@tabler/icons-react"
 
 Here's a brief overview of the folder structure you should expect to see in a ProofKit project. Not all files are shown in the diagram
 
 
-<Folder name="src" defaultOpen>
+<Folder name="src" defaultOpen className='mb-8'>
   <Folder name="app" defaultOpen>
     <Folder name="(main)" defaultOpen>
-      <File name="page.tsx" />
-      <File name="layout.tsx" />
+      <File name="page.tsx" icon={<IconBrandReact />} />
+      <File name="layout.tsx" icon={<IconBrandReact />} />
     </Folder>
   </Folder>
   <Folder name="components" defaultOpen>
     <Folder name="ui" defaultOpen>
-      <File name="button.tsx" />
+      <File name="button.tsx" icon={<IconBrandReact />} />
     </Folder>
   </Folder>
   <Folder name="config" defaultOpen>
@@ -41,7 +42,7 @@ Here's a brief overview of the folder structure you should expect to see in a Pr
     </Folder>
   </Folder>
   <Folder name="utils" />
-    
+  <File name="package.json" icon={<IconBrandNodejs />} />
 </Folder>
 
 

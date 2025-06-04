@@ -27,7 +27,7 @@ filters:
   - type: directory
     pattern: "src/server/"
   - type: content
-    pattern: "(@proofgeist/fmdapi|ZodError|typegen)"
+    pattern: "(@proofkit/cli|ZodError|typegen)"
 
 data_source_policy:
   exclusive_source: "FileMaker Data API"
@@ -49,14 +49,14 @@ troubleshooting:
 
 conventions:
   api_setup:
-    - Uses @proofgeist/fmdapi package version ^4.2.2
+    - Uses @proofkit/fmdapi package version ^5.0.0
     - Configuration in fmschema.config.mjs
     - Environment variables in .env for connection details
     - Type generation via `{package-manager} typegen` command
   
   data_access:
     - ALL data operations MUST use FileMaker Data API
-    - Server-side only API calls via @proofgeist/fmdapi
+    - Server-side only API calls via @proofkit/fmdapi
     - Type-safe database operations
     - Centralized error handling
     - Connection pooling and session management
@@ -135,8 +135,8 @@ patterns:
   - Caching strategies for frequent queries
 
 dependencies:
-  fmdapi: "@proofkit/fmdapi@^4.2.2"
-  proofkit: "@proofgeist/kit@^0.2.3"
+  fmdapi: "@proofkit/fmdapi@^5.0.0"
+  proofkit: "@proofkit/cli@^1.0.0"
 
 keywords:
   database:

@@ -1,6 +1,6 @@
 # ProofKit NextJS Template
 
-This is a [NextJS](https://nextjs.org/) project bootstrapped with `@proofgeist/kit`
+This is a [NextJS](https://nextjs.org/) project bootstrapped with `@proofkit/cli`. Learn more at [proofkit.dev](https://proofkit.dev)
 
 ## What's next? How do I make an app with this?
 

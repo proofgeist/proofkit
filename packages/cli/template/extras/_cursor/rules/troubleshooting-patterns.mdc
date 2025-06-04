@@ -14,7 +14,7 @@ filters:
   - type: file_extension
     pattern: "\\.(ts|tsx)$"
   - type: content
-    pattern: "(Error|error|ZodError|TypeError|ValidationError|@proofgeist/fmdapi)"
+    pattern: "(Error|error|ZodError|TypeError|ValidationError|@proofkit/fmdapi)"
 
 initial_debugging_steps:
   priority: "ALWAYS run `{package-manager} typegen` first for any data-related issues"
@@ -50,7 +50,7 @@ data_source_validation:
     - "Using incorrect field names from old schema"
   correct_approach:
     - "Run typegen first"
-    - "Use @proofgeist/fmdapi for all data operations"
+    - "Use @proofkit/fmdapi for all data operations"
     - "Follow FileMaker layout and field conventions"
     - "Use layout.create, layout.find, layout.get, layout.update, layout.delete"
     - "Use layout.maybeFindFirst for optional records"

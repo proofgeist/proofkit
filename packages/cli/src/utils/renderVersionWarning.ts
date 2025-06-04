@@ -42,7 +42,7 @@ function checkForLatestVersion(): Promise<string> {
   return new Promise((resolve, reject) => {
     https
       .get(
-        "https://registry.npmjs.org/-/package/@proofgeist/kit/dist-tags",
+        "https://registry.npmjs.org/-/package/@proofkit/cli/dist-tags",
         (res) => {
           if (res.statusCode === 200) {
             let body = "";

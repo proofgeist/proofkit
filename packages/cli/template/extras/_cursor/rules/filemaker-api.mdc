@@ -135,7 +135,7 @@ patterns:
   - Caching strategies for frequent queries
 
 dependencies:
-  fmdapi: "@proofgeist/fmdapi@^4.2.2"
+  fmdapi: "@proofkit/fmdapi@^4.2.2"
   proofkit: "@proofgeist/kit@^0.2.3"
 
 keywords:

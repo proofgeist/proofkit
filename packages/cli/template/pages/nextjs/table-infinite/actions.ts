@@ -3,7 +3,7 @@
 import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
 import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
 import { __ACTION_CLIENT__ } from "@/server/safe-action";
-import { ListParams, Query } from "@proofgeist/fmdapi/dist/client-types.js";
+import { ListParams, Query } from "@proofkit/fmdapi/dist/client-types.js";
 import dayjs from "dayjs";
 import { z } from "zod/v4";
 

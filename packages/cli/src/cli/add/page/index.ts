@@ -233,7 +233,7 @@ async function promptForSchemaFromDataSource({
     const schemaName = abortIfCancel(
       await p.select({
         message: "Which schema should this page load data from?",
-        options: schemas.map((o) => ({ label: o, value: o })),
+        options: schemas.map((o) => ({ label: o, value: o ?? "" })),
       })
     );
     return schemaName;

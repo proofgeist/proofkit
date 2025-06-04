@@ -1,6 +1,6 @@
 import path from "path";
 import * as p from "@clack/prompts";
-import { type OttoAPIKey } from "@proofgeist/fmdapi";
+import { type OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import fs from "fs-extra";
@@ -80,30 +80,30 @@ export const proofkitAuthInstaller = async () => {
     project,
     config: {
       clientSuffix: "Layout",
-      schemas: [
+      layouts: [
         {
-          layout: "proofkit_auth_sessions",
+          layoutName: "proofkit_auth_sessions",
           schemaName: "sessions",
           strictNumbers: true,
         },
         {
-          layout: "proofkit_auth_users",
+          layoutName: "proofkit_auth_users",
           schemaName: "users",
           strictNumbers: true,
         },
         {
-          layout: "proofkit_auth_email_verification",
+          layoutName: "proofkit_auth_email_verification",
           schemaName: "emailVerification",
           strictNumbers: true,
         },
         {
-          layout: "proofkit_auth_password_reset",
+          layoutName  : "proofkit_auth_password_reset",
           schemaName: "passwordReset",
           strictNumbers: true,
         },
       ],
       clearOldFiles: true,
-      useZod: false,
+      validator: false,
       path: "./src/server/auth/db",
     },
     projectDir,

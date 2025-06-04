@@ -72,7 +72,9 @@ export const postInstallTable: TPostInstallFn = async ({
     .getVariableDeclaration("columns")
     ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
 
-  const fieldNames = filterOutCommonFieldNames(allFieldNames);
+  const fieldNames = filterOutCommonFieldNames(
+    allFieldNames.filter(Boolean) as string[]
+  );
 
   for await (const fieldName of fieldNames) {
     columns?.addElement((writer) =>

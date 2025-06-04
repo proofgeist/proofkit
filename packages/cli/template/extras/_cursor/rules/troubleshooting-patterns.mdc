@@ -232,7 +232,7 @@ keywords:
     - "No SQL"
     - "FM Data API"
     - "Exclusive data source"
-    - "@proofgeist/fmdapi"
+    - "@proofkit/fmdapi"
 
 metadata:
   priority: high

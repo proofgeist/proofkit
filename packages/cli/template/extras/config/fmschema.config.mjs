@@ -1,4 +1,4 @@
-/** @type {import("@proofgeist/fmdapi/dist/utils/typegen/types.d.ts").GenerateSchemaOptions} */
+/** @type {import("@proofkit/fmdapi/dist/utils/typegen/types.d.ts").GenerateSchemaOptions} */
 export const config = {
   clientSuffix: "Layout",
   schemas: [

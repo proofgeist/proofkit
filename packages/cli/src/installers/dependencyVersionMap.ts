@@ -1,4 +1,4 @@
-import { getNodeMajorVersion, getVersion } from "~/utils/getProofKitVersion.js";
+import { getFmdapiVersion, getNodeMajorVersion, getVersion } from "~/utils/getProofKitVersion.js";
 
 /*
  * This maps the necessary packages to a version.
@@ -45,10 +45,10 @@ export const dependencyVersionMap = {
   "@clerk/themes": "^2.1.33",
 
   // FileMaker Data API
-  "@proofgeist/fmdapi": "^4.3.2",
+  "@proofkit/fmdapi": `^${getFmdapiVersion()}`,
 
   // ProofKit
-  "@proofgeist/kit": `^${getVersion()}`,
+  "@proofkit/cli": `^${getVersion()}`,
 
   // Tanstack Query
   "@tanstack/react-query": "^5.59.0",

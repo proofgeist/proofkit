@@ -1,5 +1,6 @@
-import DataApi, { OttoAdapter, type OttoAPIKey } from "@proofgeist/fmdapi";
-import { type LayoutOrFolder } from "@proofgeist/fmdapi/dist/client-types.js";
+import DataApi, { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi";
+import { type clientTypes } from "@proofkit/fmdapi";
+
 
 export async function getLayouts({
   dataApiKey,
@@ -16,6 +17,7 @@ export async function getLayouts({
       db: fmFile,
       server,
     }),
+    layout: ""
   });
 
   const layoutsResp = await DapiClient.layouts();
@@ -25,7 +27,7 @@ export async function getLayouts({
   return layouts;
 }
 
-function getAllLayoutNames(layout: LayoutOrFolder): string[] {
+function getAllLayoutNames(layout: clientTypes.LayoutOrFolder): string[] {
   if ("isFolder" in layout) {
     return (layout.folderLayoutNames ?? []).flatMap(getAllLayoutNames);
   }
@@ -34,7 +36,7 @@ function getAllLayoutNames(layout: LayoutOrFolder): string[] {
 
 export const commonFileMakerLayoutPrefixes = ["API_", "API ", "dapi_", "dapi"];
 
-export function transformLayoutList(layouts: LayoutOrFolder[]): string[] {
+export function transformLayoutList(layouts: clientTypes.LayoutOrFolder[]): string[] {
   const flatList = layouts.flatMap(getAllLayoutNames);
 
   // sort the list so that any values that begin with one of the prefixes are at the top

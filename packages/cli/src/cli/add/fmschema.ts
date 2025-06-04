@@ -1,7 +1,7 @@
 import path from "path";
 import * as p from "@clack/prompts";
-import { type OttoAPIKey } from "@proofgeist/fmdapi";
-import { type ValueListsOptions } from "@proofgeist/fmdapi/typegen/types.js";
+import type { OttoAPIKey } from "@proofkit/fmdapi";
+
 import chalk from "chalk";
 import { Command } from "commander";
 import dotenv from "dotenv";
@@ -12,6 +12,7 @@ import { state } from "~/state.js";
 import { getSettings, type Settings } from "~/utils/parseSettings.js";
 import { commonFileMakerLayoutPrefixes, getLayouts } from "../fmdapi.js";
 import { abortIfCancel } from "../utils.js";
+import { type ValueListsOptions } from "@proofkit/typegen/config";
 
 export const runAddSchemaAction = async (opts?: {
   projectDir?: string;
@@ -179,7 +180,7 @@ export const runAddSchemaAction = async (opts?: {
     dataSourceName: sourceName,
     schemas: [
       {
-        layout: selectedLayout,
+        layoutName: selectedLayout,
         schemaName,
         valueLists: valueListsValidated,
       },

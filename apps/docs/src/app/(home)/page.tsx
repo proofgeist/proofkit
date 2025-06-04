@@ -1,28 +1,38 @@
 import Link from "next/link";
 
 import ProofKitLogo from "@/../public/proofkit.png";
-import { AuroraText } from "@/components/magicui/aurora-text";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { Separator } from "@/components/ui/separator";
 
 import Image from "next/image";
 import { Card } from "fumadocs-ui/components/card";
 import { Cards } from "fumadocs-ui/components/card";
-import {
-  Code,
-  CpuIcon,
-  Database,
-  Globe,
-  PanelsTopLeft,
-  Terminal,
-  WebhookIcon,
-} from "lucide-react";
+import { Code, Globe, Terminal, WebhookIcon } from "lucide-react";
+import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern";
+import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   return (
     <main className="flex text-center mb-42 mt-24">
       <div className="flex flex-col items-center justify-center w-full mx-auto max-w-screen-lg">
-        <Image src={ProofKitLogo} alt="ProofKit Logo" width={400} />
+        <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden rounded-lg  bg-background">
+          <InteractiveGridPattern
+            className={cn(
+              "absolute inset-0 [mask-image:radial-gradient(400px_circle_at_center,white,transparent)]",
+            )}
+            width={40}
+            height={40}
+            squares={[80, 80]}
+            squaresClassName="hover:fill-brand/50"
+            style={{ zIndex: 0 }}
+          />
+          <Image
+            src={ProofKitLogo}
+            alt="ProofKit Logo"
+            width={400}
+            className="z-10 pointer-events-none"
+          />
+        </div>
 
         <div className="mt-8 space-y-8 text-center w-full ">
           <h1 className="text-4xl font-bold">Welcome</h1>
@@ -37,7 +47,7 @@ export default function HomePage() {
             </Card>
             <Card icon={<Code />} href="/docs/typegen" title={"Typegen"}>
               Automatically generate runtime validators and TypeScript files
-              from your own FileMaker layouts
+              from your own FileMaker layouts.
             </Card>
             <Card
               icon={<WebhookIcon className="text-blue-300" />}
@@ -65,9 +75,11 @@ export default function HomePage() {
             quickly without any prior experience. Get a full Next.js app running
             in a matter of minutes!
           </p>
-          <ShimmerButton className="mx-auto">
-            <span className="text-white">Get Started</span>
-          </ShimmerButton>
+          <Link href="/docs/cli">
+            <ShimmerButton className="mx-auto">
+              <span className="text-white">Get Started</span>
+            </ShimmerButton>
+          </Link>
         </div>
       </div>
     </main>

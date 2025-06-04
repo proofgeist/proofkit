@@ -218,7 +218,7 @@ export async function promptForFileMakerDataSource({
   });
 
   const fmdapiImport = schemaFile.getImportDeclaration(
-    (imp) => imp.getModuleSpecifierValue() === "@proofgeist/fmdapi"
+    (imp) => imp.getModuleSpecifierValue() === "@proofkit/fmdapi"
   );
   if (fmdapiImport) {
     fmdapiImport
@@ -229,13 +229,13 @@ export async function promptForFileMakerDataSource({
   } else {
     schemaFile.addImportDeclaration({
       namedImports: [{ name: "OttoAPIKey", isTypeOnly: true }],
-      moduleSpecifier: "@proofgeist/fmdapi",
+      moduleSpecifier: "@proofkit/fmdapi",
     });
   }
 
   addPackageDependency({
     projectDir,
-    dependencies: ["@proofgeist/fmdapi"],
+    dependencies: ["@proofkit/fmdapi"],
     devMode: false,
   });
 

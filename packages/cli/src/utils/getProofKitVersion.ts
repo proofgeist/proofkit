@@ -12,6 +12,17 @@ export const getVersion = () => {
   return packageJsonContent.version ?? "1.0.0";
 };
 
+export const getFmdapiVersion = () => {
+  const packageJsonPath = path.join(
+    PKG_ROOT,
+    "..",
+    "fmdapi",
+    "package.json"
+  );
+  const packageJsonContent = fs.readJSONSync(packageJsonPath) as PackageJson;
+  return packageJsonContent.version ?? "1.0.0";
+};
+
 export const getNodeMajorVersion = () => {
   const defaultVersion = "22";
   try {

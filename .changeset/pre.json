@@ -7,13 +7,15 @@
     "@proofkit/typegen": "0.0.1",
     "@proofkit/webviewer": "3.0.0",
     "demo": "0.1.0",
-    "@proofkit/cli": "0.3.2"
+    "@proofkit/cli": "0.3.2",
+    "create-proofkit": "0.0.7"
   },
   "changesets": [
     "breezy-cooks-rescue",
     "cyan-eels-glow",
     "great-rabbits-spend",
     "lemon-toys-follow",
+    "nine-dragons-punch",
     "serious-tips-sing",
     "six-maps-grow",
     "soft-views-swim",

@@ -1,6 +1,6 @@
 import path from "path";
 import * as p from "@clack/prompts";
-import { type OttoAPIKey } from "@proofgeist/fmdapi";
+import { type OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
 

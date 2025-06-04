@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const distPath = path.dirname(__filename);
 export const PKG_ROOT = path.join(distPath, "../");
 export const cliName = "proofkit";
-export const npmName = "@proofgeist/kit";
+export const npmName = "@proofkit/cli";
 export const DOCS_URL = "https://proofkit.dev";
 
 const version = getVersion();

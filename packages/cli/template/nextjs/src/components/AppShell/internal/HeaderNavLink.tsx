@@ -1,6 +1,6 @@
 "use client";
 
-import { type ProofKitRoute } from "@proofgeist/kit";
+import { type ProofKitRoute } from "@proofkit/cli";
 import { usePathname } from "next/navigation";
 import React from "react";
 

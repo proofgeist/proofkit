@@ -1,6 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod/v4";
-import { type OttoAPIKey } from "@proofgeist/fmdapi";
+import { type OttoAPIKey } from "@proofkit/fmdapi";
 
 export const env = createEnv({
   server: {

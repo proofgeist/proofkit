@@ -3,7 +3,7 @@ import { isCancel } from "@clack/core";
 import { cancel } from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { ZodError } from "zod/v4";
+import z, { ZodError } from "zod/v4";
 
 import { npmName } from "~/consts.js";
 import { getSettings } from "~/utils/parseSettings.js";
@@ -35,7 +35,7 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
   } catch (error) {
     console.log(chalk.red("Error parsing ProofKit settings file:"));
     if (error instanceof ZodError) {
-      console.log(error.errors);
+      console.log(z.prettifyError(error));
     } else {
       console.log(error);
     }

@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { env } from "@/config/env";
-import { OttoAdapter } from "@proofgeist/fmdapi";
+import { OttoAdapter } from "@proofkit/fmdapi";
 import NextAuth, { type DefaultSession } from "next-auth";
 import { FilemakerAdapter } from "next-auth-adapter-filemaker";
 import { type Provider } from "next-auth/providers";

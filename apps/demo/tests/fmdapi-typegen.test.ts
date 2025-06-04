@@ -94,7 +94,6 @@ describe("typegen", () => {
       },
       validator: false,
     };
-    await testTypegenConfig(config);
 
     const { genPath } = await testTypegenConfig(config);
 

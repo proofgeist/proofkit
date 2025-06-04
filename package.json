@@ -9,7 +9,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "sherif": "pnpm dlx sherif@latest",
-    "sherif:fix": "pnpm sherif --fix"
+    "sherif:fix": "pnpm sherif --fix",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.3",

@@ -6,6 +6,7 @@ import {
 } from "@proofkit/typegen/config";
 import { execa } from "execa";
 import fs from "fs-extra";
+import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser";
 import { type z } from "zod/v4";
 
 // Removed ts-morph imports as they are no longer used for config
@@ -48,10 +49,12 @@ async function readJsonConfigFile(
     return null;
   }
   try {
-    return (await fs.readJson(configPath)) as FullProofkitTypegenJsonFile;
+    const fileContent = await fs.readFile(configPath, "utf8");
+    const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
+    return parsed;
   } catch (error) {
     console.error(
-      `Error reading or parsing JSON config at ${configPath}:`,
+      `Error reading or parsing JSONC config at ${configPath}:`,
       error
     );
     // Return a default structure for the *file* if parsing fails but file exists
@@ -66,7 +69,23 @@ async function writeJsonConfigFile(
   configPath: string,
   fileContent: FullProofkitTypegenJsonFile
 ) {
-  await fs.writeJson(configPath, fileContent, { spaces: 2 });
+  // Check if file exists to preserve comments
+  if (fs.existsSync(configPath)) {
+    const originalText = await fs.readFile(configPath, "utf8");
+    // Use jsonc-parser's modify function to preserve comments
+    const edits = modify(originalText, ["config"], fileContent.config, {
+      formattingOptions: {
+        tabSize: 2,
+        insertSpaces: true,
+        eol: "\n",
+      },
+    });
+    const modifiedText = applyEdits(originalText, edits);
+    await fs.writeFile(configPath, modifiedText, "utf8");
+  } else {
+    // If file doesn't exist, create it with proper formatting
+    await fs.writeJson(configPath, fileContent, { spaces: 2 });
+  }
 }
 
 export async function addLayout({
@@ -219,14 +238,14 @@ export function getClientSuffix({
     return "Client";
   }
   try {
-    const fileContent = fs.readJsonSync(
-      jsonConfigPath
-    ) as FullProofkitTypegenJsonFile;
+    const fileContent = fs.readFileSync(jsonConfigPath, "utf8");
+    const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
+
     let targetDataSource: ImportedDataSourceConfig | undefined;
 
-    const configToSearch = Array.isArray(fileContent.config)
-      ? fileContent.config
-      : [fileContent.config];
+    const configToSearch = Array.isArray(parsed.config)
+      ? parsed.config
+      : [parsed.config];
 
     targetDataSource = configToSearch.find(
       (ds) =>
@@ -237,7 +256,7 @@ export function getClientSuffix({
     return targetDataSource?.clientSuffix ?? "Client";
   } catch (error) {
     console.error(
-      `Error reading or parsing JSON config for getClientSuffix: ${jsonConfigPath}`,
+      `Error reading or parsing JSONC config for getClientSuffix: ${jsonConfigPath}`,
       error
     );
     return "Client";
@@ -256,14 +275,13 @@ export function getExistingSchemas({
     return [];
   }
   try {
-    const fileContent = fs.readJsonSync(
-      jsonConfigPath
-    ) as FullProofkitTypegenJsonFile;
+    const fileContent = fs.readFileSync(jsonConfigPath, "utf8");
+    const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
     let targetDataSource: ImportedDataSourceConfig | undefined;
 
-    const configToSearch = Array.isArray(fileContent.config)
-      ? fileContent.config
-      : [fileContent.config];
+    const configToSearch = Array.isArray(parsed.config)
+      ? parsed.config
+      : [parsed.config];
 
     targetDataSource = configToSearch.find(
       (ds) =>
@@ -281,7 +299,7 @@ export function getExistingSchemas({
     return [];
   } catch (error) {
     console.error(
-      `Error reading or parsing JSON config for getExistingSchemas: ${jsonConfigPath}`,
+      `Error reading or parsing JSONC config for getExistingSchemas: ${jsonConfigPath}`,
       error
     );
     return [];

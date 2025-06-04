@@ -56,7 +56,7 @@
     "ts-morph": "^25.0.1",
     "ts-toolbelt": "^9.6.0",
     "vite": "^6.3.4",
-    "zod": "3.25.0-beta.20250519T094321"
+    "zod": "3.25.51"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

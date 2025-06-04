@@ -1,0 +1,10 @@
+# CodeRabbit Configuration
+
+# Review settings
+reviews:
+  # Enable automated review for pull requests
+  auto_review:
+    enabled: true
+    base_branches:
+      - ".*" # Matches all branches using regex
+  review_status: false

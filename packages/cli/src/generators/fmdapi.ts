@@ -209,11 +209,13 @@ export async function runCodegenCommand() {
       pkgManager === "npm"
         ? "npx"
         : pkgManager === "pnpm"
-          ? "pnpx" // User preference
+          ? "pnpm"
           : pkgManager === "bun"
             ? "bunx"
             : pkgManager,
-      ["@proofkit/typegen@latest", `--env-path=${settings.envFile}`],
+      pkgManager === "pnpm"
+        ? ["dlx", "@proofkit/typegen@latest", `--env-path=${settings.envFile}`]
+        : ["@proofkit/typegen@latest", `--env-path=${settings.envFile}`],
       {
         cwd: projectDir,
         stderr: "inherit",
@@ -290,7 +292,7 @@ export function getExistingSchemas({
         ds.path === dataSourceName
     );
 
-    if (targetDataSource && targetDataSource.layouts) {
+    if (targetDataSource?.layouts) {
       return targetDataSource.layouts.map((layout) => ({
         layout: layout.layoutName,
         schemaName: layout.schemaName,
@@ -494,7 +496,7 @@ export async function removeLayout({
 
   const targetDataSource = configArray.find((ds) => ds.path === targetDsPath);
 
-  if (targetDataSource && targetDataSource.layouts) {
+  if (targetDataSource?.layouts) {
     const initialCount = targetDataSource.layouts.length;
     targetDataSource.layouts = targetDataSource.layouts.filter(
       (layout) => layout.schemaName !== schemaName

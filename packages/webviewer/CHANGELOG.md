@@ -1,10 +1,12 @@
-# @proofgeist/fm-webviewer-fetch
+# @proofkit/webviewer
 
 ## 3.0.0
 
 ### Major Changes
 
 - Rename to @proofkit/webviewer
+
+# @proofgeist/fm-webviewer-fetch
 
 ## 2.2.4
 

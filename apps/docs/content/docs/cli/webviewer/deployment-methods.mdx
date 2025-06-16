@@ -34,7 +34,7 @@ To get around the data migration issue, you have a few options:
 
 ## Hosted
 
-In the other extreme, you can host the WebViewer code like you would any other web application. If you're only using the fm-webviewer-fetch library, you can still do this without any security concerns because the data won't load unless the web page is loaded in your FileMaker solution in a WebViewer.
+In the other extreme, you can host the WebViewer code like you would any other web application. If you're only using the @proofkit/webviewer library, you can still do this without any security concerns because the data won't load unless the web page is loaded in your FileMaker solution in a WebViewer.
 
 #### Pros
 
@@ -60,7 +60,7 @@ To implement this method with a ProofKit-initialized WebViewer project, you'll n
 - Edit the WebViewer object to load from your production URL (from Vercel) instead of the `ProofKitWV::HTML` field
   - You may also want to add more steps to the case statement to load different URLs based on the environment, such as `development`, `staging`, and `production`
 
-Alternatively, you can just install the `fm-webviewer-fetch` library into a standard Next.js web app if you're going to use the Hosted method.
+Alternatively, you can just install the `@proofkit/webviewer` library into a standard Next.js web app if you're going to use the Hosted method.
 
 ## Downloaded
 

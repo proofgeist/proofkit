@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/fmdapi",
-  "version": "5.0.0-beta.0",
+  "version": "5.0.0",
   "description": "FileMaker Data API client",
   "repository": "git@github.com:proofgeist/fm-dapi.git",
   "author": "Eric <37158449+eluce2@users.noreply.github.com>",

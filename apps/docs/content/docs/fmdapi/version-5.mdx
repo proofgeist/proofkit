@@ -1,0 +1,91 @@
+---
+title: Upgrading to v5
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+In v5, we've split the Data API and typegen functionality into two separate packages: `@proofkit/fmdapi` and `@proofkit/typegen`, as well as introduces a few breaking changes.
+
+## Codemod
+
+To make the transition as smooth as possible, we've made an upgrade script to the `@proofgeist/fmdapi`
+package. Simply run this command in the root of your project:
+
+```bash
+npx @proofgeist/fmdapi@latest upgrade
+```
+
+This script will:
+
+- Install the new packages (@proofkit/fmdapi and @proofkit/typegen)
+- Remove the old package (@proofgeist/fmdapi)
+- Migrate your existing config file to the new format
+- Attempt to re-run the typegen command to generate new clients
+
+After running the command, you'll likely want to run `tsc` to check for any issues. You may need to simply do a full project find/replace for `@proofgeist/fmdapi` and replace with `@proofkit/fmdapi`.
+
+We also suggest creating/updating the "typegen" script in your `package.json` file to use the new `@proofkit/typegen` package.
+
+```json
+"typegen": "npx @proofkit/typegen"
+```
+
+## What's new?
+
+### Validation / Transformations
+
+Zod is no longer required as a peer dependency, and you can now use any library that supports [Standard Schema](https://standardschema.dev/) as your runtime validator. Zod will still be used by the typegen package by default, but only if you want to use it in your runtime application.
+
+Each method called will now also return the result of your validator, so you can define custom transformations if supported by your validation library.
+
+Here's an example of how you might use zod to force a number field to a boolean, or a string to a JavaScript Date:
+
+```ts title="schema/Customers.ts"
+import { z } from "zod/v4";
+import { ZCustomers as ZCustomers_generated } from "./generated/Customers";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+dayjs.extend(customParseFormat);
+
+export const ZCustomers = ZCustomers_generated.omit({ active: true }).extend({
+  active: z.coerce.boolean(),
+  createdAt: z
+    .string()
+    .transform((v) => dayjs(v, ["MM/DD/YYYY"]))
+    .toDate(),
+});
+```
+
+```ts title="index.ts"
+import { CustomersLayout } from "./schema/client";
+
+const { data } = await CustomersLayout.list();
+data[0].fieldData.active; // --> boolean
+```
+
+### Typegen
+
+The typegen features have been isolated from the Data API package and are now available as a separate package: `@proofkit/typegen`. The typegen can be run exclusively with npx so you don't even need to install it as a dev dependency. This should make the package size even smaller and more focused on its core functionality.
+
+Additionally, the generated code now allows you to specify overrides for each schema. Only the files in the `client` and `generated` folders will be overwritten, allowing you to write custom schemas or transformers in the files in the root of the generated folder.
+
+## Breaking Changes
+
+### Layout-specific clients only
+
+Due to the change in how the runtime validators are now processed, it's now **required** to pass a layout name when initializing a client, and you can no longer override the layout per method. If you were exclusvily using generated clients from the typegen features, this should not affect you.
+
+### Token Store removed from typegen
+
+This was deprecated in v4 and is now removed **from typegen only**. You can still use a custom token store, but you will need to modify the typegen options and set `generateClient` to `false` so that you can use the generated types and/or validators, but create your own clients with your own token store for the Fetch adapter.
+
+### Typegen config updates
+
+For full details about the new typegen package, please see the [Typegen docs](/docs/typegen).
+
+- Within the root config:
+  - `schemas` has been renamed to `layouts`
+  - `useZod` has been removed
+  - New option: `validator` can be set to `zod` or `false`
+- Within the `layouts` config:
+  - `layout` has been renamed to `layoutName`

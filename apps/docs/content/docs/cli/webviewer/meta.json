@@ -1,0 +1,6 @@
+{
+  "title": "Webviewer",
+  "icon": "Globe",
+  "pages": ["overview", "getting-started", "deployment-methods"],
+  "defaultOpen": true
+}

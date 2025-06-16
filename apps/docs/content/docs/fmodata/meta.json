@@ -1,0 +1,6 @@
+{
+  "title": "FileMaker OData API",
+  "description": "@proofkit/fmodata",
+  "icon": "Database",
+  "root": true
+}

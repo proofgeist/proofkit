@@ -1,0 +1,19 @@
+{
+  "title": "ProofKit CLI",
+  "description": "@proofkit/cli",
+  "icon": "Terminal",
+  "root": true,
+  "pages": [
+    "guides/motivation",
+    "---Guides---",
+    "guides/getting-started",
+    "guides/adding-components",
+    "guides/deployment",
+    "guides/typegen",
+    "webviewer",
+    "---Reference---",
+    "reference/cli-commands",
+    "reference/folder-structure",
+    "guides/resources"
+  ]
+}

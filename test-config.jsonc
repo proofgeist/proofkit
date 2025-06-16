@@ -1,0 +1,10 @@
+{
+  "$schema": "./packages/typegen/typegen.schema.json",
+  "config": [
+    {
+      "adapter": {
+        "type": "webviewer",
+      },
+    },
+  ],
+}

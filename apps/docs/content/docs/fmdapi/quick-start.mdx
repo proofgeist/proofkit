@@ -1,0 +1,101 @@
+---
+title: Quick Start - Typegen
+---
+
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+The typegen tool is the best way to interact with this library, as it will automatically generate layout-specific clients and get autocomplete hints in your IDE with your actual field names from your solution
+
+<Steps>
+  <Step>
+    ### Install the required packages
+    
+    ```package-install
+    @proofkit/fmdapi zod
+    ```
+
+    <Callout type="info">
+      Zod is used by the typegen tool by default, but it can be excluded if you set `validator` to `false` in the typegen config.
+    </Callout>
+
+  </Step>
+
+  <Step>
+    ### Create a typegen config file in your project
+    ```sh
+    npx @proofkit/typegen
+    ```
+  
+  
+  Add the layouts you want to generate clients for to the `layouts` array in the config file.
+  ```jsonc title='proofkit-typegen.config.jsonc'
+  {
+    "$schema": "https://proofkit.dev/typegen-config-schema.json",
+    "config": {
+      "clientSuffix": "Layout",
+      "layouts": [
+        // add your layouts and name schemas here
+        { "layoutName": "my_layout", "schemaName": "MySchema" }
+
+        // repeat as needed for each layout...
+        // { layoutName: "my_other_layout", schemaName: "MyOtherSchema" },
+      ],
+
+      // change this value to generate the files in a different directory
+      "path": "schema",
+      "clearOldFiles": true
+    },
+  }
+
+  ```
+  </Step>
+
+  <Step>
+
+  ### Setup Environment Variables
+  Add the following envnironment variables to your project's `.env` file:
+
+  ```bash title=".env"
+  FM_SERVER=https://filemaker.example.com # must start with https://
+  FM_DATABASE=filename.fmp12 # must end with .fmp12
+
+  # if you want to use the OttoFMS Data API Proxy (recommended)
+  OTTO_API_KEY=dk_123456...789
+  # otherwise
+  FM_USERNAME=admin
+  FM_PASSWORD=password
+  ```
+  </Step>
+
+  <Step>
+  ### Generate the layout-specific clients
+  Run this command any time you make changes to your config file, any of the referenced FileMaker layouts, or any field names/types that are on the layouts.
+
+  ```sh
+  npx @proofkit/typegen
+  ```
+  </Step>
+
+</Steps>
+
+
+## Usage
+You can now import the layout-specifc client for use in your project.
+
+
+```ts title="getCustomer.ts"
+import { CustomersLayout } from "./schema/client";
+
+export async function getCustomer(id: string) {
+  // findOne will throw an error if 0 or more thna 1 record is returned
+  const { data } = await CustomersLayout.findOne({
+    query: {
+      id: `==${id}`
+    }
+  });
+
+  return data.fieldData;
+}
+```
+For all available methods, see [this page](/docs/fmdapi/methods).

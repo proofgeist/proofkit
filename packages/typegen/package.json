@@ -1,0 +1,67 @@
+{
+  "name": "@proofkit/typegen",
+  "version": "1.0.0-beta.4",
+  "description": "",
+  "type": "module",
+  "main": "dist/esm/index.js",
+  "scripts": {
+    "dev": "pnpm build:watch",
+    "test": "op inject -i op.env -o .env.local -f && vitest run",
+    "build": "vite build && publint --strict",
+    "build:watch": "vite build --watch",
+    "ci": "pnpm run build && pnpm run test",
+    "prepublishOnly": "pnpm run ci"
+  },
+  "bin": "./dist/esm/cli.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      }
+    },
+    "./config": {
+      "import": {
+        "types": "./dist/esm/types.d.ts",
+        "default": "./dist/esm/types.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "keywords": [
+    "proofkit",
+    "typegen",
+    "fmdapi",
+    "proofgeist",
+    "filemaker",
+    "fmrest"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "stubs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "@commander-js/extra-typings": "^13.1.0",
+    "@proofkit/fmdapi": "workspace:*",
+    "@tanstack/vite-config": "^0.2.0",
+    "chalk": "4.1.2",
+    "commander": "^10.0.1",
+    "dotenv": "^16.4.7",
+    "fs-extra": "^11.3.0",
+    "jsonc-parser": "^3.3.1",
+    "ts-morph": "^25.0.1",
+    "ts-toolbelt": "^9.6.0",
+    "vite": "^6.3.4",
+    "zod": "3.25.51"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "publint": "^0.3.12",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.2"
+  }
+}

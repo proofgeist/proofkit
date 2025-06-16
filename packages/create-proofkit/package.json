@@ -1,0 +1,29 @@
+{
+  "name": "create-proofkit",
+  "version": "0.1.0-beta.0",
+  "description": "Create a new ProofKit project",
+  "type": "module",
+  "bin": "./src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/proofgeist/proofkit.git",
+    "directory": "packages/create-proofkit"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "dev:watch": "node src/index.js",
+    "pub:release": "npm publish --access public",
+    "pub:beta": "npm publish --tag beta --access public"
+  },
+  "dependencies": {
+    "execa": "^9.5.1"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

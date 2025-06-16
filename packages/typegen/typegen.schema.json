@@ -1,0 +1,235 @@
+{
+  "type": "object",
+  "properties": {
+    "config": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "adapter": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "const": "fetch"
+                    },
+                    "envNames": {
+                      "type": "object",
+                      "properties": {
+                        "apiKey": {
+                          "type": "string"
+                        },
+                        "baseUrl": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["apiKey", "baseUrl"]
+                    }
+                  },
+                  "required": ["type", "envNames"]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "const": "ottofms"
+                    },
+                    "envNames": {
+                      "type": "object",
+                      "properties": {
+                        "apiKey": {
+                          "type": "string"
+                        },
+                        "baseUrl": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["apiKey", "baseUrl"]
+                    }
+                  },
+                  "required": ["type", "envNames"]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "const": "webviewer"
+                    },
+                    "webviewerScriptName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "webviewerScriptName"]
+                }
+              ]
+            },
+            "layouts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "layoutName": {
+                    "type": "string"
+                  },
+                  "schemaName": {
+                    "type": "string"
+                  },
+                  "valueLists": {
+                    "enum": ["strict", "allowEmpty", "ignore"]
+                  },
+                  "generateClient": {
+                    "type": "boolean"
+                  },
+                  "strictNumbers": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["layoutName", "schemaName"]
+              }
+            },
+            "path": {
+              "type": "string",
+              "default": "schema"
+            },
+            "clearOldFiles": {
+              "type": "boolean",
+              "default": false
+            },
+            "validator": {
+              "anyOf": [
+                {
+                  "enum": ["zod/v4"]
+                },
+                {
+                  "const": false
+                }
+              ],
+              "default": "zod/v4"
+            },
+            "clientSuffix": {
+              "type": "string",
+              "default": "Client"
+            }
+          },
+          "required": ["adapter", "layouts"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "adapter": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "const": "fetch"
+                      },
+                      "envNames": {
+                        "type": "object",
+                        "properties": {
+                          "apiKey": {
+                            "type": "string"
+                          },
+                          "baseUrl": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["apiKey", "baseUrl"]
+                      }
+                    },
+                    "required": ["type", "envNames"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "const": "ottofms"
+                      },
+                      "envNames": {
+                        "type": "object",
+                        "properties": {
+                          "apiKey": {
+                            "type": "string"
+                          },
+                          "baseUrl": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["apiKey", "baseUrl"]
+                      }
+                    },
+                    "required": ["type", "envNames"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "const": "webviewer"
+                      },
+                      "webviewerScriptName": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["type", "webviewerScriptName"]
+                  }
+                ]
+              },
+              "layouts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "layoutName": {
+                      "type": "string"
+                    },
+                    "schemaName": {
+                      "type": "string"
+                    },
+                    "valueLists": {
+                      "enum": ["strict", "allowEmpty", "ignore"]
+                    },
+                    "generateClient": {
+                      "type": "boolean"
+                    },
+                    "strictNumbers": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["layoutName", "schemaName"]
+                }
+              },
+              "path": {
+                "type": "string",
+                "default": "schema"
+              },
+              "clearOldFiles": {
+                "type": "boolean",
+                "default": false
+              },
+              "validator": {
+                "anyOf": [
+                  {
+                    "enum": ["zod/v4"]
+                  },
+                  {
+                    "const": false
+                  }
+                ],
+                "default": "zod/v4"
+              },
+              "clientSuffix": {
+                "type": "string",
+                "default": "Client"
+              }
+            },
+            "required": ["adapter", "layouts"]
+          }
+        }
+      ]
+    }
+  },
+  "required": ["config"]
+}

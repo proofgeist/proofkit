@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-browser
+dist-tokenStore
+schema
+.env.local
+fmschema.config.js
+test/codegen/*
+test/local.test.ts

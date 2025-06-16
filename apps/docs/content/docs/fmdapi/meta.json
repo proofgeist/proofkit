@@ -1,0 +1,20 @@
+{
+  "title": "FileMaker Rest API",
+  "description": "@proofkit/fmdapi",
+  "icon": "Webhook",
+  "pages": [
+    "index",
+    "---Setup---",
+    "quick-start",
+    "manual-setup",
+    "version-5",
+    "---Guides---",
+    "validation",
+    "---Reference---",
+    "adapters",
+    "methods",
+    "typegen",
+    "token-store"
+  ],
+  "root": true
+}

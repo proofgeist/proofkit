@@ -1,0 +1,14 @@
+{
+  "title": "Typegen",
+  "description": "@proofkit/typegen",
+  "icon": "Code",
+  "root": true,
+  "pages": [
+    "---@proofkit/typegen---",
+    "index",
+    "faq",
+    "---Reference---",
+    "config",
+    "options"
+  ]
+}

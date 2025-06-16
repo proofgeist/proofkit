@@ -1,0 +1,34 @@
+---
+title: Token Store
+---
+
+<Callout type="info">
+ This page applies only to the FetchAdapter when your connecting via username/password to your FileMaker server. The Otto Data API Proxy manages the token for you.
+</Callout>
+
+If you are using username/password authentication, the fmdapi client will manage your access token for you. By default, the token is kept in memory only, but you can provide other getter and setter methods to store the token in a database or other location. Included in this package are helper functions for file storage if you have access to the filesystem, or Upstash if running in a serverless environment.
+
+```ts
+import { DataApi, FetchAdapter } from "@proofkit/fmdapi";
+
+// using file storage, if you have persistent access to the filesystem on your server
+import { fileTokenStore } from "@proofkit/fmdapi/tokenStore/file";
+const client = DataApi({
+  adapter: new FetchAdapter({
+    // ...
+    tokenStore: fileTokenStore(),
+  }),
+});
+
+// or with Upstash, requires `@upstash/redis` as peer dependency
+import { upstashTokenStore } from "@proofkit/fmdapi/tokenStore/upstash";
+const client = DataApi({
+  adapter: new FetchAdapter({
+    // ...
+    tokenStore: upstashTokenStore({
+      token: process.env.UPSTASH_TOKEN,
+      url: process.env.UPSTASH_URL,
+    }),
+  }),
+});
+```

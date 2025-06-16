@@ -8,6 +8,7 @@ reviews:
     base_branches:
       - ".*" # Matches all branches using regex
   review_status: false
+  poem: false
 
 path_filters:
   - "!apps/demo/**" # exclude the demo app from reivews

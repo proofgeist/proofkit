@@ -1,5 +1,18 @@
 # @proofgeist/kit
 
+## 1.0.0
+
+### Major Changes
+
+- c348e37: Support @proofkit namespaced packages
+
+### Patch Changes
+
+- Updated dependencies [16fb8bd]
+- Updated dependencies [16fb8bd]
+- Updated dependencies [16fb8bd]
+  - @proofkit/fmdapi@5.0.0
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,5 +1,26 @@
 # @proofkit/typegen
 
+## 1.0.0
+
+### Major Changes
+
+- 16fb8bd: Introducing @proofkit/typegen
+
+### Minor Changes
+
+- 16fb8bd: Add CLI option to reset the overrides files
+
+### Patch Changes
+
+- 16fb8bd: export type for typegen config
+- 16fb8bd: Fix client gen for no validator and no portals
+- 16fb8bd: Better success/error messages when layouts aren't found
+- 16fb8bd: Proper jsonc parsing
+- Updated dependencies [16fb8bd]
+- Updated dependencies [16fb8bd]
+- Updated dependencies [16fb8bd]
+  - @proofkit/fmdapi@5.0.0
+
 ## 1.0.0-beta.4
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @proofkit/fmdapi
 
+## 5.0.0
+
+### Major Changes
+
+- 16fb8bd: Require layout to be passed when initializing client
+- 16fb8bd: Use StandardSchemaV1 for validation and transforming data. No longer have to pass types directly when initializing the client
+- 16fb8bd: Rename to @proofkit/fmdapi
+
 ## 5.0.0-beta.0
 
 ### Major Changes

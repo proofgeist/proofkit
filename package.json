@@ -19,7 +19,7 @@
     "eslint": "^9.23.0",
     "prettier": "^3.5.3",
     "turbo": "^2.5.2",
-    "vitest": "^3.2.2"
+    "vitest": "^3.2.3"
   },
   "packageManager": "pnpm@10.11.1",
   "engines": {

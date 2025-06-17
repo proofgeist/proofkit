@@ -9,16 +9,11 @@ There are many ways to deploy WebViewer code to your FileMaker file, and each me
 
 This technique stores the WebViewer code as **data** directly in your FileMaker file. This is the default method for most WebViewer integrations and the method used when setting up a new project with the ProofKit CLI.
 
-#### Pros
-
-- Simple to setup and understand
-- Works offline
-
-#### Cons
-
-- Doesn't survive data migrations
-- Unable to use server-side JavaScript libraries
-- Updates requires the web developer to have access to the FileMaker file
+| Pros                                   | Cons                                                                 |
+|----------------------------------------|----------------------------------------------------------------------|
+| ✅ Simple to setup and understand      | ⚠️ Doesn't survive data migrations                                   |
+| ✅ Works offline                      | ⚠️ Unable to use server-side JavaScript libraries                    |
+|                                        | ⚠️ Updates requires the web developer to have access to the FileMaker file |
 
 #### Considerations
 
@@ -36,17 +31,11 @@ To get around the data migration issue, you have a few options:
 
 In the other extreme, you can host the WebViewer code like you would any other web application. If you're only using the @proofkit/webviewer library, you can still do this without any security concerns because the data won't load unless the web page is loaded in your FileMaker solution in a WebViewer.
 
-#### Pros
-
-- Code survives data migrations
-- Can use server-side JavaScript libraries
-- Can deploy updates to the web code without a data migration
-
-#### Cons
-
-- Requires a web server, or hosting account with Vercel (or similar)
-- Code is de-coupled from the FileMaker file, which may cause schema to be out of sync if you're not careful
-- Requires a persistent internet connection
+| Pros                                   | Cons                                                                 |
+|----------------------------------------|----------------------------------------------------------------------|
+| ✅ Code survives data migrations       | ⚠️ Requires a web server, or hosting account with Vercel (or similar) |
+| ✅ Can use server-side JavaScript libraries | ⚠️ Code is de-coupled from the FileMaker file, which may cause schema to be out of sync if you're not careful |
+| ✅ Can deploy updates to the web code without a data migration | ⚠️ Requires a persistent internet connection |
 
 #### Implementation
 
@@ -66,13 +55,19 @@ Alternatively, you can just install the `@proofkit/webviewer` library into a sta
 
 This technique is a hybrid of the embedded and hosted methods. Essentially, the code is embedded in the FileMaker file, but you also host a copy of it on another web server. The FileMaker file (or the web code) can check for updates and download the latest version directly to the the neccesary field.
 
-#### Pros
+| Pros                                   | Cons                                                                 |
+|----------------------------------------|----------------------------------------------------------------------|
+| ✅ Enables a self-updating solution    | ⚠️ Requires a server to host a copy of the code (but can be a simple static file host or CDN) |
+| ✅ Great for non-hosted files, or a vertical-market solution where each copy may need a different version of the WebViewer code | ⚠️ More complex to setup and maintain |
+| ✅ Can work offline, after the initial download |                                                                      |
 
-- Enables a self-updating solution
-- Great for non-hosted files, or a vertical-market solution where each copy may need a different version of the WebViewer code
-- Can work offline, after the initial download
+## Comparison Table
 
-#### Cons
-
-- Requires a server to host a copy of the code (but can be a simple static file host or CDN)
-- More complex to setup and maintain
+| Feature                                    | Embedded         | Hosted           | Downloaded       |
+|--------------------------------------------|------------------|------------------|------------------|
+| **Simple Setup**                           | ✅               | ⚠️ (needs hosting) | ⚠️ (hybrid setup) |
+| **Survives Data Migrations**               | ❌               | ✅               | ✅               |
+| **Works Offline** | ✅           | ❌               | ✅ (after download) |
+| **Web Server Required?**                 | No               | Yes               | Simple (static file host or CDN) |
+| **Can Use Server-side JS Libraries**       | ❌               | ✅               | ❌               |
+| **Update Method** | ⚠️ File migration (downtime) | ✅ Simplest (no downtime) | ✅ Self-updating, no downtime |

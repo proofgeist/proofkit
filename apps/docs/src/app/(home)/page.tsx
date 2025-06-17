@@ -36,15 +36,21 @@ export default function HomePage() {
         </div>
 
         <div className="mt-8 space-y-8 text-center w-full ">
-          <h1 className="text-4xl font-bold">Welcome</h1>
+          <h1 className="text-4xl font-bold">
+            A collection of tools for FileMaker-aware JavaScript applications
+          </h1>
           <p className="text-xl text-gray-500 font-medium">
-            A collection of tools for building great JavaScript applications
+            For new and experienced developers alike, ProofKit is the best way
+            build web apps connected to FileMaker data, or full interfaces in a
+            FileMaker webviewer.
           </p>
 
           <Cards className="px-4 text-left">
             <Card icon={<Terminal />} title="ProofKit CLI" href="/docs/cli">
               A command line tool to start a new project, or easily apply
-              templates and common patterns.
+              templates and common patterns with{" "}
+              <span className="underline">no JavaScript experience</span>{" "}
+              required.
             </Card>
             <Card icon={<Code />} href="/docs/typegen" title={"Typegen"}>
               Automatically generate runtime validators and TypeScript files
@@ -63,8 +69,8 @@ export default function HomePage() {
               title="FileMaker Webviewer"
               href="/docs/webviewer"
             >
-              Use async functions in WebViewer code to run and get results from
-              FileMaker scripts.
+              Use async functions in WebViewer code to execute and get the
+              result of a FileMaker script.
             </Card>
           </Cards>
 

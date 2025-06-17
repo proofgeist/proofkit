@@ -1,5 +1,11 @@
 # @proofkit/webviewer
 
+## 3.0.2
+
+### Patch Changes
+
+- Update readme and repo metadata
+
 ## 3.0.0
 
 ### Major Changes

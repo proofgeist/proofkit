@@ -40,9 +40,9 @@ export default function HomePage() {
             A collection of tools for FileMaker-aware JavaScript applications
           </h1>
           <p className="text-xl text-gray-500 font-medium">
-            For new and experienced developers alike, ProofKit is the best way
-            build web apps connected to FileMaker data, or full interfaces in a
-            FileMaker webviewer.
+            For new and experienced developers alike, the ProofKit toolset is
+            the best way to build web apps connected to FileMaker data, or rich,
+            interactive interfaces in a FileMaker webviewer.
           </p>
 
           <Cards className="px-4 text-left">

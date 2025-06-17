@@ -5,6 +5,7 @@ description: This guide walks you through how to get up and running with a new P
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Step, Steps } from "fumadocs-ui/components/steps";
+import InitCommand from "@/components/InitCommand"
 
 <Callout title="Are you more of a visual learner?">
   Check out the various videos available on [this page](/docs/cli).
@@ -46,13 +47,7 @@ Coming Soon
 
 Now you can scaffold a new ProofKit project! Follow the prompts to setup your project and connect to your own database.
 
-```bash tab="pnpm"
-pnpm create proofkit
-```
-
-```bash tab="npm"
-npm create proofkit
-```
+<InitCommand />
 
 **Project Name** - must be lowercase letters, numbers, `_` and `-` characters only. This will also be the folder name where your project will get created.
 

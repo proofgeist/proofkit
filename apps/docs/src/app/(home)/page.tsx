@@ -10,6 +10,7 @@ import { Cards } from "fumadocs-ui/components/card";
 import { Code, Globe, Terminal, WebhookIcon } from "lucide-react";
 import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern";
 import { cn } from "@/lib/utils";
+import InitCommand from "@/components/InitCommand";
 
 export default function HomePage() {
   return (
@@ -69,17 +70,34 @@ export default function HomePage() {
 
           <Separator className="my-12" />
 
-          <h2 className="text-3xl font-bold">New to web development?</h2>
-          <p className="text-xl text-gray-500">
-            The ProofKit CLI is the best way to get a new project started
-            quickly without any prior experience. Get a full Next.js app running
-            in a matter of minutes!
-          </p>
-          <Link href="/docs/cli">
-            <ShimmerButton className="mx-auto">
-              <span className="text-white">Get Started</span>
-            </ShimmerButton>
-          </Link>
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="flex flex-col text-left ">
+              <h2 className="text-3xl font-bold mb-4">Quick Start</h2>
+              <p className="text-lg text-gray-600 mb-0">
+                Use the ProofKit CLI to launch a full-featured Next.js app in
+                minutes—no prior experience required.
+              </p>
+            </div>
+
+            <div className="flex flex-col md:flex-row text-left">
+              <div className="min-w-96">
+                <InitCommand />
+              </div>
+
+              <div className="flex flex-col text-left mt-6 md:mt-0 p-4 md:p-6 rounded-lg bg-background/50">
+                <p>
+                  Check out the{" "}
+                  <Link
+                    href="/docs/cli/guides/getting-started"
+                    className="text-primary underline hover:opacity-80 transition"
+                  >
+                    full getting started guide
+                  </Link>{" "}
+                  for more detailed explanations and prerequisites.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

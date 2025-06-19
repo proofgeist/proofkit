@@ -1,6 +1,10 @@
 {
   "include": [".eslintrc.cjs", "prettier.config.mjs"],
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@proofkit/*": ["packages/*/src"]
+    },
     /* LANGUAGE COMPILATION OPTIONS */
     "target": "ES2020",
     "lib": ["DOM", "DOM.Iterable", "ES2021"],

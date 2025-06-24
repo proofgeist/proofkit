@@ -1,0 +1,6 @@
+{
+  "title": "Authentication",
+  "icon": "lock",
+  "pages": ["clerk", "add-on"],
+  "defaultOpen": true
+}

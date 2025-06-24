@@ -14,21 +14,21 @@
     "@proofkit/typegen": "workspace:*",
     "dotenv": "^16.4.7",
     "fs-extra": "^11.3.0",
-    "next": "^15.3.3",
+    "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "3.25.64"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4.1.4",
+    "@tailwindcss/postcss": "^4.1.10",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.15.19",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
+    "@types/node": "^22.15.32",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
     "eslint": "^9.23.0",
     "eslint-config-next": "^15.3.3",
-    "tailwindcss": "^4.1.4",
+    "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"
   }

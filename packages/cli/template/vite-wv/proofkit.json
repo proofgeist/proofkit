@@ -1,1 +1,6 @@
-{ "auth": { "type": "none" }, "envFile": ".env", "appType": "webviewer" }
+{
+  "auth": { "type": "none" },
+  "envFile": ".env",
+  "appType": "webviewer",
+  "appliedUpgrades": ["shadcn"]
+}

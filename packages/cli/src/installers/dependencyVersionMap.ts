@@ -1,4 +1,8 @@
-import { getFmdapiVersion, getNodeMajorVersion, getVersion } from "~/utils/getProofKitVersion.js";
+import {
+  getFmdapiVersion,
+  getNodeMajorVersion,
+  getVersion,
+} from "~/utils/getProofKitVersion.js";
 
 /*
  * This maps the necessary packages to a version.
@@ -27,10 +31,15 @@ export const dependencyVersionMap = {
   "@libsql/client": "^0.6.0",
 
   // TailwindCSS
-  tailwindcss: "^3.4.3",
-  postcss: "^8.4.39",
-  prettier: "^3.3.2",
-  "prettier-plugin-tailwindcss": "^0.6.5",
+  tailwindcss: "^4.1.10",
+  postcss: "^8.4.41",
+  prettier: "^3.5.3",
+  "prettier-plugin-tailwindcss": "^0.6.12",
+  "@tailwindcss/postcss": "^4.1.10",
+  "class-variance-authority": "^0.7.1",
+  clsx: "^2.1.1",
+  "tailwind-merge": "^3.3.1",
+  "tw-animate-css": "^1.3.4",
 
   // tRPC
   "@trpc/client": "^11.0.0-rc.446",
@@ -73,5 +82,11 @@ export const dependencyVersionMap = {
 
   // Node
   "@types/node": `^${getNodeMajorVersion()}`,
+
+  // Radix (for shadcn/ui)
+  "@radix-ui/react-slot": "^1.2.3",
+
+  // Icons (for shadcn/ui)
+  "lucide-react": "^0.518.0",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

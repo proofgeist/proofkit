@@ -3,6 +3,10 @@ import chalk from "chalk";
 import open from "open";
 
 import { DOCS_URL } from "~/consts.js";
+import {
+  checkForAvailableUpgrades,
+  runAllAvailableUpgrades,
+} from "~/upgrades/index.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { runAdd } from "./add/index.js";
 import { runDeploy } from "./deploy/index.js";
@@ -13,6 +17,33 @@ import { abortIfCancel } from "./utils.js";
 
 export const runMenu = async () => {
   const settings = getSettings();
+  const upgrades = checkForAvailableUpgrades();
+
+  if (upgrades.length > 0) {
+    p.log.info(
+      `${chalk.yellow("There are upgrades available for your ProofKit project")}\n${upgrades
+        .map((upgrade) => `- ${upgrade.title}`)
+        .join("\n")}`
+    );
+
+    const shouldRunUpgrades = abortIfCancel(
+      await p.confirm({
+        message: "Would you like to run them now?",
+        initialValue: true,
+      })
+    );
+
+    if (shouldRunUpgrades) {
+      await runAllAvailableUpgrades();
+      p.log.success(chalk.green("Successfully ran all upgrades"));
+    } else {
+      p.log.info(
+        `You can apply the upgrades later by running ${chalk.cyan(
+          "proofkit upgrade"
+        )}`
+      );
+    }
+  }
 
   const menuChoice = abortIfCancel(
     await p.select({

@@ -7,8 +7,8 @@ import ora from "ora";
 import { PKG_ROOT } from "~/consts.js";
 import { type InstallerOptions } from "~/installers/index.js";
 import { state } from "~/state.js";
+import { copyCursorRules } from "~/upgrades/cursorRules.js";
 import { logger } from "~/utils/logger.js";
-import { copyCursorRules } from "./copyCursorRules.js";
 
 // This bootstraps the base Next.js application
 export const scaffoldProject = async ({

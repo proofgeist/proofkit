@@ -75,6 +75,20 @@ The typegen tool is the best way to interact with this library, as it will autom
   ```sh
   npx @proofkit/typegen
   ```
+
+<Callout type="info" >
+  Tip: Add a script to your `package.json` to make it easier to run in the future.
+
+```jsonc title="package.json"
+{
+  "scripts": {
+    // ...
+    "typegen": "npx @proofkit/typegen"
+  }
+}
+```
+</Callout>
+
   </Step>
 
 </Steps>
@@ -88,7 +102,7 @@ You can now import the layout-specifc client for use in your project.
 import { CustomersLayout } from "./schema/client";
 
 export async function getCustomer(id: string) {
-  // findOne will throw an error if 0 or more thna 1 record is returned
+  // findOne will throw an error unless exactly 1 record is returned
   const { data } = await CustomersLayout.findOne({
     query: {
       id: `==${id}`
@@ -98,4 +112,14 @@ export async function getCustomer(id: string) {
   return data.fieldData;
 }
 ```
-For all available methods, see [this page](/docs/fmdapi/methods).
+  <Card title="Methods" href="/docs/fmdapi/methods">For all available methods, see [this page](/docs/fmdapi/methods).</Card>
+
+
+## Customization
+
+If you run into any limitations from the generated code, there are many ways to customize it to your needs.
+
+<Cards>
+  <Card title="Typegen Config" href="/docs/typegen/customization">How to configure the typegen tool for your use case.</Card>
+  <Card title="Transformations" href="/docs/fmdapi/validation">Customize the shape of the data returned from your database.</Card>
+</Cards>

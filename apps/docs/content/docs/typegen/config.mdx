@@ -3,24 +3,42 @@ title: Configuration
 ---
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 import { typegenConfig } from "@proofkit/typegen/config";
 
-The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at the root of your project.
+The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at the root of your project. 
 
 <Callout type="info">
   JSONC is just JSON with comments. `@proofkit/typegen` will also work with
   standard JSON files.
 </Callout>
 
-```jsonc title="proofkit-typegen-config.jsonc"
+  The config key can also be an array of configs, which is useful if you need to connect to multiple databases, or with different settings for different sets of layouts.
+
+
+```jsonc title="proofkit-typegen-config.jsonc" tab="Single config"
 {
   "$schema": "https://proofkit.dev/typegen-config-schema.json",
   "config": {
     // ... your config here
-    // can be an object (single config) or an array (multiple configs)
   },
 }
 ```
+
+```jsonc title="proofkit-typegen-config.jsonc" tab="Multiple configs"
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": [
+    {
+      // ... your config here
+    },
+    {
+      // ... your other config here
+    },
+  ],
+}
+```
+
 
 ## Config options
 
@@ -28,6 +46,8 @@ The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at
   type={{
     layouts: {
       type: "array",
+      description:
+        "The layouts to generate clients for. See the table below for more details.",
       required: true,
     },
     envNames: {
@@ -55,11 +75,44 @@ The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at
       description:
         "If set, will generate the client using the @proofkit/webviewer package",
     },
-    generateClient: { type: "boolean", default: "true" },
+    generateClient: {
+      type: "boolean",
+      default: "true",
+      description:
+        "If set to false, will only generate the zod schema and/or typescript types, but not the client files. Use this to customize the generated client, but still use the typegen tool to keep your schema up to date.",
+    },
   }}
 />
 
+### `generateClient` (default: `true`)
+If set to `false`, will only generate the zod schema and/or typescript types, but not the client files. Use this to customize the generated client, but still use the typegen tool to keep your schema up to date.
+
+### `webviewerScriptName`
+If set, will generate the client using the [@proofkit/webviewer](/docs/webviewer) package. This allows all calls to run via a FileMaker script rather than a network request. For more information, see the [@proofkit/webviewer](/docs/webviewer) documentation.
+
+### `clientSuffix` (default: `"Layout"`)
+The suffix to add to the client name.
+
+For example, if the `schemaName` is `"Customers"`, the client name will be `"CustomersLayout"` and you'll import it as `import { CustomersLayout } from "./schema/client";` in your application code.
+
+### `validator` (default: `"zod/v4"`)
+The validator to use for the schema. Can be `"zod/v4"` or `"zod/v3"`. If set to `false`, only TypeScript types will be generated and no runtime validation will be performed when data is returned from the database.
+
+### `clearOldFiles` (default: `true`)
+If set to `true`, will delete all existing files in the output directory before generating new files. Useful to clean up old layouts that are no longer defined in the config.
+
+### `path` (default: `"schema"`)
+The path to the directory where the generated files will be saved.
+
+### `envNames` 
+If set, will use the specified environment variable names for your FileMaker connection.
+
+<Callout type="warn">
+  Only use the **names** of your environment variables, not the values for security reasons.
+</Callout>
+
 ## Layout options
+The `layouts` array in the config is where you define the layouts that you want to generate clients for. You must define at least one layout in the config.
 
 <TypeTable
   type={{
@@ -73,3 +126,34 @@ The typegen tool is configured using the `proofkit-typegen-config.jsonc` file at
     strictNumbers: { type: "boolean", default: false },
   }}
 />
+
+### `schemaName` (required)
+The name of the schema to generate. This will end up being the name of the generated client and what you'll see most throughout your codebase.
+
+### `layoutName` (required)
+The name of the layout to generate a client for. Must match exactly the name of a layout in your FileMaker database.
+
+### `strictNumbers` (default: `false`)
+If set to `true`, will force all number fields to be typed as `number | null`. This is useful if you want to ensure that all numbers are properly validated and not just strings.
+
+<Callout type="info">
+By default, number fields are typed as `string | number` because FileMaker may return numbers as strings in certain cases (such as very large numbers in scientific notation or blank fields). This ensures you properly account for this in your frontend code.
+
+We suggest only turning on `strictNumbers` if you are sure that your data will not hit these conditions or if you are also using a validator like Zod.
+</Callout>
+
+### `generateClient` (default: `inherit`)
+Use this setting to override the `generateClient` setting from the root of the config.
+
+### `valueLists` (default: `"ignore"`)
+- `"strict"`: Will force all value list fields to be typed as the actual value from the value list. This is useful if you want to ensure that all value list fields are properly validated and not just strings.
+- `"allowEmpty"`: Will show the possible values from the value list, but also allow the value to be an empty string, which is the default behavior of FileMaker.
+- `"ignore"`: Any value lists defined on fields in the layout will be ignored and typed as `string`.
+
+<Callout type="info">
+Even if you ignore the value lists for type purposes, the value lists will still be available in the generated schema file for use in your own code.
+</Callout>
+
+<Callout type="info">
+  This setting will apply to all fields with value lists in the layout. For more granular control, override the Zod schema using the `extend` method. See the [Transformations](/docs/fmdapi/validation) page for more details.
+</Callout>

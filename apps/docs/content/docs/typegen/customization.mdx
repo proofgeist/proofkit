@@ -1,0 +1,12 @@
+---
+title: Customization
+description: How to customize the generated code produced by the typegen tool
+---
+
+## Customize the generated clients
+You'll notice that the generated clients have a strict warning that says not to ever edit them, but if you need customizations for any reason, you probably need to just write the client files yourself.
+
+However, this doesn't mean you can't use the typegen tool. If you simply pass `generateClient: false` to the typegen tool, it will still generate the zod schema and/or typescript types, which you can use in your own files and still keep the field names up to date as your database changes.
+
+## Customize the generated schema
+If you want to change the shape of the schema validator, you **can** edit the files in the main schema directory. The only files that will be overwritten each time that you run the typegen command are in the generated and client directories (if `generateClient` is enabled). For more details on this, see the [Transformations](/docs/fmdapi/validation) page.

@@ -1,5 +1,11 @@
 # @proofkit/typegen
 
+## 1.0.1
+
+### Patch Changes
+
+- b483d67: Update formatting after typegen to be more consistent
+
 ## 1.0.0
 
 ### Major Changes

@@ -1,5 +1,17 @@
 # @proofgeist/kit
 
+## 1.1.0
+
+### Minor Changes
+
+- 7429a1e: Add simultaneous support for Shadcn. New projects will have Shadcn initialized automatically, and the upgrade command will offer to automatically add support for Shadcn to an existing ProofKit project.
+
+### Patch Changes
+
+- b483d67: Update formatting after typegen to be more consistent
+- f0ddde2: Upgrade next-safe-action to v8 (and related dependencies)
+- 7c87649: Fix getFieldNamesForSchema function
+
 ## 1.0.0
 
 ### Major Changes

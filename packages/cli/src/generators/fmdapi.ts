@@ -372,11 +372,23 @@ export function getFieldNamesForSchema({
   const project = getNewProject(projectDir);
   const sourceFilePath = path.join(
     projectDir,
+    `src/config/schemas/${dataSourceName}/generated/${schemaName}.ts`
+  );
+
+  const sourceFilePathAlternative = path.join(
+    projectDir,
     `src/config/schemas/${dataSourceName}/${schemaName}.ts`
   );
 
-  if (!fs.existsSync(sourceFilePath)) return [];
-  const sourceFile = project.addSourceFileAtPath(sourceFilePath);
+  let fileToUse = sourceFilePath;
+  if (!fs.existsSync(sourceFilePath)) {
+    if (fs.existsSync(sourceFilePathAlternative)) {
+      fileToUse = sourceFilePathAlternative;
+    } else {
+      return [];
+    }
+  }
+  const sourceFile = project.addSourceFileAtPath(fileToUse);
 
   const zodSchema = sourceFile.getVariableDeclaration(`Z${schemaName}`);
   if (zodSchema) {

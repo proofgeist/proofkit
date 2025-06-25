@@ -12,9 +12,9 @@
     "deploy": "proofkit deploy"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
-    "@next-safe-action/adapter-react-hook-form": "^1.0.13",
-    "next-safe-action": "^7.10.4",
+    "@hookform/resolvers": "^5.1.1",
+    "@next-safe-action/adapter-react-hook-form": "^2.0.0",
+    "next-safe-action": "^8.0.4",
     "react-hook-form": "^7.54.2",
     "@tabler/icons-react": "^3.30.0",
     "@mantine/core": "^7.17.0",

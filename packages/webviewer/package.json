@@ -38,11 +38,11 @@
     "@proofkit/fmdapi": "workspace:*",
     "@tanstack/vite-config": "^0.2.0",
     "@types/filemaker-webviewer": "^1.0.0",
-    "@types/node": "^22.15.32",
+    "@types/node": "^22.17.1",
     "@types/uuid": "^10.0.0",
-    "knip": "^5.52.0",
+    "knip": "^5.56.0",
     "publint": "^0.3.12",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.2",
     "vite": "^6.3.4"
   },
   "publishConfig": {

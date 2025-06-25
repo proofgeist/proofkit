@@ -301,6 +301,7 @@ describe("other methods", () => {
       query: { anything: "anything" },
       limit: 1,
     });
+
     expect(data.length).toBe(2);
   });
 

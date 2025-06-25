@@ -1,8 +1,8 @@
 import chalk from "chalk";
 import { Command } from "commander";
 
-import { copyCursorRules } from "~/helpers/copyCursorRules.js";
 import { initProgramState, state } from "~/state.js";
+import { runAllAvailableUpgrades } from "~/upgrades/index.js";
 import { logger } from "~/utils/logger.js";
 import { ensureProofKitProject } from "../utils.js";
 
@@ -14,9 +14,8 @@ export const runUpgrade = async () => {
   logger.info("\nUpgrading ProofKit components...\n");
 
   try {
-    logger.info(`\nUpgrading cursor rules...\n`);
-    copyCursorRules();
-    logger.info(chalk.green(`✔ Successfully upgraded cursor rules\n`));
+    await runAllAvailableUpgrades();
+    logger.info(chalk.green(`✔ Successfully upgraded components\n`));
   } catch (error) {
     logger.error("Failed to upgrade components:", error);
     process.exit(1);

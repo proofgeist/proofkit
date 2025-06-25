@@ -5,8 +5,7 @@ import { PKG_ROOT } from "~/consts.js";
 import { state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 
-// Copies cursor rules to the project directory
-export const copyCursorRules = () => {
+export async function copyCursorRules() {
   const projectDir = state.projectDir;
   const extrasDir = path.join(PKG_ROOT, "template/extras");
   const cursorRulesSrcDir = path.join(extrasDir, "_cursor/rules");
@@ -15,8 +14,8 @@ export const copyCursorRules = () => {
   if (!fs.existsSync(cursorRulesSrcDir)) return;
 
   const pkgManager = getUserPkgManager();
-  fs.ensureDirSync(cursorRulesDestDir);
-  fs.copySync(cursorRulesSrcDir, cursorRulesDestDir);
+  await fs.ensureDir(cursorRulesDestDir);
+  await fs.copy(cursorRulesSrcDir, cursorRulesDestDir);
 
   // Copy package manager specific rules
   const conditionalRulesDir = path.join(extrasDir, "_cursor/conditional-rules");
@@ -35,7 +34,7 @@ export const copyCursorRules = () => {
     const ruleDest = path.join(cursorRulesDestDir, "package-manager.mdc");
 
     if (fs.existsSync(ruleSrc)) {
-      fs.copySync(ruleSrc, ruleDest, { overwrite: true });
+      await fs.copy(ruleSrc, ruleDest, { overwrite: true });
     }
   }
-};
+}

@@ -2,8 +2,10 @@ import path from "path";
 
 import { installPackages } from "~/helpers/installPackages.js";
 import { scaffoldProject } from "~/helpers/scaffoldProject.js";
+import { type AvailableDependencies } from "~/installers/dependencyVersionMap.js";
 import { type PkgInstallerMap } from "~/installers/index.js";
 import { state } from "~/state.js";
+import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { replaceTextInFiles } from "./replaceText.js";
 
@@ -30,6 +32,34 @@ export const createBareProject = async ({
     pkgManager,
     scopedAppName,
     noInstall,
+  });
+
+  // Add new base dependencies for Tailwind v4 and shadcn/ui
+  // These should match the plan and dependencyVersionMap
+  const BASE_DEPS = [
+    "@radix-ui/react-slot",
+    "@tailwindcss/postcss",
+    "class-variance-authority",
+    "clsx",
+    "lucide-react",
+    "tailwind-merge",
+    "tailwindcss",
+    "tw-animate-css",
+  ] as AvailableDependencies[];
+  const BASE_DEV_DEPS = [
+    "prettier",
+    "prettier-plugin-tailwindcss",
+  ] as AvailableDependencies[];
+
+  addPackageDependency({
+    dependencies: BASE_DEPS,
+    devMode: false,
+    projectDir: state.projectDir,
+  });
+  addPackageDependency({
+    dependencies: BASE_DEV_DEPS,
+    devMode: true,
+    projectDir: state.projectDir,
   });
 
   // Install the selected packages

@@ -1,6 +1,6 @@
 import path from "path";
-import { isCancel } from "@clack/core";
-import { cancel } from "@clack/prompts";
+// import { isCancel } from "@clack/core";
+import { cancel, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
 import z, { ZodError } from "zod/v4";

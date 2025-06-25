@@ -51,6 +51,7 @@ const settingsSchema = z.object({
   dataSources: z.array(dataSourceSchema).default([]),
   tanstackQuery: z.boolean().catch(false),
   replacedMainPage: z.boolean().catch(false),
+  appliedUpgrades: z.array(z.string()).default([]),
 });
 
 export const defaultSettings = settingsSchema.parse({ auth: { type: "none" } });

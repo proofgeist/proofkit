@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- 7429a1e: Add simultaneous support for Shadcn. New projects will have Shadcn initilized automatically, and the upgrade command will offer to automatically add support for Shadcn to an existing ProofKit project.
+- 7429a1e: Add simultaneous support for Shadcn. New projects will have Shadcn initialized automatically, and the upgrade command will offer to automatically add support for Shadcn to an existing ProofKit project.
 
 ### Patch Changes
 

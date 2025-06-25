@@ -1,21 +1,15 @@
 import path from "path";
-import {
-  type TypegenConfig,
-  type typegenConfigSingle,
-  // We'll infer layoutConfig type if it's not directly exported as a type
-} from "@proofkit/typegen/config";
+import { type typegenConfigSingle } from "@proofkit/typegen/config";
 import { execa } from "execa";
 import fs from "fs-extra";
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser";
+import { SyntaxKind } from "ts-morph";
 import { type z } from "zod/v4";
 
-// Removed ts-morph imports as they are no longer used for config
-// import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
-
-import { PKG_ROOT } from "~/consts.js";
 import { state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { getSettings, type envNamesSchema } from "~/utils/parseSettings.js";
+import { getNewProject } from "~/utils/ts-morph.js";
 
 // Input schema for functions like addLayout
 // This might be different from the layout config stored in the file
@@ -26,9 +20,6 @@ type Schema = {
   generateClient?: boolean;
   strictNumbers?: boolean;
 };
-
-// Inferred types from the imported Zod schemas
-type ImportedProofkitTypegenFileContent = TypegenConfig; // Represents the { config: ... } part
 
 // For a single data source configuration object
 type ImportedDataSourceConfig = z.infer<typeof typegenConfigSingle>;
@@ -377,31 +368,8 @@ export function getFieldNamesForSchema({
   schemaName: string;
   dataSourceName: string;
 }) {
-  // This function reads the *output* of typegen, so its core logic
-  // of parsing TypeScript files for Zod schemas or types should remain.
-  // It does not depend on the fmschema.config.mjs format.
-  // However, it uses getNewProject which we might want to remove if not used elsewhere.
-  // For now, assuming getNewProject and ts-morph are still needed for this.
-  // If not, this function would need a different way to parse TS files, or be removed/rethought.
-
-  // To fully remove ts-morph, this function would need a different implementation
-  // e.g., using regex or a lighter TS parser if the schema files are simple enough,
-  // or acknowledge that ts-morph is kept *only* for this function.
-  // For now, let's assume its ts-morph usage is specific and contained.
-  // If `getNewProject` is removed, this will break.
-
-  // TEMPORARY: To allow removal of getNewProject, this part would need refactoring.
-  // For now, I'll comment out the parts that would break if ts-morph is fully gone
-  // and return an empty array, indicating this function needs a separate overhaul
-  // if ts-morph is to be completely eradicated.
-  console.warn(
-    "getFieldNamesForSchema currently relies on ts-morph. Refactoring needed if ts-morph is fully removed."
-  );
-  return [];
-
-  /*
   const projectDir = state.projectDir;
-  const project = getNewProject(projectDir); // This would be an issue if getNewProject is removed
+  const project = getNewProject(projectDir);
   const sourceFilePath = path.join(
     projectDir,
     `src/config/schemas/${dataSourceName}/${schemaName}.ts`
@@ -416,23 +384,26 @@ export function getFieldNamesForSchema({
       .getInitializer()
       ?.getFirstDescendantByKind(SyntaxKind.ObjectLiteralExpression)
       ?.getProperties();
-    return properties
+    return (
+      properties
         ?.map((pr) =>
           pr.asKind(SyntaxKind.PropertyAssignment)?.getName()?.replace(/"/g, "")
         )
-        .filter(Boolean) ?? [];
+        .filter(Boolean) ?? []
+    );
   } else {
     const typeAlias = sourceFile.getTypeAlias(`T${schemaName}`);
     const properties = typeAlias
       ?.getFirstDescendantByKind(SyntaxKind.TypeLiteral)
       ?.getProperties();
-    return properties
+    return (
+      properties
         ?.map((pr) =>
           pr.asKind(SyntaxKind.PropertySignature)?.getName()?.replace(/"/g, "")
         )
-        .filter(Boolean) ?? [];
+        .filter(Boolean) ?? []
+    );
   }
-  */
 }
 
 export async function removeFromFmschemaConfig({

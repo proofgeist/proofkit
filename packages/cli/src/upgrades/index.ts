@@ -33,13 +33,20 @@ export type UpgradeKeys = (typeof availableUpgrades)[number]["key"];
 
 export function checkForAvailableUpgrades() {
   const settings = getSettings();
-  return availableUpgrades
-    .filter(
-      (upgrade) =>
-        !settings.appliedUpgrades.includes(upgrade.key) &&
-        upgrade.appType === settings.appType
-    )
-    .map(({ key, title, description }) => ({ key, title, description }));
+
+  const appliedUpgrades = settings.appliedUpgrades;
+
+  const neededUpgrades = availableUpgrades.filter(
+    (upgrade) =>
+      !appliedUpgrades.includes(upgrade.key) &&
+      upgrade.appType === settings.appType
+  );
+
+  return neededUpgrades.map(({ key, title, description }) => ({
+    key,
+    title,
+    description,
+  }));
 }
 
 export async function runAllAvailableUpgrades() {

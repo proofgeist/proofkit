@@ -1,5 +1,42 @@
 {
-  "name": "shared-utils",
-  "version": "0.0.0",
-  "private": true
+  "name": "@proofkit/shared-utils",
+  "version": "0.1.0",
+  "description": "Shared utilities for ProofKit packages",
+  "type": "module",
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "pnpm build:watch",
+    "build": "vite build && publint --strict",
+    "build:watch": "vite build --watch",
+    "ci": "pnpm run build",
+    "prepublishOnly": "pnpm run ci"
+  },
+  "keywords": [
+    "proofkit",
+    "utilities"
+  ],
+  "author": "ProofGeist",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.1",
+  "dependencies": {
+    "prettier": "^3.5.3",
+    "ts-morph": "^26.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/vite-config": "^0.2.0",
+    "publint": "^0.3.12",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.4"
+  }
 }

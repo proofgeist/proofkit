@@ -156,7 +156,7 @@ export async function promptForFileMakerDataSource({
   const name =
     existingFmDataSourceNames.length === 0
       ? "filemaker"
-      : opts.name ??
+      : (opts.name ??
         abortIfCancel(
           await p.text({
             message: "What do you want to call this data source?",
@@ -171,7 +171,7 @@ export async function promptForFileMakerDataSource({
               return validateAppName(value);
             },
           })
-        );
+        ));
 
   const newDataSource: z.infer<typeof dataSourceSchema> = {
     type: "fm",
@@ -244,7 +244,6 @@ export async function promptForFileMakerDataSource({
 
   addToFmschemaConfig({
     dataSourceName: name,
-    project,
     envNames: name === "filemaker" ? undefined : newDataSource.envNames,
   });
 

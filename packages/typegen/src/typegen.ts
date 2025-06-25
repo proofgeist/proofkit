@@ -7,7 +7,6 @@ import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
 import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
 import fs from "fs-extra";
 import path from "path";
-import os from "os";
 import {
   typegenConfig,
   typegenConfigSingle,
@@ -22,6 +21,7 @@ import { getLayoutMetadata } from "./getLayoutMetadata";
 import { buildOverrideFile, buildSchema } from "./buildSchema";
 import { buildLayoutClient } from "./buildLayoutClient";
 import { z } from "zod/v4";
+import { formatAndSaveSourceFiles } from "@proofkit/shared-utils";
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
@@ -247,14 +247,7 @@ const generateTypedClientsSingle = async (
     successCount++;
   }
 
-  // format all files
-  project.getSourceFiles().forEach((file) => {
-    file.formatText({
-      baseIndentSize: 2,
-    });
-  });
-
-  await project.save();
+  await formatAndSaveSourceFiles(project);
 
   return { successCount, errorCount, totalCount };
 };

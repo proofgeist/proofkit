@@ -6,7 +6,7 @@ type Upgrade = {
   key: string;
   title: string;
   description: string;
-  appType: (typeof appTypes)[number];
+  appType: (typeof appTypes)[number][];
   function: () => Promise<void>;
 };
 
@@ -16,7 +16,7 @@ const availableUpgrades: Upgrade[] = [
     title: "Upgrade Cursor Rules",
     description:
       "Upgrade the .cursor rules in your project to the latest version.",
-    appType: "browser",
+    appType: ["browser"],
     function: copyCursorRules,
   },
   {
@@ -24,7 +24,7 @@ const availableUpgrades: Upgrade[] = [
     title: "Add Shadcn",
     description:
       "Add Shadcn to your project, to support easily adding new components from a variety of component registries.",
-    appType: "browser",
+    appType: ["browser", "webviewer"],
     function: addShadcn,
   },
 ];
@@ -39,7 +39,7 @@ export function checkForAvailableUpgrades() {
   const neededUpgrades = availableUpgrades.filter(
     (upgrade) =>
       !appliedUpgrades.includes(upgrade.key) &&
-      upgrade.appType === settings.appType
+      upgrade.appType.includes(settings.appType)
   );
 
   return neededUpgrades.map(({ key, title, description }) => ({

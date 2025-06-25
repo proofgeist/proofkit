@@ -1,8 +1,8 @@
 import path from "path";
-import { fileURLToPath } from "url";
 import fs from "fs-extra";
 
 import { PKG_ROOT } from "~/consts.js";
+import { installDependencies } from "~/helpers/installDependencies.js";
 import { type AvailableDependencies } from "~/installers/dependencyVersionMap.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
@@ -62,11 +62,8 @@ export async function addShadcn() {
   );
 
   // 3. Install dependencies
-  const { execa } = await import("execa");
-  await execa("pnpm", ["install"], { cwd: projectDir, stdio: "inherit" });
+  await installDependencies();
 
   // 4. Success message
-  console.log(
-    "\n✅ shadcn/ui + Tailwind v4 upgrade complete! Please review your configs and test your app.\n"
-  );
+  console.log("\n✅ shadcn/ui + Tailwind v4 upgrade complete!\n");
 }

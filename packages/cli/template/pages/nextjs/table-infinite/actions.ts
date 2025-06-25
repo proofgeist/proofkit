@@ -3,13 +3,13 @@
 import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
 import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
 import { __ACTION_CLIENT__ } from "@/server/safe-action";
-import { ListParams, Query } from "@proofkit/fmdapi/dist/client-types.js";
+import { clientTypes } from "@proofkit/fmdapi";
 import dayjs from "dayjs";
 import { z } from "zod/v4";
 
 const limit = 50; // raise or lower this number depending on how your layout performs
 export const fetchData = __ACTION_CLIENT__
-  .schema(
+  .inputSchema(
     z.object({
       offset: z.number().catch(0),
       sorting: z.array(
@@ -20,8 +20,8 @@ export const fetchData = __ACTION_CLIENT__
   )
   .action(async ({ parsedInput: { offset, sorting, columnFilters } }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const getOptions: ListParams<__TYPE_NAME__, any> & {
-      query: Query<__TYPE_NAME__>[];
+    const getOptions: clientTypes.ListParams<__TYPE_NAME__, any> & {
+      query: clientTypes.Query<__TYPE_NAME__>[];
     } = {
       limit,
       offset,
@@ -49,7 +49,7 @@ export const fetchData = __ACTION_CLIENT__
           }
           return null;
         })
-        .filter(Boolean) as Query<any>[];
+        .filter(Boolean) as clientTypes.Query<any>[];
     }
 
     const data = await __CLIENT_NAME__.find(getOptions);

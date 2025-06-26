@@ -2,5 +2,5 @@
   "auth": { "type": "none" },
   "envFile": ".env",
   "appType": "browser",
-  "appliedUpgrades": ["shadcn"]
+  "appliedUpgrades": ["shadcn", "cursorRules"]
 }

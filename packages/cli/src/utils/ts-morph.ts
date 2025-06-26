@@ -1,7 +1,7 @@
 import path from "path";
 import { Project, SyntaxKind, type ReturnStatement } from "ts-morph";
 
-export { formatAndSaveSourceFiles } from "@proofkit/shared-utils";
+export { formatAndSaveSourceFiles } from "./formatting.js";
 
 export function ensureReturnStatementIsWrappedInFragment(
   returnStatement: ReturnStatement | undefined

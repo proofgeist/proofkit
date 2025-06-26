@@ -21,11 +21,11 @@ import { getLayoutMetadata } from "./getLayoutMetadata";
 import { buildOverrideFile, buildSchema } from "./buildSchema";
 import { buildLayoutClient } from "./buildLayoutClient";
 import { z } from "zod/v4";
-import { formatAndSaveSourceFiles } from "@proofkit/shared-utils";
+import { formatAndSaveSourceFiles } from "./formatting";
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
-  options?: { resetOverrides?: boolean },
+  options?: { resetOverrides?: boolean; cwd?: string },
 ): Promise<{
   successCount: number;
   errorCount: number;
@@ -50,7 +50,7 @@ export const generateTypedClients = async (
 
 const generateTypedClientsSingle = async (
   config: z.infer<typeof typegenConfigSingle>,
-  options?: { resetOverrides?: boolean },
+  options?: { resetOverrides?: boolean; cwd?: string },
 ) => {
   const {
     envNames,
@@ -62,11 +62,11 @@ const generateTypedClientsSingle = async (
     ...rest
   } = config;
 
-  const { resetOverrides = false } = options ?? {};
+  const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
 
   const validator = rest.validator ?? "zod/v4";
 
-  const rootDir = rest.path ?? "schema";
+  const rootDir = path.join(cwd, rest.path ?? "schema");
 
   const project = new Project({});
 
@@ -153,6 +153,7 @@ const generateTypedClientsSingle = async (
       client,
       valueLists: item.valueLists,
     });
+
     if (!result) {
       errorCount++;
       continue;

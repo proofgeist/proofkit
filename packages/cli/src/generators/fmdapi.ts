@@ -1,4 +1,5 @@
 import path from "path";
+import { generateTypedClients } from "@proofkit/typegen";
 import { type typegenConfigSingle } from "@proofkit/typegen/config";
 import { execa } from "execa";
 import fs from "fs-extra";
@@ -188,34 +189,19 @@ export async function runCodegenCommand() {
     console.log("no data sources found, skipping typegen");
     return;
   }
-  const pkgManager = getUserPkgManager();
 
   const hasFileMakerDataSources = settings.dataSources.some(
     (ds) => ds.type === "fm"
   );
 
   if (hasFileMakerDataSources) {
-    // The command now directly uses @proofkit/typegen which should read the new jsonc file
-    const { failed } = await execa(
-      pkgManager === "npm"
-        ? "npx"
-        : pkgManager === "pnpm"
-          ? "pnpm"
-          : pkgManager === "bun"
-            ? "bunx"
-            : pkgManager,
-      pkgManager === "pnpm"
-        ? ["dlx", "@proofkit/typegen@latest", `--env-path=${settings.envFile}`]
-        : ["@proofkit/typegen@latest", `--env-path=${settings.envFile}`],
-      {
-        cwd: projectDir,
-        stderr: "inherit",
-        stdout: "inherit",
-      }
+    const config = await readJsonConfigFile(
+      path.join(projectDir, "proofkit-typegen.config.jsonc")
     );
-    if (failed) {
-      throw new Error("Failed to run codegen command");
+    if (!config) {
+      throw new Error("proofkit-typegen.config.jsonc not found");
     }
+    await generateTypedClients(config.config, { cwd: projectDir });
   }
 }
 

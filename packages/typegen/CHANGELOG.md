@@ -1,5 +1,35 @@
 # @proofkit/typegen
 
+## 1.0.6
+
+### Patch Changes
+
+- Reduce error logs
+
+## 1.0.5
+
+### Patch Changes
+
+- Run typegen code directly instead of via execa
+
+## 1.0.4
+
+### Patch Changes
+
+- error trap around formatting
+
+## 1.0.3
+
+### Patch Changes
+
+- Remove shared-utils dep
+
+## 1.0.2
+
+### Patch Changes
+
+- Remove shared-utils dependency
+
 ## 1.0.1
 
 ### Patch Changes

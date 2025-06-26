@@ -211,6 +211,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     noInstall: cliOptions.noInstall,
     appRouter: cliOptions.appRouter,
   });
+  state.projectDir = projectDir;
   setImportAlias(projectDir, "@/");
   addPackageDependency({
     dependencies: ["@proofkit/cli", "@types/node"],

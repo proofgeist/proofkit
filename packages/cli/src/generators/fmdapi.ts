@@ -1,7 +1,7 @@
 import path from "path";
 import { generateTypedClients } from "@proofkit/typegen";
 import { type typegenConfigSingle } from "@proofkit/typegen/config";
-import { execa } from "execa";
+import { config as dotenvConfig } from "dotenv";
 import fs from "fs-extra";
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser";
 import { SyntaxKind } from "ts-morph";
@@ -201,6 +201,9 @@ export async function runCodegenCommand() {
     if (!config) {
       throw new Error("proofkit-typegen.config.jsonc not found");
     }
+
+    // make sure to load the .env file
+    dotenvConfig({ path: path.join(projectDir, ".env") });
     await generateTypedClients(config.config, { cwd: projectDir });
   }
 }

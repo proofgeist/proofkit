@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/cli",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Create web application with the ProofKit stack",
   "license": "MIT",
   "repository": {
@@ -19,8 +19,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "bin": {
@@ -30,6 +30,7 @@
     "dist",
     "template",
     "README.md",
+    "index.d.ts",
     "LICENSE",
     "CHANGELOG.md",
     "package.json"
@@ -39,7 +40,7 @@
   },
   "scripts": {
     "typecheck": "tsc",
-    "build": "tsup",
+    "build": "tsup && publint --strict",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo node_modules",
     "start": "node dist/index.js",
@@ -108,6 +109,7 @@
     "next-auth": "^4.24.7",
     "postgres": "^3.4.4",
     "prisma": "^5.14.0",
+    "publint": "^0.3.12",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "superjson": "^2.2.1",

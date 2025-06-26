@@ -1,11 +1,4 @@
-import type {
-  CreateResponse,
-  DeleteResponse,
-  GetResponse,
-  LayoutMetadataResponse,
-  RawFMResponse,
-  UpdateResponse,
-} from "@proofkit/fmdapi/dist/esm/client-types.js";
+import type { clientTypes } from "@proofkit/fmdapi";
 import { FileMakerError } from "@proofkit/fmdapi";
 import {
   Adapter,
@@ -55,7 +48,7 @@ export class WebViewerAdapter implements Adapter {
       delete body._sort;
     }
 
-    const resp = await fmFetch<RawFMResponse>(this.scriptName, {
+    const resp = await fmFetch<clientTypes.RawFMResponse>(this.scriptName, {
       ...body,
       layouts: layout,
       action,
@@ -74,71 +67,77 @@ export class WebViewerAdapter implements Adapter {
     return resp.response;
   };
 
-  public list = async (opts: ListOptions): Promise<GetResponse> => {
+  public list = async (opts: ListOptions): Promise<clientTypes.GetResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       body: data,
       layout,
     });
-    return resp as GetResponse;
+    return resp as clientTypes.GetResponse;
   };
 
-  public get = async (opts: GetOptions): Promise<GetResponse> => {
+  public get = async (opts: GetOptions): Promise<clientTypes.GetResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       body: data,
       layout,
     });
-    return resp as GetResponse;
+    return resp as clientTypes.GetResponse;
   };
 
-  public find = async (opts: FindOptions): Promise<GetResponse> => {
+  public find = async (opts: FindOptions): Promise<clientTypes.GetResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       body: data,
       layout,
     });
-    return resp as GetResponse;
+    return resp as clientTypes.GetResponse;
   };
 
-  public create = async (opts: CreateOptions): Promise<CreateResponse> => {
+  public create = async (
+    opts: CreateOptions,
+  ): Promise<clientTypes.CreateResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       action: "create",
       body: data,
       layout,
     });
-    return resp as CreateResponse;
+    return resp as clientTypes.CreateResponse;
   };
 
-  public update = async (opts: UpdateOptions): Promise<UpdateResponse> => {
+  public update = async (
+    opts: UpdateOptions,
+  ): Promise<clientTypes.UpdateResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       action: "update",
       layout,
       body: data,
     });
-    return resp as UpdateResponse;
+    return resp as clientTypes.UpdateResponse;
   };
 
-  public delete = async (opts: DeleteOptions): Promise<DeleteResponse> => {
+  public delete = async (
+    opts: DeleteOptions,
+  ): Promise<clientTypes.DeleteResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       action: "delete",
       body: data,
       layout,
     });
-    return resp as DeleteResponse;
+    return resp as clientTypes.DeleteResponse;
   };
 
   public layoutMetadata = async (
     opts: LayoutMetadataOptions,
-  ): Promise<LayoutMetadataResponse> => {
+  ): Promise<clientTypes.LayoutMetadataResponse> => {
     return (await this.request({
       action: "metaData",
       layout: opts.layout,
       body: {},
-    })) as LayoutMetadataResponse;
+    })) as clientTypes.LayoutMetadataResponse;
   };
 
   public containerUpload = async (): Promise<never> => {

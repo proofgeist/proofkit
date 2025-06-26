@@ -1,5 +1,13 @@
 # @proofgeist/kit
 
+## 1.1.5
+
+### Patch Changes
+
+- Run typegen code directly instead of via execa
+- error trap around formatting
+- Remove shared-utils dep
+
 ## 1.1.0
 
 ### Minor Changes

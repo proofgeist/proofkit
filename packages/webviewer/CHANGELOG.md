@@ -1,5 +1,11 @@
 # @proofkit/webviewer
 
+## 3.0.5
+
+### Patch Changes
+
+- eb7594a: Fix import paths
+
 ## 3.0.2
 
 ### Patch Changes

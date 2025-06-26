@@ -41,6 +41,7 @@
     "@types/node": "^22.15.32",
     "@types/uuid": "^10.0.0",
     "knip": "^5.52.0",
+    "publint": "^0.3.12",
     "typescript": "^5.8.3",
     "vite": "^6.3.4"
   },
@@ -49,7 +50,7 @@
   },
   "scripts": {
     "prepublishOnly": "tsc",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && publint --strict",
     "build:watch": "tsc && vite build --watch",
     "dev": "vite",
     "check-exports": "attw --pack .",

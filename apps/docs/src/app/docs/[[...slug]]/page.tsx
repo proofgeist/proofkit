@@ -18,8 +18,18 @@ export default async function Page(props: {
 
   const MDXContent = page.data.body;
 
+  console.log(page.file.path);
+
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      editOnGithub={{
+        owner: "proofgeist",
+        repo: "proofkit",
+        path: page.file.path,
+      }}
+    >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>

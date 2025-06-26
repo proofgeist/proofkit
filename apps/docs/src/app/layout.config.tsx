@@ -1,5 +1,4 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import { GithubIcon } from "lucide-react";
 import Image from "next/image";
 /**
  * Shared layout configurations

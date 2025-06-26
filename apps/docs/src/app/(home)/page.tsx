@@ -104,6 +104,8 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* <Separator className="my-12" /> */}
         </div>
       </div>
     </main>

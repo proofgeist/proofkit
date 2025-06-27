@@ -1,0 +1,1 @@
+export { FileMakerAdapter } from "./adapter";

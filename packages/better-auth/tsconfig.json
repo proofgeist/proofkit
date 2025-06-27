@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    /* If transpiling with TypeScript: */
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "dist",
+    "sourceMap": true,
+
+    /* AND if you're building for a library: */
+    "declaration": true,
+
+    /* AND if you're building for a library in a monorepo: */
+    "declarationMap": true
+  },
+  "exclude": ["*.config.ts", "test", "dist", "schema", "docs"],
+  "include": ["./src/index.ts", "./src/**/*.ts", "vite.config.ts"]
+}

@@ -219,6 +219,42 @@ describe("typegen", () => {
     );
 
     // Step 3: Clean up generated files
-    // await cleanupGeneratedFiles(genPath);
+    await cleanupGeneratedFiles(genPath);
+  }, 30000);
+
+  it("zod validator", async () => {
+    const config: z.infer<typeof typegenConfigSingle> = {
+      layouts: [
+        {
+          layoutName: "layout",
+          schemaName: "testLayout",
+          valueLists: "allowEmpty",
+          strictNumbers: true,
+        },
+      ],
+      path: "typegen-output/config4", // Use relative path
+      envNames: {
+        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
+        server: "DIFFERENT_FM_SERVER",
+        db: "DIFFERENT_FM_DATABASE",
+      },
+      clientSuffix: "Layout",
+      validator: "zod",
+    };
+
+    // Step 1: Generate types
+    const genPath = await generateTypes(config);
+
+    // Step 2: Use vitest file snapshots to check generated layout client
+    // This will create/update snapshots of the generated layout client file
+    const layoutClientPath = path.join(genPath, "generated", "testLayout.ts");
+    console.log(layoutClientPath);
+    const layoutClientContent = await fs.readFile(layoutClientPath, "utf-8");
+    await expect(layoutClientContent).toMatchFileSnapshot(
+      path.join(__dirname, "__snapshots__", "zod-layout-client.snap.ts"),
+    );
+
+    // Step 3: Clean up generated files
+    await cleanupGeneratedFiles(genPath);
   }, 30000);
 });

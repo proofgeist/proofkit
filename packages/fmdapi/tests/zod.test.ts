@@ -9,9 +9,9 @@ const ZPortalTable = z.object({
   "related::related_field": z.string(),
 });
 
-const ZCustomerPortals = z.object({
+const ZCustomerPortals = {
   PortalTable: ZPortalTable,
-});
+};
 
 const client = DataApi({
   adapter: new OttoAdapter({
@@ -79,12 +79,12 @@ describe("zod transformation", () => {
           booleanField: z.coerce.boolean(),
           CreationTimestamp: z.coerce.date(), // this does not convert the date properly, but does test the transformation
         }),
-        portalData: z.object({
+        portalData: {
           test: z.object({
             "related::related_field": z.string(),
             "related::recordId": z.coerce.string(), // it's actually a number field, this tests the transformation
           }),
-        }),
+        },
       },
     });
     const data = await customClient.listAll();
@@ -92,6 +92,9 @@ describe("zod transformation", () => {
     console.log(data[0].fieldData.CreationTimestamp);
     expect(typeof data[0].fieldData.CreationTimestamp).toBe("object");
     const firstPortalRecord = data[0].portalData.test[0];
+    // @ts-expect-error - notAPortal is not a portal
+    data[0].portalData.notAPortal;
+
     console.log("test portal data, first record", firstPortalRecord);
     expect(typeof firstPortalRecord["related::related_field"]).toBe("string");
     expect(typeof firstPortalRecord["related::recordId"]).toBe("string");

@@ -166,7 +166,10 @@ const generateTypedClientsSingle = async (
       layoutName: item.layoutName,
       portalSchema,
       valueLists,
-      type: validator === "zod/v4" || validator === "zod/v3" ? validator : "ts",
+      type:
+        validator === "zod" || validator === "zod/v4" || validator === "zod/v3"
+          ? validator
+          : "ts",
       strictNumbers: item.strictNumbers,
       webviewerScriptName: config.webviewerScriptName,
       envNames: {

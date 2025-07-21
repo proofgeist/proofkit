@@ -211,7 +211,7 @@ function buildTypeZod(
                   writer.write("z.string()");
                 } else if (field.type === "fmnumber") {
                   if (strictNumbers) {
-                    writer.write("z.number().nullable()");
+                    writer.write("z.coerce.number().nullable().catch(null)");
                   } else {
                     writer.write("z.union([z.string(), z.number()])");
                   }

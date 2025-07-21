@@ -22,6 +22,8 @@ import { buildOverrideFile, buildSchema } from "./buildSchema";
 import { buildLayoutClient } from "./buildLayoutClient";
 import { z } from "zod/v4";
 import { formatAndSaveSourceFiles } from "./formatting";
+import { type PackageJson } from "type-fest";
+import semver from "semver";
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
@@ -67,6 +69,21 @@ const generateTypedClientsSingle = async (
   const validator = rest.validator ?? "zod/v4";
 
   const rootDir = path.join(cwd, rest.path ?? "schema");
+
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.join(cwd, "package.json"), "utf8"),
+  ) as PackageJson;
+  const fmdapiVersion = packageJson.dependencies?.["@proofkit/fmdapi"];
+  if (fmdapiVersion && semver.valid(fmdapiVersion)) {
+    const isAtLeast6 = semver.satisfies(fmdapiVersion, ">=6.0.0");
+    if (!isAtLeast6) {
+      console.log(
+        chalk.yellow(
+          "WARNING: @proofkit/typegen will generate types only compatible with @proofkit/fmdapi version 6.0.0 or higher. Please update to the latest version of @proofkit/fmdapi",
+        ),
+      );
+    }
+  }
 
   const project = new Project({});
 

@@ -1,12 +1,16 @@
 import { type BetterAuthDbSchema } from "better-auth/db";
 import { Database, type Field as FmField } from "fm-odata-client";
+import chalk from "chalk";
 import z from "zod/v4";
 
 export async function planMigration(
   db: Database,
   betterAuthSchema: BetterAuthDbSchema,
 ): Promise<MigrationPlan> {
-  const metadata = await db.getMetadata().catch(() => null);
+  const metadata = await db.getMetadata().catch((error) => {
+    console.error("Failed to get metadata from database", error);
+    return null;
+  });
 
   // Build a map from entity set name to entity type key
   let entitySetToType: Record<string, string> = {};
@@ -62,17 +66,17 @@ export async function planMigration(
   const migrationPlan: MigrationPlan = [];
 
   for (const baTable of baTables) {
-    const fields: FmField[] = Object.values(baTable.fields)
-      .filter((o) => o.fieldName)
-      .map((field) => ({
-        name: field.fieldName!,
+    const fields: FmField[] = Object.entries(baTable.fields).map(
+      ([key, field]) => ({
+        name: field.fieldName ?? key,
         type:
           field.type === "boolean" || field.type.includes("number")
             ? "numeric"
             : field.type === "date"
               ? "timestamp"
               : "string",
-      }));
+      }),
+    );
 
     // get existing table or create it
     const tableExists = Object.prototype.hasOwnProperty.call(
@@ -138,8 +142,10 @@ export async function executeMigration(
 ) {
   for (const step of migrationPlan) {
     if (step.operation === "create") {
+      console.log("Creating table:", step.tableName);
       await db.schemaManager().createTable(step.tableName, step.fields);
     } else if (step.operation === "update") {
+      console.log("Adding fields to table:", step.tableName);
       await db.schemaManager().addFields(step.tableName, step.fields);
     }
   }
@@ -202,3 +208,29 @@ export const migrationPlanSchema = z
   .array();
 
 export type MigrationPlan = z.infer<typeof migrationPlanSchema>;
+
+export function prettyPrintMigrationPlan(migrationPlan: MigrationPlan) {
+  if (!migrationPlan.length) {
+    console.log("No changes to apply. Database is up to date.");
+    return;
+  }
+  console.log(chalk.bold.green("Migration plan:"));
+  for (const step of migrationPlan) {
+    const emoji = step.operation === "create" ? "✅" : "✏️";
+    console.log(
+      `\n${emoji} ${step.operation === "create" ? chalk.bold.green("Create table") : chalk.bold.yellow("Update table")}: ${step.tableName}`,
+    );
+    if (step.fields.length) {
+      for (const field of step.fields) {
+        let fieldDesc = `    - ${field.name} (${field.type}`;
+        if (field.primary) fieldDesc += ", primary";
+        if (field.unique) fieldDesc += ", unique";
+        fieldDesc += ")";
+        console.log(fieldDesc);
+      }
+    } else {
+      console.log("    (No fields to add)");
+    }
+  }
+  console.log("");
+}

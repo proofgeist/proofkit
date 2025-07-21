@@ -1,0 +1,60 @@
+---
+title: Installation
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+
+<Callout type="warning">
+This package is currently in beta. Please report any issues you find to the [GitHub repository](https://github.com/proofgeist/proofkit/issues), or reach out to us in the [Community](https://community.ottomatic.cloud/c/proofkit/13)
+</Callout>
+
+
+Follow the [Better-Auth installation guide](https://better-auth.com/docs/installation) to get started in your app, but come back here for special instructions for anything related to your Database Setup or schema migrations.
+
+### Database Setup
+
+Ensure you have the @proofkit/better-auth package installed in your app.
+```package-install
+@proofkit/better-auth
+```
+
+Configure your database connection in your `auth.ts` file. Be sure to set these value secrets in your environment variables. The credentials you use here need `fmodata` permissions enabled, and read/write access to the better-auth tables.
+```ts title="auth.ts"
+import { betterAuth } from "better-auth";
+import { FileMakerAdapter } from "@proofkit/better-auth";
+
+export const auth = betterAuth({
+  database: FileMakerAdapter({
+    odata: {
+      hostname: "filemaker.example.com",
+      auth: {
+        username: process.env.FM_USERNAME,
+        password: process.env.FM_PASSWORD,
+      },
+      database: process.env.FM_DATABASE,
+    },
+  }),
+});
+```
+
+### Create Database Tables
+
+Run the following command to create the necessary tables and fields in your FileMaker file.
+```bash
+pnpm dlx @proofkit/better-auth@latest migrate
+```
+[Full Access] credentials are required for the schema changes to be applied automatically, but you may want to use a more restricted account for the rest of better-auth usage. If your credentials that you entered eariler in the `auth.ts` file do not have the [Full Access] permissions, you can override them in the CLI.
+```bash
+pnpm dlx @proofkit/better-auth@latest migrate --username "full_access_username" --password "full_access_password"
+```
+
+<Callout type="info">
+If you make any schema-related changes to the better-auth config, such as adding plugins, you will need to run the migration command again to apply the changes to your FileMaker file.
+</Callout>
+
+
+
+## Next Steps
+
+Now that you have your database setup and your tables created, you can continue with the [Better-Auth installation guide](https://better-auth.com/docs/installation) to get your app up and running.

@@ -8,7 +8,7 @@ const config = defineConfig({
 export default mergeConfig(
   config,
   tanstackViteConfig({
-    entry: ["./src/index.ts", "./src/migrate/index.ts"],
+    entry: ["./src/index.ts", "./src/cli/index.ts"],
     srcDir: "./src",
     cjs: false,
     outDir: "./dist",

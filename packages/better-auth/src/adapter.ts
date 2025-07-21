@@ -4,6 +4,7 @@ import {
   type AdapterDebugLogs,
 } from "better-auth/adapters";
 import { FmOdata, type FmOdataConfig } from "./odata";
+import { prettifyError, z } from "zod/v4";
 
 interface FileMakerAdapterConfig {
   /**
@@ -18,8 +19,22 @@ interface FileMakerAdapterConfig {
   /**
    * Connection details for the FileMaker server.
    */
-  odata: FmOdataConfig | FmOdata;
+  odata: FmOdataConfig;
 }
+
+export type AdapterOptions = {
+  config: FileMakerAdapterConfig;
+};
+
+const configSchema = z.object({
+  debugLogs: z.boolean().optional(),
+  usePlural: z.boolean().optional(),
+  odata: z.object({
+    hostname: z.string(),
+    auth: z.object({ username: z.string(), password: z.string() }),
+    database: z.string().endsWith(".fmp12"),
+  }),
+});
 
 const defaultConfig: Required<FileMakerAdapterConfig> = {
   debugLogs: false,
@@ -116,8 +131,13 @@ export function parseWhere(where?: CleanedWhere[]): string {
 
 export const FileMakerAdapter = (
   _config: FileMakerAdapterConfig = defaultConfig,
-): ReturnType<typeof createAdapter> => {
-  const { ...config } = { ...defaultConfig, ..._config };
+) => {
+  const parsed = configSchema.safeParse(_config);
+
+  if (!parsed.success) {
+    throw new Error(`Invalid configuration: ${prettifyError(parsed.error)}`);
+  }
+  const config = parsed.data;
 
   const odata =
     config.odata instanceof FmOdata ? config.odata : new FmOdata(config.odata);
@@ -136,6 +156,7 @@ export const FileMakerAdapter = (
     },
     adapter: ({ options }) => {
       return {
+        options: { config },
         create: async ({ data, model, select }) => {
           const row = await db.table(model).create(data);
           return row as unknown as typeof data;
@@ -193,20 +214,6 @@ export const FileMakerAdapter = (
           const filter = parseWhere(where);
           const rows = await db.table(model).updateMany(filter, update as any);
           return rows.length;
-        },
-        createSchema: async ({ tables, file }) => {
-          return {
-            code: JSON.stringify(
-              {
-                tables,
-                useNumberId: options.advanced?.database?.useNumberId ?? false,
-              },
-              null,
-              2,
-            ),
-            path: file ?? "better-auth-schema.json",
-            overwrite: true,
-          };
         },
       };
     },

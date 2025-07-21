@@ -12,17 +12,14 @@
     "ci": "pnpm run build && pnpm run test",
     "prepublishOnly": "pnpm run ci"
   },
+  "bin": {
+    "better-auth": "./dist/esm/cli/index.js"
+  },
   "exports": {
     ".": {
       "import": {
         "types": "./dist/esm/index.d.ts",
         "default": "./dist/esm/index.js"
-      }
-    },
-    "./migrate": {
-      "import": {
-        "types": "./dist/esm/migrate/index.d.ts",
-        "default": "./dist/esm/migrate/index.js"
       }
     },
     "./package.json": "./package.json"
@@ -47,14 +44,18 @@
     "url": "git+https://github.com/proofgeist/proofkit.git"
   },
   "dependencies": {
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
     "@commander-js/extra-typings": "^14.0.0",
     "@proofkit/fmdapi": "workspace:*",
     "@tanstack/vite-config": "^0.2.0",
     "better-auth": "^1.2.10",
+    "c12": "^3.0.4",
+    "chalk": "5.4.1",
     "commander": "^14.0.0",
     "dotenv": "^16.5.0",
     "execa": "^9.5.3",
-    "fm-odata-client": "link:../../../fm-odata-client",
+    "fm-odata-client": "^3.0.1",
     "fs-extra": "^11.3.0",
     "prompts": "^2.4.2",
     "vite": "^6.3.4",

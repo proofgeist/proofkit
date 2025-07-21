@@ -1,0 +1,37 @@
+---
+title: Getting Started
+description: "@proofkit/better-auth"
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { SquareArrowOutUpRight } from "lucide-react";
+
+# What is Better-Auth?
+
+From the [Better-Auth](https://better-auth.com) website:
+> The most comprehensive authentication framework for TypeScript.
+
+Better-Auth has a robust plugin ecosystem that gives you the ability to pick and choose which authentication methods you want to use, all within a system that let's you securely host your own authentication.
+
+The @proofkit/better-auth package allows you to use FileMaker as the backend database for the better-auth library, including automated schema migrations to easily add any neccesary tables and fields to your FileMaker file.
+
+
+<Cards>
+  <Card
+    href="/docs/better-auth/installation"
+    title="Installation"
+  >
+How to quickly get started with Better-Auth and FileMaker.
+  </Card>
+  <Card
+    title={
+      <>
+        Better-Auth Docs{" "}
+        <SquareArrowOutUpRight className="inline-block w-3 h-3 mb-1 ml-1" />
+      </>
+    }
+    href="https://better-auth.com/docs"
+  >
+    Learn more about the Better-Auth framework and how to use it in your app.
+  </Card>
+</Cards>

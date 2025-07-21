@@ -7,7 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { Card } from "fumadocs-ui/components/card";
 import { Cards } from "fumadocs-ui/components/card";
-import { Code, Globe, Terminal, WebhookIcon } from "lucide-react";
+import {
+  Code,
+  Globe,
+  RectangleEllipsis,
+  Terminal,
+  WebhookIcon,
+} from "lucide-react";
 import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern";
 import { cn } from "@/lib/utils";
 import InitCommand from "@/components/InitCommand";
@@ -71,6 +77,14 @@ export default function HomePage() {
             >
               Use async functions in WebViewer code to execute and get the
               result of a FileMaker script.
+            </Card>
+            <Card
+              icon={<RectangleEllipsis />}
+              title="Better-Auth Adapter"
+              href="/docs/better-auth"
+            >
+              Own your authentication with FileMaker and the extensible
+              Better-Auth framework.
             </Card>
           </Cards>
 

@@ -20,7 +20,7 @@ import dotenv from "dotenv";
 // // Load the correct .env.local relative to this test file's directory
 // dotenv.config({ path: path.resolve(__dirname, ".env.local") });
 
-const genPath = path.resolve(__dirname, "./typegen"); // Resolve path relative to the current file
+// Remove the old genPath definition - we'll use baseGenPath consistently
 
 // Helper function to recursively get all .ts files (excluding index.ts)
 async function getAllTsFilesRecursive(dir: string): Promise<string[]> {
@@ -44,11 +44,11 @@ async function getAllTsFilesRecursive(dir: string): Promise<string[]> {
 async function testTypegenConfig(
   config: z.infer<typeof typegenConfigSingle>,
 ): Promise<void> {
-  const genPath = config.path || path.resolve(__dirname, "./typegen-output"); // Use config path or default
+  const genPath = path.resolve(__dirname, config.path || "./typegen-output"); // Resolve relative path to absolute
 
   // 1. Generate the code
   await fs.mkdir(genPath, { recursive: true }); // Ensure genPath exists
-  await generateTypedClients(config);
+  await generateTypedClients(config, { cwd: __dirname }); // Pass the test directory as cwd
   console.log(`Generated code in ${genPath}`);
 
   // // 2. Modify imports in generated files to point to local src
@@ -96,31 +96,10 @@ async function testTypegenConfig(
   console.log(`Cleaned up ${genPath}`);
 }
 
-const testConfig1: z.infer<typeof typegenConfigSingle> = {
-  layouts: [
-    // add your layouts and name schemas here
-    {
-      layoutName: "layout",
-      schemaName: "testLayout",
-      valueLists: "allowEmpty",
-    },
-    // { layoutName: "Weird Portals", schemaName: "weirdPortals" },
-
-    // repeat as needed for each schema...
-    // { layout: "my_other_layout", schemaName: "MyOtherSchema" },
-  ],
-  path: genPath, // Use the resolved absolute path
-  // webviewerScriptName: "webviewer",
-  envNames: {
-    auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
-    server: "DIFFERENT_FM_SERVER",
-    db: "DIFFERENT_FM_DATABASE",
-  },
-  clientSuffix: "Layout",
-};
+// Remove testConfig1 since it's not being used in the tests
 
 describe("typegen", () => {
-  // Define a base path for generated files if not specified in config
+  // Define a base path for generated files relative to the test file directory
   const baseGenPath = path.resolve(__dirname, "./typegen-output");
 
   // Clean up the base directory before each test
@@ -139,7 +118,7 @@ describe("typegen", () => {
         },
         // { layoutName: "Weird Portals", schemaName: "weirdPortals" },
       ],
-      path: path.join(baseGenPath, "config1"), // Unique path for this config
+      path: "typegen-output/config1", // Use relative path
       envNames: {
         auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
         server: "DIFFERENT_FM_SERVER",
@@ -166,7 +145,7 @@ describe("typegen", () => {
         // repeat as needed for each schema...
         // { layout: "my_other_layout", schemaName: "MyOtherSchema" },
       ],
-      path: path.join(baseGenPath, "config2"), // Unique path for this config
+      path: "typegen-output/config2", // Use relative path
       // webviewerScriptName: "webviewer",
       envNames: {
         auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
@@ -174,6 +153,27 @@ describe("typegen", () => {
         db: "DIFFERENT_FM_DATABASE",
       },
       validator: false,
+    };
+    await testTypegenConfig(config);
+  }, 30000);
+
+  it("basic typegen with strict numbers", async () => {
+    const config: z.infer<typeof typegenConfigSingle> = {
+      layouts: [
+        {
+          layoutName: "layout",
+          schemaName: "testLayout",
+          valueLists: "allowEmpty",
+          strictNumbers: true,
+        },
+      ],
+      path: "typegen-output/config3", // Use relative path
+      envNames: {
+        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
+        server: "DIFFERENT_FM_SERVER",
+        db: "DIFFERENT_FM_DATABASE",
+      },
+      clientSuffix: "Layout",
     };
     await testTypegenConfig(config);
   }, 30000);

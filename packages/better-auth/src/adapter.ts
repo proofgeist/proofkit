@@ -27,7 +27,7 @@ export type AdapterOptions = {
 };
 
 const configSchema = z.object({
-  debugLogs: z.boolean().optional(),
+  debugLogs: z.unknown().optional(),
   usePlural: z.boolean().optional(),
   odata: z.object({
     hostname: z.string(),
@@ -132,7 +132,7 @@ export function parseWhere(where?: CleanedWhere[]): string {
 export const FileMakerAdapter = (
   _config: FileMakerAdapterConfig = defaultConfig,
 ) => {
-  const parsed = configSchema.safeParse(_config);
+  const parsed = configSchema.loose().safeParse(_config);
 
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${prettifyError(parsed.error)}`);

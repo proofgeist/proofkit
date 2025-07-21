@@ -39,7 +39,14 @@ describe("My Adapter Tests", async () => {
     debugLogs: {
       isRunningAdapterTests: true, // This is our super secret flag to let us know to only log debug logs if a test fails.
     },
-    odata,
+    odata: {
+      auth: {
+        username: process.env.FM_USERNAME!,
+        password: process.env.FM_PASSWORD!,
+      },
+      database: process.env.FM_DATABASE!,
+      hostname: process.env.FM_SERVER!,
+    },
   });
 
   await runAdapterTest({

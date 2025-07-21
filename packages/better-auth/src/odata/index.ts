@@ -35,7 +35,7 @@ export class FmOdata {
       throw new Error("Otto API key auth is yet not supported");
     } else {
       this.connection = new Connection(
-        args.hostname,
+        args.hostname.replace(/^https?:\/\//, "").replace(/\/$/, ""),
         new BasicAuth(args.auth.username, args.auth.password),
       );
     }

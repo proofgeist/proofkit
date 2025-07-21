@@ -41,9 +41,9 @@ async function getAllTsFilesRecursive(dir: string): Promise<string[]> {
   return files;
 }
 
-async function testTypegenConfig(
+async function generateTypes(
   config: z.infer<typeof typegenConfigSingle>,
-): Promise<void> {
+): Promise<string> {
   const genPath = path.resolve(__dirname, config.path || "./typegen-output"); // Resolve relative path to absolute
 
   // 1. Generate the code
@@ -91,16 +91,47 @@ async function testTypegenConfig(
     cwd: path.resolve(__dirname, "../../.."), // Execute from monorepo root
   });
 
-  // Optional: Clean up generated files after test
+  return genPath;
+}
+
+async function cleanupGeneratedFiles(genPath: string): Promise<void> {
   await fs.rm(genPath, { recursive: true, force: true });
   console.log(`Cleaned up ${genPath}`);
 }
 
-// Remove testConfig1 since it's not being used in the tests
+async function testTypegenConfig(
+  config: z.infer<typeof typegenConfigSingle>,
+): Promise<void> {
+  const genPath = await generateTypes(config);
+  await cleanupGeneratedFiles(genPath);
+}
+
+// Helper function to get the base path for generated files
+function getBaseGenPath(): string {
+  return path.resolve(__dirname, "./typegen-output");
+}
+
+// Export the functions for individual use
+//
+// Usage examples:
+//
+// 1. Generate types only:
+//    const config = { layouts: [...], path: "typegen-output/my-config" };
+//    const genPath = await generateTypes(config);
+//    console.log(`Generated types in: ${genPath}`);
+//
+// 2. Clean up generated files:
+//    await cleanupGeneratedFiles(genPath);
+//
+// 3. Get the base path for generated files:
+//    const basePath = getBaseGenPath();
+//    console.log(`Base path: ${basePath}`);
+//
+export { generateTypes, cleanupGeneratedFiles, getBaseGenPath };
 
 describe("typegen", () => {
   // Define a base path for generated files relative to the test file directory
-  const baseGenPath = path.resolve(__dirname, "./typegen-output");
+  const baseGenPath = getBaseGenPath();
 
   // Clean up the base directory before each test
   beforeEach(async () => {
@@ -175,6 +206,19 @@ describe("typegen", () => {
       },
       clientSuffix: "Layout",
     };
-    await testTypegenConfig(config);
+
+    // Step 1: Generate types
+    const genPath = await generateTypes(config);
+
+    // Step 2: Use vitest file snapshots to check generated types files
+    // This will create/update snapshots of the generated types files
+    const typesPath = path.join(genPath, "generated", "testLayout.ts");
+    const typesContent = await fs.readFile(typesPath, "utf-8");
+    await expect(typesContent).toMatchFileSnapshot(
+      path.join(__dirname, "__snapshots__", "strict-numbers.snap.ts"),
+    );
+
+    // Step 3: Clean up generated files
+    // await cleanupGeneratedFiles(genPath);
   }, 30000);
 });

@@ -1,5 +1,11 @@
 # @proofkit/typegen
 
+## 1.0.8
+
+### Patch Changes
+
+- 56270f6: Fix strict numbers to use coerce
+
 ## 1.0.7
 
 ### Patch Changes

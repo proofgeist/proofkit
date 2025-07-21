@@ -3,6 +3,7 @@ import Link from "next/link";
 import ProofKitLogo from "@/../public/proofkit.png";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 import Image from "next/image";
 import { Card } from "fumadocs-ui/components/card";
@@ -80,7 +81,14 @@ export default function HomePage() {
             </Card>
             <Card
               icon={<RectangleEllipsis />}
-              title="Better-Auth Adapter"
+              title={
+                <span>
+                  Better-Auth Adapter{" "}
+                  <Badge className="bg-blue-200 text-blue-700 dark:bg-blue-600 dark:text-blue-50 uppercase">
+                    beta
+                  </Badge>
+                </span>
+              }
               href="/docs/better-auth"
             >
               Own your authentication with FileMaker and the extensible

@@ -231,6 +231,10 @@ describe("typegen", () => {
           valueLists: "allowEmpty",
           strictNumbers: true,
         },
+        {
+          layoutName: "customer_fieldsMissing",
+          schemaName: "customer",
+        },
       ],
       path: "typegen-output/config4", // Use relative path
       envNames: {
@@ -245,14 +249,27 @@ describe("typegen", () => {
     // Step 1: Generate types
     const genPath = await generateTypes(config);
 
-    // Step 2: Use vitest file snapshots to check generated layout client
-    // This will create/update snapshots of the generated layout client file
-    const layoutClientPath = path.join(genPath, "generated", "testLayout.ts");
-    console.log(layoutClientPath);
-    const layoutClientContent = await fs.readFile(layoutClientPath, "utf-8");
-    await expect(layoutClientContent).toMatchFileSnapshot(
-      path.join(__dirname, "__snapshots__", "zod-layout-client.snap.ts"),
-    );
+    const snapshotMap = [
+      {
+        generated: path.join(genPath, "generated", "testLayout.ts"),
+        snapshot: "zod-layout-client.snap.ts",
+      },
+      {
+        generated: path.join(genPath, "testLayout.ts"),
+        snapshot: "zod-layout-overrides.snap.ts",
+      },
+      {
+        generated: path.join(genPath, "customer.ts"),
+        snapshot: "zod-layout-client-customer.snap.ts",
+      },
+    ];
+
+    for (const { generated, snapshot } of snapshotMap) {
+      const generatedContent = await fs.readFile(generated, "utf-8");
+      await expect(generatedContent).toMatchFileSnapshot(
+        path.join(__dirname, "__snapshots__", snapshot),
+      );
+    }
 
     // Step 3: Clean up generated files
     await cleanupGeneratedFiles(genPath);

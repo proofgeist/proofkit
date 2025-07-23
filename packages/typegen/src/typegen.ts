@@ -70,19 +70,23 @@ const generateTypedClientsSingle = async (
 
   const rootDir = path.join(cwd, rest.path ?? "schema");
 
-  const packageJson = JSON.parse(
-    fs.readFileSync(path.join(cwd, "package.json"), "utf8"),
-  ) as PackageJson;
-  const fmdapiVersion = packageJson.dependencies?.["@proofkit/fmdapi"];
-  if (fmdapiVersion && semver.valid(fmdapiVersion)) {
-    const isAtLeast6 = semver.satisfies(fmdapiVersion, ">=6.0.0");
-    if (!isAtLeast6) {
-      console.log(
-        chalk.yellow(
-          "WARNING: @proofkit/typegen will generate types only compatible with @proofkit/fmdapi version 6.0.0 or higher. Please update to the latest version of @proofkit/fmdapi",
-        ),
-      );
+  try {
+    const packageJson = JSON.parse(
+      fs.readFileSync(path.join(cwd, "package.json"), "utf8"),
+    ) as PackageJson;
+    const fmdapiVersion = packageJson.dependencies?.["@proofkit/fmdapi"];
+    if (fmdapiVersion && semver.valid(fmdapiVersion)) {
+      const isAtLeast501 = semver.satisfies(fmdapiVersion, ">=5.0.1");
+      if (!isAtLeast501) {
+        console.log(
+          chalk.yellow(
+            "WARNING: @proofkit/typegen will generate types only compatible with @proofkit/fmdapi version 5.0.1 or higher. Please update to the latest version of @proofkit/fmdapi",
+          ),
+        );
+      }
     }
+  } catch (e) {
+    // ignore
   }
 
   const project = new Project({});

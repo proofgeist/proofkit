@@ -1,5 +1,12 @@
 # @proofkit/fmdapi
 
+## 5.0.1
+
+### Patch Changes
+
+- 2ff4cd1: Update how portal validation should be passed to the fmdapi client.
+  To update, simply re-run the `npx @proofkit/typegen@latest` command and your files will be updated to the correct syntax. If you still see errors, try with the "--reset-overrides" flag to also re-create your overrides files.
+
 ## 5.0.0
 
 ### Major Changes

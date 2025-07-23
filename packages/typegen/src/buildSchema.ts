@@ -24,11 +24,19 @@ export function buildSchema(
     strictNumbers = false,
   } = args;
 
-  if (type === "zod/v4" || type === "zod/v3") {
+  const hasPortals = portalSchema.length > 0;
+
+  if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
     schemaFile.addImportDeclaration({
       moduleSpecifier: type,
       namedImports: ["z"],
     });
+    if (hasPortals) {
+      schemaFile.addImportDeclaration({
+        moduleSpecifier: "@proofkit/fmdapi",
+        namedImports: ["InferZodPortals"],
+      });
+    }
   }
 
   // build the portals
@@ -103,24 +111,26 @@ export function buildSchema(
             name: `Z${varname(schemaName)}Portals`,
             initializer: (writer) => {
               writer
-                .write(`z.object(`)
-                .inlineBlock(() => {
+                .write(`{`)
+                .newLine()
+                .indent(() => {
                   portalSchema.forEach((p, i) => {
                     writer
                       .quote(p.schemaName)
                       .write(": ")
                       .write(`Z${varname(p.schemaName)}`);
                     writer.conditionalWrite(i !== portalSchema.length - 1, ",");
+                    writer.newLine();
                   });
                 })
-                .write(")");
+                .write(`}`);
             },
           },
         ],
       });
       schemaFile.addTypeAlias({
         name: `T${varname(schemaName)}Portals`,
-        type: `z.infer<typeof Z${varname(schemaName)}Portals>`,
+        type: `InferZodPortals<typeof Z${varname(schemaName)}Portals>`,
         isExported: true,
       });
     }
@@ -286,7 +296,7 @@ export function buildOverrideFile(
   schemaFile: SourceFile,
   { type, ...args }: BuildSchemaArgs,
 ) {
-  if (type === "zod/v4" || type === "zod/v3") {
+  if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
     overrideFile.addImportDeclaration({
       moduleSpecifier: type,
       namedImports: ["z"],
@@ -299,7 +309,7 @@ export function buildOverrideFile(
     .getExportSymbols()
     .map((symbol) => symbol.getName())
     .filter((name) => {
-      if (type === "zod/v4" || type === "zod/v3") {
+      if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
         return name.startsWith("Z");
       } else {
         return name.startsWith("T");
@@ -316,8 +326,20 @@ export function buildOverrideFile(
     })),
   });
 
+  const hasPortals = portalSchema.length > 0;
+
+  if (
+    hasPortals &&
+    (type === "zod" || type === "zod/v4" || type === "zod/v3")
+  ) {
+    overrideFile.addImportDeclaration({
+      moduleSpecifier: "@proofkit/fmdapi",
+      namedImports: ["InferZodPortals"],
+    });
+  }
+
   namedExportNames.forEach((name) => {
-    if (type === "zod/v4" || type === "zod/v3") {
+    if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
       overrideFile.addVariableStatement({
         isExported: true,
         declarationKind: VariableDeclarationKind.Const,
@@ -346,7 +368,7 @@ export function buildOverrideFile(
   });
 
   // build the final portals object
-  if (portalSchema.length > 0) {
+  if (hasPortals) {
     if (type === "ts") {
       overrideFile.addTypeAlias({
         name: `T${varname(schemaName)}Portals`,
@@ -368,24 +390,26 @@ export function buildOverrideFile(
             name: `Z${varname(schemaName)}Portals`,
             initializer: (writer) => {
               writer
-                .write(`z.object(`)
-                .inlineBlock(() => {
+                .write(`{`)
+                .newLine()
+                .indent(() => {
                   portalSchema.forEach((p, i) => {
                     writer
                       .quote(p.schemaName)
                       .write(": ")
                       .write(`Z${varname(p.schemaName)}`);
                     writer.conditionalWrite(i !== portalSchema.length - 1, ",");
+                    writer.newLine();
                   });
                 })
-                .write(")");
+                .write(`}`);
             },
           },
         ],
       });
       overrideFile.addTypeAlias({
         name: `T${varname(schemaName)}Portals`,
-        type: `z.infer<typeof Z${varname(schemaName)}Portals>`,
+        type: `InferZodPortals<typeof Z${varname(schemaName)}Portals>`,
         isExported: true,
       });
     }

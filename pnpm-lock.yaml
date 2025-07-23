@@ -17,12 +17,18 @@ importers:
       eslint:
         specifier: ^9.23.0
         version: 9.27.0(jiti@2.4.2)
+      knip:
+        specifier: ^5.56.0
+        version: 5.56.0(@types/node@22.15.32)(typescript@5.8.3)
       prettier:
         specifier: ^3.5.3
         version: 3.5.3
       turbo:
         specifier: ^2.5.4
         version: 2.5.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
       vitest:
         specifier: ^3.2.3
         version: 3.2.3(@types/debug@4.1.12)(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(msw@2.10.2(@types/node@22.15.32)(typescript@5.8.3))(yaml@2.8.0)
@@ -214,9 +220,6 @@ importers:
       '@commander-js/extra-typings':
         specifier: ^14.0.0
         version: 14.0.0(commander@14.0.0)
-      '@proofkit/fmdapi':
-        specifier: workspace:*
-        version: link:../fmdapi
       '@tanstack/vite-config':
         specifier: ^0.2.0
         version: 0.2.0(@types/node@22.15.32)(rollup@4.40.2)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.8.0))
@@ -235,9 +238,6 @@ importers:
       dotenv:
         specifier: ^16.5.0
         version: 16.5.0
-      execa:
-        specifier: ^9.5.3
-        version: 9.5.3
       fm-odata-client:
         specifier: ^3.0.1
         version: 3.0.1
@@ -570,6 +570,9 @@ importers:
       prettier:
         specifier: ^3.5.3
         version: 3.5.3
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
       ts-morph:
         specifier: ^26.0.0
         version: 26.0.0
@@ -586,9 +589,15 @@ importers:
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
+      '@types/semver':
+        specifier: ^7.7.0
+        version: 7.7.0
       publint:
         specifier: ^0.3.12
         version: 0.3.12
+      type-fest:
+        specifier: ^3.13.1
+        version: 3.13.1
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -9031,7 +9040,7 @@ snapshots:
 
   '@oxc-resolver/binding-wasm32-wasi@9.0.2':
     dependencies:
-      '@napi-rs/wasm-runtime': 0.2.10
+      '@napi-rs/wasm-runtime': 0.2.11
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@9.0.2':
@@ -12864,8 +12873,8 @@ snapshots:
 
   magicast@0.3.5:
     dependencies:
-      '@babel/parser': 7.27.2
-      '@babel/types': 7.27.1
+      '@babel/parser': 7.27.7
+      '@babel/types': 7.27.7
       source-map-js: 1.2.1
 
   make-dir@4.0.0:

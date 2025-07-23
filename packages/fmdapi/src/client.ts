@@ -36,7 +36,7 @@ export type ClientObjectProps = {
     /**
      * The schema for the portal data.
      */
-    portalData?: StandardSchemaV1<GenericPortalData>;
+    portalData?: Record<string, StandardSchemaV1<FieldData>>;
   };
 };
 
@@ -55,7 +55,11 @@ function DataApi<
     : Fd;
   type InferredPortalData = Opts["schema"] extends object
     ? Opts["schema"]["portalData"] extends object
-      ? StandardSchemaV1.InferOutput<Opts["schema"]["portalData"]>
+      ? {
+          [K in keyof Opts["schema"]["portalData"]]: StandardSchemaV1.InferOutput<
+            Opts["schema"]["portalData"][K]
+          >;
+        }
       : Pd
     : Pd;
 
@@ -473,19 +477,20 @@ function DataApi<
           const validatedPortalRecords: PortalsWithIds<GenericPortalData>[] =
             [];
           for (const portalRecord of portalRecords) {
-            let portalResult = schema.portalData["~standard"].validate({
-              [portalName]: portalRecord,
-            });
+            let portalResult =
+              schema.portalData[portalName]?.["~standard"].validate(
+                portalRecord,
+              );
             if (portalResult instanceof Promise)
               portalResult = await portalResult;
-            if ("value" in portalResult) {
+            if (portalResult && "value" in portalResult) {
               validatedPortalRecords.push({
-                ...portalResult.value[portalName],
+                ...portalResult.value,
                 recordId: portalRecord.recordId,
                 modId: portalRecord.modId,
               });
             } else {
-              portalDataIssues.push(...portalResult.issues);
+              portalDataIssues.push(...(portalResult?.issues ?? []));
             }
           }
           // @ts-expect-error We know portalName is a valid key, but can't figure out the right assertions

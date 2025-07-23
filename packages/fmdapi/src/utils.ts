@@ -1,4 +1,6 @@
 import type { S, L, U } from "ts-toolbelt";
+import type * as z3 from "zod/v3";
+import type * as z4 from "zod/v4/core";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TransformedFields<T extends Record<string, any>> = U.Merge<
@@ -27,3 +29,13 @@ export function removeFMTableNames<T extends Record<string, any>>(
   }
   return newObj;
 }
+
+export type InferZodPortals<T extends Record<string, any>> = {
+  [K in keyof T]: T[K] extends { _def: any; parse: (...args: any[]) => any }
+    ? ReturnType<T[K]["parse"]>
+    : T[K] extends { _def: any; safeParse: (...args: any[]) => any }
+      ? T[K] extends { parse: (...args: any[]) => any }
+        ? ReturnType<T[K]["parse"]>
+        : any
+      : never;
+};

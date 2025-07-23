@@ -35,7 +35,7 @@ export function buildLayoutClient(
   }
 
   // import the types
-  if (type === "zod/v4" || type === "zod/v3") {
+  if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
     const schemaImport = sourceFile.addImportDeclaration({
       moduleSpecifier: `../${schemaName}`,
       namedImports: [{ name: `Z${schemaName}` }],
@@ -101,7 +101,7 @@ export function buildLayoutClient(
               buildAdapter(writer, args);
               writer.write(",").newLine();
               writer.write(`layout: `).quote(layoutName).write(`,`).newLine();
-              if (type === "zod/v4" || type === "zod/v3") {
+              if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
                 writer.writeLine(
                   `schema: { fieldData: Z${schemaName}${
                     hasPortals ? `, portalData: Z${schemaName}Portals` : ""

@@ -219,6 +219,59 @@ describe("typegen", () => {
     );
 
     // Step 3: Clean up generated files
-    // await cleanupGeneratedFiles(genPath);
+    await cleanupGeneratedFiles(genPath);
+  }, 30000);
+
+  it("zod validator", async () => {
+    const config: z.infer<typeof typegenConfigSingle> = {
+      layouts: [
+        {
+          layoutName: "layout",
+          schemaName: "testLayout",
+          valueLists: "allowEmpty",
+          strictNumbers: true,
+        },
+        {
+          layoutName: "customer_fieldsMissing",
+          schemaName: "customer",
+        },
+      ],
+      path: "typegen-output/config4", // Use relative path
+      envNames: {
+        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
+        server: "DIFFERENT_FM_SERVER",
+        db: "DIFFERENT_FM_DATABASE",
+      },
+      clientSuffix: "Layout",
+      validator: "zod",
+    };
+
+    // Step 1: Generate types
+    const genPath = await generateTypes(config);
+
+    const snapshotMap = [
+      {
+        generated: path.join(genPath, "generated", "testLayout.ts"),
+        snapshot: "zod-layout-client.snap.ts",
+      },
+      {
+        generated: path.join(genPath, "testLayout.ts"),
+        snapshot: "zod-layout-overrides.snap.ts",
+      },
+      {
+        generated: path.join(genPath, "customer.ts"),
+        snapshot: "zod-layout-client-customer.snap.ts",
+      },
+    ];
+
+    for (const { generated, snapshot } of snapshotMap) {
+      const generatedContent = await fs.readFile(generated, "utf-8");
+      await expect(generatedContent).toMatchFileSnapshot(
+        path.join(__dirname, "__snapshots__", snapshot),
+      );
+    }
+
+    // Step 3: Clean up generated files
+    await cleanupGeneratedFiles(genPath);
   }, 30000);
 });

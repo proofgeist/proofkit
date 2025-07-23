@@ -17,12 +17,18 @@ importers:
       eslint:
         specifier: ^9.23.0
         version: 9.27.0(jiti@2.4.2)
+      knip:
+        specifier: ^5.56.0
+        version: 5.56.0(@types/node@22.15.32)(typescript@5.8.3)
       prettier:
         specifier: ^3.5.3
         version: 3.5.3
       turbo:
         specifier: ^2.5.4
         version: 2.5.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
       vitest:
         specifier: ^3.2.3
         version: 3.2.3(@types/debug@4.1.12)(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(msw@2.10.2(@types/node@22.15.32)(typescript@5.8.3))(yaml@2.8.0)
@@ -214,9 +220,6 @@ importers:
       '@commander-js/extra-typings':
         specifier: ^14.0.0
         version: 14.0.0(commander@14.0.0)
-      '@proofkit/fmdapi':
-        specifier: workspace:*
-        version: link:../fmdapi
       '@tanstack/vite-config':
         specifier: ^0.2.0
         version: 0.2.0(@types/node@22.15.32)(rollup@4.40.2)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.8.0))
@@ -235,9 +238,6 @@ importers:
       dotenv:
         specifier: ^16.5.0
         version: 16.5.0
-      execa:
-        specifier: ^9.5.3
-        version: 9.5.3
       fm-odata-client:
         specifier: ^3.0.1
         version: 3.0.1
@@ -9040,7 +9040,7 @@ snapshots:
 
   '@oxc-resolver/binding-wasm32-wasi@9.0.2':
     dependencies:
-      '@napi-rs/wasm-runtime': 0.2.10
+      '@napi-rs/wasm-runtime': 0.2.11
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@9.0.2':
@@ -10368,15 +10368,6 @@ snapshots:
       '@vitest/utils': 3.2.3
       chai: 5.2.0
       tinyrainbow: 2.0.0
-
-  '@vitest/mocker@3.2.3(msw@2.10.2(@types/node@22.15.32)(typescript@5.8.3))(vite@6.3.5(@types/node@22.15.32)(jiti@1.21.7)(lightningcss@1.30.1)(yaml@2.8.0))':
-    dependencies:
-      '@vitest/spy': 3.2.3
-      estree-walker: 3.0.3
-      magic-string: 0.30.17
-    optionalDependencies:
-      msw: 2.10.2(@types/node@22.15.32)(typescript@5.8.3)
-      vite: 6.3.5(@types/node@22.15.32)(jiti@1.21.7)(lightningcss@1.30.1)(yaml@2.8.0)
 
   '@vitest/mocker@3.2.3(msw@2.10.2(@types/node@22.15.32)(typescript@5.8.3))(vite@6.3.5(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.8.0))':
     dependencies:
@@ -12882,8 +12873,8 @@ snapshots:
 
   magicast@0.3.5:
     dependencies:
-      '@babel/parser': 7.27.2
-      '@babel/types': 7.27.1
+      '@babel/parser': 7.27.7
+      '@babel/types': 7.27.7
       source-map-js: 1.2.1
 
   make-dir@4.0.0:
@@ -15201,7 +15192,7 @@ snapshots:
     dependencies:
       '@types/chai': 5.2.2
       '@vitest/expect': 3.2.3
-      '@vitest/mocker': 3.2.3(msw@2.10.2(@types/node@22.15.32)(typescript@5.8.3))(vite@6.3.5(@types/node@22.15.32)(jiti@1.21.7)(lightningcss@1.30.1)(yaml@2.8.0))
+      '@vitest/mocker': 3.2.3(msw@2.10.2(@types/node@22.15.32)(typescript@5.8.3))(vite@6.3.5(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(yaml@2.8.0))
       '@vitest/pretty-format': 3.2.3
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3

@@ -254,15 +254,16 @@ export async function startDeployment({
     messages: z.array(z.object({ code: z.number(), text: z.string() })),
   });
 
-  const response = await axios.post(
-    `${url.origin}/otto/api/deployment`,
-    payload,
-    {
+  const response = await axios
+    .post(`${url.origin}/otto/api/deployment`, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    }
-  );
+    })
+    .catch((error) => {
+      console.error(error.response.data);
+      throw error;
+    });
 
   return responseSchema.parse(response.data);
 }

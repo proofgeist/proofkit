@@ -217,6 +217,12 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.27.1
         version: 7.27.1(@babel/core@7.27.7)
+      '@better-fetch/fetch':
+        specifier: 1.1.17
+        version: 1.1.17
+      '@better-fetch/logger':
+        specifier: ^1.1.18
+        version: 1.1.18
       '@commander-js/extra-typings':
         specifier: ^14.0.0
         version: 14.0.0(commander@14.0.0)
@@ -238,12 +244,12 @@ importers:
       dotenv:
         specifier: ^16.5.0
         version: 16.5.0
-      fm-odata-client:
-        specifier: ^3.0.1
-        version: 3.0.1
       fs-extra:
         specifier: ^11.3.0
         version: 11.3.0
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       prompts:
         specifier: ^2.4.2
         version: 2.4.2

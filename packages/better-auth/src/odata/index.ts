@@ -1,4 +1,6 @@
-import { BasicAuth, Connection, Database } from "fm-odata-client";
+import { createFetch } from "@better-fetch/fetch";
+import { logger } from "@better-fetch/logger";
+import { err, ok, Result } from "neverthrow";
 
 export type BasicAuthCredentials = {
   username: string;
@@ -21,25 +23,61 @@ export function isOttoAPIKeyAuth(auth: ODataAuth): auth is OttoAPIKeyAuth {
 }
 
 export type FmOdataConfig = {
-  hostname: string;
+  serverUrl: string;
   auth: ODataAuth;
   database: string;
+  logging?: true | "verbose" | "none";
 };
 
-export class FmOdata {
-  public connection: Connection;
-  public database: Database;
+export function createFmOdataFetch(
+  args: FmOdataConfig,
+): ReturnType<typeof createFetch> {
+  const result = validateUrl(args.serverUrl);
 
-  constructor(args: FmOdataConfig) {
-    if (isOttoAPIKeyAuth(args.auth)) {
-      throw new Error("Otto API key auth is yet not supported");
-    } else {
-      this.connection = new Connection(
-        args.hostname.replace(/^https?:\/\//, "").replace(/\/$/, ""),
-        new BasicAuth(args.auth.username, args.auth.password),
-      );
-    }
+  if (result.isErr()) {
+    throw new Error("Invalid server URL");
+  }
+  let baseURL = result.value.origin;
+  if ("apiKey" in args.auth) {
+    baseURL += `/otto`;
+  }
+  baseURL += `/fmi/odata/v4/${args.database}`;
 
-    this.database = new Database(this.connection, args.database);
+  return createFetch({
+    baseURL,
+    auth:
+      "apiKey" in args.auth
+        ? { type: "Bearer", token: args.auth.apiKey }
+        : {
+            type: "Basic",
+            username: args.auth.username,
+            password: args.auth.password,
+          },
+    onError: (error) => {
+      console.error(error.request.url.toString(), error.error);
+    },
+    plugins: [
+      logger({
+        verbose: args.logging === "verbose",
+        enabled: args.logging === "verbose" || !!args.logging,
+        console: {
+          fail: (...args) => console.error(...args),
+          success: (...args) => console.log(...args),
+          log: (...args) => console.log(...args),
+          error: (...args) => console.error(...args),
+          warn: (...args) => console.warn(...args),
+        },
+      }),
+    ],
+  });
+}
+
+export function validateUrl(input: string): Result<URL, unknown> {
+  try {
+    const url = new URL(input);
+    return ok(url);
+  } catch (error) {
+    console.error(error);
+    return err(error);
   }
 }

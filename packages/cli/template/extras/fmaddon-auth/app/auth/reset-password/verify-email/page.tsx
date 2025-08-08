@@ -1,8 +1,9 @@
-import { Alert, Anchor, Container, Text, Title } from "@mantine/core";
-import VerifyEmailForm from "./verify-email-form";
 import { env } from "@/config/env";
 import { validatePasswordResetSessionRequest } from "@/server/auth/utils/password-reset";
+import { Alert, Anchor, Container, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
+
+import VerifyEmailForm from "./verify-email-form";
 
 export default async function Page() {
   const { session } = await validatePasswordResetSessionRequest();

@@ -1,20 +1,21 @@
 "use server";
 
-import { actionClient } from "@/server/safe-action";
-import { signupSchema } from "./schema";
-import { checkEmailAvailability, createUser } from "@/server/auth/utils/user";
-import { verifyPasswordStrength } from "@/server/auth/utils/password";
-import {
-  createSession,
-  setSessionTokenCookie,
-} from "@/server/auth/utils/session";
-import { generateSessionToken } from "@/server/auth/utils/session";
-import { redirect } from "next/navigation";
 import {
   createEmailVerificationRequest,
   sendVerificationEmail,
   setEmailVerificationRequestCookie,
 } from "@/server/auth/utils/email-verification";
+import { verifyPasswordStrength } from "@/server/auth/utils/password";
+import {
+  createSession,
+  generateSessionToken,
+  setSessionTokenCookie,
+} from "@/server/auth/utils/session";
+import { checkEmailAvailability, createUser } from "@/server/auth/utils/user";
+import { actionClient } from "@/server/safe-action";
+import { redirect } from "next/navigation";
+
+import { signupSchema } from "./schema";
 
 export const signupAction = actionClient
   .schema(signupSchema)

@@ -75,7 +75,8 @@ export default async function SignInPage(props: {
       )}
 
       <Text size="sm" c="dimmed">
-        {"Don't have an account? "}<Link href="/auth/signup">Sign up</Link>
+        {"Don't have an account? "}
+        <Link href="/auth/signup">Sign up</Link>
       </Text>
     </Stack>
   );

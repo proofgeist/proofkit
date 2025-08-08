@@ -1,18 +1,11 @@
 ﻿{
-	"Title" : "ProofKitWV",
+  "Title": "ProofKitWV",
 
-	"Description" : "*** DESCRIPTION MISSING *** - DNL",
+  "Description": "*** DESCRIPTION MISSING *** - DNL",
 
-	"Category" : "___...___",
+  "Category": "___...___",
 
-	"Features" :
-		[
-			
-		],
+  "Features": [],
 
-	"Optimized" :
-		[
-			"Desktop", "Tablet", "Mobile"
-
-		]
+  "Optimized": ["Desktop", "Tablet", "Mobile"]
 }

@@ -1,0 +1,55 @@
+{
+  "name": "@proofkit/registry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ProofKit registry containing types and templates",
+  "type": "module",
+  "main": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js",
+      "default": "./dist/lib/index.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "default": "./dist/lib/*.js"
+    },
+    "./templates/*": "./templates/*"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsdown && tsc --emitDeclarationOnly && publint --strict",
+    "dev": "pnpm run build && chokidar ./lib/**/* ./templates/**/* -c \"tsdown && tsc --emitDeclarationOnly\" --silent",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "proofkit",
+    "registry",
+    "templates"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.8",
+    "chokidar-cli": "^3.0.0",
+    "concurrently": "^8.2.2",
+    "publint": "^0.3.12",
+    "tsdown": "^0.3.1",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "jiti": "^1.21.7",
+    "shadcn": "^2.10.0",
+    "zod": "3.25.64"
+  }
+}

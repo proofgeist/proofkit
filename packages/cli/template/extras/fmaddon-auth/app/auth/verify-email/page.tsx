@@ -1,10 +1,11 @@
+import { getUserEmailVerificationRequestFromRequest } from "@/server/auth/utils/email-verification";
+import { getRedirectCookie } from "@/server/auth/utils/redirect";
 import { getCurrentSession } from "@/server/auth/utils/session";
 import { Anchor, Container, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
+
 import EmailVerificationForm from "./email-verification-form";
 import ResendButton from "./resend-button";
-import { getUserEmailVerificationRequestFromRequest } from "@/server/auth/utils/email-verification";
-import { getRedirectCookie } from "@/server/auth/utils/redirect";
 
 export default async function Page() {
   const { user } = await getCurrentSession();
@@ -15,7 +16,8 @@ export default async function Page() {
 
   // TODO: Ideally we'd sent a new verification email automatically if the previous one is expired,
   // but we can't set cookies inside server components.
-  const verificationRequest = await getUserEmailVerificationRequestFromRequest();
+  const verificationRequest =
+    await getUserEmailVerificationRequestFromRequest();
   if (verificationRequest === null && user.emailVerified) {
     const redirectTo = await getRedirectCookie();
     return redirect(redirectTo);

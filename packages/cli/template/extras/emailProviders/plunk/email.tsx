@@ -1,5 +1,6 @@
-import { render } from "@react-email/render";
 import { AuthCodeEmail } from "@/emails/auth-code";
+import { render } from "@react-email/render";
+
 import { plunk } from "../services/plunk";
 
 export async function sendEmail({
@@ -15,12 +16,12 @@ export async function sendEmail({
   const body = await render(
     <AuthCodeEmail validationCode={code} type={type} />
   );
-  const subject = type === "verification" ? "Verify Your Email" : "Reset Your Password"
-  
+  const subject =
+    type === "verification" ? "Verify Your Email" : "Reset Your Password";
+
   await plunk.emails.send({
     to,
     subject,
     body,
   });
 }
-

@@ -37,6 +37,6 @@ if (!rootElement.innerHTML) {
   root.render(
     <MantineProvider theme={theme} forceColorScheme="light">
       <RouterProvider router={router} />
-    </MantineProvider>
+    </MantineProvider>,
   );
 }

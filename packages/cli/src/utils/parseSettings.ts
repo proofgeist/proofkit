@@ -20,6 +20,9 @@ const authSchema = z
       type: z.literal("fmaddon"),
     }),
     z.object({
+      type: z.literal("better-auth"),
+    }),
+    z.object({
       type: z.literal("none"),
     }),
   ])
@@ -56,8 +59,13 @@ const settingsSchema = z.object({
   dataSources: z.array(dataSourceSchema).default([]),
   tanstackQuery: z.boolean().catch(false),
   replacedMainPage: z.boolean().catch(false),
+  // Whether React Email scaffolding has been installed
+  reactEmail: z.boolean().catch(false),
+  // Whether provider-specific server email sender files have been installed
+  reactEmailServer: z.boolean().catch(false),
   appliedUpgrades: z.array(z.string()).default([]),
   registryUrl: z.url().optional(),
+  registryTemplates: z.array(z.string()).default([]),
 });
 
 export const defaultSettings = settingsSchema.parse({ auth: { type: "none" } });
@@ -67,6 +75,12 @@ export const getSettings = () => {
   if (settings) return settings;
 
   const settingsPath = path.join(state.projectDir, "proofkit.json");
+
+  // Check if the settings file exists before trying to read it
+  if (!fs.existsSync(settingsPath)) {
+    throw new Error(`ProofKit settings file not found at: ${settingsPath}`);
+  }
+
   const settingsFile: unknown = fs.readJSONSync(settingsPath);
 
   const parsed = settingsSchema.parse(settingsFile);

@@ -1,4 +1,5 @@
 import { Anchor, Container, Text, Title } from "@mantine/core";
+
 import ForgotForm from "./forgot-form";
 
 export default async function Page() {

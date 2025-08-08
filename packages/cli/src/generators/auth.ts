@@ -3,6 +3,7 @@ import path from "path";
 import { glob } from "glob";
 
 import { installDependencies } from "~/helpers/installDependencies.js";
+import { betterAuthInstaller } from "~/installers/better-auth.js";
 import { clerkInstaller } from "~/installers/clerk.js";
 import { proofkitAuthInstaller } from "~/installers/proofkit-auth.js";
 import { state } from "~/state.js";
@@ -19,7 +20,8 @@ export async function addAuth({
         type: "fmaddon";
         emailProvider?: "plunk" | "resend";
         apiKey?: string;
-      };
+      }
+    | { type: "better-auth" };
   projectDir?: string;
   noInstall?: boolean;
 }) {
@@ -32,6 +34,13 @@ export async function addAuth({
   ) {
     throw new Error(
       "A FileMaker data source is required to use the FM Add-on Auth"
+    );
+  } else if (
+    !settings.dataSources.some((o) => o.type === "fm") &&
+    options.type === "better-auth"
+  ) {
+    throw new Error(
+      "A FileMaker data source is required to use the Better-Auth"
     );
   }
 
@@ -78,4 +87,9 @@ async function replaceActionClientWithAuthed() {
     );
     writeFileSync(fullPath, updatedContent);
   }
+}
+
+async function addBetterAuth() {
+  await betterAuthInstaller();
+  mergeSettings({ auth: { type: "better-auth" } });
 }

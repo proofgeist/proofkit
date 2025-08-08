@@ -1,12 +1,13 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { fetchData } from "./actions";
-import { useMemo } from "react";
 import type {
-  MRT_SortingState,
   MRT_ColumnFiltersState,
+  MRT_SortingState,
 } from "mantine-react-table";
+import { useMemo } from "react";
+
+import { fetchData } from "./actions";
 
 export function useAllData({
   sorting,

@@ -1,7 +1,7 @@
 import path from "path";
+import fs from "fs-extra";
 import { type RouteLink } from "index.js";
 import { SyntaxKind } from "ts-morph";
-import fs from "fs-extra";
 
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 

@@ -1,5 +1,6 @@
 import { usersLayout } from "../db/client";
 import { Tusers as _User } from "../db/users";
+import { hashPassword, verifyPasswordHash } from "./password";
 
 export type User = Partial<
   Omit<_User, "id" | "password_hash" | "recovery_code" | "emailVerified">
@@ -8,8 +9,6 @@ export type User = Partial<
   email: string;
   emailVerified: boolean;
 };
-
-import { hashPassword, verifyPasswordHash } from "./password";
 
 /** An internal helper function to fetch a user from the database. */
 async function fetchUser(userId: string) {

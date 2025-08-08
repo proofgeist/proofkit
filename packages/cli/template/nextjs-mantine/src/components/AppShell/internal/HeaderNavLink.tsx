@@ -10,7 +10,11 @@ export default function HeaderNavLink(route: ProofKitRoute) {
   const pathname = usePathname();
 
   if (route.type === "function") {
-    return <button className={classes.link} onClick={route.onClick}>{route.label}</button>;
+    return (
+      <button className={classes.link} onClick={route.onClick}>
+        {route.label}
+      </button>
+    );
   }
 
   const isActive = route.exactMatch

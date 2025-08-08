@@ -1,15 +1,16 @@
 "use client";
 
-import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  TextInput,
   Button,
-  Stack,
   Paper,
-  Text,
   PasswordInput,
+  Stack,
+  Text,
+  TextInput,
 } from "@mantine/core";
+import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
+
 import { resetPasswordAction } from "./actions";
 import { resetPasswordSchema } from "./schema";
 

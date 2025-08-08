@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as utils from "@/registry/lib/utils";
-import { GET as registryRoute } from "@/app/registry/[[...name]]/route";
+import * as utils from "@proofkit/registry";
+import { GET as registryRoute } from "@/app/r/[[...name]]/route";
 
-vi.mock("@/registry/lib/utils", async () => {
-  const actual = await vi.importActual<typeof utils>("@/registry/lib/utils");
+vi.mock("@proofkit/registry", async () => {
+  const actual = await vi.importActual<typeof utils>("@proofkit/registry");
   return {
     ...actual,
     getRegistryIndex: vi.fn(),
@@ -26,9 +26,9 @@ describe("Registry API", () => {
       },
     ]);
 
-    const res = await registryRoute(new Request("http://localhost"), {
-      params: { name: ["index.json"] },
-    } as any);
+    const res = await registryRoute(
+      new Request("http://localhost/r/index.json"),
+    );
 
     const json = await (res as Response).json();
     expect(Array.isArray(json)).toBe(true);
@@ -40,9 +40,7 @@ describe("Registry API", () => {
       { name: "button", type: "static", categories: ["component"], files: [] },
     ]);
 
-    const res = await registryRoute(new Request("http://localhost"), {
-      params: { name: undefined },
-    } as any);
+    const res = await registryRoute(new Request("http://localhost/r"));
 
     const json = await (res as Response).json();
     expect(Array.isArray(json)).toBe(true);
@@ -61,9 +59,9 @@ describe("Registry API", () => {
       ],
     });
 
-    const res = await registryRoute(new Request("http://localhost"), {
-      params: { name: ["button.json"] },
-    } as any);
+    const res = await registryRoute(
+      new Request("http://localhost/r/button.json"),
+    );
     const json = await (res as Response).json();
     expect(json).toMatchObject({ name: "button", type: "static" });
     expect(Array.isArray(json.files)).toBe(true);
@@ -83,9 +81,7 @@ describe("Registry API", () => {
       ],
     });
 
-    const res = await registryRoute(new Request("http://localhost"), {
-      params: { name: ["button"] },
-    } as any);
+    const res = await registryRoute(new Request("http://localhost/r/button"));
     const json = await (res as Response).json();
     expect(json).toMatchObject({ name: "button", type: "static" });
   });

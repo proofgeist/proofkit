@@ -1,22 +1,21 @@
 "use server";
 
-import { getCurrentSession } from "@/server/auth/utils/session";
-import { actionClient } from "@/server/safe-action";
-import { emailVerificationSchema } from "./schema";
 import {
+  createEmailVerificationRequest,
   deleteEmailVerificationRequestCookie,
   deleteUserEmailVerificationRequest,
+  getUserEmailVerificationRequestFromRequest,
   sendVerificationEmail,
   setEmailVerificationRequestCookie,
 } from "@/server/auth/utils/email-verification";
-import {
-  createEmailVerificationRequest,
-  getUserEmailVerificationRequestFromRequest,
-} from "@/server/auth/utils/email-verification";
 import { invalidateUserPasswordResetSessions } from "@/server/auth/utils/password-reset";
-import { updateUserEmailAndSetEmailAsVerified } from "@/server/auth/utils/user";
-import { redirect } from "next/navigation";
 import { getRedirectCookie } from "@/server/auth/utils/redirect";
+import { getCurrentSession } from "@/server/auth/utils/session";
+import { updateUserEmailAndSetEmailAsVerified } from "@/server/auth/utils/user";
+import { actionClient } from "@/server/safe-action";
+import { redirect } from "next/navigation";
+
+import { emailVerificationSchema } from "./schema";
 
 export const verifyEmailAction = actionClient
   .schema(emailVerificationSchema)

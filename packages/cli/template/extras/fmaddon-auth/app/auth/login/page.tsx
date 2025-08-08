@@ -1,6 +1,7 @@
 import { getCurrentSession } from "@/server/auth/utils/session";
 import { Anchor, Container, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
+
 import LoginForm from "./login-form";
 
 export default async function Page() {

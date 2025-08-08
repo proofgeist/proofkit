@@ -1,10 +1,11 @@
 "use client";
-import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
-import { emailVerificationSchema } from "./schema";
-import { verifyEmailAction } from "./actions";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Paper, PinInput, Text } from "@mantine/core";
-import { Stack } from "@mantine/core";
+import { Button, Paper, PinInput, Stack, Text } from "@mantine/core";
+import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
+
+import { verifyEmailAction } from "./actions";
+import { emailVerificationSchema } from "./schema";
 
 export default function LoginForm() {
   const { form, handleSubmitWithAction, action } = useHookFormAction(

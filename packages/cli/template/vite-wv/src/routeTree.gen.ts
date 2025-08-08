@@ -10,85 +10,85 @@
 
 // Import Routes
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as SecondaryImport } from './routes/secondary'
-import { Route as IndexImport } from './routes/index'
+import { Route as rootRoute } from "./routes/__root";
+import { Route as SecondaryImport } from "./routes/secondary";
+import { Route as IndexImport } from "./routes/index";
 
 // Create/Update Routes
 
 const SecondaryRoute = SecondaryImport.update({
-  id: '/secondary',
-  path: '/secondary',
+  id: "/secondary",
+  path: "/secondary",
   getParentRoute: () => rootRoute,
-} as any)
+} as any);
 
 const IndexRoute = IndexImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRoute,
-} as any)
+} as any);
 
 // Populate the FileRoutesByPath interface
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/secondary': {
-      id: '/secondary'
-      path: '/secondary'
-      fullPath: '/secondary'
-      preLoaderRoute: typeof SecondaryImport
-      parentRoute: typeof rootRoute
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexImport;
+      parentRoute: typeof rootRoute;
+    };
+    "/secondary": {
+      id: "/secondary";
+      path: "/secondary";
+      fullPath: "/secondary";
+      preLoaderRoute: typeof SecondaryImport;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
 // Create and export the route tree
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/secondary': typeof SecondaryRoute
+  "/": typeof IndexRoute;
+  "/secondary": typeof SecondaryRoute;
 }
 
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/secondary': typeof SecondaryRoute
+  "/": typeof IndexRoute;
+  "/secondary": typeof SecondaryRoute;
 }
 
 export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/secondary': typeof SecondaryRoute
+  __root__: typeof rootRoute;
+  "/": typeof IndexRoute;
+  "/secondary": typeof SecondaryRoute;
 }
 
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/secondary'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/secondary'
-  id: '__root__' | '/' | '/secondary'
-  fileRoutesById: FileRoutesById
+  fileRoutesByFullPath: FileRoutesByFullPath;
+  fullPaths: "/" | "/secondary";
+  fileRoutesByTo: FileRoutesByTo;
+  to: "/" | "/secondary";
+  id: "__root__" | "/" | "/secondary";
+  fileRoutesById: FileRoutesById;
 }
 
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  SecondaryRoute: typeof SecondaryRoute
+  IndexRoute: typeof IndexRoute;
+  SecondaryRoute: typeof SecondaryRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SecondaryRoute: SecondaryRoute,
-}
+};
 
 export const routeTree = rootRoute
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
 /* ROUTE_MANIFEST_START
 {

@@ -18,7 +18,7 @@ export function showSuccessNotification(): void;
 export function showSuccessNotification(props: NotificationData): void;
 export function showSuccessNotification(message: string): void;
 export function showSuccessNotification(
-  args?: string | NotificationData
+  args?: string | NotificationData,
 ): void {
   const message = typeof args === "string" ? args : "Success!";
   const defaultProps = typeof args === "string" ? {} : (args ?? {});

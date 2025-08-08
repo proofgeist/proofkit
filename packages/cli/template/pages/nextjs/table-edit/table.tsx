@@ -1,15 +1,16 @@
 "use client";
 
 import { type __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
+import { showErrorNotification } from "@/utils/notification-helpers";
 import {
   MantineReactTable,
+  useMantineReactTable,
   type MRT_Cell,
   type MRT_ColumnDef,
-  useMantineReactTable,
 } from "mantine-react-table";
 import React from "react";
+
 import { updateRecord } from "./actions";
-import { showErrorNotification } from "@/utils/notification-helpers";
 import { idFieldName } from "./schema";
 
 type TData = __TYPE_NAME__;
@@ -39,5 +40,6 @@ export default function MyTable({ data }: { data: TData[] }) {
         handleSaveCell(cell, event.target.value);
       },
     }),
-  });  return <MantineReactTable table={table} />;
+  });
+  return <MantineReactTable table={table} />;
 }

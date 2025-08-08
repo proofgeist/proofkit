@@ -1,9 +1,10 @@
 "use client";
 
 import { Button, Menu, px, Skeleton } from "@mantine/core";
-import { useUser } from "./use-user";
-import Link from "next/link";
 import { IconChevronDown, IconLogout, IconUser } from "@tabler/icons-react";
+import Link from "next/link";
+
+import { useUser } from "./use-user";
 
 export default function UserMenu() {
   const { state, session, user, logout } = useUser();

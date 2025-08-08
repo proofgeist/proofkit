@@ -1,0 +1,64 @@
+import { getOtherProofKitDependencies } from "@proofkit/registry";
+import semver from "semver";
+
+import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
+import { getVersion } from "~/utils/getProofKitVersion.js";
+import { logger } from "~/utils/logger.js";
+import { getSettings, mergeSettings } from "~/utils/parseSettings.js";
+import { getMetaFromRegistry } from "./getOptions.js";
+import { processPostInstallStep } from "./postInstall/index.js";
+
+export async function installFromRegistry(name: string) {
+  const meta = await getMetaFromRegistry(name);
+  if (!meta) {
+    logger.error(`Template ${name} not found in the ProofKit registry`);
+    return;
+  }
+
+  if (
+    meta.minimumProofKitVersion &&
+    semver.gt(meta.minimumProofKitVersion, getVersion())
+  ) {
+    logger.error(
+      `Template ${name} requires ProofKit version ${meta.minimumProofKitVersion}, but you are using version ${getVersion()}`
+    );
+    return;
+  }
+
+  const otherProofKitDependencies = getOtherProofKitDependencies(meta);
+
+  const previouslyInstalledTemplates = getSettings().registryTemplates;
+
+  // if dynamic, figure out what fields to pass, then construct the URL to send to shadcn. Otherwise, just send the URL to shadcn
+  let url = `${getRegistryUrl()}/r/${name}`;
+  if (meta.type === "dynamic") {
+    throw new Error("Dynamic templates are not yet supported");
+  } else if (meta.type === "static") {
+    // just send the URL to shadcn
+  } else {
+    throw new Error("Unknown template type");
+  }
+
+  // run shadcn command
+  await shadcnInstall([url], meta.title);
+
+  // if post-install steps, process those
+  if (meta.postInstall) {
+    for (const step of meta.postInstall) {
+      if (step._from && previouslyInstalledTemplates.includes(step._from)) {
+        // don't re-run post-install steps for templates that have already been installed
+        continue;
+      }
+      await processPostInstallStep(step);
+    }
+  }
+
+  // update the settings
+  mergeSettings({
+    registryTemplates: [
+      ...previouslyInstalledTemplates,
+      name,
+      ...otherProofKitDependencies,
+    ],
+  });
+}

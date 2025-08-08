@@ -1,10 +1,11 @@
-import { generateRandomOTP } from "./index";
 import { encodeBase32 } from "@oslojs/encoding";
 import { cookies } from "next/headers";
-import { getCurrentSession } from "./session";
+
 import { emailVerificationLayout } from "../db/client";
 import { TemailVerification } from "../db/emailVerification";
 import { sendEmail } from "../email";
+import { generateRandomOTP } from "./index";
+import { getCurrentSession } from "./session";
 
 /**
  * An Email Verification Request is a record in the email verification table that is created when a user requests to change their email address. It's like a temporary session which can expire if the user doesn't verify the new email address within a certain amount of time.
@@ -18,7 +19,7 @@ import { sendEmail } from "../email";
  */
 export async function getUserEmailVerificationRequest(
   userId: string,
-  id: string,
+  id: string
 ): Promise<TemailVerification | null> {
   const result = await emailVerificationLayout.maybeFindFirst({
     query: { id_user: `==${userId}`, id: `==${id}` },
@@ -34,7 +35,7 @@ export async function getUserEmailVerificationRequest(
  */
 export async function createEmailVerificationRequest(
   id_user: string,
-  email: string,
+  email: string
 ): Promise<TemailVerification> {
   deleteUserEmailVerificationRequest(id_user);
   const idBytes = new Uint8Array(20);
@@ -64,7 +65,7 @@ export async function createEmailVerificationRequest(
  * @param id_user - The ID of the user.
  */
 export async function deleteUserEmailVerificationRequest(
-  id_user: string,
+  id_user: string
 ): Promise<void> {
   const result = await emailVerificationLayout.maybeFindFirst({
     query: { id_user: `==${id_user}` },
@@ -81,7 +82,7 @@ export async function deleteUserEmailVerificationRequest(
  */
 export async function sendVerificationEmail(
   email: string,
-  code: string,
+  code: string
 ): Promise<void> {
   await sendEmail({ to: email, code, type: "verification" });
 }
@@ -91,7 +92,7 @@ export async function sendVerificationEmail(
  * @param request - The email verification request.
  */
 export async function setEmailVerificationRequestCookie(
-  request: TemailVerification,
+  request: TemailVerification
 ): Promise<void> {
   (await cookies()).set("email_verification", request.id, {
     httpOnly: true,

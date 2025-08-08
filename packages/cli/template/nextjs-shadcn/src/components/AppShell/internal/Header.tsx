@@ -1,5 +1,3 @@
-import { Box, Container, Group } from "@mantine/core";
-
 import SlotHeaderCenter from "../slot-header-center";
 import SlotHeaderLeft from "../slot-header-left";
 import SlotHeaderRight from "../slot-header-right";
@@ -10,25 +8,20 @@ import HeaderMobileMenu from "./HeaderMobileMenu";
 export function Header() {
   return (
     <header className={classes.header} style={{ height: headerHeight }}>
-      <Container size="md" className={classes.inner} style={{ height: "100%" }}>
-        <Group
-          justify="space-between"
-          align="center"
-          w="100%"
-          style={{ height: "100%" }}
-        >
+      <div className={"mx-auto max-w-screen-md h-full px-4"}>
+        <div className="flex h-full w-full items-center justify-between">
           <SlotHeaderLeft />
-          <Box visibleFrom="md">
+          <div className="hidden md:block">
             <SlotHeaderCenter />
-          </Box>
-          <Box visibleFrom="md">
+          </div>
+          <div className="hidden md:block">
             <SlotHeaderRight />
-          </Box>
-          <Box hiddenFrom="md">
+          </div>
+          <div className="block md:hidden">
             <HeaderMobileMenu />
-          </Box>
-        </Group>
-      </Container>
+          </div>
+        </div>
+      </div>
     </header>
   );
 }

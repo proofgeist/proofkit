@@ -1,5 +1,4 @@
 import { primaryRoutes } from "@/app/navigation";
-import { Group } from "@mantine/core";
 
 import HeaderNavLink from "./internal/HeaderNavLink";
 
@@ -13,13 +12,11 @@ import HeaderNavLink from "./internal/HeaderNavLink";
  */
 export function SlotHeaderRight() {
   return (
-    <>
-      <Group gap={5} visibleFrom="xs">
-        {primaryRoutes.map((route) => (
-          <HeaderNavLink key={route.label} {...route} />
-        ))}
-      </Group>
-    </>
+    <div className="hidden gap-1 xs:flex">
+      {primaryRoutes.map((route) => (
+        <HeaderNavLink key={route.label} {...route} />
+      ))}
+    </div>
   );
 }
 

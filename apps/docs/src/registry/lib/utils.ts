@@ -9,7 +9,7 @@ const templatesPath = path.join(process.cwd(), "src/registry/templates");
 export type RegistryIndexItem = {
   name: string;
   type: "static";
-  categories: TemplateMetadata["categories"];
+  categories: TemplateMetadata["category"];
   // files: string[]; // destination paths
 };
 

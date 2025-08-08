@@ -5,7 +5,7 @@ export const meta: TemplateMetadata = {
   title: "Mode Toggle",
 
   description: "A toggle button to switch between light and dark mode.",
-  categories: ["component"],
+  category: "component",
 
   registryType: "registry:component",
   dependencies: ["next-themes"],

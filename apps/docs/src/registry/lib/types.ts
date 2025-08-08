@@ -45,7 +45,7 @@ export const templateMetadataSchema = z.object({
   registryType: registryTypeSchema,
   type: z.literal("static"),
   description: z.string().optional(),
-  categories: z.array(z.enum(["component", "page", "utility", "hook"])),
+  category: z.enum(["component", "page", "utility", "hook", "email"]),
   files: z.array(templateFileSchema),
   dependencies: z
     .array(z.string())

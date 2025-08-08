@@ -13,12 +13,7 @@ export const getVersion = () => {
 };
 
 export const getFmdapiVersion = () => {
-  const packageJsonPath = path.join(
-    PKG_ROOT,
-    "..",
-    "fmdapi",
-    "package.json"
-  );
+  const packageJsonPath = path.join(PKG_ROOT, "..", "fmdapi", "package.json");
   const packageJsonContent = fs.readJSONSync(packageJsonPath) as PackageJson;
   return packageJsonContent.version ?? "1.0.0";
 };
@@ -30,4 +25,15 @@ export const getNodeMajorVersion = () => {
   } catch {
     return defaultVersion;
   }
+};
+
+export const getProofkitBetterAuthVersion = () => {
+  const packageJsonPath = path.join(
+    PKG_ROOT,
+    "..",
+    "better-auth",
+    "package.json"
+  );
+  const packageJsonContent = fs.readJSONSync(packageJsonPath) as PackageJson;
+  return packageJsonContent.version ?? "latest";
 };

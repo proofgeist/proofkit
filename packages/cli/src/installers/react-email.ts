@@ -7,21 +7,36 @@ import { type PackageJson } from "type-fest";
 
 import { abortIfCancel } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";
+import { installDependencies } from "~/helpers/installDependencies.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
 import { logger } from "~/utils/logger.js";
+import { getSettings, setSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
-export async function installEmailProvider({ ...args }: { project?: Project }) {
+export async function installReactEmail({
+  ...args
+}: {
+  project?: Project;
+  noInstall?: boolean;
+  installServerFiles?: boolean;
+}) {
   const projectDir = state.projectDir;
+
+  // Exit early if already installed
+  const settings = getSettings();
+  if (settings.reactEmail) return false;
+
+  // Ensure emails directory exists
+  fs.ensureDirSync(path.join(projectDir, "src/emails"));
   addPackageDependency({
     dependencies: ["@react-email/components", "@react-email/render"],
     devMode: false,
     projectDir,
   });
   addPackageDependency({
-    dependencies: ["react-email"],
+    dependencies: ["react-email", "@react-email/preview-server"],
     devMode: true,
     projectDir,
   });
@@ -37,22 +52,49 @@ export async function installEmailProvider({ ...args }: { project?: Project }) {
 
   const project = args.project ?? getNewProject(projectDir);
 
-  const emailProvider = state.emailProvider;
+  if (args.installServerFiles) {
+    const emailProvider = state.emailProvider;
+    if (emailProvider === "plunk") {
+      await installPlunk({ project });
+    } else if (emailProvider === "resend") {
+      await installResend({ project });
+    } else {
+      await fs.copy(
+        path.join(PKG_ROOT, "template/extras/emailProviders/none/email.tsx"),
+        path.join(projectDir, "src/server/auth/email.tsx")
+      );
+    }
+  }
 
-  if (emailProvider === "plunk") {
-    await installPlunk({ project });
-  } else if (emailProvider === "resend") {
-    await installResend({ project });
-  } else {
+  // Copy base email template(s) into src/emails for preview and reuse
+  await fs.copy(
+    path.join(PKG_ROOT, "template/extras/emailTemplates/generic.tsx"),
+    path.join(projectDir, "src/emails/generic.tsx")
+  );
+  if (args.installServerFiles) {
     await fs.copy(
-      path.join(PKG_ROOT, "template/extras/emailProviders/none/email.tsx"),
-      path.join(projectDir, "src/server/auth/email.tsx")
+      path.join(PKG_ROOT, "template/extras/emailTemplates/auth-code.tsx"),
+      path.join(projectDir, "src/emails/auth-code.tsx")
     );
   }
 
   if (!args.project) {
     await formatAndSaveSourceFiles(project);
   }
+
+  // Mark as installed
+  setSettings({
+    ...settings,
+    reactEmail: true,
+    reactEmailServer:
+      Boolean(args.installServerFiles) || settings.reactEmailServer,
+  });
+
+  // Install dependencies unless explicitly skipped
+  if (!args.noInstall) {
+    await installDependencies({ projectDir });
+  }
+  return true;
 }
 
 export async function installPlunk({ project }: { project?: Project }) {

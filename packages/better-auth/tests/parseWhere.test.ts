@@ -1,6 +1,7 @@
 import { expect, test, describe } from "vitest";
 import { parseWhere } from "../src/adapter";
 import { type CleanedWhere } from "better-auth/adapters";
+import { validateUrl } from "../src/odata";
 
 describe("parseWhere", () => {
   test("should return empty string for empty where clause", () => {
@@ -77,7 +78,7 @@ describe("parseWhere", () => {
       { field: "created_at", operator: "eq", value: date, connector: "AND" },
     ];
     const result = parseWhere(where);
-    expect(result).toBe("created_at eq '2023-01-01T00:00:00.000Z'");
+    expect(result).toBe("created_at eq 2023-01-01T00:00:00.000Z");
   });
 
   test("should handle IN operator with array values", () => {
@@ -154,5 +155,99 @@ describe("parseWhere", () => {
     ];
     const result = parseWhere(where);
     expect(result).toBe(`"id" eq '123'`);
+  });
+
+  test("should handle date values, no single quotes", () => {
+    const where: CleanedWhere[] = [
+      {
+        operator: "lt",
+        connector: "AND",
+        field: "expiresAt",
+        value: new Date("2025-08-06T18:06:11.066Z"),
+      },
+    ];
+    const result = parseWhere(where);
+    expect(result).toBe("expiresAt lt 2025-08-06T18:06:11.066Z");
+  });
+
+  test("should handle date-like objects (serialized dates)", () => {
+    // Simulate what happens when a Date gets serialized/deserialized
+    const dateObj = new Date("2025-08-06T18:06:11.066Z");
+    const serializedDate = JSON.parse(JSON.stringify({ value: dateObj })).value;
+
+    const where: CleanedWhere[] = [
+      {
+        operator: "lt",
+        connector: "AND",
+        field: "expiresAt",
+        value: serializedDate,
+      },
+    ];
+
+    const result = parseWhere(where);
+    expect(result).toBe("expiresAt lt 2025-08-06T18:06:11.066Z");
+  });
+
+  test("should handle various ISO date string formats", () => {
+    const testCases = [
+      {
+        value: "2023-01-01T00:00:00.000Z",
+        expected: "field eq 2023-01-01T00:00:00.000Z",
+      },
+      {
+        value: "2023-01-01T00:00:00Z",
+        expected: "field eq 2023-01-01T00:00:00Z",
+      },
+      {
+        value: "2023-01-01T00:00:00.123Z",
+        expected: "field eq 2023-01-01T00:00:00.123Z",
+      },
+      { value: "not-a-date", expected: "field eq 'not-a-date'" }, // Regular string should get quotes
+    ];
+
+    testCases.forEach(({ value, expected }) => {
+      const where: CleanedWhere[] = [
+        { field: "field", operator: "eq", value, connector: "AND" },
+      ];
+      const result = parseWhere(where);
+      expect(result).toBe(expected);
+    });
+  });
+
+  test("should handle date-only strings (without time)", () => {
+    const testCases = [
+      { value: "2023-01-01", expected: "field eq '2023-01-01'" }, // Date-only should be treated as regular string
+      { value: "2023-12-31", expected: "field eq '2023-12-31'" },
+      { value: "2023-01-01T", expected: "field eq '2023-01-01T'" }, // Invalid format should be treated as string
+    ];
+
+    testCases.forEach(({ value, expected }) => {
+      const where: CleanedWhere[] = [
+        { field: "field", operator: "eq", value, connector: "AND" },
+      ];
+      const result = parseWhere(where);
+      expect(result).toBe(expected);
+    });
+  });
+});
+
+describe("utils: validateUrl", () => {
+  const validUrls = [
+    "https://example.com",
+    "https://example.com/path",
+    "https://example.com/path?query=value",
+    "https://example.com/path?query=value#fragment",
+    "https://acme-dev.ottomatic.cloud",
+  ];
+  test("should validate a valid URL", () => {
+    for (const url of validUrls) {
+      const result = validateUrl(url);
+      expect(result.isOk()).toBe(true);
+    }
+  });
+
+  test("should return an error for an invalid URL", () => {
+    const result = validateUrl("not-a-url");
+    expect(result.isErr()).toBe(true);
   });
 });

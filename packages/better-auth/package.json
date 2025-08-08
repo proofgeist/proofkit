@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/better-auth",
-  "version": "0.1.0",
+  "version": "0.2.3",
   "description": "FileMaker adapter for Better Auth",
   "type": "module",
   "main": "dist/esm/index.js",
@@ -64,6 +64,7 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/prompts": "^2.4.9",
+    "fm-odata-client": "^3.0.1",
     "publint": "^0.3.12",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"

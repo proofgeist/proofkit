@@ -1,3 +1,5 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - apps/*
+  - packages/*
+overrides:
+  '@proofkit/better-auth': link:../../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth

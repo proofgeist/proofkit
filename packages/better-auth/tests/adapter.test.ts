@@ -1,4 +1,4 @@
-import { describe, beforeAll } from "vitest";
+import { describe, beforeAll, it, expect } from "vitest";
 import { runAdapterTest } from "better-auth/adapters/test";
 import { FileMakerAdapter } from "../src";
 import { createFmOdataFetch } from "../src/odata";
@@ -53,33 +53,38 @@ describe("My Adapter Tests", async () => {
   });
 
   await runAdapterTest({
-    disableTests: {
-      // CREATE_MODEL: true,
-      // CREATE_MODEL_SHOULD_ALWAYS_RETURN_AN_ID: true,
-      // DELETE_MODEL: true,
-      // FIND_MODEL: true,
-      // FIND_MODEL_WITH_MODIFIED_FIELD_NAME: true,
-      // FIND_MODEL_WITH_SELECT: true,
-      // FIND_MODEL_WITHOUT_ID: true,
-      // SHOULD_DELETE_MANY: true,
-      // SHOULD_FIND_MANY_WITH_CONTAINS_OPERATOR: true,
-      // SHOULD_FIND_MANY: true,
-      // SHOULD_FIND_MANY_WITH_LIMIT: true,
-      // SHOULD_FIND_MANY_WITH_OFFSET: true,
-      // SHOULD_FIND_MANY_WITH_OPERATORS: true,
-      // SHOULD_FIND_MANY_WITH_SORT_BY: true,
-      // SHOULD_FIND_MANY_WITH_WHERE: true,
-      // SHOULD_NOT_THROW_ON_DELETE_RECORD_NOT_FOUND: true,
-      // SHOULD_NOT_THROW_ON_RECORD_NOT_FOUND: true,
-      // SHOULD_SEARCH_USERS_WITH_STARTS_WITH: true,
-      // SHOULD_SEARCH_USERS_WITH_ENDS_WITH: true,
-      // SHOULD_PREFER_GENERATE_ID_IF_PROVIDED: true,
-      // SHOULD_UPDATE_WITH_MULTIPLE_WHERE: true,
-      // SHOULD_WORK_WITH_REFERENCE_FIELDS: true,
-      // UPDATE_MODEL: true,
-    },
     getAdapter: async (betterAuthOptions = {}) => {
       return adapter(betterAuthOptions);
     },
+  });
+});
+
+it.only("should properly filter by dates", async () => {
+  // create user
+  const date = new Date("2025-01-10").toISOString();
+  await fetch(`/user`, {
+    method: "POST",
+    body: {
+      id: "filter-test",
+      createdAt: date,
+    },
+    throw: true,
+  });
+
+  const result = await fetch(`/user`, {
+    method: "GET",
+    query: {
+      $filter: `createdAt ge 2025-01-05`,
+    },
+  });
+
+  console.log(result);
+
+  expect(result.data?.value).toHaveLength(1);
+
+  // delete record
+  await fetch(`/user('filter-test')`, {
+    method: "DELETE",
+    throw: true,
   });
 });

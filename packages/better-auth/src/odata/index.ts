@@ -1,26 +1,17 @@
-import { createFetch } from "@better-fetch/fetch";
+import { createFetch, createSchema } from "@better-fetch/fetch";
 import { logger } from "@better-fetch/logger";
+import { logger as betterAuthLogger } from "better-auth";
 import { err, ok, Result } from "neverthrow";
+import { z } from "zod/v4";
 
-export type BasicAuthCredentials = {
+type BasicAuthCredentials = {
   username: string;
   password: string;
 };
-export type OttoAPIKeyAuth = {
+type OttoAPIKeyAuth = {
   apiKey: string;
 };
-export type ODataAuth = BasicAuthCredentials | OttoAPIKeyAuth;
-
-export function isBasicAuth(auth: ODataAuth): auth is BasicAuthCredentials {
-  return (
-    typeof (auth as BasicAuthCredentials).username === "string" &&
-    typeof (auth as BasicAuthCredentials).password === "string"
-  );
-}
-
-export function isOttoAPIKeyAuth(auth: ODataAuth): auth is OttoAPIKeyAuth {
-  return typeof (auth as OttoAPIKeyAuth).apiKey === "string";
-}
+type ODataAuth = BasicAuthCredentials | OttoAPIKeyAuth;
 
 export type FmOdataConfig = {
   serverUrl: string;
@@ -29,9 +20,35 @@ export type FmOdataConfig = {
   logging?: true | "verbose" | "none";
 };
 
-export function createFmOdataFetch(
-  args: FmOdataConfig,
-): ReturnType<typeof createFetch> {
+const schema = createSchema({
+  /**
+   * Create a new table
+   */
+  "@post/FileMaker_Tables": {
+    input: z.object({ tableName: z.string(), fields: z.array(z.any()) }),
+  },
+  /**
+   * Add fields to a table
+   */
+  "@patch/FileMaker_Tables/:tableName": {
+    params: z.object({ tableName: z.string() }),
+    input: z.object({ fields: z.array(z.any()) }),
+  },
+  /**
+   * Delete a table
+   */
+  "@delete/FileMaker_Tables/:tableName": {
+    params: z.object({ tableName: z.string() }),
+  },
+  /**
+   * Delete a field from a table
+   */
+  "@delete/FileMaker_Tables/:tableName/:fieldName": {
+    params: z.object({ tableName: z.string(), fieldName: z.string() }),
+  },
+});
+
+export function createFmOdataFetch(args: FmOdataConfig) {
   const result = validateUrl(args.serverUrl);
 
   if (result.isErr()) {
@@ -54,18 +71,21 @@ export function createFmOdataFetch(
             password: args.auth.password,
           },
     onError: (error) => {
-      console.error(error.request.url.toString(), error.error);
+      console.error("url", error.request.url.toString());
+      console.log(error.error);
+      console.log("error.request.body", JSON.stringify(error.request.body));
     },
+    schema,
     plugins: [
       logger({
         verbose: args.logging === "verbose",
         enabled: args.logging === "verbose" || !!args.logging,
         console: {
-          fail: (...args) => console.error(...args),
-          success: (...args) => console.log(...args),
-          log: (...args) => console.log(...args),
-          error: (...args) => console.error(...args),
-          warn: (...args) => console.warn(...args),
+          fail: (...args) => betterAuthLogger.error("better-fetch", ...args),
+          success: (...args) => betterAuthLogger.info("better-fetch", ...args),
+          log: (...args) => betterAuthLogger.info("better-fetch", ...args),
+          error: (...args) => betterAuthLogger.error("better-fetch", ...args),
+          warn: (...args) => betterAuthLogger.warn("better-fetch", ...args),
         },
       }),
     ],
@@ -77,7 +97,6 @@ export function validateUrl(input: string): Result<URL, unknown> {
     const url = new URL(input);
     return ok(url);
   } catch (error) {
-    console.error(error);
     return err(error);
   }
 }

@@ -5,6 +5,20 @@ import {
 } from "better-auth/adapters";
 import { createFmOdataFetch, type FmOdataConfig } from "./odata";
 import { prettifyError, z } from "zod/v4";
+import { logger } from "better-auth";
+
+const configSchema = z.object({
+  debugLogs: z.unknown().optional(),
+  usePlural: z.boolean().optional(),
+  odata: z.object({
+    serverUrl: z.url(),
+    auth: z.union([
+      z.object({ username: z.string(), password: z.string() }),
+      z.object({ apiKey: z.string() }),
+    ]),
+    database: z.string().endsWith(".fmp12"),
+  }),
+});
 
 interface FileMakerAdapterConfig {
   /**
@@ -25,16 +39,6 @@ interface FileMakerAdapterConfig {
 export type AdapterOptions = {
   config: FileMakerAdapterConfig;
 };
-
-const configSchema = z.object({
-  debugLogs: z.unknown().optional(),
-  usePlural: z.boolean().optional(),
-  odata: z.object({
-    serverUrl: z.string(),
-    auth: z.object({ username: z.string(), password: z.string() }),
-    database: z.string().endsWith(".fmp12"),
-  }),
-});
 
 const defaultConfig: Required<FileMakerAdapterConfig> = {
   debugLogs: false,
@@ -67,10 +71,20 @@ export function parseWhere(where?: CleanedWhere[]): string {
   // Helper to format values for OData
   function formatValue(value: any): string {
     if (value === null) return "null";
-    if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`;
     if (typeof value === "boolean") return value ? "true" : "false";
-    if (value instanceof Date) return `'${value.toISOString()}'`;
+    if (value instanceof Date) return value.toISOString();
     if (Array.isArray(value)) return `(${value.map(formatValue).join(",")})`;
+
+    // Handle strings - check if it's an ISO date string first
+    if (typeof value === "string") {
+      // Check if it's an ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ format)
+      const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+      if (isoDateRegex.test(value)) {
+        return value; // Return ISO date strings without quotes
+      }
+      return `'${value.replace(/'/g, "''")}'`; // Regular strings get quotes
+    }
+
     return value?.toString() ?? "";
   }
 
@@ -141,7 +155,7 @@ export const FileMakerAdapter = (
 
   const fetch = createFmOdataFetch({
     ...config.odata,
-    // logging: config.debugLogs ? true : "none",
+    logging: config.debugLogs ? "verbose" : "none",
   });
 
   return createAdapter({
@@ -159,6 +173,10 @@ export const FileMakerAdapter = (
       return {
         options: { config },
         create: async ({ data, model, select }) => {
+          if (model === "session") {
+            console.log("session", data);
+          }
+
           const result = await fetch(`/${model}`, {
             method: "POST",
             body: data,
@@ -172,10 +190,12 @@ export const FileMakerAdapter = (
           return result.data as any;
         },
         count: async ({ model, where }) => {
+          const filter = parseWhere(where);
+          logger.debug("$filter", filter);
           const result = await fetch(`/${model}/$count`, {
             method: "GET",
             query: {
-              $filter: parseWhere(where),
+              $filter: filter,
             },
             output: z.object({ value: z.number() }),
           });
@@ -185,10 +205,12 @@ export const FileMakerAdapter = (
           return result.data?.value ?? 0;
         },
         findOne: async ({ model, where }) => {
+          const filter = parseWhere(where);
+          logger.debug("$filter", filter);
           const result = await fetch(`/${model}`, {
             method: "GET",
             query: {
-              ...(where.length > 0 ? { $filter: parseWhere(where) } : {}),
+              ...(filter.length > 0 ? { $filter: filter } : {}),
               $top: 1,
             },
             output: z.object({ value: z.array(z.any()) }),
@@ -200,6 +222,7 @@ export const FileMakerAdapter = (
         },
         findMany: async ({ model, where, limit, offset, sortBy }) => {
           const filter = parseWhere(where);
+          logger.debug("$filter", filter);
 
           const rows = await fetch(`/${model}`, {
             method: "GET",
@@ -219,12 +242,14 @@ export const FileMakerAdapter = (
           return rows.data?.value ?? [];
         },
         delete: async ({ model, where }) => {
+          const filter = parseWhere(where);
+          logger.debug("$filter", filter);
+          console.log("delete", model, where, filter);
           const result = await fetch(`/${model}`, {
             method: "DELETE",
             query: {
-              ...(where.length > 0 ? { $filter: parseWhere(where) } : {}),
+              ...(where.length > 0 ? { $filter: filter } : {}),
               $top: 1,
-              $select: [`"id"`],
             },
           });
           if (result.error) {
@@ -232,12 +257,18 @@ export const FileMakerAdapter = (
           }
         },
         deleteMany: async ({ model, where }) => {
+          const filter = parseWhere(where);
+          logger.debug(
+            where
+              .map((o) => `typeof ${o.value} is ${typeof o.value}`)
+              .join("\n"),
+          );
+          logger.debug("$filter", filter);
+
           const result = await fetch(`/${model}/$count`, {
             method: "DELETE",
             query: {
-              ...(where.length > 0 ? { $filter: parseWhere(where) } : {}),
-              $top: 1,
-              $select: [`"id"`],
+              ...(where.length > 0 ? { $filter: filter } : {}),
             },
             output: z.coerce.number(),
           });

@@ -1,16 +1,35 @@
 import { type BetterAuthDbSchema } from "better-auth/db";
-import { Database, type Field as FmField } from "fm-odata-client";
+import { type Metadata } from "fm-odata-client";
 import chalk from "chalk";
 import z from "zod/v4";
+import { createFmOdataFetch } from "./odata";
+
+export async function getMetadata(
+  fetch: ReturnType<typeof createFmOdataFetch>,
+  databaseName: string,
+) {
+  console.log("getting metadata...");
+  const result = await fetch("/$metadata", {
+    method: "GET",
+    headers: { accept: "application/json" },
+    output: z
+      .looseObject({
+        $Version: z.string(),
+        "@ServerVersion": z.string(),
+      })
+      .or(z.null())
+      .catch(null),
+  });
+
+  return (result.data?.[databaseName] ?? null) as Metadata | null;
+}
 
 export async function planMigration(
-  db: Database,
+  fetch: ReturnType<typeof createFmOdataFetch>,
   betterAuthSchema: BetterAuthDbSchema,
+  databaseName: string,
 ): Promise<MigrationPlan> {
-  const metadata = await db.getMetadata().catch((error) => {
-    console.error("Failed to get metadata from database", error);
-    return null;
-  });
+  const metadata = await getMetadata(fetch, databaseName);
 
   // Build a map from entity set name to entity type key
   let entitySetToType: Record<string, string> = {};
@@ -40,14 +59,14 @@ export async function planMigration(
               name: fieldKey,
               type:
                 fieldValue.$Type === "Edm.String"
-                  ? "string"
+                  ? "varchar"
                   : fieldValue.$Type === "Edm.DateTimeOffset"
                     ? "timestamp"
                     : fieldValue.$Type === "Edm.Decimal" ||
                         fieldValue.$Type === "Edm.Int32" ||
                         fieldValue.$Type === "Edm.Int64"
                       ? "numeric"
-                      : "string",
+                      : "varchar",
             }));
           acc[entitySetName] = fields;
           return acc;
@@ -74,7 +93,7 @@ export async function planMigration(
             ? "numeric"
             : field.type === "date"
               ? "timestamp"
-              : "string",
+              : "varchar",
       }),
     );
 
@@ -91,7 +110,7 @@ export async function planMigration(
         fields: [
           {
             name: "id",
-            type: "string",
+            type: "varchar",
             primary: true,
             unique: true,
           },
@@ -137,16 +156,24 @@ export async function planMigration(
 }
 
 export async function executeMigration(
-  db: Database,
+  fetch: ReturnType<typeof createFmOdataFetch>,
   migrationPlan: MigrationPlan,
 ) {
   for (const step of migrationPlan) {
     if (step.operation === "create") {
       console.log("Creating table:", step.tableName);
-      await db.schemaManager().createTable(step.tableName, step.fields);
+      await fetch("@post/FileMaker_Tables", {
+        body: {
+          tableName: step.tableName,
+          fields: step.fields,
+        },
+      });
     } else if (step.operation === "update") {
       console.log("Adding fields to table:", step.tableName);
-      await db.schemaManager().addFields(step.tableName, step.fields);
+      await fetch("@post/FileMaker_Tables/:tableName", {
+        params: { tableName: step.tableName },
+        body: { fields: step.fields },
+      });
     }
   }
 }
@@ -161,7 +188,7 @@ const genericFieldSchema = z.object({
 });
 
 const stringFieldSchema = genericFieldSchema.extend({
-  type: z.literal("string"),
+  type: z.literal("varchar"),
   maxLength: z.number().optional(),
   default: z.enum(["USER", "USERNAME", "CURRENT_USER"]).optional(),
 });
@@ -199,7 +226,9 @@ const fieldSchema = z.discriminatedUnion("type", [
   containerFieldSchema,
 ]);
 
-export const migrationPlanSchema = z
+type FmField = z.infer<typeof fieldSchema>;
+
+const migrationPlanSchema = z
   .object({
     tableName: z.string(),
     operation: z.enum(["create", "update"]),

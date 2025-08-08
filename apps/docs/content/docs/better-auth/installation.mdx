@@ -1,5 +1,5 @@
 ---
-title: Installation
+title: Installation & Usage
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
@@ -27,10 +27,14 @@ import { FileMakerAdapter } from "@proofkit/better-auth";
 export const auth = betterAuth({
   database: FileMakerAdapter({
     odata: {
-      hostname: "filemaker.example.com",
+      serverUrl: process.env.FM_SERVER_URL,
       auth: {
+        // option 1: username/password credentials
         username: process.env.FM_USERNAME,
         password: process.env.FM_PASSWORD,
+
+        // option 2: Data API key (OttoFMS 4.11+, OData enabled for the key)
+        // apiKey: process.env.OTTO_API_KEY,
       },
       database: process.env.FM_DATABASE,
     },

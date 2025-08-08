@@ -14,6 +14,7 @@ import prompts from "prompts";
 import chalk from "chalk";
 import { AdapterOptions } from "../adapter";
 import { createFmOdataFetch } from "../odata";
+import "dotenv/config";
 
 async function main() {
   const program = new Command();

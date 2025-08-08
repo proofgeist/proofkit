@@ -1,7 +1,6 @@
 "use client";
 
 import { primaryRoutes } from "@/app/navigation";
-import { Menu } from "@mantine/core";
 import { useRouter } from "next/navigation";
 
 /**
@@ -19,11 +18,11 @@ export function SlotHeaderMobileMenuContent({
 }) {
   const router = useRouter();
   return (
-    <>
+    <div className="flex flex-col">
       {primaryRoutes.map((route) => (
-        <Menu.Item
+        <button
           key={route.label}
-          leftSection={route.icon}
+          className="flex items-center gap-2 rounded px-3 py-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
           onClick={() => {
             closeMenu();
             if (route.type === "function") {
@@ -33,10 +32,11 @@ export function SlotHeaderMobileMenuContent({
             }
           }}
         >
-          {route.label}
-        </Menu.Item>
+          {route.icon}
+          <span>{route.label}</span>
+        </button>
       ))}
-    </>
+    </div>
   );
 }
 

@@ -1,0 +1,14 @@
+{
+  "appType": "browser",
+  "ui": "shadcn",
+  "auth": {
+    "type": "none"
+  },
+  "envFile": ".env",
+  "dataSources": [],
+  "tanstackQuery": false,
+  "replacedMainPage": false,
+  "appliedUpgrades": [
+    "cursorRules"
+  ]
+}

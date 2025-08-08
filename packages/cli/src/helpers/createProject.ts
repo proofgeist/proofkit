@@ -34,9 +34,9 @@ export const createBareProject = async ({
     noInstall,
   });
 
-  // Add new base dependencies for Tailwind v4 and shadcn/ui
+  // Add new base dependencies for Tailwind v4 and shadcn/ui or legacy Mantine
   // These should match the plan and dependencyVersionMap
-  const BASE_DEPS = [
+  const SHADCN_BASE_DEPS = [
     "@radix-ui/react-slot",
     "@tailwindcss/postcss",
     "class-variance-authority",
@@ -46,18 +46,43 @@ export const createBareProject = async ({
     "tailwindcss",
     "tw-animate-css",
   ] as AvailableDependencies[];
-  const BASE_DEV_DEPS = [
+  const SHADCN_BASE_DEV_DEPS = [
     "prettier",
     "prettier-plugin-tailwindcss",
   ] as AvailableDependencies[];
 
+  const MANTINE_DEPS = [
+    "@mantine/core",
+    "@mantine/dates",
+    "@mantine/hooks",
+    "@mantine/modals",
+    "@mantine/notifications",
+    "mantine-react-table",
+  ] as AvailableDependencies[];
+  const MANTINE_DEV_DEPS = [
+    "postcss",
+    "postcss-preset-mantine",
+    "postcss-simple-vars",
+  ] as AvailableDependencies[];
+
+  // Transitional: until all templates/components are fully shadcn, include Mantine deps as well
   addPackageDependency({
-    dependencies: BASE_DEPS,
+    dependencies: SHADCN_BASE_DEPS,
     devMode: false,
     projectDir: state.projectDir,
   });
   addPackageDependency({
-    dependencies: BASE_DEV_DEPS,
+    dependencies: SHADCN_BASE_DEV_DEPS,
+    devMode: true,
+    projectDir: state.projectDir,
+  });
+  addPackageDependency({
+    dependencies: MANTINE_DEPS,
+    devMode: false,
+    projectDir: state.projectDir,
+  });
+  addPackageDependency({
+    dependencies: MANTINE_DEV_DEPS,
     devMode: true,
     projectDir: state.projectDir,
   });

@@ -10,6 +10,7 @@ const schema = z
       .optional()
       .catch(undefined),
     appType: z.enum(["browser", "webviewer"]).optional().catch(undefined),
+    ui: z.enum(["shadcn", "mantine"]).optional().catch(undefined),
     projectDir: z.string().default(process.cwd()),
     authType: z.enum(["clerk", "fmaddon"]).optional(),
     emailProvider: z.enum(["plunk", "resend", "none"]).optional(),

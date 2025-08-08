@@ -47,6 +47,15 @@ export const runAdd = async (name: string | undefined) => {
     })
   );
 
+  // For shadcn projects, block adding new pages or auth for now
+  if (settings.ui === "shadcn") {
+    if (addType === "page" || addType === "auth") {
+      return p.cancel(
+        "Adding new pages or auth is not yet supported for shadcn-based projects."
+      );
+    }
+  }
+
   if (addType === "auth") {
     await runAddAuthAction();
   } else if (addType === "data") {

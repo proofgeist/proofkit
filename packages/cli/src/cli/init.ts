@@ -14,6 +14,7 @@ import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
+import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
 import { buildPkgInstallerMap } from "~/installers/index.js";
 import { ensureWebViewerAddonInstalled } from "~/installers/proofkit-webviewer.js";
 import { initProgramState, state } from "~/state.js";
@@ -21,6 +22,11 @@ import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
+import {
+  getSettings,
+  setSettings,
+  type Settings,
+} from "~/utils/parseSettings.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { promptForFileMakerDataSource } from "./add/data-source/filemaker.js";
 import { abortIfCancel } from "./utils.js";
@@ -39,6 +45,8 @@ interface CliFlags {
   fmServerURL: string;
   auth: "none" | "next-auth" | "clerk";
   dataSource?: "filemaker" | "none" | "supabase";
+  /** @internal UI library selection; hidden flag */
+  ui?: "shadcn" | "mantine";
   /** @internal Used in CI. */
   CI: boolean;
   /** @internal Used in CI. */
@@ -72,6 +80,7 @@ const defaultOptions: CliFlags = {
   dataApiKey: "",
   fmServerURL: "",
   dataSource: undefined,
+  ui: "shadcn",
 };
 
 export const makeInitCommand = () => {
@@ -82,6 +91,8 @@ export const makeInitCommand = () => {
       "The name of the application, as well as the name of the directory to create"
     )
     .option("--appType [type]", "The type of app to create", undefined)
+    // hidden UI selector; default is shadcn; pass --ui mantine to opt-in legacy Mantine templates
+    .option("--ui [ui]", undefined, undefined)
     .option("--server [url]", "The URL of your FileMaker Server", undefined)
     .option(
       "--adminApiKey [key]",
@@ -166,6 +177,8 @@ type ProofKitPackageJSON = PackageJson & {
 export const runInit = async (name?: string, opts?: CliFlags) => {
   const pkgManager = getUserPkgManager();
   const cliOptions = opts ?? defaultOptions;
+  // capture ui choice early into state
+  state.ui = (cliOptions.ui ?? "shadcn") as "shadcn" | "mantine";
 
   const projectName =
     name ||
@@ -211,13 +224,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     noInstall: cliOptions.noInstall,
     appRouter: cliOptions.appRouter,
   });
-  state.projectDir = projectDir;
   setImportAlias(projectDir, "@/");
-  addPackageDependency({
-    dependencies: ["@proofkit/cli", "@types/node"],
-    devMode: true,
-    projectDir,
-  });
 
   // Write name to package.json
   const pkgJson = fs.readJSONSync(
@@ -237,6 +244,19 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   fs.writeJSONSync(path.join(projectDir, "package.json"), pkgJson, {
     spaces: 2,
   });
+
+  // Ensure proofkit.json exists with initial settings including ui
+  const initialSettings: Settings = {
+    appType: state.appType ?? "browser",
+    ui: (state.ui as "shadcn" | "mantine") ?? "shadcn",
+    auth: { type: "none" },
+    envFile: ".env",
+    dataSources: [],
+    tanstackQuery: false,
+    replacedMainPage: false,
+    appliedUpgrades: ["cursorRules"],
+  };
+  const { registryUrl } = setSettings(initialSettings);
 
   // for webviewer apps FM is required, so don't ask
   let dataSource =
@@ -285,10 +305,17 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
 
   await askForAuth({ projectDir });
 
-  if (!cliOptions.noInstall) {
-    await installDependencies({ projectDir });
-    await runCodegenCommand();
+  await installDependencies({ projectDir });
+
+  if (state.ui === "shadcn") {
+    await shadcnInstall([
+      `${getRegistryUrl()}/r/mode-toggle`,
+      "sonner",
+      "button",
+    ]);
   }
+
+  await runCodegenCommand();
 
   if (!cliOptions.noGit) {
     await initializeGit(projectDir);

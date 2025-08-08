@@ -16,6 +16,7 @@ const execWithSpinner = async (
     args?: string[];
     stdout?: StdoutStderrOption;
     onDataHandle?: (spinner: Ora) => (data: Buffer) => void;
+    loadingMessage?: string;
   }
 ) => {
   const { onDataHandle, args = ["install"], stdout = "pipe" } = options;
@@ -24,7 +25,9 @@ const execWithSpinner = async (
     args.push("--prefer-offline");
   }
 
-  const spinner = ora(`Running ${pkgManager} ${args.join(" ")} ...`).start();
+  const spinner = ora(
+    options.loadingMessage ?? `Running ${pkgManager} ${args.join(" ")} ...`
+  ).start();
   const subprocess = execa(pkgManager, args, { cwd: projectDir, stdout });
 
   await new Promise<void>((res, rej) => {
@@ -93,14 +96,20 @@ export const installDependencies = async (args?: { projectDir?: string }) => {
 
 export const runExecCommand = async ({
   command,
-  projectDir,
+  projectDir = state.projectDir,
   successMessage,
+  loadingMessage,
 }: {
   command: string[];
-  projectDir: string;
+  projectDir?: string;
   successMessage?: string;
+  loadingMessage?: string;
 }) => {
-  const spinner = await _runExecCommand({ projectDir, command });
+  const spinner = await _runExecCommand({
+    projectDir,
+    command,
+    loadingMessage,
+  });
 
   // If the spinner was used to show the progress, use succeed method on it
   // If not, use the succeed on a new spinner
@@ -116,10 +125,12 @@ export const runExecCommand = async ({
 export const _runExecCommand = async ({
   projectDir,
   command,
+  loadingMessage,
 }: {
   projectDir: string;
   exec?: boolean;
   command: string[];
+  loadingMessage?: string;
 }): Promise<Ora | null> => {
   const pkgManager = getUserPkgManager();
   switch (pkgManager) {
@@ -133,8 +144,9 @@ export const _runExecCommand = async ({
       return null;
     // When using yarn or pnpm, use the stdout stream and ora spinner to show the progress
     case "pnpm":
-      return execWithSpinner(projectDir, "pnpx", {
-        args: [...command],
+      return execWithSpinner(projectDir, "pnpm", {
+        args: ["dlx", ...command],
+        loadingMessage,
         onDataHandle: (spinner) => (data) => {
           const text = data.toString();
 
@@ -148,6 +160,7 @@ export const _runExecCommand = async ({
     case "yarn":
       return execWithSpinner(projectDir, pkgManager, {
         args: [...command],
+        loadingMessage,
         onDataHandle: (spinner) => (data) => {
           spinner.text = data.toString();
         },
@@ -157,6 +170,7 @@ export const _runExecCommand = async ({
       return execWithSpinner(projectDir, "bunx", {
         stdout: "ignore",
         args: [...command],
+        loadingMessage,
       });
   }
 };

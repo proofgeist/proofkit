@@ -20,7 +20,9 @@ export const scaffoldProject = async ({
 
   const srcDir = path.join(
     PKG_ROOT,
-    state.appType === "browser" ? "template/nextjs" : "template/vite-wv"
+    state.appType === "browser"
+      ? `template/${state.ui === "mantine" ? "nextjs-mantine" : "nextjs-shadcn"}`
+      : "template/vite-wv"
   );
 
   if (!noInstall) {

@@ -27,3 +27,8 @@ ${" ".repeat(61 - versionCharLength)}v${version}
 `;
 export const DEFAULT_APP_NAME = "my-proofkit-app";
 export const CREATE_FM_APP = cliName;
+
+export const DEFAULT_REGISTRY_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3005"
+    : "https://proofkit.dev";

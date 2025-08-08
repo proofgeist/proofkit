@@ -7,13 +7,14 @@ import {
   dependencyVersionMap,
   type AvailableDependencies,
 } from "~/installers/dependencyVersionMap.js";
+import { state } from "~/state.js";
 
 export const addPackageDependency = (opts: {
   dependencies: AvailableDependencies[];
   devMode: boolean;
-  projectDir: string;
+  projectDir?: string;
 }) => {
-  const { dependencies, devMode, projectDir } = opts;
+  const { dependencies, devMode, projectDir = state.projectDir } = opts;
 
   const pkgJson = fs.readJSONSync(
     path.join(projectDir, "package.json")

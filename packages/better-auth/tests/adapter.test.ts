@@ -59,7 +59,15 @@ describe("My Adapter Tests", async () => {
   });
 });
 
-it.only("should properly filter by dates", async () => {
+it("should properly filter by dates", async () => {
+  // delete all users
+  await fetch(`/user`, {
+    method: "DELETE",
+    query: {
+      $filter: `"id" ne '0'`,
+    },
+  });
+
   // create user
   const date = new Date("2025-01-10").toISOString();
   await fetch(`/user`, {

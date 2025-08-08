@@ -14,6 +14,11 @@ export async function runAddAuthAction() {
   if (settings.appType !== "browser") {
     return p.cancel(`Auth is not supported for your app type.`);
   }
+  if (settings.ui === "shadcn") {
+    return p.cancel(
+      "Adding auth is not yet supported for shadcn-based projects."
+    );
+  }
 
   const authType =
     state.authType ??

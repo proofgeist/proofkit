@@ -44,8 +44,12 @@ export type DataSource = z.infer<typeof dataSourceSchema>;
 
 export const appTypes = ["browser", "webviewer"] as const;
 
+export const uiTypes = ["shadcn", "mantine"] as const;
+export type Ui = (typeof uiTypes)[number];
+
 const settingsSchema = z.object({
   appType: z.enum(appTypes).default("browser"),
+  ui: z.enum(uiTypes).default("shadcn"),
   auth: authSchema,
   envFile: z.string().default(".env"),
   dataSources: z.array(dataSourceSchema).default([]),
@@ -60,11 +64,37 @@ let settings: Settings | undefined;
 export const getSettings = () => {
   if (settings) return settings;
 
-  const settingsFile: unknown = fs.readJSONSync(
-    path.join(state.projectDir, "proofkit.json")
-  );
+  const settingsPath = path.join(state.projectDir, "proofkit.json");
+  const settingsFile: unknown = fs.readJSONSync(settingsPath);
 
   const parsed = settingsSchema.parse(settingsFile);
+
+  // Persist missing ui field for older projects; auto-detect mantine if present
+  const hasUiInFile = typeof (settingsFile as Record<string, unknown>)?.ui === "string";
+  if (!hasUiInFile) {
+    try {
+      const pkgJson = fs.readJSONSync(path.join(state.projectDir, "package.json")) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      const depHas = (name: string) =>
+        Boolean(pkgJson.dependencies?.[name] || pkgJson.devDependencies?.[name]);
+      const detectedUi: Ui = depHas("@mantine/core") ? "mantine" : "shadcn";
+      const nextSettings = { ...parsed, ui: detectedUi } as Settings;
+      fs.writeJSONSync(settingsPath, nextSettings, { spaces: 2 });
+      settings = nextSettings;
+      state.appType = nextSettings.appType;
+      return settings;
+    } catch {
+      // If detection fails, just persist default
+      const nextSettings = { ...parsed } as Settings;
+      fs.writeJSONSync(settingsPath, nextSettings, { spaces: 2 });
+      settings = nextSettings;
+      state.appType = nextSettings.appType;
+      return settings;
+    }
+  }
+
   settings = parsed;
   state.appType = parsed.appType;
   return settings;

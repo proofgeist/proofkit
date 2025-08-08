@@ -24,6 +24,7 @@ import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { promptForFileMakerDataSource } from "./add/data-source/filemaker.js";
 import { abortIfCancel } from "./utils.js";
+import { setSettings, type Settings } from "~/utils/parseSettings.js";
 
 interface CliFlags {
   noGit: boolean;
@@ -39,6 +40,8 @@ interface CliFlags {
   fmServerURL: string;
   auth: "none" | "next-auth" | "clerk";
   dataSource?: "filemaker" | "none" | "supabase";
+  /** @internal UI library selection; hidden flag */
+  ui?: "shadcn" | "mantine";
   /** @internal Used in CI. */
   CI: boolean;
   /** @internal Used in CI. */
@@ -72,6 +75,7 @@ const defaultOptions: CliFlags = {
   dataApiKey: "",
   fmServerURL: "",
   dataSource: undefined,
+  ui: "shadcn",
 };
 
 export const makeInitCommand = () => {
@@ -82,6 +86,8 @@ export const makeInitCommand = () => {
       "The name of the application, as well as the name of the directory to create"
     )
     .option("--appType [type]", "The type of app to create", undefined)
+    // hidden UI selector; default is shadcn; pass --ui mantine to opt-in legacy Mantine templates
+    .option("--ui [ui]", undefined, undefined)
     .option("--server [url]", "The URL of your FileMaker Server", undefined)
     .option(
       "--adminApiKey [key]",
@@ -166,6 +172,8 @@ type ProofKitPackageJSON = PackageJson & {
 export const runInit = async (name?: string, opts?: CliFlags) => {
   const pkgManager = getUserPkgManager();
   const cliOptions = opts ?? defaultOptions;
+  // capture ui choice early into state
+  state.ui = (cliOptions.ui ?? "shadcn") as "shadcn" | "mantine";
 
   const projectName =
     name ||
@@ -237,6 +245,19 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   fs.writeJSONSync(path.join(projectDir, "package.json"), pkgJson, {
     spaces: 2,
   });
+
+  // Ensure proofkit.json exists with initial settings including ui
+  const initialSettings: Settings = {
+    appType: state.appType ?? "browser",
+    ui: (state.ui as "shadcn" | "mantine") ?? "shadcn",
+    auth: { type: "none" },
+    envFile: ".env",
+    dataSources: [],
+    tanstackQuery: false,
+    replacedMainPage: false,
+    appliedUpgrades: ["cursorRules"],
+  };
+  setSettings(initialSettings);
 
   // for webviewer apps FM is required, so don't ask
   let dataSource =

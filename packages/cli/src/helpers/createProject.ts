@@ -65,27 +65,29 @@ export const createBareProject = async ({
     "postcss-simple-vars",
   ] as AvailableDependencies[];
 
-  // Transitional: until all templates/components are fully shadcn, include Mantine deps as well
-  addPackageDependency({
-    dependencies: SHADCN_BASE_DEPS,
-    devMode: false,
-    projectDir: state.projectDir,
-  });
-  addPackageDependency({
-    dependencies: SHADCN_BASE_DEV_DEPS,
-    devMode: true,
-    projectDir: state.projectDir,
-  });
-  addPackageDependency({
-    dependencies: MANTINE_DEPS,
-    devMode: false,
-    projectDir: state.projectDir,
-  });
-  addPackageDependency({
-    dependencies: MANTINE_DEV_DEPS,
-    devMode: true,
-    projectDir: state.projectDir,
-  });
+  if (state.ui === "mantine") {
+    addPackageDependency({
+      dependencies: MANTINE_DEPS,
+      devMode: false,
+      projectDir: state.projectDir,
+    });
+    addPackageDependency({
+      dependencies: MANTINE_DEV_DEPS,
+      devMode: true,
+      projectDir: state.projectDir,
+    });
+  } else {
+    addPackageDependency({
+      dependencies: SHADCN_BASE_DEPS,
+      devMode: false,
+      projectDir: state.projectDir,
+    });
+    addPackageDependency({
+      dependencies: SHADCN_BASE_DEV_DEPS,
+      devMode: true,
+      projectDir: state.projectDir,
+    });
+  }
 
   // Install the selected packages
   installPackages({

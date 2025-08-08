@@ -1,7 +1,7 @@
-import { describe, beforeAll } from "vitest";
+import { describe, beforeAll, it, expect } from "vitest";
 import { runAdapterTest } from "better-auth/adapters/test";
 import { FileMakerAdapter } from "../src";
-import { FmOdata } from "../src/odata";
+import { createFmOdataFetch } from "../src/odata";
 
 if (!process.env.FM_SERVER) {
   throw new Error("FM_SERVER is not set");
@@ -16,23 +16,26 @@ if (!process.env.FM_PASSWORD) {
   throw new Error("FM_PASSWORD is not set");
 }
 
-const odata = new FmOdata({
-  hostname: process.env.FM_SERVER,
+const fetch = createFmOdataFetch({
+  serverUrl: process.env.FM_SERVER,
   auth: {
     username: process.env.FM_USERNAME,
     password: process.env.FM_PASSWORD,
   },
   database: process.env.FM_DATABASE,
 });
-const db = odata.database;
 
 describe("My Adapter Tests", async () => {
   beforeAll(async () => {
     // reset the database
-    await db.table("user").deleteMany(`"id" ne '0'`);
-    await db.table("session").deleteMany(`"id" ne '0'`);
-    await db.table("account").deleteMany(`"id" ne '0'`);
-    await db.table("verification").deleteMany(`"id" ne '0'`);
+    for (const table of ["user", "session", "account", "verification"]) {
+      await fetch(`/${table}`, {
+        method: "DELETE",
+        query: {
+          $filter: `"id" ne '0'`,
+        },
+      });
+    }
   });
 
   const adapter = FileMakerAdapter({
@@ -45,7 +48,7 @@ describe("My Adapter Tests", async () => {
         password: process.env.FM_PASSWORD!,
       },
       database: process.env.FM_DATABASE!,
-      hostname: process.env.FM_SERVER!,
+      serverUrl: process.env.FM_SERVER!,
     },
   });
 
@@ -53,5 +56,35 @@ describe("My Adapter Tests", async () => {
     getAdapter: async (betterAuthOptions = {}) => {
       return adapter(betterAuthOptions);
     },
+  });
+});
+
+it.only("should properly filter by dates", async () => {
+  // create user
+  const date = new Date("2025-01-10").toISOString();
+  await fetch(`/user`, {
+    method: "POST",
+    body: {
+      id: "filter-test",
+      createdAt: date,
+    },
+    throw: true,
+  });
+
+  const result = await fetch(`/user`, {
+    method: "GET",
+    query: {
+      $filter: `createdAt ge 2025-01-05`,
+    },
+  });
+
+  console.log(result);
+
+  expect(result.data?.value).toHaveLength(1);
+
+  // delete record
+  await fetch(`/user('filter-test')`, {
+    method: "DELETE",
+    throw: true,
   });
 });

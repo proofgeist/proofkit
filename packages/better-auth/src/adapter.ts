@@ -3,8 +3,22 @@ import {
   createAdapter,
   type AdapterDebugLogs,
 } from "better-auth/adapters";
-import { FmOdata, type FmOdataConfig } from "./odata";
+import { createFmOdataFetch, type FmOdataConfig } from "./odata";
 import { prettifyError, z } from "zod/v4";
+import { logger } from "better-auth";
+
+const configSchema = z.object({
+  debugLogs: z.unknown().optional(),
+  usePlural: z.boolean().optional(),
+  odata: z.object({
+    serverUrl: z.url(),
+    auth: z.union([
+      z.object({ username: z.string(), password: z.string() }),
+      z.object({ apiKey: z.string() }),
+    ]),
+    database: z.string().endsWith(".fmp12"),
+  }),
+});
 
 interface FileMakerAdapterConfig {
   /**
@@ -26,21 +40,11 @@ export type AdapterOptions = {
   config: FileMakerAdapterConfig;
 };
 
-const configSchema = z.object({
-  debugLogs: z.unknown().optional(),
-  usePlural: z.boolean().optional(),
-  odata: z.object({
-    hostname: z.string(),
-    auth: z.object({ username: z.string(), password: z.string() }),
-    database: z.string().endsWith(".fmp12"),
-  }),
-});
-
 const defaultConfig: Required<FileMakerAdapterConfig> = {
   debugLogs: false,
   usePlural: false,
   odata: {
-    hostname: "",
+    serverUrl: "",
     auth: { username: "", password: "" },
     database: "",
   },
@@ -67,11 +71,21 @@ export function parseWhere(where?: CleanedWhere[]): string {
   // Helper to format values for OData
   function formatValue(value: any): string {
     if (value === null) return "null";
-    if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`;
     if (typeof value === "boolean") return value ? "true" : "false";
-    if (value instanceof Date) return `'${value.toISOString()}'`;
+    if (value instanceof Date) return value.toISOString();
     if (Array.isArray(value)) return `(${value.map(formatValue).join(",")})`;
-    return value.toString();
+
+    // Handle strings - check if it's an ISO date string first
+    if (typeof value === "string") {
+      // Check if it's an ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ format)
+      const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+      if (isoDateRegex.test(value)) {
+        return value; // Return ISO date strings without quotes
+      }
+      return `'${value.replace(/'/g, "''")}'`; // Regular strings get quotes
+    }
+
+    return value?.toString() ?? "";
   }
 
   // Map our operators to OData
@@ -139,9 +153,10 @@ export const FileMakerAdapter = (
   }
   const config = parsed.data;
 
-  const odata =
-    config.odata instanceof FmOdata ? config.odata : new FmOdata(config.odata);
-  const db = odata.database;
+  const fetch = createFmOdataFetch({
+    ...config.odata,
+    logging: config.debugLogs ? "verbose" : "none",
+  });
 
   return createAdapter({
     config: {
@@ -158,62 +173,133 @@ export const FileMakerAdapter = (
       return {
         options: { config },
         create: async ({ data, model, select }) => {
-          const row = await db.table(model).create(data);
-          return row as unknown as typeof data;
+          if (model === "session") {
+            console.log("session", data);
+          }
+
+          const result = await fetch(`/${model}`, {
+            method: "POST",
+            body: data,
+            output: z.looseObject({ id: z.string() }),
+          });
+
+          if (result.error) {
+            throw new Error("Failed to create record");
+          }
+
+          return result.data as any;
         },
         count: async ({ model, where }) => {
-          const count = await db.table(model).count(parseWhere(where));
-          return count;
+          const filter = parseWhere(where);
+          logger.debug("$filter", filter);
+          const result = await fetch(`/${model}/$count`, {
+            method: "GET",
+            query: {
+              $filter: filter,
+            },
+            output: z.object({ value: z.number() }),
+          });
+          if (!result.data) {
+            throw new Error("Failed to count records");
+          }
+          return result.data?.value ?? 0;
         },
         findOne: async ({ model, where }) => {
-          const row = await db.table(model).query({
-            filter: parseWhere(where),
-            top: 1,
+          const filter = parseWhere(where);
+          logger.debug("$filter", filter);
+          const result = await fetch(`/${model}`, {
+            method: "GET",
+            query: {
+              ...(filter.length > 0 ? { $filter: filter } : {}),
+              $top: 1,
+            },
+            output: z.object({ value: z.array(z.any()) }),
           });
-          return (row[0] as any) ?? null;
+          if (result.error) {
+            throw new Error("Failed to find record");
+          }
+          return result.data?.value?.[0] ?? null;
         },
         findMany: async ({ model, where, limit, offset, sortBy }) => {
           const filter = parseWhere(where);
+          logger.debug("$filter", filter);
 
-          const rows = await db.table(model).query({
-            filter,
-            top: limit,
-            skip: offset,
-            orderBy: sortBy,
+          const rows = await fetch(`/${model}`, {
+            method: "GET",
+            query: {
+              ...(filter.length > 0 ? { $filter: filter } : {}),
+              $top: limit,
+              $skip: offset,
+              ...(sortBy
+                ? { $orderby: `"${sortBy.field}" ${sortBy.direction ?? "asc"}` }
+                : {}),
+            },
+            output: z.object({ value: z.array(z.any()) }),
           });
-          return rows.map((row) => row as any);
+          if (rows.error) {
+            throw new Error("Failed to find records");
+          }
+          return rows.data?.value ?? [];
         },
         delete: async ({ model, where }) => {
-          const rows = await db.table(model).query({
-            filter: parseWhere(where),
-            top: 1,
-            select: [`"id"`],
+          const filter = parseWhere(where);
+          logger.debug("$filter", filter);
+          console.log("delete", model, where, filter);
+          const result = await fetch(`/${model}`, {
+            method: "DELETE",
+            query: {
+              ...(where.length > 0 ? { $filter: filter } : {}),
+              $top: 1,
+            },
           });
-          const row = rows[0] as { id: string } | undefined;
-          if (!row) return;
-          await db.table(model).delete(row.id);
+          if (result.error) {
+            throw new Error("Failed to delete record");
+          }
         },
         deleteMany: async ({ model, where }) => {
           const filter = parseWhere(where);
-          const count = await db.table(model).count(filter);
-          await db.table(model).deleteMany(filter);
-          return count;
+          logger.debug(
+            where
+              .map((o) => `typeof ${o.value} is ${typeof o.value}`)
+              .join("\n"),
+          );
+          logger.debug("$filter", filter);
+
+          const result = await fetch(`/${model}/$count`, {
+            method: "DELETE",
+            query: {
+              ...(where.length > 0 ? { $filter: filter } : {}),
+            },
+            output: z.coerce.number(),
+          });
+          if (result.error) {
+            throw new Error("Failed to delete record");
+          }
+          return result.data ?? 0;
         },
         update: async ({ model, where, update }) => {
-          const rows = await db.table(model).query({
-            filter: parseWhere(where),
-            top: 1,
-            select: [`"id"`],
+          const result = await fetch(`/${model}`, {
+            method: "PATCH",
+            query: {
+              ...(where.length > 0 ? { $filter: parseWhere(where) } : {}),
+              $top: 1,
+              $select: [`"id"`],
+            },
+            body: update,
+            output: z.object({ value: z.array(z.any()) }),
           });
-          const row = rows[0] as { id: string } | undefined;
-          if (!row) return null;
-          const result = await db.table(model).update(row["id"], update as any);
-          return result as any;
+          return result.data?.value?.[0] ?? null;
         },
         updateMany: async ({ model, where, update }) => {
           const filter = parseWhere(where);
-          const rows = await db.table(model).updateMany(filter, update as any);
-          return rows.length;
+          const result = await fetch(`/${model}`, {
+            method: "PATCH",
+            query: {
+              ...(where.length > 0 ? { $filter: filter } : {}),
+            },
+            body: update,
+          });
+          return result.data as any;
         },
       };
     },

@@ -1,45 +1,102 @@
-import { BasicAuth, Connection, Database } from "fm-odata-client";
+import { createFetch, createSchema } from "@better-fetch/fetch";
+import { logger } from "@better-fetch/logger";
+import { logger as betterAuthLogger } from "better-auth";
+import { err, ok, Result } from "neverthrow";
+import { z } from "zod/v4";
 
-export type BasicAuthCredentials = {
+type BasicAuthCredentials = {
   username: string;
   password: string;
 };
-export type OttoAPIKeyAuth = {
+type OttoAPIKeyAuth = {
   apiKey: string;
 };
-export type ODataAuth = BasicAuthCredentials | OttoAPIKeyAuth;
-
-export function isBasicAuth(auth: ODataAuth): auth is BasicAuthCredentials {
-  return (
-    typeof (auth as BasicAuthCredentials).username === "string" &&
-    typeof (auth as BasicAuthCredentials).password === "string"
-  );
-}
-
-export function isOttoAPIKeyAuth(auth: ODataAuth): auth is OttoAPIKeyAuth {
-  return typeof (auth as OttoAPIKeyAuth).apiKey === "string";
-}
+type ODataAuth = BasicAuthCredentials | OttoAPIKeyAuth;
 
 export type FmOdataConfig = {
-  hostname: string;
+  serverUrl: string;
   auth: ODataAuth;
   database: string;
+  logging?: true | "verbose" | "none";
 };
 
-export class FmOdata {
-  public connection: Connection;
-  public database: Database;
+const schema = createSchema({
+  /**
+   * Create a new table
+   */
+  "@post/FileMaker_Tables": {
+    input: z.object({ tableName: z.string(), fields: z.array(z.any()) }),
+  },
+  /**
+   * Add fields to a table
+   */
+  "@patch/FileMaker_Tables/:tableName": {
+    params: z.object({ tableName: z.string() }),
+    input: z.object({ fields: z.array(z.any()) }),
+  },
+  /**
+   * Delete a table
+   */
+  "@delete/FileMaker_Tables/:tableName": {
+    params: z.object({ tableName: z.string() }),
+  },
+  /**
+   * Delete a field from a table
+   */
+  "@delete/FileMaker_Tables/:tableName/:fieldName": {
+    params: z.object({ tableName: z.string(), fieldName: z.string() }),
+  },
+});
 
-  constructor(args: FmOdataConfig) {
-    if (isOttoAPIKeyAuth(args.auth)) {
-      throw new Error("Otto API key auth is yet not supported");
-    } else {
-      this.connection = new Connection(
-        args.hostname.replace(/^https?:\/\//, "").replace(/\/$/, ""),
-        new BasicAuth(args.auth.username, args.auth.password),
-      );
-    }
+export function createFmOdataFetch(args: FmOdataConfig) {
+  const result = validateUrl(args.serverUrl);
 
-    this.database = new Database(this.connection, args.database);
+  if (result.isErr()) {
+    throw new Error("Invalid server URL");
+  }
+  let baseURL = result.value.origin;
+  if ("apiKey" in args.auth) {
+    baseURL += `/otto`;
+  }
+  baseURL += `/fmi/odata/v4/${args.database}`;
+
+  return createFetch({
+    baseURL,
+    auth:
+      "apiKey" in args.auth
+        ? { type: "Bearer", token: args.auth.apiKey }
+        : {
+            type: "Basic",
+            username: args.auth.username,
+            password: args.auth.password,
+          },
+    onError: (error) => {
+      console.error("url", error.request.url.toString());
+      console.log(error.error);
+      console.log("error.request.body", JSON.stringify(error.request.body));
+    },
+    schema,
+    plugins: [
+      logger({
+        verbose: args.logging === "verbose",
+        enabled: args.logging === "verbose" || !!args.logging,
+        console: {
+          fail: (...args) => betterAuthLogger.error("better-fetch", ...args),
+          success: (...args) => betterAuthLogger.info("better-fetch", ...args),
+          log: (...args) => betterAuthLogger.info("better-fetch", ...args),
+          error: (...args) => betterAuthLogger.error("better-fetch", ...args),
+          warn: (...args) => betterAuthLogger.warn("better-fetch", ...args),
+        },
+      }),
+    ],
+  });
+}
+
+export function validateUrl(input: string): Result<URL, unknown> {
+  try {
+    const url = new URL(input);
+    return ok(url);
+  } catch (error) {
+    return err(error);
   }
 }

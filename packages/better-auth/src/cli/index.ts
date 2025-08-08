@@ -10,11 +10,10 @@ import {
 import { getAdapter, getAuthTables } from "better-auth/db";
 import { getConfig } from "../better-auth-cli/utils/get-config";
 import { logger } from "better-auth";
-import { BasicAuth, Connection, Database } from "fm-odata-client";
 import prompts from "prompts";
 import chalk from "chalk";
 import { AdapterOptions } from "../adapter";
-import { FmOdata } from "../odata";
+import { createFmOdataFetch } from "../odata";
 
 async function main() {
   const program = new Command();
@@ -64,7 +63,7 @@ async function main() {
       const betterAuthSchema = getAuthTables(config);
 
       const adapterConfig = (adapter.options as AdapterOptions).config;
-      const db = new FmOdata({
+      const fetch = createFmOdataFetch({
         ...adapterConfig.odata,
         auth:
           // If the username and password are provided in the CLI, use them to authenticate instead of what's in the config file.
@@ -74,9 +73,13 @@ async function main() {
                 password: options.password,
               }
             : adapterConfig.odata.auth,
-      }).database;
+      });
 
-      const migrationPlan = await planMigration(db, betterAuthSchema);
+      const migrationPlan = await planMigration(
+        fetch,
+        betterAuthSchema,
+        adapterConfig.odata.database,
+      );
 
       if (migrationPlan.length === 0) {
         logger.info("No changes to apply. Database is up to date.");
@@ -105,7 +108,7 @@ async function main() {
         }
       }
 
-      await executeMigration(db, migrationPlan);
+      await executeMigration(fetch, migrationPlan);
 
       logger.info("Migration applied successfully.");
     });

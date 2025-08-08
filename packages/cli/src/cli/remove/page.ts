@@ -18,9 +18,12 @@ import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 const getExistingRoutes = (
   project: Project
 ): { label: string; href: string }[] => {
-  const sourceFile = project.addSourceFileAtPath(
-    path.join(state.projectDir, "src/app/navigation.tsx")
-  );
+  const navFilePath = path.join(state.projectDir, "src/app/navigation.tsx");
+
+  // If navigation file doesn't exist (e.g., webviewer apps), there are no nav routes to remove
+  if (!fs.existsSync(navFilePath)) return [];
+
+  const sourceFile = project.addSourceFileAtPath(navFilePath);
 
   const routes: { label: string; href: string }[] = [];
 
@@ -88,9 +91,12 @@ const getExistingRoutes = (
 };
 
 const removeRouteFromNav = async (project: Project, routeToRemove: string) => {
-  const sourceFile = project.addSourceFileAtPath(
-    path.join(state.projectDir, "src/app/navigation.tsx")
-  );
+  const navFilePath = path.join(state.projectDir, "src/app/navigation.tsx");
+
+  // Skip if there is no navigation file
+  if (!fs.existsSync(navFilePath)) return;
+
+  const sourceFile = project.addSourceFileAtPath(navFilePath);
 
   // Remove from primary routes
   const primaryRoutes = sourceFile
@@ -190,7 +196,7 @@ export const runRemovePageAction = async (routeName?: string) => {
       return p.cancel(`Page at ${routeName} does not exist`);
     }
 
-    // Remove from navigation first
+    // Remove from navigation first (if present)
     await removeRouteFromNav(project, routeName);
 
     // Remove the page directory

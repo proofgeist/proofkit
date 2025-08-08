@@ -1,6 +1,7 @@
 import path from "path";
 import { type RouteLink } from "index.js";
 import { SyntaxKind } from "ts-morph";
+import fs from "fs-extra";
 
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
@@ -12,10 +13,13 @@ export async function addRouteToNav({
   projectDir: string;
   navType: "primary" | "secondary";
 }) {
+  const navFilePath = path.join(projectDir, "src/app/navigation.tsx");
+
+  // If the navigation file doesn't exist (e.g., WebViewer apps), skip adding to nav
+  if (!fs.existsSync(navFilePath)) return;
+
   const project = getNewProject(projectDir);
-  const sourceFile = project.addSourceFileAtPath(
-    path.join(projectDir, "src/app/navigation.tsx")
-  );
+  const sourceFile = project.addSourceFileAtPath(navFilePath);
   sourceFile
     .getVariableDeclaration(
       navType === "primary" ? "primaryRoutes" : "secondaryRoutes"

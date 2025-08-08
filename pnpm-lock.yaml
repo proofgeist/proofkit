@@ -10,10 +10,6 @@ overrides:
 importers:
 
   .:
-    dependencies:
-      '@proofkit/better-auth':
-        specifier: link:../../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth
-        version: link:../../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.3
@@ -46,8 +42,8 @@ importers:
         specifier: ^1.2.10
         version: 1.2.10(@libsql/client@0.6.2)(@planetscale/database@1.19.0)(@types/react@19.1.8)(kysely@0.28.2)(magicast@0.3.5)(mysql2@3.14.1)(postgres@3.4.5)(react@19.1.0)
       '@proofkit/better-auth':
-        specifier: link:../../../../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth
-        version: link:../../../../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth
+        specifier: link:../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth
+        version: link:../../../Library/pnpm/global/5/node_modules/@proofkit/better-auth
       '@proofkit/fmdapi':
         specifier: workspace:*
         version: link:../../packages/fmdapi

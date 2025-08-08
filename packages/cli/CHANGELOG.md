@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 1.1.7
+
+### Patch Changes
+
+- 00177bf: Guard page add/remove against missing `src/app/navigation.tsx` so WebViewer apps don’t error when updating navigation. This safely no-ops when the navigation file isn’t present.
+
 ## 1.1.5
 
 ### Patch Changes

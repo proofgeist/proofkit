@@ -45,6 +45,7 @@ export const createBareProject = async ({
     "tailwind-merge",
     "tailwindcss",
     "tw-animate-css",
+    "next-themes",
   ] as AvailableDependencies[];
   const SHADCN_BASE_DEV_DEPS = [
     "prettier",

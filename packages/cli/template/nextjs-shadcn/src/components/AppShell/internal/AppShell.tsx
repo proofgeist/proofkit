@@ -8,8 +8,11 @@ export default function MainAppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh">
-      <header style={{ height: headerHeight }}>
+    <div
+      className="min-h-dvh"
+      style={{ ["--header-height" as any]: `${headerHeight}px` }}
+    >
+      <header style={{ height: "var(--header-height)" }}>
         <Header />
       </header>
       <main className="min-h-[calc(100dvh-var(--header-height,56px))]">

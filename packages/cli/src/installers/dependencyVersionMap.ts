@@ -88,5 +88,16 @@ export const dependencyVersionMap = {
 
   // Icons (for shadcn/ui)
   "lucide-react": "^0.518.0",
+
+  // Mantine UI
+  "@mantine/core": "^7.15.0",
+  "@mantine/dates": "^7.15.0",
+  "@mantine/hooks": "^7.15.0",
+  "@mantine/modals": "^7.15.0",
+  "@mantine/notifications": "^7.15.0",
+  "mantine-react-table": "^2.0.0",
+
+  // Theme utilities
+  "next-themes": "^0.4.6",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

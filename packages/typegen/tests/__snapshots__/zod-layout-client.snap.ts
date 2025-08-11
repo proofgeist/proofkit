@@ -35,3 +35,5 @@ export const ZtestLayoutPortals = {
 };
 
 export type TtestLayoutPortals = InferZodPortals<typeof ZtestLayoutPortals>;
+
+export const layoutName = "layout";

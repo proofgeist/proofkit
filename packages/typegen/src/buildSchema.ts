@@ -135,6 +135,20 @@ export function buildSchema(
       });
     }
   }
+
+  // Export the layout name so it can be imported even when generateClient is false
+  schemaFile.addVariableStatement({
+    isExported: true,
+    declarationKind: VariableDeclarationKind.Const,
+    declarations: [
+      {
+        name: "layoutName",
+        initializer: (writer) => {
+          writer.quote(args.layoutName);
+        },
+      },
+    ],
+  });
 }
 
 function buildTypeTS(

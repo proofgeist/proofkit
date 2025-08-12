@@ -319,7 +319,6 @@ describe("other methods", () => {
     const resp = await client.executeScript({
       script: "script",
       scriptParam: param,
-      layout: client.layout,
     });
 
     expect(resp.scriptResult).toBe("result");

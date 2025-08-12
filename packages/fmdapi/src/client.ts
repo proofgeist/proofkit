@@ -1,4 +1,4 @@
-import type { Adapter } from "./adapters/core.js";
+import type { Adapter, ExecuteScriptOptions } from "./adapters/core.js";
 import type {
   CreateParams,
   CreateResponse,
@@ -80,6 +80,7 @@ function DataApi<
     update,
     layoutMetadata,
     containerUpload,
+    executeScript,
     ...otherMethods
   } = options.adapter;
 
@@ -125,6 +126,8 @@ function DataApi<
     query: Query<T> | Array<Query<T>>;
     timeout?: number;
   };
+
+  type ExecuteScriptArgs = Omit<ExecuteScriptOptions, "layout">;
 
   /**
    * List all records from a given layout, no find criteria applied.
@@ -516,6 +519,13 @@ function DataApi<
     return result;
   }
 
+  async function _executeScript(args: ExecuteScriptArgs & FetchOptions) {
+    return await executeScript({
+      ...args,
+      layout,
+    });
+  }
+
   return {
     ...otherMethods,
     layout: options.layout as Opts["layout"],
@@ -532,6 +542,7 @@ function DataApi<
     findAll,
     layoutMetadata: _layoutMetadata,
     containerUpload: _containerUpload,
+    executeScript: _executeScript,
   };
 }
 

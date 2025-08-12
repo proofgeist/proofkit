@@ -11,6 +11,8 @@ import type {
   Query,
   UpdateParams,
   UpdateResponse,
+  ScriptParams,
+  ScriptResponse,
 } from "../client-types.js";
 
 export type BaseRequest = {
@@ -44,7 +46,10 @@ export type ContainerUploadOptions = BaseRequest & {
     modId?: number;
   };
 };
-
+export type ExecuteScriptOptions = BaseRequest & {
+  script: string;
+  scriptParam?: string;
+};
 export type LayoutMetadataOptions = BaseRequest;
 
 export interface Adapter {
@@ -59,4 +64,6 @@ export interface Adapter {
   layoutMetadata: (
     opts: LayoutMetadataOptions,
   ) => Promise<LayoutMetadataResponse>;
+
+  executeScript: (opts: ExecuteScriptOptions) => Promise<ScriptResponse>;
 }

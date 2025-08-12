@@ -17,6 +17,7 @@ import type {
   ContainerUploadOptions,
   CreateOptions,
   DeleteOptions,
+  ExecuteScriptOptions,
   FindOptions,
   GetOptions,
   LayoutMetadataOptions,
@@ -27,11 +28,6 @@ import type {
   BaseFetchAdapterOptions,
   GetTokenArguments,
 } from "./fetch-base-types.js";
-
-export type ExecuteScriptOptions = BaseRequest & {
-  script: string;
-  scriptParam?: string;
-};
 
 export class BaseFetchAdapter implements Adapter {
   protected server: string;

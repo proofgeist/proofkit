@@ -20,3 +20,5 @@ export const CustomersLayout = DataApi({
     }),
   },
 });
+
+export type TCustomer = z.infer<typeof CustomersLayout.schema.fieldData>;

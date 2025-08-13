@@ -18,7 +18,8 @@ export default async function Page(props: {
 
   const MDXContent = page.data.body;
 
-  console.log(page.file.path);
+  // Build the repository path to the MDX file
+  const githubFilePath = `apps/docs/content/docs/${page.file.path}`;
 
   return (
     <DocsPage
@@ -27,7 +28,8 @@ export default async function Page(props: {
       editOnGithub={{
         owner: "proofgeist",
         repo: "proofkit",
-        path: page.file.path,
+        branch: "main",
+        path: githubFilePath,
       }}
     >
       <DocsTitle>{page.data.title}</DocsTitle>

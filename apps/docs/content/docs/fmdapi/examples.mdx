@@ -57,7 +57,7 @@ import { CustomersLayout } from "./CustomersLayout";
 // ---cut---
 export async function getCustomersByCityOrStatus(city: string, status: string) {
   const records = await CustomersLayout.findAll({
-    query: [{ city: "New York" }, { status: "Active" }]
+    query: [{ city }, { status }]
   });
   
   return records;
@@ -166,9 +166,6 @@ export async function updateCustomerInfo(myPrimaryKey: string, updates: {
   if (updates.lastName) fieldData.lastName = updates.lastName;
   if (updates.phone) fieldData.phone = updates.phone;
   if (updates.city) fieldData.city = updates.city;
-  
-  // Always update the modified date
-  fieldData.updated_date = new Date().toISOString().split('T')[0];
   
   const response = await CustomersLayout.update({ fieldData, recordId });
   return response.modId;

@@ -41,14 +41,13 @@ export default defineConfig({
           ];
 
           let customersLayoutSource = "";
-          let selectedPath = "";
           for (const candidate of tryPaths) {
-            if (fs.existsSync(candidate)) {
-              selectedPath = candidate;
-              try {
-                customersLayoutSource = fs.readFileSync(candidate, "utf8");
-              } catch {}
-              break;
+            if (!fs.existsSync(candidate)) continue;
+            try {
+              customersLayoutSource = fs.readFileSync(candidate, "utf8");
+              break; // only break after a successful read
+            } catch {
+              // try next candidate
             }
           }
 

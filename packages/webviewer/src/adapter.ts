@@ -11,7 +11,7 @@ import {
   ListOptions,
   UpdateOptions,
 } from "@proofkit/fmdapi/dist/esm/adapters/core.js";
-import { fmFetch } from "./main.js";
+import { fmFetch, callFMScript } from "./main.js";
 
 export type ExecuteScriptOptions = BaseRequest & {
   data: { script: string; scriptParam?: string };
@@ -138,6 +138,12 @@ export class WebViewerAdapter implements Adapter {
       layout: opts.layout,
       body: {},
     })) as clientTypes.LayoutMetadataResponse;
+  };
+
+  public executeScript = async (): Promise<never> => {
+    throw new Error(
+      "the `executeScript` method is not supported in the webviewer adapter. Use the `fmFetch` or `callFMScript` functions from @proofkit/webviewer instead.",
+    );
   };
 
   public containerUpload = async (): Promise<never> => {

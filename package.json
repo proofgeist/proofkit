@@ -10,7 +10,7 @@
     "version-packages": "changeset version",
     "sherif": "pnpm dlx sherif@latest",
     "sherif:fix": "pnpm sherif --fix",
-    "release": "pnpm build --filter='./packages/...' && changeset publish",
+    "release": "pnpm build --filter={./packages/*} && changeset publish",
     "test": "vitest",
     "knip": "knip"
   },

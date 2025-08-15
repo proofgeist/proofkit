@@ -1,5 +1,13 @@
 # @proofkit/typegen
 
+## 1.0.10
+
+### Patch Changes
+
+- 7c602a9: Export layoutName from generated schema files so consumers can import the layout name when generateClient is false. This avoids hard-coding layout strings elsewhere. No changes to generated clients.
+- Updated dependencies [a29ca94]
+  - @proofkit/fmdapi@5.0.2
+
 ## 1.0.9
 
 ### Patch Changes

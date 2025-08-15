@@ -1,5 +1,11 @@
 # @proofkit/fmdapi
 
+## 5.0.2
+
+### Patch Changes
+
+- a29ca94: Update executeScript method to infer layout name from client
+
 ## 5.0.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @proofkit/webviewer
 
+## 3.0.6
+
+### Patch Changes
+
+- b28a070: Added method to support "executeScript" method required by the adapter
+
 ## 3.0.5
 
 ### Patch Changes

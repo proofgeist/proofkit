@@ -15,7 +15,7 @@ describe("Registry utils (dynamic scanning)", () => {
   });
 
   it("reads a known template (mode-toggle)", async () => {
-    const comp = await getStaticComponent("mode-toggle");
+    const comp = await getStaticComponent("components/mode-toggle");
     expect(comp).toHaveProperty("files");
     expect(comp.files).toBeInstanceOf(Array);
     expect(comp.files.length).toBeGreaterThan(0);

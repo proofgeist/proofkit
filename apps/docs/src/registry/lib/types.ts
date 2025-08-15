@@ -39,14 +39,12 @@ export const templateFileSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-// Defines the metadata for a single template (_meta.ts)
-export const templateMetadataSchema = z.object({
+const sharedMetadataSchema = z.object({
   title: z.string(),
-  registryType: registryTypeSchema,
-  type: z.literal("static"),
   description: z.string().optional(),
   category: z.enum(["component", "page", "utility", "hook", "email"]),
   files: z.array(templateFileSchema),
+  registryType: registryTypeSchema,
   dependencies: z
     .array(z.string())
     .describe("NPM package dependencies")
@@ -56,6 +54,17 @@ export const templateMetadataSchema = z.object({
     .describe("Other components")
     .optional(),
 });
+
+// Defines the metadata for a single template (_meta.ts)
+export const templateMetadataSchema = z.discriminatedUnion("type", [
+  sharedMetadataSchema.extend({
+    type: z.literal("static"),
+  }),
+  sharedMetadataSchema.extend({
+    type: z.literal("dynamic"),
+    postInstall: z.string().optional(),
+  }),
+]);
 
 export type TemplateFile = z.infer<typeof templateFileSchema>;
 export type TemplateMetadata = z.infer<typeof templateMetadataSchema>;

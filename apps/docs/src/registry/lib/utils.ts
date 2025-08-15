@@ -8,7 +8,7 @@ const templatesPath = path.join(process.cwd(), "src/registry/templates");
 
 export type RegistryIndexItem = {
   name: string;
-  type: "static";
+  type: TemplateMetadata["type"];
   category: TemplateMetadata["category"];
   // files: string[]; // destination paths
 };
@@ -37,7 +37,7 @@ function getTemplateDirs(root: string, prefix = ""): string[] {
 /**
  * Loads template metadata using jiti
  */
-function loadTemplateMeta(templatePath: string): TemplateMetadata {
+function loadTemplateMeta(templatePath: string) {
   const jiti = createJiti(__filename, {
     interopDefault: true,
     requireCache: false,
@@ -45,7 +45,7 @@ function loadTemplateMeta(templatePath: string): TemplateMetadata {
 
   const metaPath = path.join(templatesPath, templatePath, "_meta.ts");
   const metaModule = jiti(metaPath);
-  const meta =
+  const meta: TemplateMetadata =
     metaModule.meta || metaModule.default?.meta || metaModule.default;
 
   if (!meta) {
@@ -54,7 +54,10 @@ function loadTemplateMeta(templatePath: string): TemplateMetadata {
     );
   }
 
-  return meta;
+  return {
+    ...meta,
+    registryPath: templatePath,
+  };
 }
 
 export async function getRegistryIndex(): Promise<RegistryIndexItem[]> {

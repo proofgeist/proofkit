@@ -2,10 +2,10 @@ import type { TemplateMetadata } from "../../../lib/types";
 
 export const meta: TemplateMetadata = {
   type: "static",
-  title: "Generic Email Template",
+  title: "Auth Code Email",
 
   description:
-    "A generic email template with optional title, description, CTA, and footer.",
+    "A email template for sending a one-time code to the user's email address.",
   category: "email",
 
   registryType: "registry:file",
@@ -13,9 +13,9 @@ export const meta: TemplateMetadata = {
 
   files: [
     {
-      sourceFileName: "generic.tsx",
+      sourceFileName: "auth-code.tsx",
       type: "registry:file",
-      destinationPath: "src/emails/generic.tsx",
+      destinationPath: "src/emails/auth-code.tsx",
     },
   ],
 };

@@ -32,7 +32,7 @@ export const GenericEmail = ({
     <Body style={styles.main}>
       <Container style={styles.container}>
         <Img
-          src="https://proofkit.dev/_astro/proofkit.DNcFg0_B_1JN3Dz.webp"
+          src="https://proofkit.dev/proofkit.png"
           width="238"
           height="175"
           alt="ProofKit"

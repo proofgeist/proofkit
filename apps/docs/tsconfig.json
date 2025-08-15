@@ -17,6 +17,7 @@
     "incremental": true,
     "paths": {
       "@/.source": ["./.source/index.ts"],
+      "@/registry/*": ["./src/registry/*"],
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"]
     },
@@ -27,5 +28,5 @@
     ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/registry/templates/**/*"]
 }

@@ -1,0 +1,245 @@
+---
+title: Usage Examples
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card, Cards } from "fumadocs-ui/components/card";
+
+## Prerequisites
+
+Before you can use any of these methods, you need to set up a FileMaker Data API client. If you haven't done this yet, check out our [Quick Start Guide](/docs/fmdapi/quick-start) to create your client in a separate file.
+
+For these examples, we'll assume you've already setup a client in another file and are importing it for use.
+
+```ts
+// This is just an example - follow the Quick Start guide for your actual setup
+import { CustomersLayout } from "./schema/client";
+```
+
+---
+
+
+
+## Retrieving Data from FileMaker
+
+### Finding Records
+
+You can use the `find` method to perform FileMaker-style find requests on a layout. This method is limited to 100 records by default, but you can use the `findAll` helper method to automatically paginate the results and return all records that match the query.
+
+
+```ts twoslash title="searchCustomers.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+// Simple search - find customers in a specific city (max 100 records)
+export async function findCustomersByCity(city: string) {
+  const response = await CustomersLayout.find({
+    query: { city: city }
+  });
+  
+  console.log(`Found ${response.data.length} customers in ${city}`);
+  return response.data;
+}
+
+// Get ALL matching records at once (handles pagination automatically)
+export async function getAllActiveCustomers() {
+  const records = await CustomersLayout.findAll({
+    query: { status: "==Active" } // all standard FileMaker operators are supported
+  });
+  
+  return records;  // All active customers, no pagination needed
+}
+```
+
+Use an array of find requests to get the OR behavior, equivalent to having multiple find requests in FileMaker.
+
+```ts twoslash title="multipleFindRequests.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+export async function getCustomersByCityOrStatus(city: string, status: string) {
+  const records = await CustomersLayout.findAll({
+    query: [{ city }, { status }]
+  });
+  
+  return records;
+}
+```
+
+There are also helper methods for common find scenarios. Any of these methods will return just a single record instead of an array.
+- `findOne` will throw an error unless there is exactly one record found
+- `findFirst` will return the first record found, but still throw if no records are found
+- `maybeFindFirst` will return the first record found or null
+
+
+
+### Getting All Records
+
+If you don't need to specify any find requests, you can use the `list` or `listAll` methods. `list` will limit to 100 records per request by default, while `listAll` will automatically handle pagination via the API and return all records for the entire table. Use with caution if the table is large!
+
+
+```ts twoslash title="getAllCustomers.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+// Get a page of customers (recommended for large datasets)
+export async function listCustomers() {
+  const response = await CustomersLayout.list({
+    sort: [{ fieldName: "firstName", sortOrder: "ascend" }]
+  });
+  
+  return {
+    customers: response.data,
+    totalRecords: response.dataInfo.foundCount,
+    hasMore: response.data.length === 100 // Default page size
+  };
+}
+
+// Get ALL customers at once (use with caution on large datasets)
+export async function listAllCustomers() {
+  const records = await CustomersLayout.listAll();
+  
+  console.log(`Retrieved all ${records.length} customers`);
+  
+  return records.map(customer => ({
+    id: customer.recordId,
+    firstName: customer.fieldData.firstName,
+    lastName: customer.fieldData.lastName,
+    email: customer.fieldData.email,
+    city: customer.fieldData.city
+  }));
+}
+```
+
+---
+
+## Creating Records
+
+Use `create` to add new records to your FileMaker database.
+
+```ts twoslash title="createCustomer.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+export async function createNewCustomer(customerData: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+}) {
+  const response = await CustomersLayout.create({
+    fieldData: {
+      firstName: customerData.firstName,
+      lastName: customerData.lastName,
+      email: customerData.email,
+      phone: customerData.phone || "",
+      city: customerData.city || "",
+      status: "Active",
+      created_date: new Date().toISOString()
+    }
+  });
+  
+  console.log(`Created customer with ID: ${response.recordId}`);
+  return response.recordId;
+}
+```
+
+---
+
+## Update / Delete Records
+
+Updating or deleting records requires the internal record id from FileMaker, not the primary key for your table. This value is returned in the `recordId` field of any create, list, or find response.
+
+This record id *can* change during imports or data migrations, so you should never store it, but instead alwyas look it up via a find request when it's needed.
+
+```ts twoslash title="updateCustomer.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+export async function updateCustomerInfo(myPrimaryKey: string, updates: {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  city?: string;
+}) {
+  const { data: { recordId } } = await CustomersLayout.findOne({ query: { myPrimaryKey: myPrimaryKey } });
+
+  // Only update fields that were provided
+  const fieldData: any = {};
+  if (updates.firstName) fieldData.firstName = updates.firstName;
+  if (updates.lastName) fieldData.lastName = updates.lastName;
+  if (updates.phone) fieldData.phone = updates.phone;
+  if (updates.city) fieldData.city = updates.city;
+  
+  const response = await CustomersLayout.update({ fieldData, recordId });
+  return response.modId;
+}
+```
+
+```ts twoslash title="deleteCustomer.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+export async function deleteCustomer(myPrimaryKey: string) {
+  // Optional: Get customer info first for logging
+  const { data: { recordId } } = await CustomersLayout.findOne({ query: { myPrimaryKey: myPrimaryKey } });
+
+  await CustomersLayout.delete({recordId});
+}
+```
+
+---
+
+## Working with Scripts
+
+FileMaker scripts can be executed during any other method or run directly.
+
+### Running Scripts Directly
+Use `executeScript` to run a script directly.
+
+```ts twoslash title="executeScripts.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+export async function sendEmailFromFileMaker() {
+  const response = await CustomersLayout.executeScript({
+    script: "Send Email",
+    scriptParam: JSON.stringify({
+      to: "customer@example.com",
+      subject: "Welcome to our service",
+      body: "Thank you for signing up!"
+    })
+  });
+  console.log("Script result:", response.scriptResult);
+  return response.scriptResult;
+}
+```
+
+### Run a script with another method
+
+You can run scripts before or after any data operation. The script will be run in the context of the layout specified in your client and will be on the record or found set as the operation. This is especially useful when creating records, as you can run a script after the record is created, knowing the script will be focused on this newly created record; thus giving you access to the calculated values such as a UUID primary key defined in your field definitions.
+
+```ts twoslash title="scriptsWithOperations.ts"
+import { CustomersLayout } from "./CustomersLayout";
+// ---cut---
+// Run a script after creating a record
+export async function createCustomerWithWelcomeEmail(customerData: any) {
+  const response = await CustomersLayout.create({
+    fieldData: customerData,
+    script: "Send Welcome Email", // script name
+
+    // script param must always be a string
+    "script.param": JSON.stringify({
+      email: customerData.email,
+      name: `${customerData.firstName} ${customerData.lastName}`
+    })
+  });
+  
+  return {
+    recordId: response.recordId,
+    scriptResult: response.scriptResult
+  };
+}
+```
+For more details about the script execution order, see [this page](https://help.claris.com/en/data-api-guide/content/run-script-with-another-request.html) of the FileMaker Data API guide.
+
+---
+See also
+<Cards>
+  <Card title="Methods Reference" href="/docs/fmdapi/methods">Complete list of all available methods</Card>
+  <Card title="Quick Start Guide" href="/docs/fmdapi/quick-start">Set up your FileMaker Data API client</Card>
+</Cards>

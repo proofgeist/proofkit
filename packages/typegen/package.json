@@ -55,7 +55,7 @@
     "@tanstack/vite-config": "^0.2.0",
     "chalk": "5.4.1",
     "commander": "^14.0.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "fs-extra": "^11.3.0",
     "jsonc-parser": "^3.3.1",
     "prettier": "^3.5.3",
@@ -70,7 +70,7 @@
     "@types/semver": "^7.7.0",
     "publint": "^0.3.12",
     "type-fest": "^3.13.1",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.3"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

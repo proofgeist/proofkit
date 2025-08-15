@@ -22,7 +22,7 @@
     "prettier": "^3.5.3",
     "turbo": "^2.5.4",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.3"
+    "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.14.0",
   "engines": {

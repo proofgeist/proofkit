@@ -71,6 +71,6 @@
     "publint": "^0.3.12",
     "type-fest": "^3.13.1",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.3"
+    "vitest": "^3.2.4"
   }
 }

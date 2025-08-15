@@ -53,6 +53,7 @@ const sharedMetadataSchema = z.object({
     .array(z.string())
     .describe("Other components")
     .optional(),
+  postInstall: z.array(z.unknown()).optional(), // steps that should be run by the proofkit CLI after shadcn CLI is done
 });
 
 // Defines the metadata for a single template (_meta.ts)
@@ -62,7 +63,7 @@ export const templateMetadataSchema = z.discriminatedUnion("type", [
   }),
   sharedMetadataSchema.extend({
     type: z.literal("dynamic"),
-    postInstall: z.string().optional(),
+    schema: z.unknown(), // a JSON schema for the required values to be passed as query(?) params
   }),
 ]);
 

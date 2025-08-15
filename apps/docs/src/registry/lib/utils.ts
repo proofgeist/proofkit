@@ -9,7 +9,7 @@ const templatesPath = path.join(process.cwd(), "src/registry/templates");
 export type RegistryIndexItem = {
   name: string;
   type: "static";
-  categories: TemplateMetadata["category"];
+  category: TemplateMetadata["category"];
   // files: string[]; // destination paths
 };
 
@@ -71,18 +71,31 @@ export async function getRegistryIndex(): Promise<RegistryIndexItem[]> {
   return index;
 }
 
-export async function getStaticComponent(
-  namePath: string,
-): Promise<RegistryItem> {
-  const normalized = namePath.replace(/^\/+|\/+$/g, "");
+function getNormalizedPath(namePath: string): string {
+  return namePath.replace(/^\/+|\/+$/g, "");
+}
 
-  // Check if template exists
+export async function getComponentMeta(
+  namePath: string,
+): Promise<TemplateMetadata> {
+  const normalized = getNormalizedPath(namePath);
   const templateDirs = getTemplateDirs(templatesPath);
   if (!templateDirs.includes(normalized)) {
     throw new Error(`Template "${normalized}" not found`);
   }
-
   const meta = loadTemplateMeta(normalized);
+  return meta;
+}
+
+export async function getStaticComponent(
+  namePath: string,
+): Promise<RegistryItem> {
+  const normalized = getNormalizedPath(namePath);
+  const meta = await getComponentMeta(namePath);
+
+  if (meta.type !== "static") {
+    throw new Error(`Template "${normalized}" is not a static template`);
+  }
 
   const files: ShadcnFilesUnion = await Promise.all(
     meta.files.map(async (file) => {

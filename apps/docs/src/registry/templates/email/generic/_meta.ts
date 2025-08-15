@@ -8,7 +8,7 @@ export const meta: TemplateMetadata = {
     "A generic email template with optional title, description, CTA, and footer.",
   category: "email",
 
-  registryType: "registry:file",
+  registryType: "registry:block",
   dependencies: ["@react-email/components"],
 
   files: [

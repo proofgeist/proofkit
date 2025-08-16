@@ -29,6 +29,11 @@ export const runAddPageAction = async (opts?: {
   const projectDir = state.projectDir;
 
   const settings = getSettings();
+  if (settings.ui === "shadcn") {
+    return p.cancel(
+      "Adding pages is not yet supported for shadcn-based projects."
+    );
+  }
 
   const templates =
     state.appType === "browser"

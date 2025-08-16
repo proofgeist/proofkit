@@ -314,15 +314,6 @@ importers:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.4.1
         version: 4.4.1(prettier@3.5.3)
-      '@proofkit/fmdapi':
-        specifier: workspace:*
-        version: link:../fmdapi
-      '@proofkit/registry':
-        specifier: workspace:*
-        version: link:../registry
-      '@proofkit/typegen':
-        specifier: workspace:*
-        version: link:../typegen
       '@types/glob':
         specifier: ^8.1.0
         version: 8.1.0

@@ -77,7 +77,6 @@ export const proofkitAuthInstaller = async () => {
   );
 
   await addConfig({
-    project,
     config: {
       clientSuffix: "Layout",
       layouts: [

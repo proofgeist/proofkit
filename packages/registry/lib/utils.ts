@@ -1,15 +1,23 @@
 import { promises as fs } from "fs";
 import fsSync from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import createJiti from "jiti";
-import type { RegistryItem, ShadcnFilesUnion, TemplateMetadata } from "./types";
+import type {
+  RegistryItem,
+  ShadcnFilesUnion,
+  TemplateMetadata,
+} from "./types.js";
 
-const templatesPath = path.join(process.cwd(), "src/registry/templates");
+// Find the templates path relative to this module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const templatesPath = path.resolve(__dirname, "../templates");
 
 export type RegistryIndexItem = {
   name: string;
-  type: "static";
-  categories: TemplateMetadata["categories"];
+  type: TemplateMetadata["type"];
+  category: TemplateMetadata["category"];
   // files: string[]; // destination paths
 };
 
@@ -37,7 +45,7 @@ function getTemplateDirs(root: string, prefix = ""): string[] {
 /**
  * Loads template metadata using jiti
  */
-function loadTemplateMeta(templatePath: string): TemplateMetadata {
+function loadTemplateMeta(templatePath: string) {
   const jiti = createJiti(__filename, {
     interopDefault: true,
     requireCache: false,
@@ -45,7 +53,7 @@ function loadTemplateMeta(templatePath: string): TemplateMetadata {
 
   const metaPath = path.join(templatesPath, templatePath, "_meta.ts");
   const metaModule = jiti(metaPath);
-  const meta =
+  const meta: TemplateMetadata =
     metaModule.meta || metaModule.default?.meta || metaModule.default;
 
   if (!meta) {
@@ -54,7 +62,10 @@ function loadTemplateMeta(templatePath: string): TemplateMetadata {
     );
   }
 
-  return meta;
+  return {
+    ...meta,
+    registryPath: templatePath,
+  };
 }
 
 export async function getRegistryIndex(): Promise<RegistryIndexItem[]> {
@@ -71,18 +82,31 @@ export async function getRegistryIndex(): Promise<RegistryIndexItem[]> {
   return index;
 }
 
-export async function getStaticComponent(
-  namePath: string,
-): Promise<RegistryItem> {
-  const normalized = namePath.replace(/^\/+|\/+$/g, "");
+function getNormalizedPath(namePath: string): string {
+  return namePath.replace(/^\/+|\/+$/g, "");
+}
 
-  // Check if template exists
+export async function getComponentMeta(
+  namePath: string,
+): Promise<TemplateMetadata> {
+  const normalized = getNormalizedPath(namePath);
   const templateDirs = getTemplateDirs(templatesPath);
   if (!templateDirs.includes(normalized)) {
     throw new Error(`Template "${normalized}" not found`);
   }
-
   const meta = loadTemplateMeta(normalized);
+  return meta;
+}
+
+export async function getStaticComponent(
+  namePath: string,
+): Promise<RegistryItem> {
+  const normalized = getNormalizedPath(namePath);
+  const meta = await getComponentMeta(namePath);
+
+  if (meta.type !== "static") {
+    throw new Error(`Template "${normalized}" is not a static template`);
+  }
 
   const files: ShadcnFilesUnion = await Promise.all(
     meta.files.map(async (file) => {

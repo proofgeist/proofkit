@@ -3,7 +3,7 @@ import {
   createAdapter,
   type AdapterDebugLogs,
 } from "better-auth/adapters";
-import { createFmOdataFetch, type FmOdataConfig } from "./odata";
+import { createFmOdataFetch, type FmOdataConfig } from "./odata/index";
 import { prettifyError, z } from "zod/v4";
 import { logger } from "better-auth";
 

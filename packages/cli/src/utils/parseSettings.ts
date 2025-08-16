@@ -20,6 +20,9 @@ const authSchema = z
       type: z.literal("fmaddon"),
     }),
     z.object({
+      type: z.literal("better-auth"),
+    }),
+    z.object({
       type: z.literal("none"),
     }),
   ])
@@ -56,6 +59,10 @@ const settingsSchema = z.object({
   dataSources: z.array(dataSourceSchema).default([]),
   tanstackQuery: z.boolean().catch(false),
   replacedMainPage: z.boolean().catch(false),
+  // Whether React Email scaffolding has been installed
+  reactEmail: z.boolean().catch(false),
+  // Whether provider-specific server email sender files have been installed
+  reactEmailServer: z.boolean().catch(false),
   appliedUpgrades: z.array(z.string()).default([]),
   registryUrl: z.url().optional(),
 });

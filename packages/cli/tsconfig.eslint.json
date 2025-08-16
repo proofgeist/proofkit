@@ -3,7 +3,7 @@
   "include": [
     "src",
     "template",
-    "tsup.config.ts",
+    "tsdown.config.ts",
     "prettier.config.mjs",
     "index.d.ts"
   ]

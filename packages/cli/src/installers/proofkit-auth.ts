@@ -18,7 +18,7 @@ import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 import { installFmAddon } from "./install-fm-addon.js";
-import { installEmailProvider } from "./react-email.js";
+import { installReactEmail } from "./react-email.js";
 
 export const proofkitAuthInstaller = async () => {
   const spinner = ora("Installing files for auth...").start();
@@ -77,7 +77,6 @@ export const proofkitAuthInstaller = async () => {
   );
 
   await addConfig({
-    project,
     config: {
       clientSuffix: "Layout",
       layouts: [
@@ -97,7 +96,7 @@ export const proofkitAuthInstaller = async () => {
           strictNumbers: true,
         },
         {
-          layoutName  : "proofkit_auth_password_reset",
+          layoutName: "proofkit_auth_password_reset",
           schemaName: "passwordReset",
           strictNumbers: true,
         },
@@ -111,7 +110,7 @@ export const proofkitAuthInstaller = async () => {
   });
 
   // install email files based on the email provider in state
-  await installEmailProvider({ project });
+  await installReactEmail({ project, installServerFiles: true });
 
   protectMainLayout(
     project.addSourceFileAtPath(

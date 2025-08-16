@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import createJiti from "jiti";
-import { templateMetadataSchema, type TemplateMetadata } from "./types";
+import { templateMetadataSchema, type TemplateMetadata } from "./types.js";
 
 function getTemplateDirs(root: string, prefix = ""): string[] {
   const entries = fs.readdirSync(root, { withFileTypes: true });
@@ -22,7 +23,10 @@ function getTemplateDirs(root: string, prefix = ""): string[] {
 }
 
 export function validateRegistry() {
-  const templatesPath = path.join(process.cwd(), "src/registry/templates");
+  // Find the templates path relative to this module
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const templatesPath = path.resolve(__dirname, "../templates");
   const jiti = createJiti(__filename, {
     interopDefault: true,
     requireCache: false,

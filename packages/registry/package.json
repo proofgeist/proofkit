@@ -1,0 +1,48 @@
+{
+  "name": "@proofkit/registry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ProofKit registry containing types and templates",
+  "type": "module",
+  "main": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js",
+      "default": "./dist/lib/index.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "default": "./dist/lib/*.js"
+    },
+    "./templates/*": "./templates/*"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc && publint --strict",
+    "dev": "tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "proofkit",
+    "registry",
+    "templates"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "publint": "^0.3.12",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "jiti": "^1.21.7",
+    "shadcn": "^2.10.0",
+    "zod": "3.25.64"
+  }
+}

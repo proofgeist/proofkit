@@ -39,14 +39,32 @@ export const templateFileSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-// Defines the metadata for a single template (_meta.ts)
-export const templateMetadataSchema = z.object({
+export const postInstallStepsSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("package.json script"),
+    name: z.string(),
+    script: z.string(),
+  }),
+  z.object({
+    action: z.literal("wrap provider"),
+    providerOpenTag: z.string(),
+    providerCloseTag: z.string(),
+    importStatement: z.string(),
+    parentTag: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "If set, the provider will attempt to go inside of the parent tag. The first found tag will be used as the parent. If not set or none of the tags are found, the provider will be wrapped at the very top level.",
+      ),
+  }),
+]);
+
+const sharedMetadataSchema = z.object({
   title: z.string(),
-  registryType: registryTypeSchema,
-  type: z.literal("static"),
   description: z.string().optional(),
-  categories: z.array(z.enum(["component", "page", "utility", "hook"])),
+  category: z.enum(["component", "page", "utility", "hook", "email"]),
   files: z.array(templateFileSchema),
+  registryType: registryTypeSchema,
   dependencies: z
     .array(z.string())
     .describe("NPM package dependencies")
@@ -55,7 +73,24 @@ export const templateMetadataSchema = z.object({
     .array(z.string())
     .describe("Other components")
     .optional(),
+  postInstall: z
+    .array(postInstallStepsSchema)
+    .optional()
+    .describe(
+      "Steps that should be run by the ProofKit CLI after shadcn CLI is done",
+    ),
 });
+
+// Defines the metadata for a single template (_meta.ts)
+export const templateMetadataSchema = z.discriminatedUnion("type", [
+  sharedMetadataSchema.extend({
+    type: z.literal("static"),
+  }),
+  sharedMetadataSchema.extend({
+    type: z.literal("dynamic"),
+    schema: z.unknown(), // a JSON schema for the required values to be passed as query(?) params
+  }),
+]);
 
 export type TemplateFile = z.infer<typeof templateFileSchema>;
 export type TemplateMetadata = z.infer<typeof templateMetadataSchema>;

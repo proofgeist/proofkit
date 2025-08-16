@@ -28,8 +28,9 @@ export const runAdd = async (
     return await runAddTanstackQueryCommand();
   } else if (name === "react-email") {
     return await runAddReactEmailCommand({ noInstall: options?.noInstall });
+  } else if (name !== undefined) {
+    // search the registry for the template and add
   }
-
   const addType = abortIfCancel(
     await p.select({
       message: "What do you want to add to your project?",

@@ -56,10 +56,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@better-fetch/fetch": "1.1.17",
     "@clack/core": "^0.3.4",
     "@clack/prompts": "^0.11.0",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
+    "@proofkit/docs": "workspace:*",
     "@proofkit/fmdapi": "workspace:*",
+    "@proofkit/registry": "workspace:*",
     "@proofkit/typegen": "workspace:*",
     "@types/glob": "^8.1.0",
     "axios": "^1.7.3",

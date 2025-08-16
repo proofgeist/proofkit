@@ -4,9 +4,9 @@ import {
   getComponentMeta,
   getRegistryIndex,
   getStaticComponent,
-} from "@/registry/lib/utils";
+} from "@proofkit/registry";
 import { createMiddleware } from "hono/factory";
-import type { TemplateMetadata } from "@/registry/lib/types";
+import type { TemplateMetadata } from "@proofkit/registry";
 
 const app = new Hono().basePath("/r");
 
@@ -22,47 +22,47 @@ app.get("/", async (c) => {
   }
 });
 
-const componentMeta = createMiddleware<{
-  Variables: { meta: TemplateMetadata; path: string };
-}>(async (c, next) => {
-  const path = c.req.path.replace("/r", "").replace(/\.json$/, "");
-  c.set("path", path);
+const componentMeta = (basePath: string) =>
+  createMiddleware<{
+    Variables: { meta: TemplateMetadata; path: string };
+  }>(async (c, next) => {
+    const path = c.req.path.replace(basePath, "").replace(/\.json$/, "");
+    c.set("path", path);
 
-  try {
-    const meta = await getComponentMeta(path);
-    c.set("meta", meta);
-    await next();
-  } catch (error) {
-    console.error(error);
-    return c.json({ error: "Component not found." }, { status: 404 });
+    try {
+      const meta = await getComponentMeta(path);
+      c.set("meta", meta);
+      await next();
+    } catch (error) {
+      console.error(error);
+      return c.json({ error: "Component not found." }, { status: 404 });
+    }
+  });
+
+// Handle registry requests at base path "/r"
+app.use(componentMeta("/r")).get("/*", async (c) => {
+  const path = c.get("path");
+
+  const meta = c.get("meta");
+  if (meta.type === "static") {
+    try {
+      const data = await getStaticComponent(path);
+      return c.json(data);
+    } catch (error) {
+      console.error(error);
+      return c.json({ error: "Component not found." }, { status: 404 });
+    }
+  } else {
+    return c.json(
+      { error: "Dynamic components are not supported yet." },
+      { status: 501 },
+    );
   }
 });
 
-// Handle registry requests at base path "/r"
-app
-  .use(componentMeta)
-  .get("/*", async (c) => {
-    const path = c.get("path");
-
-    const meta = c.get("meta");
-    if (meta.type === "static") {
-      try {
-        const data = await getStaticComponent(path);
-        return c.json(data);
-      } catch (error) {
-        console.error(error);
-        return c.json({ error: "Component not found." }, { status: 404 });
-      }
-    } else {
-      return c.json(
-        { error: "Dynamic components are not supported yet." },
-        { status: 501 },
-      );
-    }
-  })
-  .options(async (c) => {
-    const meta = c.get("meta");
-    return c.json(meta, 200);
-  });
+app.use(componentMeta("/r/meta")).get("/meta/*", async (c) => {
+  const meta = c.get("meta");
+  return c.json(meta, 200);
+});
 
 export default app;

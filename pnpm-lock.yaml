@@ -111,6 +111,9 @@ importers:
 
   apps/docs:
     dependencies:
+      '@proofkit/registry':
+        specifier: workspace:*
+        version: link:../../packages/registry
       '@proofkit/typegen':
         specifier: workspace:*
         version: link:../../packages/typegen
@@ -299,6 +302,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@better-fetch/fetch':
+        specifier: 1.1.17
+        version: 1.1.17
       '@clack/core':
         specifier: ^0.3.4
         version: 0.3.5
@@ -308,9 +314,15 @@ importers:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.4.1
         version: 4.4.1(prettier@3.5.3)
+      '@proofkit/docs':
+        specifier: workspace:*
+        version: link:../../apps/docs
       '@proofkit/fmdapi':
         specifier: workspace:*
         version: link:../fmdapi
+      '@proofkit/registry':
+        specifier: workspace:*
+        version: link:../registry
       '@proofkit/typegen':
         specifier: workspace:*
         version: link:../typegen
@@ -564,6 +576,25 @@ importers:
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.17.1)(happy-dom@15.11.7)(jiti@2.4.2)(lightningcss@1.30.1)(msw@2.10.2(@types/node@22.17.1)(typescript@5.9.2))(tsx@4.20.3)(yaml@2.8.0)
 
   packages/fmodata: {}
+
+  packages/registry:
+    dependencies:
+      jiti:
+        specifier: ^1.21.7
+        version: 1.21.7
+      shadcn:
+        specifier: ^2.10.0
+        version: 2.10.0(@types/node@22.17.1)(typescript@5.9.2)
+      zod:
+        specifier: 3.25.64
+        version: 3.25.64
+    devDependencies:
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.2
 
   packages/tmp: {}
 
@@ -11227,7 +11258,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.14':
     dependencies:
-      '@babel/parser': 7.27.2
+      '@babel/parser': 7.27.7
       '@vue/shared': 3.5.14
       entities: 4.5.0
       estree-walker: 2.0.2

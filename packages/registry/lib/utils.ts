@@ -1,10 +1,18 @@
 import { promises as fs } from "fs";
 import fsSync from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import createJiti from "jiti";
-import type { RegistryItem, ShadcnFilesUnion, TemplateMetadata } from "./types";
+import type {
+  RegistryItem,
+  ShadcnFilesUnion,
+  TemplateMetadata,
+} from "./types.js";
 
-const templatesPath = path.join(process.cwd(), "src/registry/templates");
+// Find the templates path relative to this module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const templatesPath = path.resolve(__dirname, "../templates");
 
 export type RegistryIndexItem = {
   name: string;

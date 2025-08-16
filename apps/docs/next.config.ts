@@ -1,6 +1,6 @@
 import { createMDX } from "fumadocs-mdx/next";
 import { type NextConfig } from "next";
-import { validateRegistry } from "@/registry/lib/validator";
+import { validateRegistry } from "@proofkit/registry";
 
 const withMDX = createMDX();
 validateRegistry();

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as utils from "@/registry/lib/utils";
+import * as utils from "@proofkit/registry";
 import { GET as registryRoute } from "@/app/r/[[...name]]/route";
 
-vi.mock("@/registry/lib/utils", async () => {
-  const actual = await vi.importActual<typeof utils>("@/registry/lib/utils");
+vi.mock("@proofkit/registry", async () => {
+  const actual = await vi.importActual<typeof utils>("@proofkit/registry");
   return {
     ...actual,
     getRegistryIndex: vi.fn(),

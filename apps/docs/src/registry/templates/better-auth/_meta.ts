@@ -1,7 +1,7 @@
 import type { TemplateMetadata } from "../../lib/types";
 
 export const meta: TemplateMetadata = {
-  type: "dynamic",
+  type: "static",
   title: "BetterAuth",
   description: "A better auth library for Next.js",
   category: "utility",
@@ -51,6 +51,21 @@ export const meta: TemplateMetadata = {
       sourceFileName: "auth-layout.tsx",
       destinationPath: "src/app/auth/[pathname]/layout.tsx",
       type: "registry:file",
+    },
+  ],
+  postInstall: [
+    {
+      action: "package.json script",
+      name: "better-auth:migrate",
+      script: "pnpm dlx @proofkit/better-auth@latest migrate",
+    },
+    {
+      action: "wrap provider",
+      importStatement:
+        "import { AuthUIProvider } from '@daveyplate/better-auth-ui'",
+      providerOpenTag: "<AuthUIProvider>",
+      providerCloseTag: "</AuthUIProvider>",
+      parentTag: ["ThemeProvider"],
     },
   ],
 };

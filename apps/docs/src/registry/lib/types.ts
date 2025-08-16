@@ -39,6 +39,26 @@ export const templateFileSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+export const postInstallStepsSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("package.json script"),
+    name: z.string(),
+    script: z.string(),
+  }),
+  z.object({
+    action: z.literal("wrap provider"),
+    providerOpenTag: z.string(),
+    providerCloseTag: z.string(),
+    importStatement: z.string(),
+    parentTag: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "If set, the provider will attempt to go inside of the parent tag. The first found tag will be used as the parent. If not set or none of the tags are found, the provider will be wrapped at the very top level.",
+      ),
+  }),
+]);
+
 const sharedMetadataSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
@@ -53,7 +73,12 @@ const sharedMetadataSchema = z.object({
     .array(z.string())
     .describe("Other components")
     .optional(),
-  postInstall: z.array(z.unknown()).optional(), // steps that should be run by the proofkit CLI after shadcn CLI is done
+  postInstall: z
+    .array(postInstallStepsSchema)
+    .optional()
+    .describe(
+      "Steps that should be run by the ProofKit CLI after shadcn CLI is done",
+    ),
 });
 
 // Defines the metadata for a single template (_meta.ts)

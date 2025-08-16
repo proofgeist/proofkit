@@ -11,7 +11,7 @@
   "exclude": ["template"],
   "include": [
     "src",
-    "tsup.config.ts",
+    "tsdown.config.ts",
     "../reset.d.ts",
     "prettier.config.mjs",
     "index.d.ts"

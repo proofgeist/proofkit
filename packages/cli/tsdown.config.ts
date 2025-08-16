@@ -1,6 +1,26 @@
+import path from "path";
+import { readJSONSync } from "fs-extra";
 import { defineConfig } from "tsdown";
 
 const isDev = process.env.npm_lifecycle_event === "dev";
+
+// Read package versions at build time
+const readPackageVersion = (packagePath: string) => {
+  const packageJsonPath = path.join(
+    __dirname,
+    "..",
+    packagePath,
+    "package.json"
+  );
+  const packageJson = readJSONSync(packageJsonPath);
+  if (!packageJson.version) {
+    throw new Error(`No version found in ${packageJsonPath}`);
+  }
+  return packageJson.version;
+};
+
+const FMDAPI_VERSION = readPackageVersion("fmdapi");
+const BETTER_AUTH_VERSION = readPackageVersion("better-auth");
 
 export default defineConfig({
   clean: true,
@@ -11,5 +31,12 @@ export default defineConfig({
   outDir: "dist",
   // Bundle workspace dependencies that shouldn't be external
   noExternal: ["@proofkit/registry"],
+  // Keep Node.js built-in module imports as-is for better compatibility
+  nodeProtocol: false,
+  // Inject package versions at build time
+  define: {
+    __FMDAPI_VERSION__: JSON.stringify(FMDAPI_VERSION),
+    __BETTER_AUTH_VERSION__: JSON.stringify(BETTER_AUTH_VERSION),
+  },
   onSuccess: isDev ? "IS_LOCAL_DEV=1 node dist/index.js" : undefined,
 });

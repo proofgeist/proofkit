@@ -314,9 +314,6 @@ importers:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.4.1
         version: 4.4.1(prettier@3.5.3)
-      '@proofkit/docs':
-        specifier: workspace:*
-        version: link:../../apps/docs
       '@proofkit/fmdapi':
         specifier: workspace:*
         version: link:../fmdapi

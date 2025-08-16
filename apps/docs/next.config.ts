@@ -8,7 +8,7 @@ validateRegistry();
 const config: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["typescript", "twoslash", "shiki"],
-  transpilePackages: ["@proofkit/fmdapi"],
+  transpilePackages: ["@proofkit/fmdapi", "@proofkit/registry"],
   async redirects() {
     return [
       {

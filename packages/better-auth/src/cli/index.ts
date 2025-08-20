@@ -13,7 +13,7 @@ import { logger } from "better-auth";
 import prompts from "prompts";
 import chalk from "chalk";
 import { AdapterOptions } from "../adapter";
-import { createFmOdataFetch } from "../odata";
+import { createRawFetch } from "../odata";
 import "dotenv/config";
 
 async function main() {
@@ -64,7 +64,7 @@ async function main() {
       const betterAuthSchema = getAuthTables(config);
 
       const adapterConfig = (adapter.options as AdapterOptions).config;
-      const fetch = createFmOdataFetch({
+      const { fetch } = createRawFetch({
         ...adapterConfig.odata,
         auth:
           // If the username and password are provided in the CLI, use them to authenticate instead of what's in the config file.
@@ -74,6 +74,7 @@ async function main() {
                 password: options.password,
               }
             : adapterConfig.odata.auth,
+        logging: "verbose", // Enable logging for CLI operations
       });
 
       const migrationPlan = await planMigration(

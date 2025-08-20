@@ -2,10 +2,10 @@ import { type BetterAuthDbSchema } from "better-auth/db";
 import { type Metadata } from "fm-odata-client";
 import chalk from "chalk";
 import z from "zod/v4";
-import { createFmOdataFetch } from "./odata";
+import { createRawFetch } from "./odata";
 
 export async function getMetadata(
-  fetch: ReturnType<typeof createFmOdataFetch>,
+  fetch: ReturnType<typeof createRawFetch>["fetch"],
   databaseName: string,
 ) {
   console.log("getting metadata...");
@@ -21,11 +21,16 @@ export async function getMetadata(
       .catch(null),
   });
 
+  if (result.error) {
+    console.error("Failed to get metadata:", result.error);
+    return null;
+  }
+
   return (result.data?.[databaseName] ?? null) as Metadata | null;
 }
 
 export async function planMigration(
-  fetch: ReturnType<typeof createFmOdataFetch>,
+  fetch: ReturnType<typeof createRawFetch>["fetch"],
   betterAuthSchema: BetterAuthDbSchema,
   databaseName: string,
 ): Promise<MigrationPlan> {
@@ -156,24 +161,41 @@ export async function planMigration(
 }
 
 export async function executeMigration(
-  fetch: ReturnType<typeof createFmOdataFetch>,
+  fetch: ReturnType<typeof createRawFetch>["fetch"],
   migrationPlan: MigrationPlan,
 ) {
   for (const step of migrationPlan) {
     if (step.operation === "create") {
       console.log("Creating table:", step.tableName);
-      await fetch("@post/FileMaker_Tables", {
+      const result = await fetch("/FileMaker_Tables", {
+        method: "POST",
         body: {
           tableName: step.tableName,
           fields: step.fields,
         },
       });
+
+      if (result.error) {
+        console.error(
+          `Failed to create table ${step.tableName}:`,
+          result.error,
+        );
+        throw new Error(`Migration failed: ${result.error}`);
+      }
     } else if (step.operation === "update") {
       console.log("Adding fields to table:", step.tableName);
-      await fetch("@post/FileMaker_Tables/:tableName", {
-        params: { tableName: step.tableName },
+      const result = await fetch(`/FileMaker_Tables/${step.tableName}`, {
+        method: "PATCH",
         body: { fields: step.fields },
       });
+
+      if (result.error) {
+        console.error(
+          `Failed to update table ${step.tableName}:`,
+          result.error,
+        );
+        throw new Error(`Migration failed: ${result.error}`);
+      }
     }
   }
 }

@@ -3,9 +3,10 @@ import {
   createAdapter,
   type AdapterDebugLogs,
 } from "better-auth/adapters";
-import { createFmOdataFetch, type FmOdataConfig } from "./odata";
+import { createRawFetch, type FmOdataConfig } from "./odata";
 import { prettifyError, z } from "zod/v4";
 import { logger } from "better-auth";
+import buildQuery from "odata-query";
 
 const configSchema = z.object({
   debugLogs: z.unknown().optional(),
@@ -153,7 +154,7 @@ export const FileMakerAdapter = (
   }
   const config = parsed.data;
 
-  const fetch = createFmOdataFetch({
+  const { fetch, baseURL } = createRawFetch({
     ...config.odata,
     logging: config.debugLogs ? "verbose" : "none",
   });
@@ -192,114 +193,177 @@ export const FileMakerAdapter = (
         count: async ({ model, where }) => {
           const filter = parseWhere(where);
           logger.debug("$filter", filter);
-          const result = await fetch(`/${model}/$count`, {
+
+          const query = buildQuery({
+            filter: filter.length > 0 ? filter : undefined,
+          });
+
+          const result = await fetch(`/${model}/$count${query}`, {
             method: "GET",
-            query: {
-              $filter: filter,
-            },
             output: z.object({ value: z.number() }),
           });
           if (!result.data) {
             throw new Error("Failed to count records");
           }
-          return result.data?.value ?? 0;
+          return (result.data?.value as any) ?? 0;
         },
         findOne: async ({ model, where }) => {
           const filter = parseWhere(where);
           logger.debug("$filter", filter);
-          const result = await fetch(`/${model}`, {
+
+          const query = buildQuery({
+            top: 1,
+            filter: filter.length > 0 ? filter : undefined,
+          });
+
+          const result = await fetch(`/${model}${query}`, {
             method: "GET",
-            query: {
-              ...(filter.length > 0 ? { $filter: filter } : {}),
-              $top: 1,
-            },
             output: z.object({ value: z.array(z.any()) }),
           });
           if (result.error) {
             throw new Error("Failed to find record");
           }
-          return result.data?.value?.[0] ?? null;
+          return (result.data?.value?.[0] as any) ?? null;
         },
         findMany: async ({ model, where, limit, offset, sortBy }) => {
           const filter = parseWhere(where);
-          logger.debug("$filter", filter);
+          logger.debug("FIND MANY", { where, filter });
 
-          const rows = await fetch(`/${model}`, {
+          const query = buildQuery({
+            top: limit,
+            skip: offset,
+            orderBy: sortBy
+              ? `${sortBy.field} ${sortBy.direction ?? "asc"}`
+              : undefined,
+            filter: filter.length > 0 ? filter : undefined,
+          });
+          logger.debug("QUERY", query);
+
+          const result = await fetch(`/${model}${query}`, {
             method: "GET",
-            query: {
-              ...(filter.length > 0 ? { $filter: filter } : {}),
-              $top: limit,
-              $skip: offset,
-              ...(sortBy
-                ? { $orderby: `${sortBy.field}%20${sortBy.direction ?? "asc"}` }
-                : {}),
-            },
             output: z.object({ value: z.array(z.any()) }),
           });
-          if (rows.error) {
+          logger.debug("RESULT", result);
+
+          if (result.error) {
             throw new Error("Failed to find records");
           }
-          return rows.data?.value ?? [];
+
+          return (result.data?.value as any) ?? [];
         },
         delete: async ({ model, where }) => {
           const filter = parseWhere(where);
+          console.log("DELETE", { model, where, filter });
           logger.debug("$filter", filter);
-          console.log("delete", model, where, filter);
-          const result = await fetch(`/${model}`, {
+
+          // Find a single id matching the filter
+          const query = buildQuery({
+            top: 1,
+            select: [`"id"`],
+            filter: filter.length > 0 ? filter : undefined,
+          });
+
+          const toDelete = await fetch(`/${model}${query}`, {
+            method: "GET",
+            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
+          });
+
+          const id = toDelete.data?.value?.[0]?.id;
+          if (!id) {
+            // Nothing to delete
+            return;
+          }
+
+          const result = await fetch(`/${model}('${id}')`, {
             method: "DELETE",
-            query: {
-              ...(where.length > 0 ? { $filter: filter } : {}),
-              $top: 1,
-            },
           });
           if (result.error) {
+            console.log("DELETE ERROR", result.error);
             throw new Error("Failed to delete record");
           }
         },
         deleteMany: async ({ model, where }) => {
           const filter = parseWhere(where);
-          logger.debug(
-            where
-              .map((o) => `typeof ${o.value} is ${typeof o.value}`)
-              .join("\n"),
-          );
-          logger.debug("$filter", filter);
+          console.log("DELETE MANY", { model, where, filter });
 
-          const result = await fetch(`/${model}/$count`, {
-            method: "DELETE",
-            query: {
-              ...(where.length > 0 ? { $filter: filter } : {}),
-            },
-            output: z.coerce.number(),
+          // Find all ids matching the filter
+          const query = buildQuery({
+            select: [`"id"`],
+            filter: filter.length > 0 ? filter : undefined,
           });
-          if (result.error) {
-            throw new Error("Failed to delete record");
+
+          const rows = await fetch(`/${model}${query}`, {
+            method: "GET",
+            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
+          });
+
+          const ids = rows.data?.value?.map((r: any) => r.id) ?? [];
+          let deleted = 0;
+          for (const id of ids) {
+            const res = await fetch(`/${model}('${id}')`, {
+              method: "DELETE",
+            });
+            if (!res.error) deleted++;
           }
-          return result.data ?? 0;
+          return deleted;
         },
         update: async ({ model, where, update }) => {
-          const result = await fetch(`/${model}`, {
-            method: "PATCH",
-            query: {
-              ...(where.length > 0 ? { $filter: parseWhere(where) } : {}),
-              $top: 1,
-              $select: [`"id"`],
-            },
-            body: update,
-            output: z.object({ value: z.array(z.any()) }),
+          const filter = parseWhere(where);
+          logger.debug("UPDATE", { model, where, update });
+          logger.debug("$filter", filter);
+          // Find one id to update
+          const query = buildQuery({
+            select: [`"id"`],
+            filter: filter.length > 0 ? filter : undefined,
           });
-          return result.data?.value?.[0] ?? null;
+
+          const existing = await fetch(`/${model}${query}`, {
+            method: "GET",
+            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
+          });
+          logger.debug("EXISTING", existing.data);
+
+          const id = existing.data?.value?.[0]?.id;
+          if (!id) return null;
+
+          const patchRes = await fetch(`/${model}('${id}')`, {
+            method: "PATCH",
+            body: update,
+          });
+          logger.debug("PATCH RES", patchRes.data);
+          if (patchRes.error) return null;
+
+          // Read back the updated record
+          const readBack = await fetch(`/${model}('${id}')`, {
+            method: "GET",
+            output: z.record(z.string(), z.unknown()),
+          });
+          logger.debug("READ BACK", readBack.data);
+          return (readBack.data as any) ?? null;
         },
         updateMany: async ({ model, where, update }) => {
           const filter = parseWhere(where);
-          const result = await fetch(`/${model}`, {
-            method: "PATCH",
-            query: {
-              ...(where.length > 0 ? { $filter: filter } : {}),
-            },
-            body: update,
+          // Find all ids matching the filter
+          const query = buildQuery({
+            select: [`"id"`],
+            filter: filter.length > 0 ? filter : undefined,
           });
-          return result.data as any;
+
+          const rows = await fetch(`/${model}${query}`, {
+            method: "GET",
+            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
+          });
+
+          const ids = rows.data?.value?.map((r: any) => r.id) ?? [];
+          let updated = 0;
+          for (const id of ids) {
+            const res = await fetch(`/${model}('${id}')`, {
+              method: "PATCH",
+              body: update,
+            });
+            if (!res.error) updated++;
+          }
+          return updated as any;
         },
       };
     },

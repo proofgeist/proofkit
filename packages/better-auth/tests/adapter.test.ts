@@ -1,7 +1,8 @@
 import { describe, beforeAll, it, expect } from "vitest";
 import { runAdapterTest } from "better-auth/adapters/test";
 import { FileMakerAdapter } from "../src";
-import { createFmOdataFetch } from "../src/odata";
+import { createRawFetch } from "../src/odata";
+import { z } from "zod/v4";
 
 if (!process.env.FM_SERVER) {
   throw new Error("FM_SERVER is not set");
@@ -16,25 +17,42 @@ if (!process.env.FM_PASSWORD) {
   throw new Error("FM_PASSWORD is not set");
 }
 
-const fetch = createFmOdataFetch({
+const { fetch } = createRawFetch({
   serverUrl: process.env.FM_SERVER,
   auth: {
     username: process.env.FM_USERNAME,
     password: process.env.FM_PASSWORD,
   },
   database: process.env.FM_DATABASE,
+  logging: "verbose", // Enable verbose logging to see the response details
 });
 
 describe("My Adapter Tests", async () => {
   beforeAll(async () => {
     // reset the database
     for (const table of ["user", "session", "account", "verification"]) {
-      await fetch(`/${table}`, {
-        method: "DELETE",
-        query: {
-          $filter: `"id" ne '0'`,
-        },
+      const result = await fetch(`/${table}`, {
+        output: z.object({ value: z.array(z.any()) }),
       });
+
+      if (result.error) {
+        console.log("Error fetching records:", result.error);
+        continue;
+      }
+
+      const records = result.data?.value || [];
+      for (const record of records) {
+        const deleteResult = await fetch(`/${table}('${record.id}')`, {
+          method: "DELETE",
+        });
+
+        if (deleteResult.error) {
+          console.log(
+            `Error deleting record ${record.id}:`,
+            deleteResult.error,
+          );
+        }
+      }
     }
   });
 
@@ -79,49 +97,49 @@ describe("My Adapter Tests", async () => {
 });
 
 it("should properly filter by dates", async () => {
-  // delete all users
-  await fetch(`/user`, {
+  // delete all users - using buildQuery to construct the filter properly
+  const deleteAllResult = await fetch(`/user?$filter="id" ne '0'`, {
     method: "DELETE",
-    query: {
-      $filter: `"id" ne '0'`,
-    },
   });
+
+  if (deleteAllResult.error) {
+    console.log("Error deleting all users:", deleteAllResult.error);
+  }
 
   // create user
   const date = new Date("2025-01-10").toISOString();
-  await fetch(`/user`, {
+  const createResult = await fetch(`/user`, {
     method: "POST",
     body: {
       id: "filter-test",
       createdAt: date,
     },
-    throw: true,
+    output: z.object({ id: z.string() }),
   });
 
-  const result = await fetch(`/user`, {
+  if (createResult.error) {
+    throw new Error(`Failed to create user: ${createResult.error}`);
+  }
+
+  const result = await fetch(`/user?$filter=createdAt ge 2025-01-05`, {
     method: "GET",
-    query: {
-      $filter: `createdAt ge 2025-01-05`,
-    },
+    output: z.object({ value: z.array(z.any()) }),
   });
 
   console.log(result);
 
-  expect(result.data).toHaveLength(1);
+  if (result.error) {
+    throw new Error(`Failed to fetch users: ${result.error}`);
+  }
+
+  expect(result.data?.value).toHaveLength(1);
 
   // delete record
-  await fetch(`/user('filter-test')`, {
+  const deleteResult = await fetch(`/user('filter-test')`, {
     method: "DELETE",
-    throw: true,
   });
-});
 
-it("should sort descending", async () => {
-  // delete all users
-  await fetch(`/user`, {
-    method: "DELETE",
-    query: {
-      $filter: `identifier eq 'zyzaUHEsETWiuORCCdyguVVlVPcnduXk'`,
-    },
-  });
+  if (deleteResult.error) {
+    console.log("Error deleting test record:", deleteResult.error);
+  }
 });

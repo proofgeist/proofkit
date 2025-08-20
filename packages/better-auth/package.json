@@ -46,8 +46,6 @@
   "dependencies": {
     "@babel/preset-react": "^7.27.1",
     "@babel/preset-typescript": "^7.27.1",
-    "@better-fetch/fetch": "1.1.17",
-    "@better-fetch/logger": "^1.1.18",
     "@commander-js/extra-typings": "^14.0.0",
     "@tanstack/vite-config": "^0.2.0",
     "better-auth": "^1.2.10",
@@ -57,6 +55,7 @@
     "dotenv": "^16.5.0",
     "fs-extra": "^11.3.0",
     "neverthrow": "^8.2.0",
+    "odata-query": "^8.0.4",
     "prompts": "^2.4.2",
     "vite": "^6.3.4",
     "zod": "3.25.64"
@@ -64,6 +63,7 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/prompts": "^2.4.9",
+    "@vitest/ui": "^3.2.4",
     "fm-odata-client": "^3.0.1",
     "publint": "^0.3.12",
     "typescript": "^5.9.2",

@@ -231,7 +231,7 @@ export const FileMakerAdapter = (
               $top: limit,
               $skip: offset,
               ...(sortBy
-                ? { $orderby: `"${sortBy.field}" ${sortBy.direction ?? "asc"}` }
+                ? { $orderby: `${sortBy.field}%20${sortBy.direction ?? "asc"}` }
                 : {}),
             },
             output: z.object({ value: z.array(z.any()) }),

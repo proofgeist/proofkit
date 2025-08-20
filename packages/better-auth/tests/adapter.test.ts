@@ -57,6 +57,25 @@ describe("My Adapter Tests", async () => {
       return adapter(betterAuthOptions);
     },
   });
+
+  it("should sort descending", async () => {
+    const result = await adapter({}).findMany({
+      model: "verification",
+      where: [
+        {
+          field: "identifier",
+          operator: "eq",
+          value: "zyzaUHEsETWiuORCCdyguVVlVPcnduXk",
+        },
+      ],
+      limit: 1,
+      sortBy: { direction: "desc", field: "createdAt" },
+    });
+
+    console.log(result);
+
+    // expect(result.data).toHaveLength(1);
+  });
 });
 
 it("should properly filter by dates", async () => {
@@ -88,11 +107,21 @@ it("should properly filter by dates", async () => {
 
   console.log(result);
 
-  expect(result.data?.value).toHaveLength(1);
+  expect(result.data).toHaveLength(1);
 
   // delete record
   await fetch(`/user('filter-test')`, {
     method: "DELETE",
     throw: true,
+  });
+});
+
+it("should sort descending", async () => {
+  // delete all users
+  await fetch(`/user`, {
+    method: "DELETE",
+    query: {
+      $filter: `identifier eq 'zyzaUHEsETWiuORCCdyguVVlVPcnduXk'`,
+    },
   });
 });

@@ -1,5 +1,11 @@
 # @proofkit/better-auth
 
+## 0.3.0
+
+### Minor Changes
+
+- 10f3fc4: Change underlying fetch implementation
+
 ## 0.2.4
 
 ### Patch Changes

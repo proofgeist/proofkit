@@ -1,7 +1,7 @@
 import { FileMakerAdapter } from "@proofkit/better-auth";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { env } from "@/config/env";
+import { env } from "@/registry/lib/env";
 import { render } from "@react-email/components";
 import { GenericEmail } from "@/emails/generic";
 

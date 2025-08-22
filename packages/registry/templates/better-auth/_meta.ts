@@ -12,6 +12,7 @@ export const meta: TemplateMetadata = {
     "@proofkit/better-auth",
   ],
   registryDependencies: [
+    "{proofkit}/r/utils/t3-env",
     "{proofkit}/r/react-email",
     "{proofkit}/r/email/generic",
   ],
@@ -34,22 +35,15 @@ export const meta: TemplateMetadata = {
     },
     {
       sourceFileName: "auth.ts",
-      destinationPath: "src/auth.ts",
-      type: "registry:file",
+      type: "registry:lib",
     },
     {
       sourceFileName: "auth-client.ts",
-      destinationPath: "src/auth-client.ts",
-      type: "registry:file",
+      type: "registry:lib",
     },
     {
-      sourceFileName: "auth/[pathname]/page.tsx",
-      // destinationPath: "src/app/auth/[pathname]/page.tsx",
-      type: "registry:page",
-    },
-    {
-      sourceFileName: "view.tsx",
-      destinationPath: "src/app/auth/[pathname]/view.tsx",
+      sourceFileName: "page.tsx",
+      destinationPath: "src/app/auth/[pathname]/page.tsx",
       type: "registry:file",
     },
     {

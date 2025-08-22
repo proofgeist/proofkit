@@ -68,7 +68,7 @@ const settingsSchema = z.object({
   registryTemplates: z.array(z.string()).default([]),
 });
 
-export const defaultSettings = settingsSchema.parse({ auth: { type: "none" } });
+export const defaultSettings = settingsSchema.parse({ auth: { type: "none" },ui:"shadcn" });
 
 let settings: Settings | undefined;
 export const getSettings = () => {

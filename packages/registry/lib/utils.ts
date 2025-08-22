@@ -191,7 +191,7 @@ export async function getStaticComponent(
               path: file.sourceFileName,
               type: file.type,
               content,
-              target: file.destinationPath ?? file.sourceFileName,
+              target: file.destinationPath!
             };
 
       return shadcnFile;

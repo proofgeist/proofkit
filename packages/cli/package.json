@@ -69,6 +69,7 @@
     "dotenv": "^16.5.0",
     "es-toolkit": "^1.15.1",
     "execa": "^9.5.1",
+    "fast-glob": "^3.3.3",
     "fs-extra": "^11.3.0",
     "glob": "^11.0.1",
     "gradient-string": "^2.0.2",

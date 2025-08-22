@@ -42,21 +42,22 @@ export function validateTemplateMetadata(
   const validatedMeta = validationResult.data;
 
   // Validate that declared files actually exist
-  const actualFiles = fs
-    .readdirSync(context.templateDir)
-    .filter((f) => f !== "_meta.ts");
   const declaredFiles = validatedMeta.files.map((f) => f.sourceFileName);
 
   for (const declaredFile of declaredFiles) {
-    if (!actualFiles.includes(declaredFile)) {
+    const filePath = path.resolve(context.templateDir, declaredFile);
+    if (!fs.existsSync(filePath)) {
       throw new Error(
-        `Template ${context.templateName}: Declared file '${declaredFile}' does not exist`,
+        `Template ${context.templateName}: Declared file '${declaredFile}' does not exist at path '${filePath}'`,
       );
     }
   }
 
   // Check if template has content files when it declares files
   // Templates with empty files array in metadata are valid (e.g., dependency-only templates)
+  const actualFiles = fs
+    .readdirSync(context.templateDir)
+    .filter((f) => f !== "_meta.ts");
   if (declaredFiles.length > 0 && actualFiles.length === 0) {
     throw new Error(
       `Template ${context.templateName} declares files but has no content files`,

@@ -185,13 +185,13 @@ export async function getStaticComponent(
               path: file.sourceFileName,
               type: file.type,
               content,
-              target: file.destinationPath,
+              target: file.destinationPath ?? file.sourceFileName,
             }
           : {
               path: file.sourceFileName,
               type: file.type,
               content,
-              target: file.destinationPath ?? "",
+              target: file.destinationPath ?? file.sourceFileName,
             };
 
       return shadcnFile;

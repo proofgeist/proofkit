@@ -309,7 +309,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
 
   if (state.ui === "shadcn") {
     await shadcnInstall([
-      `${getRegistryUrl()}/r/mode-toggle`,
+      `${getRegistryUrl()}/r/components/mode-toggle`,
       "sonner",
       "button",
     ]);

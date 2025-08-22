@@ -1,5 +1,6 @@
 import { getOtherProofKitDependencies } from "@proofkit/registry";
 import semver from "semver";
+import ora from "ora";
 
 import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
@@ -7,23 +8,33 @@ import { logger } from "~/utils/logger.js";
 import { getSettings, mergeSettings } from "~/utils/parseSettings.js";
 import { getMetaFromRegistry } from "./getOptions.js";
 import { processPostInstallStep } from "./postInstall/index.js";
+import { preflightAddCommand } from "./preflight.js";
+import { uniq } from "es-toolkit";
 
 export async function installFromRegistry(name: string) {
-  const meta = await getMetaFromRegistry(name);
-  if (!meta) {
-    logger.error(`Template ${name} not found in the ProofKit registry`);
-    return;
-  }
-
-  if (
-    meta.minimumProofKitVersion &&
-    semver.gt(meta.minimumProofKitVersion, getVersion())
-  ) {
-    logger.error(
-      `Template ${name} requires ProofKit version ${meta.minimumProofKitVersion}, but you are using version ${getVersion()}`
-    );
-    return;
-  }
+  
+  const spinner = ora("Validating template").start();
+  await preflightAddCommand();
+  
+  try {
+    const meta = await getMetaFromRegistry(name);
+    if (!meta) {
+      spinner.fail(`Template ${name} not found in the ProofKit registry`);
+      return;
+    }
+    
+    
+    if (
+      meta.minimumProofKitVersion &&
+      semver.gt(meta.minimumProofKitVersion, getVersion())
+    ) {
+      logger.error(
+        `Template ${name} requires ProofKit version ${meta.minimumProofKitVersion}, but you are using version ${getVersion()}`
+      );
+      spinner.fail("Template is not compatible with your ProofKit version");
+      return;
+    }
+    spinner.succeed();
 
   const otherProofKitDependencies = getOtherProofKitDependencies(meta);
 
@@ -55,10 +66,14 @@ export async function installFromRegistry(name: string) {
 
   // update the settings
   mergeSettings({
-    registryTemplates: [
+    registryTemplates: uniq([
       ...previouslyInstalledTemplates,
       name,
       ...otherProofKitDependencies,
-    ],
+    ]),
   });
+  } catch (error) {
+    spinner.fail("Failed to fetch template metadata.");
+    logger.error(error);
+  }
 }

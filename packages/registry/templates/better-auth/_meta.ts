@@ -43,8 +43,8 @@ export const meta: TemplateMetadata = {
       type: "registry:file",
     },
     {
-      sourceFileName: "page.tsx",
-      destinationPath: "src/app/auth/[pathname]/page.tsx",
+      sourceFileName: "auth/[pathname]/page.tsx",
+      // destinationPath: "src/app/auth/[pathname]/page.tsx",
       type: "registry:page",
     },
     {

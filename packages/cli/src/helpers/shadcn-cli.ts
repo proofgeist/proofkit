@@ -6,19 +6,25 @@ import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { runExecCommand } from "./installDependencies.js";
+import { execa } from "execa";
 
 export async function shadcnInstall(
   components: string | string[],
   friendlyComponentName?: string
 ) {
   const componentsArray = Array.isArray(components) ? components : [components];
-  const command = ["shadcn@latest", "add", "--overwrite", ...componentsArray];
-  await runExecCommand({
-    command,
-    loadingMessage: `Installing ${friendlyComponentName ?? "components"}...`,
-    successMessage: `${friendlyComponentName ?? "Components"} installed successfully!`,
-    errorMessage: `Failed to install ${friendlyComponentName ?? "components"}`,
-  });
+  const command = ["shadcn@latest", "add", ...componentsArray, "--overwrite"];
+  // Use execa to run the shadcn add command directly
+  
+  try {
+    await execa("pnpm", ["dlx", ...command], {
+      stdio: "inherit",
+      cwd: process.cwd(),
+    });
+  } catch (error) {
+    logger.error(`Failed to run shadcn add: ${error}`);
+    throw error;
+  }
 }
 
 export function getRegistryUrl(): string {

@@ -29,7 +29,7 @@ export const templateFileSchema = z.discriminatedUnion("type", [
     // The name of the file within this template directory
     sourceFileName: z.string(),
     // The destination path in a consumer project, relative to project root
-    destinationPath: z.string(),
+    destinationPath: z.string().optional(),
     type: registryTypeSchema.extract(["registry:file", "registry:page"]),
   }),
   z.object({
@@ -103,6 +103,8 @@ const categorySchema = z.enum([
   "email",
 ]);
 
+export const frameworkSchema = z.enum(["next-pages", "next-app", "manual"]);
+
 const sharedMetadataSchema = registryItemSchema
   .omit({ name: true, type: true, files: true })
   .extend({
@@ -121,6 +123,7 @@ const sharedMetadataSchema = registryItemSchema
       .string()
       .describe("The minimum version of ProofKit required to use this template")
       .optional(),
+    allowedFrameworks: z.array(frameworkSchema).optional(),
   });
 
 // Defines the metadata for a single template (_meta.ts)

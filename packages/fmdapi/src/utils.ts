@@ -1,31 +1,29 @@
-import type { S, L, U } from "ts-toolbelt";
 import type * as z3 from "zod/v3";
 import type * as z4 from "zod/v4/core";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TransformedFields<T extends Record<string, any>> = U.Merge<
-  {
-    [Field in keyof T]: {
-      [Key in Field extends string
-        ? L.Last<S.Split<Field, "::">>
-        : Field]: T[Field];
-    };
-  }[keyof T]
->;
+type StripFMTableName<K extends PropertyKey> = K extends `${string}::${infer R}`
+  ? R
+  : K;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function removeFMTableNames<T extends Record<string, any>>(
+type TransformedFields<T extends object> = {
+  [K in keyof T as K extends string ? StripFMTableName<K> : K]: T[K];
+};
+
+export function removeFMTableNames<T extends object>(
   obj: T,
 ): TransformedFields<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const newObj: any = {};
+  const newObj = {} as TransformedFields<T>;
   for (const key in obj) {
-    if (key.includes("::")) {
-      const newKey = key.split("::")[1];
-      newObj[newKey as keyof TransformedFields<T>] = obj[key];
-    } else {
-      newObj[key] = obj[key];
-    }
+    const originalKey = key as keyof T;
+    const value = obj[originalKey];
+    const mappedKey = (
+      typeof key === "string" && key.includes("::") ? key.split("::")[1] : key
+    ) as keyof TransformedFields<T>;
+
+    // Use a temporary index signature cast to assign without any
+    (newObj as unknown as Record<PropertyKey, unknown>)[
+      mappedKey as unknown as PropertyKey
+    ] = value as unknown;
   }
   return newObj;
 }

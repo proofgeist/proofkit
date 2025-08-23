@@ -36,6 +36,7 @@ export const meta: TemplateMetadata = {
     {
       sourceFileName: "auth.ts",
       type: "registry:lib",
+      handlebars: true,
     },
     {
       sourceFileName: "auth-client.ts",

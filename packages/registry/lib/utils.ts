@@ -172,10 +172,14 @@ export async function getStaticComponent(
 
   const files: ShadcnFilesUnion = await Promise.all(
     meta.files.map(async (file) => {
+      const sourceFile = file.handlebars
+        ? file.sourceFileName.replace(/\.[^/.]+$/, ".hbs")
+        : file.sourceFileName;
+
       const contentPath = path.join(
         templatesPath,
         normalized,
-        file.sourceFileName,
+        sourceFile,
       );
       const content = await fs.readFile(contentPath, "utf-8");
 

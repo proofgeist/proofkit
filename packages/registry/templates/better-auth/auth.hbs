@@ -1,7 +1,7 @@
 import { FileMakerAdapter } from "@proofkit/better-auth";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { env } from "@/registry/lib/env";
+import { env } from "@/registry/default/lib/env";
 import { render } from "@react-email/components";
 import { GenericEmail } from "@/emails/generic";
 
@@ -9,11 +9,20 @@ export const auth = betterAuth({
   // database
   database: FileMakerAdapter({
     debugLogs: true,
+    {{#findFirst proofkit.dataSources "fm"}}
     odata: {
-      serverUrl: env.FM_SERVER,
-      auth: { apiKey: env.OTTO_API_KEY },
-      database: env.FM_DATABASE,
+      serverUrl: env.{{envNames.server}},
+      auth: { apiKey: env.{{envNames.apiKey}} },
+      database: env.{{envNames.database}},
     },
+    {{else}}
+    // TODO: Add your FileMaker data source here
+    // odata: {
+    //   serverUrl: env.FM_SERVER,
+    //   auth: { apiKey: env.OTTO_API_KEY },
+    //   database: env.FM_DATABASE,
+    // },
+    {{/findFirst}}
   }),
 
   emailAndPassword: {

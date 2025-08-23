@@ -42,7 +42,13 @@ export function validateTemplateMetadata(
   const validatedMeta = validationResult.data;
 
   // Validate that declared files actually exist
-  const declaredFiles = validatedMeta.files.map((f) => f.sourceFileName);
+  const declaredFiles = validatedMeta.files.map((f) => {
+    if (f.handlebars) {
+      // Replace the file extension with .hbs for existence check
+      return f.sourceFileName.replace(/\.[^/.]+$/, ".hbs");
+    }
+    return f.sourceFileName;
+  });
 
   for (const declaredFile of declaredFiles) {
     const filePath = path.resolve(context.templateDir, declaredFile);

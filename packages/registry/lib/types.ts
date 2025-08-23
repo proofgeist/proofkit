@@ -31,11 +31,13 @@ export const templateFileSchema = z.discriminatedUnion("type", [
     // The destination path in a consumer project, relative to project root
     destinationPath: z.string().optional(),
     type: registryTypeSchema.extract(["registry:file", "registry:page"]),
+    handlebars: z.boolean().optional(),
   }),
   z.object({
     sourceFileName: z.string(),
     destinationPath: z.string().optional(),
     type: registryTypeSchema.exclude(["registry:file", "registry:page"]),
+    handlebars: z.boolean().optional(),
   }),
 ]);
 

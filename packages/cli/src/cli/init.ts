@@ -246,16 +246,26 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   });
 
   // Ensure proofkit.json exists with initial settings including ui
-  const initialSettings: Settings = {
+  const initialSettings: Settings = state.ui==="mantine"?{
     appType: state.appType ?? "browser",
-    ui: (state.ui as "shadcn" | "mantine") ?? "shadcn",
+    ui: "mantine",
     auth: { type: "none" },
     envFile: ".env",
     dataSources: [],
     tanstackQuery: false,
     replacedMainPage: false,
     appliedUpgrades: ["cursorRules"],
-  };
+    reactEmail: false,
+    reactEmailServer: false,
+    registryTemplates: [],
+  }:{
+    appType: state.appType ?? "browser",
+    ui: "shadcn",
+    envFile: ".env",
+    dataSources: [],
+    replacedMainPage: false,
+    registryTemplates: [],
+  }
   const { registryUrl } = setSettings(initialSettings);
 
   // for webviewer apps FM is required, so don't ask

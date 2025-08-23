@@ -26,6 +26,9 @@ export async function addAuth({
   noInstall?: boolean;
 }) {
   const settings = getSettings();
+  if (settings.ui === "shadcn") {
+    throw new Error("Shadcn projects should add auth using the template registry");
+  }
   if (settings.auth.type !== "none") {
     throw new Error("Auth already exists");
   } else if (

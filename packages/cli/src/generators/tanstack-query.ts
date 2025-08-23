@@ -11,6 +11,7 @@ import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 export async function injectTanstackQuery(args?: { project?: Project }) {
   const projectDir = state.projectDir;
   const settings = getSettings();
+  if (settings.ui === "shadcn") return false;
   if (settings.tanstackQuery) return false;
 
   addPackageDependency({

@@ -33,6 +33,8 @@ export const runAdd = async (
   ensureProofKitProject({ commandName: "add" });
   const settings = getSettings();
 
+
+
   const addType = abortIfCancel(
     await p.select({
       message: "What do you want to add to your project?",
@@ -53,7 +55,7 @@ export const runAdd = async (
               },
             ]
           : []),
-        ...(settings.auth.type === "none" && settings.appType === "browser"
+        ...(settings.ui === "shadcn" ? [] : settings.auth.type === "none" && settings.appType === "browser"
           ? [{ label: "Auth", value: "auth" }]
           : []),
       ],

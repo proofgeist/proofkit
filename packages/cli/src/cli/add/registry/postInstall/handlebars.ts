@@ -5,7 +5,8 @@ import handlebars from "handlebars";
 
 import { getShadcnConfig } from "~/helpers/shadcn-cli.js";
 import { state } from "~/state.js";
-import { getSettings } from "~/utils/parseSettings.js";
+import { DataSource, getSettings } from "~/utils/parseSettings.js";
+import { getClientSuffix, getFieldNamesForSchema } from "~/generators/fmdapi.js";
 
 // Register handlebars helpers
 handlebars.registerHelper("eq", function (a, b) {
@@ -27,14 +28,62 @@ handlebars.registerHelper(
   }
 );
 
-export function buildHandlebarsData(schemaName?: string) {
+type DataSourceForTemplate = {
+  dataSource: DataSource;
+  schemaName: string;
+}
+
+const commonFieldNamesToExclude = [
+  "id",
+  "pk",
+  "createdat",
+  "updatedat",
+  "primarykey",
+  "createdby",
+  "modifiedby",
+  "creationtimestamp",
+  "modificationtimestamp",
+];
+
+function filterOutCommonFieldNames(fieldNames: string[]): string[] {
+  return fieldNames.filter(
+    (fieldName) =>
+      !commonFieldNamesToExclude.includes(fieldName.toLowerCase()) ||
+      fieldName.startsWith("_")
+  );
+}
+
+
+function buildDataSourceData(args: DataSourceForTemplate) {
+  const { dataSource, schemaName } = args;
+
+  const clientSuffix = getClientSuffix({
+    projectDir: state.projectDir??process.cwd(),
+    dataSourceName: dataSource.name,
+  });
+
+  const allFieldNames = getFieldNamesForSchema({
+    schemaName,
+    dataSourceName: dataSource.name,
+  }).filter(Boolean) as string[];
+
+  return {
+    sourceName: dataSource.name,
+    schemaName,
+    clientSuffix,
+    allFieldNames,
+    fieldNames: filterOutCommonFieldNames(allFieldNames)
+  }
+}
+
+export function buildHandlebarsData(args?: DataSourceForTemplate) {
   const proofkit = getSettings();
   const shadcn = getShadcnConfig();
 
   return {
     proofkit,
     shadcn,
-    schemaName,
+    schema: args ? buildDataSourceData(args) : undefined,
   };
 }
 

@@ -19,7 +19,7 @@ export async function shadcnInstall(
   try {
     await execa("pnpm", ["dlx", ...command], {
       stdio: "inherit",
-      cwd: process.cwd(),
+      cwd: state.projectDir ?? process.cwd(),
     });
   } catch (error) {
     logger.error(`Failed to run shadcn add: ${error}`);

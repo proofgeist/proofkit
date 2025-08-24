@@ -1,6 +1,6 @@
-import { IconInfinity } from "@tabler/icons-react";
+import { InfinityIcon } from "lucide-react";
 import React from "react";
 
 export default function AppLogo() {
-  return <IconInfinity size={32} />;
+  return <InfinityIcon size={32} />;
 }

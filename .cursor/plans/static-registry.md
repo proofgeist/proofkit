@@ -112,7 +112,7 @@ app.get("/index.json", async (c) => {
 // Serves the data for a single component
 // The :style param is part of the shadcn spec, we'll include it for compatibility
 app.get("/:style/:name.json", async (c) => {
-  const { name } = c.req.param();
+  const { name } = c.req.param();  
   try {
     const component = await getStaticComponent(name);
     if (!component) {

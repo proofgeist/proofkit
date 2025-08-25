@@ -9,6 +9,8 @@ export async function processPostInstallStep(step: PostInstallStep) {
     addScriptToPackageJson(step);
   } else if (step.action === "wrap provider") {
     await wrapProvider(step);
+  } else if (step.action === "next-steps") {
+    logger.info(step.data.message);
   } else {
     logger.error(`Unknown post-install step: ${step}`);
   }

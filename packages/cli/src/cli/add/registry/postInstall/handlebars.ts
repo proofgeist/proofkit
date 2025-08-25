@@ -1,5 +1,5 @@
 import path from "path";
-import { TemplateFile } from "@proofkit/registry";
+import { TemplateFile, decodeHandlebarsFromShadcn } from "@proofkit/registry";
 import fs from "fs-extra";
 import handlebars from "handlebars";
 
@@ -83,7 +83,13 @@ export function buildHandlebarsData(args?: DataSourceForTemplate) {
   return {
     proofkit,
     shadcn,
-    schema: args ? buildDataSourceData(args) : undefined,
+    schema: args ? buildDataSourceData(args) : {
+      sourceName: "UnknownDataSource",
+      schemaName: "UnknownSchema",
+      clientSuffix: "UnknownClientSuffix",
+      allFieldNames: ["UnknownFieldName"],
+      fieldNames: ["UnknownFieldName"],
+    },
   };
 }
 
@@ -92,9 +98,13 @@ export async function randerHandlebarsToFile(
   data: ReturnType<typeof buildHandlebarsData>
 ) {
   const inputPath = getFilePath(file, data);
-  const rawTemplate = await fs.readFile(inputPath, "utf8");
+  let rawTemplate = await fs.readFile(inputPath, "utf8");
+  
+  // Decode placeholder tokens back to handlebars syntax
+  // This uses the centralized decoding function from the registry package
+  rawTemplate = decodeHandlebarsFromShadcn(rawTemplate);
+  
   const template = handlebars.compile(rawTemplate);
-
   const rendered = template(data);
   await fs.writeFile(inputPath, rendered);
 }
@@ -153,6 +163,13 @@ export function getFilePath(
     case "registry:file":
       return path.join(cwd, "src", thePath);
     case "registry:page":
+      // For page templates, use the route name if available in template data
+      const routeName = (data as any).routeName;
+      if (routeName) {
+        // Add /(main) prefix for Next.js app router structure
+        const pageRoute = routeName === "/" ? "" : routeName;
+        return path.join(cwd, "src", "app", "(main)", pageRoute, thePath);
+      }
       return path.join(cwd, "src", "app", thePath);
     case "registry:block":
       return path.join(cwd, "src", "components", "blocks", thePath);

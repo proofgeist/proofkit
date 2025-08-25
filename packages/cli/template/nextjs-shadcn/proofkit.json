@@ -1,7 +1,6 @@
 {
-  "auth": { "type": "none" },
+  "ui": "shadcn",
   "envFile": ".env",
   "appType": "browser",
-  "ui": "shadcn",
-  "appliedUpgrades": ["shadcn", "cursorRules"]
+  "registryTemplates": ["utils/t3-env"]
 }

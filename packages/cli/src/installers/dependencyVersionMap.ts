@@ -106,5 +106,8 @@ export const dependencyVersionMap = {
 
   // Theme utilities
   "next-themes": "^0.4.6",
+
+  // Zod
+  "zod": "^4",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

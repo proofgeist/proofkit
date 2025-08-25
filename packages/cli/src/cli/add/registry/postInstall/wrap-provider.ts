@@ -11,9 +11,7 @@ import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
-export async function wrapProvider(
-  step: Extract<PostInstallStep, { action: "wrap provider" }>
-) {
+export async function wrapProvider(step: Extract<PostInstallStep, { action: "wrap provider" }>) {  
   const {
     parentTag,
     imports: importConfigs,
@@ -115,9 +113,21 @@ export async function wrapProvider(
       // If no parent tag found or specified, wrap the entire return statement
       const returnExpression = returnStatement?.getExpression();
       if (returnExpression) {
+        // Check if the expression is a ParenthesizedExpression
+        const isParenthesized = returnExpression.getKind() === SyntaxKind.ParenthesizedExpression;
+        
+        let innerExpressionText: string;
+        if (isParenthesized) {
+          // Get the inner expression from the parenthesized expression
+          const parenthesizedExpr = returnExpression.asKindOrThrow(SyntaxKind.ParenthesizedExpression);
+          innerExpressionText = parenthesizedExpr.getExpression().getText();
+        } else {
+          innerExpressionText = returnExpression.getText();
+        }
+        
         const newReturnContent = `return (
     ${providerOpenTag}
-      ${returnExpression.getText()}
+      ${innerExpressionText}
     ${providerCloseTag}
   );`;
 

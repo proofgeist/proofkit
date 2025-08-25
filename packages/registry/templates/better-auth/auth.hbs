@@ -1,71 +1,32 @@
-import { FileMakerAdapter } from "@proofkit/better-auth";
-import { betterAuth } from "better-auth";
-import { nextCookies } from "better-auth/next-js";
-import { env } from "@/registry/default/lib/env";
-import { render } from "@react-email/components";
-import { GenericEmail } from "@/emails/generic";
-
-export const auth = betterAuth({
-  // database
-  database: FileMakerAdapter({
-    debugLogs: true,
-    {{#findFirst proofkit.dataSources "fm"}}
-    odata: {
-      serverUrl: env.{{envNames.server}},
-      auth: { apiKey: env.{{envNames.apiKey}} },
-      database: env.{{envNames.database}},
-    },
-    {{else}}
-    // TODO: Add your FileMaker data source here
-    // odata: {
-    //   serverUrl: env.FM_SERVER,
-    //   auth: { apiKey: env.OTTO_API_KEY },
-    //   database: env.FM_DATABASE,
-    // },
-    {{/findFirst}}
-  }),
-
-  emailAndPassword: {
-    enabled: true,
-    autoSignIn: true, // Automatically sign in the user after sign up
-    sendResetPassword: async ({ url, user }) => {
-      // this is the HTML body of the email to be send
-      const body = await render(
-        GenericEmail({
-          title: "Reset Your Password",
-          description: "Click the link to reset your password",
-          ctaText: "Reset Password",
-          ctaHref: url,
-          footer:
-            "If you did not request a password reset, please ignore this email.",
-        }),
-      );
-      const subject = "Reset Your Password";
-
-      // TODO: Customize this function to actually send the email to your users
-      // Learn more: https://proofkit.dev/auth/better-auth
-      console.warn(
-        "TODO: Customize this function to actually send to your users",
-      );
-      console.log(
-        `To ${user.email}: Click the link to reset your password: ${url}`,
-      );
-    },
-
-    // if set to true, you'll have to create users in FileMaker first
-    disableSignUp: false,
-  },
-
-  // --- CUSTOMIZE TABLE NAMES HERE ---
-  // Account table: Stores OAuth tokens and/or hashed passwords
-  account: { modelName: "account" },
-  // User table: Stores user data
-  user: { modelName: "user" },
-  // Session table: The record that determines if a user is logged in
-  session: { modelName: "session" },
-  // Verification table: Stores email verification and password reset tokens
-  verification: { modelName: "verification" },
-
-  // --- PLUGINS ---
-  plugins: [nextCookies()],
-});
+import { FileMakerAdapter } from "@proofkit/better-auth"; import { betterAuth }
+from "better-auth"; import { nextCookies } from "better-auth/next-js"; import {
+env } from "@/registry/default/lib/env"; import { render } from
+"@react-email/components"; import { GenericEmail } from "@/emails/generic";
+export const auth = betterAuth({ // database database: FileMakerAdapter({
+debugLogs: true,
+{{#findFirst proofkit.dataSources "fm"}}
+  odata: { serverUrl: env.{{envNames.server}}, auth: { apiKey: env.{{envNames.apiKey}}
+  }, database: env.{{envNames.database}}, },
+{{else}}
+  // TODO: Add your FileMaker data source here // odata: { // serverUrl:
+  env.FM_SERVER, // auth: { apiKey: env.OTTO_API_KEY }, // database:
+  env.FM_DATABASE, // },
+{{/findFirst}}
+}), emailAndPassword: { enabled: true, autoSignIn: true, // Automatically sign
+in the user after sign up sendResetPassword: async ({ url, user }) => { // this
+is the HTML body of the email to be send const body = await render(
+GenericEmail({ title: "Reset Your Password", description: "Click the link to
+reset your password", ctaText: "Reset Password", ctaHref: url, footer: "If you
+did not request a password reset, please ignore this email.", }), ); const
+subject = "Reset Your Password"; // TODO: Customize this function to actually
+send the email to your users // Learn more:
+https://proofkit.dev/auth/better-auth console.warn( "TODO: Customize this
+function to actually send to your users", ); console.log( `To ${user.email}:
+Click the link to reset your password: ${url}`, ); }, // if set to true, you'll
+have to create users in FileMaker first disableSignUp: false, }, // ---
+CUSTOMIZE TABLE NAMES HERE --- // Account table: Stores OAuth tokens and/or
+hashed passwords account: { modelName: "account" }, // User table: Stores user
+data user: { modelName: "user" }, // Session table: The record that determines
+if a user is logged in session: { modelName: "session" }, // Verification table:
+Stores email verification and password reset tokens verification: { modelName:
+"verification" }, // --- PLUGINS --- plugins: [nextCookies()], });

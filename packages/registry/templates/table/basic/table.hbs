@@ -1,0 +1,162 @@
+'use client';
+
+import {
+  type ColumnDef,
+  getCoreRowModel,
+  type SortingState,
+  useReactTable,
+} from '@tanstack/react-table';
+
+import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
+import { useMemo, useTransition } from 'react';
+import { DataGrid, DataGridContainer } from '@/components/ui/data-grid';
+import { DataGridColumnHeader } from '@/components/ui/data-grid-column-header';
+import { DataGridPagination } from '@/components/ui/data-grid-pagination';
+import { DataGridTable } from '@/components/ui/data-grid-table';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { T{{schema.schemaName}} } from '@/config/schemas/{{schema.sourceName}}/{{schema.schemaName}}';
+import { DEFAULT_PAGE_SIZE } from './constants';
+
+type TData = T{{schema.schemaName}};
+
+export default function MyTable({
+  data,
+  totalCount,
+}: {
+  data: TData[];
+  totalCount: number | undefined;
+}) {
+  const [isPending, startTransition] = useTransition();
+
+  // URL-synchronized state for pagination and sorting
+  const [pageIndex, setPagination] = useQueryState(
+    'page',
+    parseAsInteger.withDefault(1).withOptions({ shallow: false })
+  );
+  const [pageSize, setPageSize] = useQueryState(
+    'pageSize',
+    parseAsInteger
+      .withDefault(DEFAULT_PAGE_SIZE)
+      .withOptions({ shallow: false })
+  );
+  const [sortBy, setSortBy] = useQueryState(
+    'sortBy',
+    parseAsString.withOptions({ shallow: false })
+  );
+  const [sortOrder, setSortOrder] = useQueryState(
+    'sortOrder',
+    parseAsString.withOptions({ shallow: false })
+  );
+
+  // Convert URL params to React Table sorting format
+  const sorting: SortingState = useMemo(() => {
+    if (sortBy && sortOrder) {
+      return [{ id: sortBy, desc: sortOrder === 'desc' }];
+    }
+    return [];
+  }, [sortBy, sortOrder]);
+
+  const handleSortingChange = (
+    updaterOrValue: SortingState | ((old: SortingState) => SortingState)
+  ) => {
+    const newSorting =
+      typeof updaterOrValue === 'function'
+        ? updaterOrValue(sorting)
+        : updaterOrValue;
+
+    startTransition(() => {
+      if (newSorting.length === 0) {
+        setSortBy(null);
+        setSortOrder(null);
+      } else {
+        const sort = newSorting[0];
+        setSortBy(sort.id);
+        setSortOrder(sort.desc ? 'desc' : 'asc');
+      }
+    });
+  };
+  // Column definitions - memoized for performance
+  const columns = useMemo<ColumnDef<TData>[]>(
+    () =>
+      [
+{{#each schema.fieldNames}}
+        {
+          id: '{{this}}',
+          header: ({ column }) => (
+            <DataGridColumnHeader column={column} title="{{this}}" />
+          ),
+          accessorFn: (row) => row["{{this}}"],
+          enableSorting: true,
+          meta: {
+            skeleton: <Skeleton className="h-7 w-16" />,
+          },
+        },
+{{/each}}
+      ] satisfies ColumnDef<TData>[],
+    []
+  );
+  // Configure React Table instance
+  const table = useReactTable({
+    columns,
+    data,
+    pageCount: Math.ceil((totalCount || 0) / pageSize),
+    getRowId: (row: TData) => row.id,
+    state: {
+      pagination: { pageIndex: pageIndex - 1, pageSize },
+      sorting,
+    },
+    onPaginationChange: (pagination) => {
+      startTransition(() => {
+        if (typeof pagination === 'function') {
+          const newPagination = pagination({
+            pageIndex: pageIndex - 1,
+            pageSize,
+          });
+
+          // Reset to page 1 if page size changed
+          if (newPagination.pageSize !== pageSize) {
+            setPagination(1);
+            setPageSize(newPagination.pageSize);
+          } else {
+            setPagination(newPagination.pageIndex + 1);
+            setPageSize(newPagination.pageSize);
+          }
+          return;
+        }
+
+        if (pagination.pageSize !== pageSize) {
+          setPagination(1);
+          setPageSize(pagination.pageSize);
+        } else {
+          setPagination(pagination.pageIndex + 1);
+          setPageSize(pagination.pageSize);
+        }
+      });
+    },
+    onSortingChange: handleSortingChange,
+    getCoreRowModel: getCoreRowModel(),
+    // Server-side processing
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+  });
+  return (
+    <DataGrid
+      isLoading={isPending}
+      recordCount={totalCount || 0}
+      table={table}
+      tableLayout={ { width: 'auto' } }
+    >
+      <div className="w-full space-y-2.5">
+        <DataGridContainer>
+          <ScrollArea>
+            <DataGridTable />
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </DataGridContainer>
+        <DataGridPagination />
+      </div>
+    </DataGrid>
+  );
+}

@@ -1,0 +1,215 @@
+# Data Table Template
+
+A comprehensive, production-ready data table implementation demonstrating modern React and Next.js patterns.
+
+## 📋 Overview
+
+This template shows how to build a data table with:
+- Server-side pagination and sorting
+- URL-synchronized state management
+- TypeScript integration
+- FileMaker database connectivity
+- Accessibility features
+
+## 🏗️ Architecture
+
+### File Structure
+```
+table/                # this folder name defines the URL path to this page
+├── README.md          # This documentation
+├── constants.ts       # Configuration constants
+├── page.tsx          # Server Component (data fetching)
+└── table.tsx         # Client Component (user interactions)
+```
+
+### Component Responsibilities
+
+**`page.tsx` - Server Component**
+- Runs on the server before the page is sent to the browser
+- Parses URL search parameters
+- Fetches data from FileMaker database
+- Handles SEO and initial page rendering
+- Cannot use browser features (onClick, useState, etc.)
+
+**`table.tsx` - Client Component**
+- Runs in the browser after page loads
+- Handles user interactions (sorting, pagination)
+- Manages UI state and loading states
+- Cannot directly access databases or server resources
+
+## 🔄 Data Flow
+
+1. **User Navigation**: User visits `/table?page=2&sortBy=nameFirst`
+2. **Server Processing**: `page.tsx` parses URL params and queries database
+3. **Data Fetching**: FileMaker API returns paginated, sorted data
+4. **Server Rendering**: Page is rendered on server with data included
+5. **Client Hydration**: `table.tsx` becomes interactive in browser
+6. **User Interaction**: User clicks sort → URL updates → Server re-renders
+
+## 🎯 Key Concepts for New Developers
+
+### 1. Server vs Client Components
+
+**Server Components** (page.tsx):
+- ✅ Direct database access
+- ✅ Environment variables
+- ✅ SEO optimization
+- ✅ Fast initial rendering
+- ❌ No user interactions
+- ❌ No React hooks (useState, useEffect)
+
+**Client Components** (table.tsx):
+- ✅ User interactions
+- ✅ React hooks
+- ✅ Browser APIs
+- ✅ Real-time updates
+- ❌ No direct database access
+- ❌ No server-only resources
+
+### 2. URL State Management
+
+Instead of storing table state in React state, we use URL parameters:
+
+```
+/table?page=2&pageSize=20&sortBy=nameFirst&sortOrder=desc
+```
+
+**Benefits:**
+- Bookmarkable links
+- Shareable URLs  
+- Browser back/forward works
+- State persists on refresh
+
+**Implementation:**
+- Server: `nuqs/server` for parsing parameters
+- Client: `nuqs` hooks for updating parameters
+
+### 3. Performance Optimizations
+
+**`useMemo`**: Prevents expensive recalculations
+```typescript
+const columns = useMemo(() => [...], []); // Only create once
+```
+
+**`useTransition`**: Shows loading states during navigation
+```typescript
+const [isPending, startTransition] = useTransition();
+startTransition(() => {
+  // State updates that trigger navigation
+});
+```
+
+**Server-side Processing**: Pagination and sorting happen on the server, reducing data transfer.
+
+### 4. TypeScript Integration
+
+**Type Safety**: Database schema types ensure correct field usage
+```typescript
+type TData = T{{schema.schemaName}}; // Generated from FileMaker schema
+```
+
+## 🛠️ Configuration
+
+### Pagination Settings
+
+Edit `constants.ts` to change default page size:
+```typescript
+export const DEFAULT_PAGE_SIZE = 10; // Adjust as needed
+```
+
+### Adding Columns
+
+1. **Update Type Definition**: Ensure field exists in `T{{schema.schemaName}}` type
+2. **Add Column Definition** in `table.tsx`:
+```typescript
+{
+  id: 'newField',
+  header: ({ column }) => (
+    <DataGridColumnHeader column={column} title="Display Name" />
+  ),
+  accessorFn: (row) => row.newField,
+  enableSorting: true,
+}
+```
+
+### Database Integration
+
+The template uses FileMaker Data API through `@proofkit/fmdapi`:
+
+```typescript
+const { data, dataInfo } = await {{schema.schemaName}}{{schema.clientSuffix}}.list({
+  limit: pageSize,     // Items per page
+  offset,              // Skip records for pagination
+  sort,                // Sorting configuration
+});
+```
+
+**Important**: Default limit is 100 records. For more, see ProofKit documentation.
+
+## 🔍 Troubleshooting
+
+### Data Loading Issues
+1. **Run type generation first**: `pnpm typegen`
+2. Check FileMaker schema changes
+3. Verify environment variables (without exposing values)
+
+### Common Patterns
+
+**Adding Loading States:**
+```typescript
+{isPending && <div>Loading...</div>}
+```
+
+**Error Handling:**
+```typescript
+try {
+  const data = await fetchData();
+} catch (error) {
+  console.error('Failed to load data:', error);
+}
+```
+
+## 🚀 Extending the Template
+
+### Adding Filtering
+1. Add filter parameters to `tableSearchParams`
+2. Update server query logic
+3. Add filter UI components
+
+### Custom Sorting
+1. Modify sort parameter building in `page.tsx`
+2. Update FileMaker query configuration
+3. Add custom sort options to column headers
+
+### Export Functionality
+1. Create server action for data export
+2. Add export button to table toolbar
+3. Handle different export formats (CSV, Excel, etc.)
+
+## 📚 Learning Resources
+
+- [Next.js App Router](https://nextjs.org/docs/app)
+- [TanStack Table](https://tanstack.com/table/latest)
+- [nuqs Documentation](https://nuqs.47ng.com/)
+- [ProofKit FileMaker Integration](https://proofkit.dev/docs)
+
+## 🎨 Styling
+
+This template uses:
+- **Tailwind CSS**: Utility-first CSS framework
+- **shadcn/ui**: Pre-built accessible components
+- **CSS Modules**: For component-specific styles
+
+Customize appearance by modifying:
+- Tailwind classes in JSX
+- Component variants in `ui/` components
+- Global styles in `globals.css`
+
+## 🔐 Security Notes
+
+- Database credentials stay on the server
+- Client never sees sensitive environment variables
+- All database queries are server-side only
+- Input validation happens at multiple layers
+
+---

@@ -1,5 +1,17 @@
 # @proofgeist/kit
 
+## 1.2.0
+
+### Minor Changes
+
+- d315ad9: CLI defaults to shadcn/ui for new projects. Legacy Mantine templates are still available via a hidden `--ui mantine` flag during `init`. The selected UI is persisted in `proofkit.json` as `ui`. Existing projects using Mantine are auto-detected and remain fully supported. For shadcn-based projects, adding new pages or auth via `proofkit add` is temporarily disabled while we work on a new component system.
+
+### Patch Changes
+
+- Updated dependencies [78cbab1]
+  - @proofkit/fmdapi@5.0.3
+  - @proofkit/typegen@1.0.11
+
 ## 1.1.8
 
 ### Patch Changes

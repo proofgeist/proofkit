@@ -1,36 +1,52 @@
-import { handle } from "hono/vercel";
-import app from "./registry";
-import { getRegistryIndex } from "@proofkit/registry";
+import { NextRequest } from 'next/server';
+import { 
+  getRegistryIndex, 
+  getComponentMeta, 
+  getStaticComponentForShadcn 
+} from '@/lib/registry-server';
 
-const handler = handle(app);
-export {
-  handler as GET,
-};
-
-export const dynamicParams = false
-
-// Generate static params for all registry routes
-export async function generateStaticParams() {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ name?: string[] }> }
+) {
   try {
-    const index = await getRegistryIndex();
+    const { name = [] } = await params;
+    const path = name.join('/');
+    const url = new URL(request.url);
     
-    const params = [
-      // Root registry route
-      { name: [] },
-      // Individual component routes
-      ...index.map((item) => ({
-        name: item.name.split('/'),
-      })),
-      // Meta routes for each component
-      ...index.map((item) => ({
-        name: ['meta', ...item.name.split('/')],
-      })),
-    ];
+    // Handle root registry request
+    if (path === '') {
+      const index = await getRegistryIndex();
+      return Response.json(index);
+    }
     
-    console.log('Generated static params for registry:', params);
-    return params;
+    // Handle meta requests
+    if (path.startsWith('meta/')) {
+      const componentPath = path.replace('meta/', '');
+      const meta = await getComponentMeta(componentPath);
+      return Response.json(meta);
+    }
+    
+    // Handle component requests
+    const routeNameRaw = url.searchParams.get('routeName');
+    const routeName = routeNameRaw ? routeNameRaw.replace(/^\/+/, '') : undefined;
+    
+    const component = await getStaticComponentForShadcn(path, { routeName });
+    
+    // Replace {proofkit} placeholders with the current origin
+    const responseData = {
+      ...component,
+      registryDependencies: component.registryDependencies?.map((dep: string) =>
+        dep.replace('{proofkit}', url.origin)
+      ),
+    };
+    
+    return Response.json(responseData);
   } catch (error) {
-    console.error('Failed to generate static params for registry:', error);
-    return [{ name: [] }];
+    console.error('Registry route error:', error);
+    return Response.json(
+      { error: 'Component not found.' },
+      { status: 404 }
+    );
   }
 }

@@ -1,7 +1,6 @@
 import { handle } from "hono/vercel";
 import app from "./registry";
 import { getRegistryIndex } from "@proofkit/registry";
-import { getRegistryIndex } from "@proofkit/registry";
 
 const handler = handle(app);
 export {

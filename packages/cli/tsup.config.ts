@@ -8,6 +8,7 @@ export default defineConfig({
   format: ["esm"],
   minify: !isDev,
   target: "esnext",
+  replaceNodeEnv: true,
   outDir: "dist",
-  onSuccess: isDev ? "node dist/index.js" : undefined,
+  onSuccess: isDev ? "IS_LOCAL_DEV=1 node dist/index.js" : undefined,
 });

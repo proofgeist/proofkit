@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs-extra";
 import { z } from "zod/v4";
 
+import { DEFAULT_REGISTRY_URL } from "~/consts.js";
 import { state } from "~/state.js";
 
 const authSchema = z
@@ -44,14 +45,19 @@ export type DataSource = z.infer<typeof dataSourceSchema>;
 
 export const appTypes = ["browser", "webviewer"] as const;
 
+export const uiTypes = ["shadcn", "mantine"] as const;
+export type Ui = (typeof uiTypes)[number];
+
 const settingsSchema = z.object({
   appType: z.enum(appTypes).default("browser"),
+  ui: z.enum(uiTypes).default("mantine"), // default if the ui key is missing
   auth: authSchema,
   envFile: z.string().default(".env"),
   dataSources: z.array(dataSourceSchema).default([]),
   tanstackQuery: z.boolean().catch(false),
   replacedMainPage: z.boolean().catch(false),
   appliedUpgrades: z.array(z.string()).default([]),
+  registryUrl: z.url().optional(),
 });
 
 export const defaultSettings = settingsSchema.parse({ auth: { type: "none" } });
@@ -60,14 +66,13 @@ let settings: Settings | undefined;
 export const getSettings = () => {
   if (settings) return settings;
 
-  const settingsFile: unknown = fs.readJSONSync(
-    path.join(state.projectDir, "proofkit.json")
-  );
+  const settingsPath = path.join(state.projectDir, "proofkit.json");
+  const settingsFile: unknown = fs.readJSONSync(settingsPath);
 
   const parsed = settingsSchema.parse(settingsFile);
-  settings = parsed;
+
   state.appType = parsed.appType;
-  return settings;
+  return parsed;
 };
 
 export type Settings = z.infer<typeof settingsSchema>;

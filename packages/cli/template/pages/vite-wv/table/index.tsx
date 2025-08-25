@@ -1,13 +1,14 @@
+import FullScreenLoader from "@/components/full-screen-loader";
+import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
+import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
+import { Stack, Text } from "@mantine/core";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   MantineReactTable,
   MRT_ColumnDef,
   useMantineReactTable,
 } from "mantine-react-table";
-import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
-import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
-import { Stack, Text } from "@mantine/core";
-import FullScreenLoader from "@/components/full-screen-loader";
+
 export const Route = createFileRoute("/")({
   component: RouteComponent,
   pendingComponent: () => <FullScreenLoader />,

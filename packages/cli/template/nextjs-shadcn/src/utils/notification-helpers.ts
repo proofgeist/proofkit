@@ -1,7 +1,8 @@
 export function showErrorNotification(): void;
 export function showErrorNotification(message: string): void;
 export function showErrorNotification(args?: string): void {
-  const message = typeof args === "string" ? args : "An unexpected error occurred.";
+  const message =
+    typeof args === "string" ? args : "An unexpected error occurred.";
   // TODO: Replace with your preferred toast library
   if (typeof window !== "undefined") console.error(message);
 }

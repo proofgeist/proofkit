@@ -1,3 +1,7 @@
+import FullScreenLoader from "@/components/full-screen-loader";
+import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
+import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
+import { Code, Stack, Text } from "@mantine/core";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   MantineReactTable,
@@ -5,10 +9,6 @@ import {
   MRT_ColumnDef,
   useMantineReactTable,
 } from "mantine-react-table";
-import { __CLIENT_NAME__ } from "@/config/schemas/__SOURCE_NAME__/client";
-import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
-import { Code, Stack, Text } from "@mantine/core";
-import FullScreenLoader from "@/components/full-screen-loader";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
@@ -61,8 +61,8 @@ function RouteComponent() {
           This table allows editing. Double-click on a cell to edit the value.
         </Text>
         <Text size="sm" c="dimmed">
-          NOTE: This feature requires a primary key field on your API layout. If your
-          primary key field is not <Code>{idFieldName}</Code>, update the
+          NOTE: This feature requires a primary key field on your API layout. If
+          your primary key field is not <Code>{idFieldName}</Code>, update the
           <Code>idFieldName</Code> variable in the code.
         </Text>
       </div>

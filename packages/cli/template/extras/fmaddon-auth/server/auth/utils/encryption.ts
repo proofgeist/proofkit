@@ -1,6 +1,6 @@
-import { decodeBase64 } from "@oslojs/encoding";
 import { createCipheriv, createDecipheriv } from "crypto";
 import { DynamicBuffer } from "@oslojs/binary";
+import { decodeBase64 } from "@oslojs/encoding";
 
 const key = decodeBase64(process.env.ENCRYPTION_KEY ?? "");
 
@@ -40,7 +40,7 @@ export function decrypt(encrypted: Uint8Array): Uint8Array {
   decipher.setAuthTag(encrypted.slice(encrypted.byteLength - 16));
   const decrypted = new DynamicBuffer(0);
   decrypted.write(
-    decipher.update(encrypted.slice(16, encrypted.byteLength - 16)),
+    decipher.update(encrypted.slice(16, encrypted.byteLength - 16))
   );
   decrypted.write(decipher.final());
   return decrypted.bytes();

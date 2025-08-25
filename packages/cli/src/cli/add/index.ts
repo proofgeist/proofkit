@@ -4,6 +4,10 @@ import { Command } from "commander";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
+import {
+  makeAddReactEmailCommand,
+  runAddReactEmailCommand,
+} from "../react-email.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
@@ -13,13 +17,22 @@ import {
 } from "./data-source/index.js";
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
+import { installFromRegistry } from "./registry/install.js";
 
-export const runAdd = async (name: string | undefined) => {
-  const settings = getSettings();
-
+export const runAdd = async (
+  name: string | undefined,
+  options?: { noInstall?: boolean }
+) => {
+  
   if (name === "tanstack-query") {
     return await runAddTanstackQueryCommand();
+  } else if (name !== undefined) {
+    // an arbitrary name was provided, so we'll try to install from the registry
+    return await installFromRegistry(name);
   }
+  
+   ensureProofKitProject({ commandName: "add" });
+  const settings = getSettings();
 
   const addType = abortIfCancel(
     await p.select({
@@ -31,6 +44,7 @@ export const runAdd = async (name: string | undefined) => {
           value: "schema",
           hint: "load data from a new table or layout from an existing data source",
         },
+        { label: "React Email", value: "react-email" },
         ...(settings.appType === "browser"
           ? [
               {
@@ -64,6 +78,8 @@ export const runAdd = async (name: string | undefined) => {
     await runAddPageAction();
   } else if (addType === "schema") {
     await runAddSchemaAction();
+  } else if (addType === "react-email") {
+    await runAddReactEmailCommand({ noInstall: options?.noInstall });
   }
 };
 
@@ -73,19 +89,22 @@ export const makeAddCommand = () => {
     .argument("[name]", "Type of component to add")
     .addOption(ciOption)
     .addOption(debugOption)
-    .action(runAdd);
+    .option(
+      "--noInstall",
+      "Do not run your package manager install command",
+      false
+    )
+    .action(runAdd as any);
 
   addCommand.hook("preAction", (_thisCommand, _actionCommand) => {
     // console.log("preAction", _actionCommand.opts());
     initProgramState(_actionCommand.opts());
     state.baseCommand = "add";
-    ensureProofKitProject({ commandName: "add" });
   });
   addCommand.hook("preSubcommand", (_thisCommand, _subCommand) => {
     // console.log("preSubcommand", _subCommand.opts());
     initProgramState(_subCommand.opts());
     state.baseCommand = "add";
-    ensureProofKitProject({ commandName: "add" });
   });
 
   addCommand.addCommand(makeAddAuthCommand());

@@ -1,9 +1,9 @@
 "use client";
 
-import { redirect } from "next/navigation";
 import { Center, Loader } from "@mantine/core";
-import { useEffect } from "react";
 import Cookies from "js-cookie";
+import { redirect } from "next/navigation";
+import { useEffect } from "react";
 
 /**
  * A client-side component that redirects to the given path, but saves the current path in the redirectTo cookie.

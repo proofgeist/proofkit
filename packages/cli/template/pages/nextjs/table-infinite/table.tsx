@@ -1,6 +1,7 @@
 "use client";
 
 import { __TYPE_NAME__ } from "@/config/schemas/__SOURCE_NAME__/__SCHEMA_NAME__";
+import { Text } from "@mantine/core";
 import {
   createMRTColumnHelper,
   MantineReactTable,
@@ -11,14 +12,14 @@ import {
   useMantineReactTable,
 } from "mantine-react-table";
 import React, {
-  type UIEvent,
   useCallback,
   useEffect,
   useRef,
   useState,
+  type UIEvent,
 } from "react";
+
 import { useAllData } from "./query";
-import { Text } from "@mantine/core";
 
 type TData = __TYPE_NAME__;
 

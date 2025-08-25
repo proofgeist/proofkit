@@ -1,8 +1,9 @@
 "use client";
 
-import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Stack, Paper, Text, PinInput } from "@mantine/core";
+import { Button, Paper, PinInput, Stack, Text } from "@mantine/core";
+import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
+
 import { verifyEmailAction } from "./actions";
 import { verifyEmailSchema } from "./schema";
 

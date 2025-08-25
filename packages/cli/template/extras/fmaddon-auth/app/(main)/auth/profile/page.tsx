@@ -1,8 +1,10 @@
 import { getCurrentSession } from "@/server/auth/utils/session";
 import { Anchor, Container, Paper, Stack, Text, Title } from "@mantine/core";
 import { redirect } from "next/navigation";
+
 import UpdateEmailForm from "./profile-form";
 import UpdatePasswordForm from "./reset-password-form";
+
 // import EmailVerificationForm from "./email-verification-form";
 
 export default async function Page() {

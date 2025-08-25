@@ -1,6 +1,9 @@
 "use server";
 
-import { getCurrentSession, invalidateSession } from "@/server/auth/utils/session";
+import {
+  getCurrentSession,
+  invalidateSession,
+} from "@/server/auth/utils/session";
 import { redirect } from "next/navigation";
 
 export async function currentSessionAction() {

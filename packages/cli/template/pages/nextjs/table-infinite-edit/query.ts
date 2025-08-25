@@ -66,7 +66,7 @@ export function useAllData({
             data: page.data.map((row) =>
               row.fieldData[idFieldName] === newRecord[idFieldName]
                 ? { ...row, fieldData: { ...row.fieldData, ...newRecord } }
-                : row,
+                : row
             ),
           })),
         };
@@ -77,5 +77,11 @@ export function useAllData({
     },
   });
 
-  return { ...qr, data: flatData, totalDBRowCount, totalFetched, updateRecord: updateRecordMutation.mutate };
+  return {
+    ...qr,
+    data: flatData,
+    totalDBRowCount,
+    totalFetched,
+    updateRecord: updateRecordMutation.mutate,
+  };
 }

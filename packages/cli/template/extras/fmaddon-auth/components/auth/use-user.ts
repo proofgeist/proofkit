@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { currentSessionAction, logoutAction } from "./actions";
 import { Session } from "@/server/auth/utils/session";
 import { User } from "@/server/auth/utils/user";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { currentSessionAction, logoutAction } from "./actions";
 
 type LogoutAction = () => Promise<void>;
 type UseUserResult =

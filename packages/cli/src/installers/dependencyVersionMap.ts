@@ -1,6 +1,7 @@
 import {
   getFmdapiVersion,
   getNodeMajorVersion,
+  getProofkitBetterAuthVersion,
   getVersion,
 } from "~/utils/getProofKitVersion.js";
 
@@ -73,10 +74,11 @@ export const dependencyVersionMap = {
   "@types/js-cookie": "^3.0.6",
 
   // React Email
-  "@react-email/components": "^0.0.28",
-  "@react-email/render": "1.0.2",
+  "@react-email/components": "^0.5.0",
+  "@react-email/render": "1.2.0",
+  "@react-email/preview-server": "^4.2.8",
   "@plunk/node": "^3.0.3",
-  "react-email": "^3.0.2",
+  "react-email": "^4.2.8",
   resend: "^4.0.0",
   "@sendgrid/mail": "^8.1.4",
 
@@ -88,6 +90,11 @@ export const dependencyVersionMap = {
 
   // Icons (for shadcn/ui)
   "lucide-react": "^0.518.0",
+
+  // better-auth
+  "better-auth": "^1.3.4",
+  "@proofkit/better-auth": `${getProofkitBetterAuthVersion()}`,
+  "@daveyplate/better-auth-ui": "^2.1.3",
 
   // Mantine UI
   "@mantine/core": "^7.15.0",

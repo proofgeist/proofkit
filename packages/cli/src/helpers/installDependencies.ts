@@ -28,15 +28,51 @@ const execWithSpinner = async (
   const spinner = ora(
     options.loadingMessage ?? `Running ${pkgManager} ${args.join(" ")} ...`
   ).start();
-  const subprocess = execa(pkgManager, args, { cwd: projectDir, stdout });
+  const subprocess = execa(pkgManager, args, {
+    cwd: projectDir,
+    stdout,
+    stderr: "pipe", // Capture stderr to get error messages
+  });
 
   await new Promise<void>((res, rej) => {
+    let stdoutOutput = "";
+    let stderrOutput = "";
+
     if (onDataHandle) {
       subprocess.stdout?.on("data", onDataHandle(spinner));
+    } else {
+      // If no custom handler, capture stdout for error reporting
+      subprocess.stdout?.on("data", (data) => {
+        stdoutOutput += data.toString();
+      });
     }
 
+    // Capture stderr output for error reporting
+    subprocess.stderr?.on("data", (data) => {
+      stderrOutput += data.toString();
+    });
+
     void subprocess.on("error", (e) => rej(e));
-    void subprocess.on("close", () => res());
+    void subprocess.on("close", (code) => {
+      if (code === 0) {
+        res();
+      } else {
+        // Combine stdout and stderr for complete error message
+        const combinedOutput = [stdoutOutput, stderrOutput]
+          .filter((output) => output.trim())
+          .join("\n")
+          .trim()
+          // Remove spinner-related lines that aren't useful in error output
+          .replace(/^- Checking registry\.$/gm, "")
+          .replace(/^\s*$/gm, "") // Remove empty lines
+          .trim();
+
+        const errorMessage =
+          combinedOutput ||
+          `Command failed with exit code ${code}: ${pkgManager} ${args.join(" ")}`;
+        rej(new Error(errorMessage));
+      }
+    });
   });
 
   return spinner;
@@ -98,28 +134,41 @@ export const runExecCommand = async ({
   command,
   projectDir = state.projectDir,
   successMessage,
+  errorMessage,
   loadingMessage,
 }: {
   command: string[];
   projectDir?: string;
   successMessage?: string;
+  errorMessage?: string;
   loadingMessage?: string;
 }) => {
-  const spinner = await _runExecCommand({
-    projectDir,
-    command,
-    loadingMessage,
-  });
+  let spinner: Ora | null = null;
 
-  // If the spinner was used to show the progress, use succeed method on it
-  // If not, use the succeed on a new spinner
-  (spinner ?? ora()).succeed(
-    chalk.green(
-      successMessage
-        ? `${successMessage}\n`
-        : `Successfully ran ${command.join(" ")}!\n`
-    )
-  );
+  try {
+    spinner = await _runExecCommand({
+      projectDir,
+      command,
+      loadingMessage,
+    });
+
+    // If the spinner was used to show the progress, use succeed method on it
+    // If not, use the succeed on a new spinner
+    (spinner ?? ora()).succeed(
+      chalk.green(
+        successMessage
+          ? `${successMessage}\n`
+          : `Successfully ran ${command.join(" ")}!\n`
+      )
+    );
+  } catch (error) {
+    // If we have a spinner, fail it, otherwise just throw the error
+    if (spinner) {
+      const failMessage = errorMessage || `Failed to run ${command.join(" ")}`;
+      spinner.fail(chalk.red(failMessage));
+    }
+    throw error;
+  }
 };
 
 export const _runExecCommand = async ({
@@ -134,36 +183,63 @@ export const _runExecCommand = async ({
 }): Promise<Ora | null> => {
   const pkgManager = getUserPkgManager();
   switch (pkgManager) {
-    // When using npm, inherit the stderr stream so that the progress bar is shown
+    // When using npm, capture both stdout and stderr to show error messages
     case "npm":
-      await execa("npx", [...command], {
+      const result = await execa("npx", [...command], {
         cwd: projectDir,
-        stderr: "inherit",
+        stdout: "pipe",
+        stderr: "pipe",
+        reject: false,
       });
+
+      if (result.exitCode !== 0) {
+        // Combine stdout and stderr for complete error message
+        const combinedOutput = [result.stdout, result.stderr]
+          .filter((output) => output?.trim())
+          .join("\n")
+          .trim()
+          // Remove spinner-related lines that aren't useful in error output
+          .replace(/^- Checking registry\.$/gm, "")
+          .replace(/^\s*$/gm, "") // Remove empty lines
+          .trim();
+
+        const errorMessage =
+          combinedOutput ||
+          `Command failed with exit code ${result.exitCode}: npx ${command.join(" ")}`;
+        throw new Error(errorMessage);
+      }
 
       return null;
     // When using yarn or pnpm, use the stdout stream and ora spinner to show the progress
     case "pnpm":
+      // For shadcn commands, don't use progress handler to capture full output
+      const isInstallCommand = command.includes("install");
       return execWithSpinner(projectDir, "pnpm", {
         args: ["dlx", ...command],
         loadingMessage,
-        onDataHandle: (spinner) => (data) => {
-          const text = data.toString();
+        onDataHandle: isInstallCommand
+          ? (spinner) => (data) => {
+              const text = data.toString();
 
-          if (text.includes("Progress")) {
-            spinner.text = text.includes("|")
-              ? (text.split(" | ")[1] ?? "")
-              : text;
-          }
-        },
+              if (text.includes("Progress")) {
+                spinner.text = text.includes("|")
+                  ? (text.split(" | ")[1] ?? "")
+                  : text;
+              }
+            }
+          : undefined,
       });
     case "yarn":
+      // For shadcn commands, don't use progress handler to capture full output
+      const isYarnInstallCommand = command.includes("install");
       return execWithSpinner(projectDir, pkgManager, {
         args: [...command],
         loadingMessage,
-        onDataHandle: (spinner) => (data) => {
-          spinner.text = data.toString();
-        },
+        onDataHandle: isYarnInstallCommand
+          ? (spinner) => (data) => {
+              spinner.text = data.toString();
+            }
+          : undefined,
       });
     // When using bun, the stdout stream is ignored and the spinner is shown
     case "bun":

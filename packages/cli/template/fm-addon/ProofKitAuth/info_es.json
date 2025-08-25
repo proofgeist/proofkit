@@ -1,18 +1,11 @@
 ﻿{
-	"Title" : "FileMaker Add-on Auth",
+  "Title": "FileMaker Add-on Auth",
 
-	"Description" : "*** DESCRIPTION MISSING *** - DNL",
+  "Description": "*** DESCRIPTION MISSING *** - DNL",
 
-	"Category" : "Web",
+  "Category": "Web",
 
-	"Features" :
-		[
-			
-			],
+  "Features": [],
 
-	"Optimized" :
-		[
-			"Desktop", "Tablet", "Mobile"
-
-		]
+  "Optimized": ["Desktop", "Tablet", "Mobile"]
 }

@@ -1,19 +1,22 @@
 "use server";
 
-import { actionClient } from "@/server/safe-action";
-import { resetPasswordSchema } from "./schema";
+import { verifyPasswordStrength } from "@/server/auth/utils/password";
 import {
   deletePasswordResetSessionTokenCookie,
   invalidateUserPasswordResetSessions,
+  validatePasswordResetSessionRequest,
 } from "@/server/auth/utils/password-reset";
-import { validatePasswordResetSessionRequest } from "@/server/auth/utils/password-reset";
-import { createSession } from "@/server/auth/utils/session";
-import { generateSessionToken } from "@/server/auth/utils/session";
-import { setSessionTokenCookie } from "@/server/auth/utils/session";
-import { verifyPasswordStrength } from "@/server/auth/utils/password";
-import { invalidateUserSessions } from "@/server/auth/utils/session";
+import {
+  createSession,
+  generateSessionToken,
+  invalidateUserSessions,
+  setSessionTokenCookie,
+} from "@/server/auth/utils/session";
 import { updateUserPassword } from "@/server/auth/utils/user";
+import { actionClient } from "@/server/safe-action";
 import { redirect } from "next/navigation";
+
+import { resetPasswordSchema } from "./schema";
 
 export const resetPasswordAction = actionClient
   .schema(resetPasswordSchema)

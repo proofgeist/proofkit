@@ -1,19 +1,20 @@
 "use client";
 
-import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
-import { signupAction } from "./actions";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signupSchema } from "./schema";
 import {
   Anchor,
-  PasswordInput,
-  TextInput,
   Button,
   Group,
-  Stack,
   Paper,
+  PasswordInput,
+  Stack,
   Text,
+  TextInput,
 } from "@mantine/core";
+import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
+
+import { signupAction } from "./actions";
+import { signupSchema } from "./schema";
 
 export default function SignupForm() {
   const { form, handleSubmitWithAction, action } = useHookFormAction(

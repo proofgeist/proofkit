@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@proofkit/registry": "workspace:*",
     "@proofkit/typegen": "workspace:*",
     "@proofkit/webviewer": "workspace:*",
     "@radix-ui/react-separator": "^1.1.7",

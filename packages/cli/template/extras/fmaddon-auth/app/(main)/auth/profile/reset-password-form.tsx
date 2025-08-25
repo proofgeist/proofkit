@@ -1,7 +1,6 @@
 "use client";
-import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
-import { updatePasswordSchema } from "./schema";
-import { updatePasswordAction } from "./actions";
+
+import { showSuccessNotification } from "@/utils/notification-helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Anchor,
@@ -9,12 +8,15 @@ import {
   Group,
   Paper,
   PasswordInput,
+  Stack,
   Text,
+  TextInput,
 } from "@mantine/core";
-import { TextInput } from "@mantine/core";
-import { Stack } from "@mantine/core";
+import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
 import { useState } from "react";
-import { showSuccessNotification } from "@/utils/notification-helpers";
+
+import { updatePasswordAction } from "./actions";
+import { updatePasswordSchema } from "./schema";
 
 export default function UpdatePasswordForm() {
   const [showForm, setShowForm] = useState(false);

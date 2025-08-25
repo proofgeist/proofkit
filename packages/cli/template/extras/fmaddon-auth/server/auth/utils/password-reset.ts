@@ -1,12 +1,13 @@
-import { encodeHexLowerCase } from "@oslojs/encoding";
-import { generateRandomOTP } from "./index";
 import { sha256 } from "@oslojs/crypto/sha2";
+import { encodeHexLowerCase } from "@oslojs/encoding";
 import { cookies } from "next/headers";
+
 import { passwordResetLayout } from "../db/client";
 import { TpasswordReset } from "../db/passwordReset";
-
-import type { User } from "./user";
 import { sendEmail } from "../email";
+import { generateRandomOTP } from "./index";
+import type { User } from "./user";
+
 type PasswordResetSession = Omit<
   TpasswordReset,
   | "proofkit_auth_users::email"

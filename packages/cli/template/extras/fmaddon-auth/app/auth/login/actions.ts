@@ -1,15 +1,16 @@
 "use server";
 
-import { actionClient } from "@/server/safe-action";
-import { loginSchema } from "./schema";
-import { validateLogin } from "@/server/auth/utils/user";
+import { getRedirectCookie } from "@/server/auth/utils/redirect";
 import {
   createSession,
   generateSessionToken,
   setSessionTokenCookie,
 } from "@/server/auth/utils/session";
+import { validateLogin } from "@/server/auth/utils/user";
+import { actionClient } from "@/server/safe-action";
 import { redirect } from "next/navigation";
-import { getRedirectCookie } from "@/server/auth/utils/redirect";
+
+import { loginSchema } from "./schema";
 
 export const loginAction = actionClient
   .schema(loginSchema)

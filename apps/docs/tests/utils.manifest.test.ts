@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { getRegistryIndex, getStaticComponent } from "@/registry/lib/utils";
-import { RegistryItem } from "@/registry/lib/types";
+import {
+  getRegistryIndex,
+  getStaticComponent,
+  RegistryItem,
+} from "@proofkit/registry";
 
 describe("Registry utils (dynamic scanning)", () => {
   it("reads index dynamically", async () => {
@@ -10,12 +13,12 @@ describe("Registry utils (dynamic scanning)", () => {
     expect(index.length).toBeGreaterThan(0);
     expect(index[0]).toHaveProperty("name");
     expect(index[0]).toHaveProperty("type");
-    expect(index[0]).toHaveProperty("categories");
-    expect(index[0]).toHaveProperty("files");
+    expect(index[0]).toHaveProperty("category");
+    // RegistryIndexItem only has name, type, and category - not files
   });
 
   it("reads a known template (mode-toggle)", async () => {
-    const comp = await getStaticComponent("mode-toggle");
+    const comp = await getStaticComponent("components/mode-toggle");
     expect(comp).toHaveProperty("files");
     expect(comp.files).toBeInstanceOf(Array);
     expect(comp.files.length).toBeGreaterThan(0);

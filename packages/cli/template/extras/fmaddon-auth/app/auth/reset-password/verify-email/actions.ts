@@ -1,13 +1,14 @@
 "use server";
 
-import { actionClient } from "@/server/safe-action";
-import { verifyEmailSchema } from "./schema";
 import {
   setPasswordResetSessionAsEmailVerified,
   validatePasswordResetSessionRequest,
 } from "@/server/auth/utils/password-reset";
 import { setUserAsEmailVerifiedIfEmailMatches } from "@/server/auth/utils/user";
+import { actionClient } from "@/server/safe-action";
 import { redirect } from "next/navigation";
+
+import { verifyEmailSchema } from "./schema";
 
 export const verifyEmailAction = actionClient
   .schema(verifyEmailSchema)

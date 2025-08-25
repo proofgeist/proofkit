@@ -1,4 +1,5 @@
 import { AuthCodeEmail } from "@/emails/auth-code";
+
 import { resend } from "../services/resend";
 
 export async function sendEmail({

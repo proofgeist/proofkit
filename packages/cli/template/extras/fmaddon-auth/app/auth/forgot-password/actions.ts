@@ -1,15 +1,17 @@
 "use server";
-import { actionClient } from "@/server/safe-action";
-import { forgotPasswordSchema } from "./schema";
-import { getUserFromEmail } from "@/server/auth/utils/user";
-import { generateSessionToken } from "@/server/auth/utils/session";
-import { redirect } from "next/navigation";
+
 import {
   createPasswordResetSession,
   invalidateUserPasswordResetSessions,
   sendPasswordResetEmail,
   setPasswordResetSessionTokenCookie,
 } from "@/server/auth/utils/password-reset";
+import { generateSessionToken } from "@/server/auth/utils/session";
+import { getUserFromEmail } from "@/server/auth/utils/user";
+import { actionClient } from "@/server/safe-action";
+import { redirect } from "next/navigation";
+
+import { forgotPasswordSchema } from "./schema";
 
 export const forgotPasswordAction = actionClient
   .schema(forgotPasswordSchema)

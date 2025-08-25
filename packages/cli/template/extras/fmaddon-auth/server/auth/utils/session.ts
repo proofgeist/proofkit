@@ -1,14 +1,14 @@
+import { sha256 } from "@oslojs/crypto/sha2";
 import {
   encodeBase32LowerCaseNoPadding,
   encodeHexLowerCase,
 } from "@oslojs/encoding";
-import { sha256 } from "@oslojs/crypto/sha2";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import type { User } from "./user";
 
 import { sessionsLayout } from "../db/client";
 import { Tsessions as _Session } from "../db/sessions";
+import type { User } from "./user";
 
 /**
  * Generate a random session token with sufficient entropy for a session ID.
@@ -29,7 +29,7 @@ export function generateSessionToken(): string {
  */
 export async function createSession(
   token: string,
-  userId: string,
+  userId: string
 ): Promise<Session> {
   const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
   const session: Session = {
@@ -70,7 +70,7 @@ export async function invalidateSession(sessionId: string): Promise<void> {
  * @returns The session, or null if it doesn't exist.
  */
 export async function validateSessionToken(
-  token: string,
+  token: string
 ): Promise<SessionValidationResult> {
   const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 
@@ -133,7 +133,7 @@ export const getCurrentSession = cache(
     }
     const result = await validateSessionToken(token);
     return result;
-  },
+  }
 );
 
 /**
@@ -156,7 +156,7 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
  */
 export async function setSessionTokenCookie(
   token: string,
-  expiresAt: Date,
+  expiresAt: Date
 ): Promise<void> {
   (await cookies()).set("session", token, {
     httpOnly: true,
@@ -166,7 +166,6 @@ export async function setSessionTokenCookie(
     expires: expiresAt,
   });
 }
-
 
 /**
  * Delete the session cookie.

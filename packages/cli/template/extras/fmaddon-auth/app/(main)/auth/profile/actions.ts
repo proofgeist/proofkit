@@ -1,6 +1,14 @@
 "use server";
-import { actionClient } from "@/server/safe-action";
-import { updateEmailSchema, updatePasswordSchema } from "./schema";
+
+import {
+  createEmailVerificationRequest,
+  sendVerificationEmail,
+  setEmailVerificationRequestCookie,
+} from "@/server/auth/utils/email-verification";
+import {
+  verifyPasswordHash,
+  verifyPasswordStrength,
+} from "@/server/auth/utils/password";
 import {
   createSession,
   generateSessionToken,
@@ -13,14 +21,10 @@ import {
   updateUserPassword,
   validateLogin,
 } from "@/server/auth/utils/user";
-import {
-  createEmailVerificationRequest,
-  sendVerificationEmail,
-  setEmailVerificationRequestCookie,
-} from "@/server/auth/utils/email-verification";
+import { actionClient } from "@/server/safe-action";
 import { redirect } from "next/navigation";
-import { verifyPasswordHash } from "@/server/auth/utils/password";
-import { verifyPasswordStrength } from "@/server/auth/utils/password";
+
+import { updateEmailSchema, updatePasswordSchema } from "./schema";
 
 export const updateEmailAction = actionClient
   .schema(updateEmailSchema)

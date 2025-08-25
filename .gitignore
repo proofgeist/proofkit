@@ -8,7 +8,7 @@ package-lock.json
 yarn.lock
 
 # TESTING
-/coverage
+coverage/
 *.lcov
 .nyc_output
 

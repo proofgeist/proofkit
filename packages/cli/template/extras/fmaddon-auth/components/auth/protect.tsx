@@ -1,4 +1,5 @@
 import { getCurrentSession } from "@/server/auth/utils/session";
+
 import AuthRedirect from "./redirect";
 
 /**

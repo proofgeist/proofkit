@@ -90,6 +90,10 @@ export const createBareProject = async ({
       dependencies: SHADCN_BASE_DEV_DEPS,
       devMode: true,
     });
+    addPackageDependency({
+      dependencies: ["zod"],
+      devMode: false,
+    });
   } else {
     throw new Error(`Unsupported UI library: ${state.ui}`);
   }

@@ -1,7 +1,6 @@
 import type { TemplateMetadata } from "@/lib/types";
 
 export const meta: TemplateMetadata = {
-  type: "static",
   title: "React Email",
   description: "Build and send emails using React and TypeScript.",
   author: "https://react.email/docs",

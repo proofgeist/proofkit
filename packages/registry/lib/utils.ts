@@ -16,7 +16,6 @@ const templatesPath = path.resolve(__dirname, "../templates");
 
 export type RegistryIndexItem = {
   name: string;
-  type: TemplateMetadata["type"];
   category: TemplateMetadata["category"];
   // files: string[]; // destination paths
 };
@@ -162,22 +161,25 @@ export async function getComponentMeta(
 
 export async function getStaticComponent(
   namePath: string,
+  options?: { routeName?: string },
 ): Promise<RegistryItem> {
   const normalized = getNormalizedPath(namePath);
   const meta = await getComponentMeta(namePath);
 
-  if (meta.type !== "static") {
-    throw new Error(`Template "${normalized}" is not a static template`);
-  }
-
   const files: ShadcnFilesUnion = await Promise.all(
     meta.files.map(async (file) => {
-      const contentPath = path.join(
-        templatesPath,
-        normalized,
-        file.sourceFileName,
-      );
+      const sourceFile = file.handlebars
+        ? file.sourceFileName.replace(/\.[^/.]+$/, ".hbs")
+        : file.sourceFileName;
+
+      const contentPath = path.join(templatesPath, normalized, sourceFile);
       const content = await fs.readFile(contentPath, "utf-8");
+
+      const routeName = options?.routeName ?? namePath;
+      const destinationPath = file.destinationPath?.replace(
+        "__PATH__",
+        routeName,
+      );
 
       const shadcnFile: ShadcnFilesUnion[number] =
         file.type === "registry:file" || file.type === "registry:page"
@@ -185,13 +187,13 @@ export async function getStaticComponent(
               path: file.sourceFileName,
               type: file.type,
               content,
-              target: file.destinationPath ?? file.sourceFileName,
+              target: destinationPath ?? file.sourceFileName,
             }
           : {
               path: file.sourceFileName,
               type: file.type,
               content,
-              target: file.destinationPath!
+              target: destinationPath!,
             };
 
       return shadcnFile;
@@ -203,5 +205,83 @@ export async function getStaticComponent(
     name: normalized,
     type: meta.registryType,
     files,
+  };
+}
+
+/**
+ * Template transformation utilities for handling handlebars syntax in shadcn CLI
+ */
+
+/**
+ * Mapping of handlebars expressions to TypeScript-safe placeholder tokens
+ */
+const HANDLEBARS_PLACEHOLDERS = {
+  '{{schema.schemaName}}': '__HB_SCHEMA_NAME__',
+  '{{schema.sourceName}}': '__HB_SOURCE_NAME__',
+  '{{schema.clientSuffix}}': '__HB_CLIENT_SUFFIX__',
+  // Add more mappings as needed
+} as const;
+
+/**
+ * Converts handlebars expressions in template content to TypeScript-safe placeholder tokens
+ * This allows the shadcn CLI to process the templates without TypeScript parsing errors
+ */
+export function encodeHandlebarsForShadcn(content: string): string {
+  let result = content;
+  
+  // Replace specific handlebars expressions with placeholder tokens
+  for (const [handlebars, placeholder] of Object.entries(HANDLEBARS_PLACEHOLDERS)) {
+    result = result.replace(new RegExp(escapeRegExp(handlebars), 'g'), placeholder);
+  }
+  
+  return result;
+}
+
+/**
+ * Converts placeholder tokens back to handlebars expressions
+ * This is used by the CLI after shadcn has processed the templates
+ */
+export function decodeHandlebarsFromShadcn(content: string): string {
+  let result = content;
+  
+  // Replace placeholder tokens back to handlebars expressions
+  for (const [handlebars, placeholder] of Object.entries(HANDLEBARS_PLACEHOLDERS)) {
+    result = result.replace(new RegExp(escapeRegExp(placeholder), 'g'), handlebars);
+  }
+  
+  return result;
+}
+
+/**
+ * Escapes special regex characters in a string
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Enhanced version of getStaticComponent that applies handlebars encoding for shadcn compatibility
+ */
+export async function getStaticComponentForShadcn(
+  namePath: string,
+  options?: { routeName?: string },
+): Promise<RegistryItem> {
+  const component = await getStaticComponent(namePath, options);
+  
+  // Apply handlebars encoding to files that need it
+  const encodedFiles = component.files.map(file => {
+    // Only encode handlebars files that might contain problematic expressions
+    if (file.path.endsWith('.hbs') || file.path.endsWith('.tsx') || file.path.endsWith('.ts')) {
+      return {
+        ...file,
+        content: encodeHandlebarsForShadcn(file.content),
+      };
+    }
+    return file;
+  });
+  
+  return {
+    ...component,
+    files: encodedFiles,
   };
 }

@@ -1,8 +1,8 @@
-import { type NextConfig } from "next";
+import type { NextConfig } from 'next';
+import '@/lib/env';
 
-// Import env here to validate during build.
-import "./src/config/env";
-
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  /* config options here */
+};
 
 export default nextConfig;

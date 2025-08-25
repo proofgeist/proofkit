@@ -51,24 +51,38 @@ export const appTypes = ["browser", "webviewer"] as const;
 export const uiTypes = ["shadcn", "mantine"] as const;
 export type Ui = (typeof uiTypes)[number];
 
-const settingsSchema = z.object({
-  appType: z.enum(appTypes).default("browser"),
-  ui: z.enum(uiTypes).default("mantine"), // default if the ui key is missing
-  auth: authSchema,
-  envFile: z.string().default(".env"),
-  dataSources: z.array(dataSourceSchema).default([]),
-  tanstackQuery: z.boolean().catch(false),
-  replacedMainPage: z.boolean().catch(false),
-  // Whether React Email scaffolding has been installed
-  reactEmail: z.boolean().catch(false),
-  // Whether provider-specific server email sender files have been installed
-  reactEmailServer: z.boolean().catch(false),
-  appliedUpgrades: z.array(z.string()).default([]),
-  registryUrl: z.url().optional(),
-  registryTemplates: z.array(z.string()).default([]),
-});
+const settingsSchema = z.discriminatedUnion("ui", [
+  z.object({
+    ui: z.literal("mantine"),
+    appType: z.enum(appTypes).default("browser"),    
+    auth: authSchema,
+    envFile: z.string().default(".env"),
+    dataSources: z.array(dataSourceSchema).default([]),
+    tanstackQuery: z.boolean().catch(false),
+    replacedMainPage: z.boolean().catch(false),
+    // Whether React Email scaffolding has been installed
+    reactEmail: z.boolean().catch(false),
+    // Whether provider-specific server email sender files have been installed
+    reactEmailServer: z.boolean().catch(false),
+    appliedUpgrades: z.array(z.string()).default([]),
+    registryUrl: z.url().optional(),
+    registryTemplates: z.array(z.string()).default([]),
+  }),
+  z.object({
+    ui: z.literal("shadcn"),
+    appType: z.enum(appTypes).default("browser"),
+    envFile: z.string().default(".env"),
+    dataSources: z.array(dataSourceSchema).default([]),
+    replacedMainPage: z.boolean().catch(false),
+    registryUrl: z.url().optional(),
+    registryTemplates: z.array(z.string()).default([]),
+  }),
+]);
 
-export const defaultSettings = settingsSchema.parse({ auth: { type: "none" },ui:"shadcn" });
+export const defaultSettings = settingsSchema.parse({
+  auth: { type: "none" },
+  ui: "shadcn",
+});
 
 let settings: Settings | undefined;
 export const getSettings = () => {
@@ -93,7 +107,9 @@ export type Settings = z.infer<typeof settingsSchema>;
 
 export function mergeSettings(_settings: Partial<Settings>) {
   const settings = getSettings();
-  setSettings({ ...settings, ..._settings });
+  const merged = { ...settings, ..._settings };
+  const validated = settingsSchema.parse(merged);
+  setSettings(validated);
 }
 
 export function setSettings(_settings: Settings) {

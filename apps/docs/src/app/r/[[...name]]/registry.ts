@@ -4,6 +4,7 @@ import {
   getComponentMeta,
   getRegistryIndex,
   getStaticComponent,
+  getStaticComponentForShadcn,
 } from "@proofkit/registry";
 import { createMiddleware } from "hono/factory";
 import type { TemplateMetadata } from "@proofkit/registry";
@@ -53,10 +54,14 @@ app.get("/*", componentMeta("/r"), async (c) => {
   const path = c.get("path");
   const requestUrl = new URL(c.req.url);
 
-  const meta = c.get("meta");
-  if (meta.type === "static") {
-    try {
-      const data = await getStaticComponent(path);
+  const routeNameRaw = c.req.query("routeName")
+    ? decodeURIComponent(c.req.query("routeName")!)
+    : undefined;
+  // remove leading slash if present
+  const routeName = routeNameRaw ? routeNameRaw.replace(/^\/+/, "") : undefined;
+
+  try {
+      const data = await getStaticComponentForShadcn(path, {routeName});
 
       return c.json({
         ...data,
@@ -68,12 +73,6 @@ app.get("/*", componentMeta("/r"), async (c) => {
       console.error(error);
       return c.json({ error: "Component not found." }, { status: 404 });
     }
-  } else {
-    return c.json(
-      { error: "Dynamic components are not supported yet." },
-      { status: 501 },
-    );
-  }
 });
 
 export default app;

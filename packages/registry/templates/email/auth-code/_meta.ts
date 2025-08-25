@@ -1,7 +1,6 @@
 import type { TemplateMetadata } from "@/lib/types";
 
 export const meta: TemplateMetadata = {
-  type: "static",
   title: "Auth Code Email",
 
   description:

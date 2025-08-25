@@ -1,12 +1,12 @@
 import fs from "fs";
 import path from "path";
+import { execa } from "execa";
 
 import { DEFAULT_REGISTRY_URL } from "~/consts.js";
 import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { runExecCommand } from "./installDependencies.js";
-import { execa } from "execa";
 
 export async function shadcnInstall(
   components: string | string[],
@@ -15,11 +15,11 @@ export async function shadcnInstall(
   const componentsArray = Array.isArray(components) ? components : [components];
   const command = ["shadcn@latest", "add", ...componentsArray, "--overwrite"];
   // Use execa to run the shadcn add command directly
-  
+
   try {
     await execa("pnpm", ["dlx", ...command], {
       stdio: "inherit",
-      cwd: process.cwd(),
+      cwd: state.projectDir ?? process.cwd(),
     });
   } catch (error) {
     logger.error(`Failed to run shadcn add: ${error}`);

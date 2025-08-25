@@ -33,6 +33,9 @@ export type UpgradeKeys = (typeof availableUpgrades)[number]["key"];
 
 export function checkForAvailableUpgrades() {
   const settings = getSettings();
+  if (settings.ui === "shadcn") {
+    return [];
+  }
 
   const appliedUpgrades = settings.appliedUpgrades;
 
@@ -51,13 +54,16 @@ export function checkForAvailableUpgrades() {
 
 export async function runAllAvailableUpgrades() {
   const upgrades = checkForAvailableUpgrades();
+  const settings = getSettings();
+  if (settings.ui === "shadcn") return 
+  
   for (const upgrade of upgrades) {
     const upgradeFunction = availableUpgrades.find(
       (u) => u.key === upgrade.key
     )?.function;
     if (upgradeFunction) {
       await upgradeFunction();
-      const appliedUpgrades = getSettings().appliedUpgrades;
+      const appliedUpgrades = settings.appliedUpgrades;
       mergeSettings({
         appliedUpgrades: [...appliedUpgrades, upgrade.key],
       });

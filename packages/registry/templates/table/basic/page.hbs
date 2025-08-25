@@ -1,0 +1,88 @@
+import {
+  createLoader,
+  parseAsInteger,
+  parseAsString,
+  type SearchParams,
+} from 'nuqs/server';
+import type { T{{schema.schemaName}} } from '@/config/schemas/{{schema.sourceName}}/{{schema.schemaName}}';
+import { {{schema.schemaName}}{{schema.clientSuffix}} } from '@/config/schemas/{{schema.sourceName}}/client';
+import { DEFAULT_PAGE_SIZE } from './constants';
+import TableContent from './table';
+
+// URL search parameter configuration
+export const tableSearchParams = {
+  page: parseAsInteger.withDefault(1),
+  pageSize: parseAsInteger.withDefault(DEFAULT_PAGE_SIZE),
+  sortBy: parseAsString,
+  sortOrder: parseAsString,
+};
+
+const loadSearchParams = createLoader(tableSearchParams);
+
+type PageProps = {
+  searchParams: Promise<SearchParams>;
+};
+
+export default async function TablePage({ searchParams }: PageProps) {
+  const { page, pageSize, sortBy, sortOrder } =
+    await loadSearchParams(searchParams);
+
+  const offset = (page - 1) * pageSize;
+
+  // Build sort parameter for FileMaker API
+  const sort =
+    sortBy && sortOrder
+      ? [
+          {
+            fieldName: sortBy as keyof T{{schema.schemaName}},
+            sortOrder: sortOrder === 'desc' ? 'descend' : 'ascend',
+          },
+        ]
+      : undefined;
+
+  // Fetch data from FileMaker database
+  // Limited to 100 records by default - see docs for more
+  const { data, dataInfo } = await {{schema.schemaName}}{{schema.clientSuffix}}.list({
+    limit: pageSize,
+    offset,
+    ...(sort ? { sort } : {}),
+    // fetch: { next: { revalidate: 60 } }, // Optional caching
+  });
+
+  return (
+    <div className="m-4 mx-auto max-w-screen-xl space-y-4">
+      <TableContent
+        data={data.map((d) => d.fieldData)}
+        totalCount={dataInfo.totalRecordCount}
+      />
+      <p className="text-center text-muted-foreground text-sm">
+        <a
+          className="underline"
+          href="https://reui.io/docs/data-grid"
+          rel="noopener"
+          target="_blank"
+        >
+          Data Grid
+        </a>{' '}
+        component by reui and{' '}
+        <a
+          className="underline"
+          href="https://tanstack.com/table/latest/docs/introduction"
+          rel="noopener"
+          target="_blank"
+        >
+          Tanstack Table
+        </a>
+        . Learn more or get more components at{' '}
+        <a
+          className="underline"
+          href="https://reui.io"
+          rel="noopener"
+          target="_blank"
+        >
+          reui.io
+        </a>
+      </p>
+    </div>
+  );
+}

@@ -23,16 +23,17 @@ export const runAdd = async (
   name: string | undefined,
   options?: { noInstall?: boolean }
 ) => {
-  
   if (name === "tanstack-query") {
     return await runAddTanstackQueryCommand();
   } else if (name !== undefined) {
     // an arbitrary name was provided, so we'll try to install from the registry
     return await installFromRegistry(name);
   }
-  
-   ensureProofKitProject({ commandName: "add" });
+
+  ensureProofKitProject({ commandName: "add" });
   const settings = getSettings();
+
+
 
   const addType = abortIfCancel(
     await p.select({
@@ -54,7 +55,7 @@ export const runAdd = async (
               },
             ]
           : []),
-        ...(settings.auth.type === "none" && settings.appType === "browser"
+        ...(settings.ui === "shadcn" ? [] : settings.auth.type === "none" && settings.appType === "browser"
           ? [{ label: "Auth", value: "auth" }]
           : []),
       ],

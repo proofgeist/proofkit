@@ -1,7 +1,6 @@
 import type { TemplateMetadata } from "@/lib/types";
 
 export const meta: TemplateMetadata = {
-  type: "static",
   title: "BetterAuth",
   description: "A better auth library for Next.js",
   category: "utility",
@@ -16,7 +15,7 @@ export const meta: TemplateMetadata = {
     "{proofkit}/r/react-email",
     "{proofkit}/r/email/generic",
   ],
-  css: { '@source "../../../node_modules/@daveyplate/better-auth-ui"': {} },
+  css: { '@source "../../node_modules/@daveyplate/better-auth-ui"': {} },
   files: [
     {
       sourceFileName: "main-layout.tsx",
@@ -36,6 +35,7 @@ export const meta: TemplateMetadata = {
     {
       sourceFileName: "auth.ts",
       type: "registry:lib",
+      handlebars: true,
     },
     {
       sourceFileName: "auth-client.ts",
@@ -69,7 +69,7 @@ export const meta: TemplateMetadata = {
             namedImports: ["AuthUIProvider"],
           },
           {
-            moduleSpecifier: "@/auth-client",
+            moduleSpecifier: "@/lib/auth-client",
             namedImports: ["authClient"],
           },
         ],
@@ -80,14 +80,3 @@ export const meta: TemplateMetadata = {
     },
   ],
 };
-
-/**
- * add to css
- * @source "../../../node_modules/@daveyplate/better-auth-ui";
- *
- * package.json script
- * "better-auth:migrate": "pnpm dlx @proofkit/better-auth@latest migrate"
- *
- * Wrap the app in AuthUIProvider
- *
- */

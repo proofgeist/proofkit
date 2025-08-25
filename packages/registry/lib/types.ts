@@ -31,27 +31,37 @@ export const templateFileSchema = z.discriminatedUnion("type", [
     // The destination path in a consumer project, relative to project root
     destinationPath: z.string().optional(),
     type: registryTypeSchema.extract(["registry:file", "registry:page"]),
+    handlebars: z.boolean().optional(),
   }),
   z.object({
     sourceFileName: z.string(),
     destinationPath: z.string().optional(),
     type: registryTypeSchema.exclude(["registry:file", "registry:page"]),
+    handlebars: z.boolean().optional(),
   }),
 ]);
 
-export const postInstallStepsSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("package.json script"),
+const buildPostInstallStepsSchema = <T extends z.AnyZodObject, A extends string>(
+  action: A, 
+  dataSchema: T
+) => {
+  return z.object({
+    action: z.literal(action),
+    data: dataSchema,
     _from: z.string().optional(),
-    data: z.object({
+  });
+};
+
+export const postInstallStepsSchema = z.discriminatedUnion("action", [
+  buildPostInstallStepsSchema("next-steps" , z.object({
+    message: z.string(),
+  })),
+  buildPostInstallStepsSchema("package.json script", z.object({
       scriptName: z.string(),
       scriptCommand: z.string(),
     }),
-  }),
-  z.object({
-    action: z.literal("wrap provider"),
-    _from: z.string().optional(),
-    data: z.object({
+  ),
+      buildPostInstallStepsSchema("wrap provider" , z.object({
       providerOpenTag: z
         .string()
         .describe(
@@ -89,8 +99,8 @@ export const postInstallStepsSchema = z.discriminatedUnion("action", [
         .describe(
           "If set, the provider will attempt to go inside of the parent tag. The first found tag will be used as the parent. If not set or none of the tags are found, the provider will be wrapped at the very top level.",
         ),
-    }),
-  }),
+      }),
+  ),
 ]);
 
 export type PostInstallStep = z.infer<typeof postInstallStepsSchema>;
@@ -105,8 +115,9 @@ const categorySchema = z.enum([
 
 export const frameworkSchema = z.enum(["next-pages", "next-app", "manual"]);
 
-const sharedMetadataSchema = registryItemSchema
-  .omit({ name: true, type: true, files: true })
+// Defines the metadata for a single template (_meta.ts)
+export const templateMetadataSchema = registryItemSchema
+  .omit({ name: true, type: true, files: true, docs: true })
   .extend({
     title: z.string(),
     description: z.string().optional(),
@@ -124,25 +135,17 @@ const sharedMetadataSchema = registryItemSchema
       .describe("The minimum version of ProofKit required to use this template")
       .optional(),
     allowedFrameworks: z.array(frameworkSchema).optional(),
+    schemaRequired: z
+      .boolean()
+      .optional()
+      .describe("Whether this template requires a database schema to be selected"),
   });
-
-// Defines the metadata for a single template (_meta.ts)
-export const templateMetadataSchema = z.discriminatedUnion("type", [
-  sharedMetadataSchema.extend({
-    type: z.literal("static"),
-  }),
-  sharedMetadataSchema.extend({
-    type: z.literal("dynamic"),
-    schema: z.unknown(), // a JSON schema for the required values to be passed as query(?) params
-  }),
-]);
 
 export type TemplateFile = z.infer<typeof templateFileSchema>;
 export type TemplateMetadata = z.infer<typeof templateMetadataSchema>;
 
-export const registryIndexSchema = sharedMetadataSchema
+export const registryIndexSchema = templateMetadataSchema
   .pick({ title: true, category: true, description: true })
-  .extend({ type: z.enum(["static", "dynamic"]) })
   .array();
 
 // Adapt shadcn RegistryItem: require `content` in files and allow both single and array forms

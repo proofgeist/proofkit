@@ -26,6 +26,7 @@ export async function installReactEmail({
 
   // Exit early if already installed
   const settings = getSettings();
+  if (settings.ui === "shadcn") return false;
   if (settings.reactEmail) return false;
 
   // Ensure emails directory exists

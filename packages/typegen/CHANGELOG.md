@@ -1,5 +1,12 @@
 # @proofkit/typegen
 
+## 1.0.11-beta.0
+
+### Patch Changes
+
+- Updated dependencies [78cbab1]
+  - @proofkit/fmdapi@5.0.3-beta.0
+
 ## 1.0.10
 
 ### Patch Changes

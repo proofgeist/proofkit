@@ -37,7 +37,11 @@ export const postInstallTable: TPostInstallFn = async ({
     dataSourceName: dataSource.name,
   });
 
-  const { auth } = getSettings();
+  const settings = getSettings();
+  if (settings.ui === "shadcn") {
+    return;
+  }
+  const auth = settings.auth;
 
   const substitutions = {
     __SOURCE_NAME__: dataSource.name,

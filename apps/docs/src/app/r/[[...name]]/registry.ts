@@ -1,19 +1,31 @@
 import { Hono } from "hono";
+import path from "path";
 
 import {
   getComponentMeta,
   getRegistryIndex,
-  getStaticComponent,
   getStaticComponentForShadcn,
 } from "@proofkit/registry";
 import { createMiddleware } from "hono/factory";
 import type { TemplateMetadata } from "@proofkit/registry";
 
+// Path to bundled templates in public directory
+const getTemplatesPath = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, templates are bundled in the public directory
+    return path.join(process.cwd(), 'public/registry-templates');
+  } else {
+    // In development, read directly from registry package
+    return path.resolve(process.cwd(), '../../packages/registry/templates');
+  }
+};
+
 const app = new Hono().basePath("/r");
 
 app.get("/", async (c) => {
   try {
-    const index = await getRegistryIndex();
+    const templatesPath = getTemplatesPath();
+    const index = await getRegistryIndex(templatesPath);
     return c.json(index);
   } catch (error) {
     return c.json(
@@ -29,12 +41,13 @@ const componentMeta = (basePath: string) =>
   }>(async (c, next) => {
     console.log("c.req.path", c.req.path);
     console.log("basePath", basePath);
-    const path = c.req.path.replace(basePath, "").replace(/\.json$/, "");
-    console.log("path", path);
-    c.set("path", path);
+    const componentPath = c.req.path.replace(basePath, "").replace(/\.json$/, "");
+    console.log("path", componentPath);
+    c.set("path", componentPath);
 
     try {
-      const meta = await getComponentMeta(path);
+      const templatesPath = getTemplatesPath();
+      const meta = await getComponentMeta(componentPath, templatesPath);
       c.set("meta", meta);
       await next();
     } catch (error) {
@@ -51,8 +64,10 @@ app.get("/meta/*", componentMeta("/r/meta"), async (c) => {
 
 // Handle registry requests at base path "/r" (less specific route)
 app.get("/*", componentMeta("/r"), async (c) => {
-  const path = c.get("path");
+  const componentPath = c.get("path");
   const requestUrl = new URL(c.req.url);
+
+  console.log("requestUrl", requestUrl);
 
   const routeNameRaw = c.req.query("routeName")
     ? decodeURIComponent(c.req.query("routeName")!)
@@ -61,18 +76,22 @@ app.get("/*", componentMeta("/r"), async (c) => {
   const routeName = routeNameRaw ? routeNameRaw.replace(/^\/+/, "") : undefined;
 
   try {
-      const data = await getStaticComponentForShadcn(path, {routeName});
+    const templatesPath = getTemplatesPath();
+    const data = await getStaticComponentForShadcn(componentPath, {
+      routeName,
+      templatesPath
+    });
 
-      return c.json({
-        ...data,
-        registryDependencies: data.registryDependencies?.map((x) =>
-          x.replace("{proofkit}", requestUrl.origin),
-        ),
-      });
-    } catch (error) {
-      console.error(error);
-      return c.json({ error: "Component not found." }, { status: 404 });
-    }
+    return c.json({
+      ...data,
+      registryDependencies: data.registryDependencies?.map((x: string) =>
+        x.replace("{proofkit}", requestUrl.origin),
+      ),
+    });
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: "Component not found." }, { status: 404 });
+  }
 });
 
 export default app;

@@ -148,12 +148,7 @@ export const registryIndexSchema = templateMetadataSchema
   .pick({ title: true, category: true, description: true })
   .array();
 
-// Adapt shadcn RegistryItem: require `content` in files and allow both single and array forms
 
-export type ShadcnFilesUnion = Required<
-  Exclude<ShadcnRegistryItem["files"], undefined>[number]
->[];
 
-export type RegistryItem = Omit<ShadcnRegistryItem, "files"> & {
-  files: ShadcnFilesUnion;
-};
+
+export type RegistryItem = ShadcnRegistryItem;

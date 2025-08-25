@@ -87,28 +87,7 @@ export async function installFromRegistry(name: string) {
     let routeName: string | undefined;
     let pageName: string | undefined;
 
-    if (meta.category === "page") {
-      // Prompt user for the URL path of the page
-      routeName = abortIfCancel(
-        await p.text({
-          message: `Enter the URL PATH for your new page`,
-          placeholder: "/my-page",
-          validate: (value) => {
-            if (value.length === 0) {
-              return "URL path is required";
-            }
-            return;
-          },
-        })
-      );
-
-      if (routeName.startsWith("/")) {
-        routeName = routeName.slice(1);
-      }
-
-      pageName = capitalize(routeName.replace("/", "").trim());
-    }
-    
+   
     if (meta.schemaRequired) {
       const settings = getSettings();
       
@@ -149,7 +128,29 @@ export async function installFromRegistry(name: string) {
       }
     }
 
-    // if dynamic, figure out what fields to pass, then construct the URL to send to shadcn. Otherwise, just send the URL to shadcn
+    if (meta.category === "page") {
+      // Prompt user for the URL path of the page
+      routeName = abortIfCancel(
+        await p.text({
+          message: `Enter the URL PATH for your new page`,
+          placeholder: "/my-page",
+          validate: (value) => {
+            if (value.length === 0) {
+              return "URL path is required";
+            }
+            return;
+          },
+        })
+      );
+
+      if (routeName.startsWith("/")) {
+        routeName = routeName.slice(1);
+      }
+
+      pageName = capitalize(routeName.replace("/", "").trim());
+    }
+    
+
     let url = new URL(`${getRegistryUrl()}/r/${name}`);
     if (meta.category === "page") {
       url.searchParams.set("routeName", `/(main)/${routeName??name}`);

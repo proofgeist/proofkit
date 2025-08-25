@@ -4,18 +4,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 import createJiti from "jiti";
 import type {
-  RegistryItem,
-  ShadcnFilesUnion,
+  RegistryItem,  
   TemplateMetadata,
 } from "./types.js";
 
 // Find the templates path relative to this module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const templatesPath = path.resolve(__dirname, "../templates");
+const defaultTemplatesPath = path.resolve(__dirname, "../templates");
 
 export type RegistryIndexItem = {
   name: string;
+  type: TemplateMetadata["registryType"];
   category: TemplateMetadata["category"];
   // files: string[]; // destination paths
 };
@@ -45,7 +45,7 @@ function getTemplateDirs(root: string, prefix = ""): string[] {
 /**
  * Loads template metadata using jiti
  */
-function loadTemplateMeta(templatePath: string) {
+function loadTemplateMeta(templatePath: string, templatesPath: string = defaultTemplatesPath) {
   const jiti = createJiti(__filename, {
     interopDefault: true,
     requireCache: false,
@@ -73,14 +73,15 @@ function loadTemplateMeta(templatePath: string) {
   };
 }
 
-export async function getRegistryIndex(): Promise<RegistryIndexItem[]> {
+export async function getRegistryIndex(templatesPath: string = defaultTemplatesPath): Promise<RegistryIndexItem[]> {
   const templateDirs = getTemplateDirs(templatesPath);
 
   const index = templateDirs.map((templatePath) => {
-    const meta = loadTemplateMeta(templatePath);
+    const meta = loadTemplateMeta(templatePath, templatesPath);
     return {
-      ...meta,
       name: templatePath, // Use the path as the name
+      type: meta.registryType,
+      category: meta.category,
     };
   });
 
@@ -101,6 +102,7 @@ export function getOtherProofKitDependencies(meta: TemplateMetadata): string[] {
 async function getComponentMetaInternal(
   namePath: string,
   visited: Set<string> = new Set(),
+  templatesPath: string = defaultTemplatesPath,
 ): Promise<TemplateMetadata> {
   const normalized = getNormalizedPath(namePath);
 
@@ -108,7 +110,7 @@ async function getComponentMetaInternal(
   if (visited.has(normalized)) {
     // Return a minimal metadata to avoid circular processing
     // but don't throw an error as circular deps might be valid
-    const meta = loadTemplateMeta(normalized);
+    const meta = loadTemplateMeta(normalized, templatesPath);
     return {
       ...meta,
       postInstall: meta.postInstall ?? [],
@@ -123,7 +125,7 @@ async function getComponentMetaInternal(
   // Add to visited set before processing dependencies
   visited.add(normalized);
 
-  const meta = loadTemplateMeta(normalized);
+  const meta = loadTemplateMeta(normalized, templatesPath);
 
   const otherProofKitDependencies = getOtherProofKitDependencies(meta).filter(
     (name) => !visited.has(name), // Skip already visited dependencies
@@ -131,7 +133,7 @@ async function getComponentMetaInternal(
 
   const otherProofKitDependenciesMeta = await Promise.all(
     otherProofKitDependencies.map(async (name) => {
-      const meta = await getComponentMetaInternal(name, visited);
+      const meta = await getComponentMetaInternal(name, visited, templatesPath);
       return {
         ...meta,
         name,
@@ -155,18 +157,20 @@ async function getComponentMetaInternal(
 
 export async function getComponentMeta(
   namePath: string,
+  templatesPath: string = defaultTemplatesPath,
 ): Promise<TemplateMetadata> {
-  return getComponentMetaInternal(namePath, new Set());
+  return getComponentMetaInternal(namePath, new Set(), templatesPath);
 }
 
 export async function getStaticComponent(
   namePath: string,
-  options?: { routeName?: string },
+  options?: { routeName?: string; templatesPath?: string },
 ): Promise<RegistryItem> {
   const normalized = getNormalizedPath(namePath);
-  const meta = await getComponentMeta(namePath);
+  const templatesPath = options?.templatesPath ?? defaultTemplatesPath;
+  const meta = await getComponentMeta(namePath, templatesPath);
 
-  const files: ShadcnFilesUnion = await Promise.all(
+  const files: RegistryItem["files"] = await Promise.all(
     meta.files.map(async (file) => {
       const sourceFile = file.handlebars
         ? file.sourceFileName.replace(/\.[^/.]+$/, ".hbs")
@@ -176,12 +180,12 @@ export async function getStaticComponent(
       const content = await fs.readFile(contentPath, "utf-8");
 
       const routeName = options?.routeName ?? namePath;
-      const destinationPath = file.destinationPath?.replace(
+      const destinationPath = file.destinationPath? file.destinationPath?.replace(
         "__PATH__",
         routeName,
-      );
+      ) : undefined;
 
-      const shadcnFile: ShadcnFilesUnion[number] =
+      const shadcnFile =
         file.type === "registry:file" || file.type === "registry:page"
           ? {
               path: file.sourceFileName,
@@ -193,7 +197,7 @@ export async function getStaticComponent(
               path: file.sourceFileName,
               type: file.type,
               content,
-              target: destinationPath!,
+              ...(destinationPath ? { target: destinationPath } : {}),
             };
 
       return shadcnFile;
@@ -264,17 +268,17 @@ function escapeRegExp(string: string): string {
  */
 export async function getStaticComponentForShadcn(
   namePath: string,
-  options?: { routeName?: string },
+  options?: { routeName?: string; templatesPath?: string },
 ): Promise<RegistryItem> {
   const component = await getStaticComponent(namePath, options);
   
   // Apply handlebars encoding to files that need it
-  const encodedFiles = component.files.map(file => {
+  const encodedFiles = component.files?.map(file => {
     // Only encode handlebars files that might contain problematic expressions
     if (file.path.endsWith('.hbs') || file.path.endsWith('.tsx') || file.path.endsWith('.ts')) {
       return {
         ...file,
-        content: encodeHandlebarsForShadcn(file.content),
+        content: encodeHandlebarsForShadcn(file.content ?? ""),
       };
     }
     return file;

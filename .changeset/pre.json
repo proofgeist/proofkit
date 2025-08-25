@@ -1,0 +1,21 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "demo": "0.1.0",
+    "@proofkit/docs": "0.0.2",
+    "@proofkit/better-auth": "0.3.0",
+    "@proofkit/cli": "1.1.8",
+    "create-proofkit": "0.1.0",
+    "@proofkit/fmdapi": "5.0.2",
+    "fmodata": "0.0.0",
+    "@proofkit/registry": "1.0.0",
+    "tmp": "0.0.0",
+    "@proofkit/typegen": "1.0.10",
+    "@proofkit/webviewer": "3.0.6"
+  },
+  "changesets": [
+    "swift-swans-rush",
+    "ui-default-shadcn"
+  ]
+}

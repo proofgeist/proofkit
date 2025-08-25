@@ -1,5 +1,11 @@
 # @proofkit/fmdapi
 
+## 5.0.3-beta.0
+
+### Patch Changes
+
+- 78cbab1: Update removeFMTableNames function for proper type-safety
+
 ## 5.0.2
 
 ### Patch Changes

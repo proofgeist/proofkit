@@ -13,5 +13,5 @@ export async function stealthInit() {
   }
 
   // create proofkit.json
-  await fs.writeJson("proofkit.json", defaultSettings);
+  fs.writeJsonSync("proofkit.json", defaultSettings);
 }

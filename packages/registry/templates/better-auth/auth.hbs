@@ -8,7 +8,7 @@ import { GenericEmail } from "@/emails/generic";
 export const auth = betterAuth({
   // database
   database: FileMakerAdapter({
-    debugLogs: true,
+    debugLogs: false,
 {{#findFirst proofkit.dataSources "fm"}}
     odata: {
       serverUrl: env.{{envNames.server}},

@@ -2,8 +2,9 @@ import path from "path";
 import fs from "fs-extra";
 import { SyntaxKind, type Project } from "ts-morph";
 
-import { formatAndSaveSourceFiles, getNewProject } from "./ts-morph.js";
 import { findT3EnvFile } from "~/installers/envVars.js";
+import { state } from "~/state.js";
+import { formatAndSaveSourceFiles, getNewProject } from "./ts-morph.js";
 
 interface EnvSchema {
   name: string;
@@ -15,17 +16,17 @@ interface EnvSchema {
 }
 
 export async function addToEnv({
-  projectDir,
+  projectDir = state.projectDir,
   envs,
   envFileDescription,
   ...args
 }: {
-  projectDir: string;
+  projectDir?: string;
   project?: Project;
   envs: EnvSchema[];
   envFileDescription?: string;
 }) {
-  const envSchemaFile = findT3EnvFile() 
+  const envSchemaFile = findT3EnvFile();
 
   const project = args.project ?? getNewProject(projectDir);
   const schemaFile = project.addSourceFileAtPath(envSchemaFile);

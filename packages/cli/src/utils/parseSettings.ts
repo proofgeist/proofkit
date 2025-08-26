@@ -54,7 +54,7 @@ export type Ui = (typeof uiTypes)[number];
 const settingsSchema = z.discriminatedUnion("ui", [
   z.object({
     ui: z.literal("mantine"),
-    appType: z.enum(appTypes).default("browser"),    
+    appType: z.enum(appTypes).default("browser"),
     auth: authSchema,
     envFile: z.string().default(".env"),
     dataSources: z.array(dataSourceSchema).default([]),
@@ -82,6 +82,11 @@ const settingsSchema = z.discriminatedUnion("ui", [
 export const defaultSettings = settingsSchema.parse({
   auth: { type: "none" },
   ui: "shadcn",
+  appType: "browser",
+  envFile: ".env",
+  dataSources: [],
+  replacedMainPage: false,
+  registryTemplates: [],
 });
 
 let settings: Settings | undefined;
@@ -95,7 +100,15 @@ export const getSettings = () => {
     throw new Error(`ProofKit settings file not found at: ${settingsPath}`);
   }
 
-  const settingsFile: unknown = fs.readJSONSync(settingsPath);
+  let settingsFile: unknown = fs.readJSONSync(settingsPath);
+
+  if (
+    typeof settingsFile === "object" &&
+    settingsFile !== null &&
+    !("ui" in settingsFile)
+  ) {
+    settingsFile = { ...settingsFile, ui: "mantine" };
+  }
 
   const parsed = settingsSchema.parse(settingsFile);
 

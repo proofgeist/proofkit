@@ -5,11 +5,12 @@ export const meta: TemplateMetadata = {
   category: "utility",
   registryType: "registry:lib",
   dependencies: ["@proofkit/fmdapi"],
+  // registryDependencies: ["{proofkit}/r/utils/t3-env"],
   files: [
     {
       sourceFileName: "proofkit-typegen.config.jsonc",
       type: "registry:file",
-      destinationPath: "~/..",
+      destinationPath: "~/proofkit-typegen.config.jsonc",
     },
   ],
   postInstall: [

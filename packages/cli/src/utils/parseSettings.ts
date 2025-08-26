@@ -56,7 +56,7 @@ const settingsSchema = z.discriminatedUnion("ui", [
     ui: z.literal("mantine"),
     appType: z.enum(appTypes).default("browser"),
     auth: authSchema,
-    envFile: z.string().default(".env"),
+    envFile: z.string().optional(),
     dataSources: z.array(dataSourceSchema).default([]),
     tanstackQuery: z.boolean().catch(false),
     replacedMainPage: z.boolean().catch(false),
@@ -71,7 +71,7 @@ const settingsSchema = z.discriminatedUnion("ui", [
   z.object({
     ui: z.literal("shadcn"),
     appType: z.enum(appTypes).default("browser"),
-    envFile: z.string().default(".env"),
+    envFile: z.string().optional(),
     dataSources: z.array(dataSourceSchema).default([]),
     replacedMainPage: z.boolean().catch(false),
     registryUrl: z.url().optional(),
@@ -83,7 +83,6 @@ export const defaultSettings = settingsSchema.parse({
   auth: { type: "none" },
   ui: "shadcn",
   appType: "browser",
-  envFile: ".env",
   dataSources: [],
   replacedMainPage: false,
   registryTemplates: [],
@@ -131,4 +130,27 @@ export function setSettings(_settings: Settings) {
   });
   settings = _settings;
   return settings;
+}
+
+/**
+ * Validates and sets the envFile in settings only if the file exists.
+ * Used during stealth initialization to avoid setting non-existent env files.
+ */
+export function validateAndSetEnvFile(envFileName = ".env") {
+  const settings = getSettings();
+  const envFilePath = path.join(state.projectDir, envFileName);
+
+  if (fs.existsSync(envFilePath)) {
+    const updatedSettings = { ...settings, envFile: envFileName };
+    setSettings(updatedSettings);
+    return envFileName;
+  }
+
+  // If no env file exists, ensure envFile is undefined in settings
+  if (settings.envFile) {
+    const { envFile, ...settingsWithoutEnvFile } = settings;
+    setSettings(settingsWithoutEnvFile as Settings);
+  }
+
+  return undefined;
 }

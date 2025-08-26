@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import path from "path";
 import fs from "fs-extra";
 import { SyntaxKind, type Project } from "ts-morph";
@@ -38,21 +39,30 @@ export async function addToEnv({
     .getDescendantsOfKind(SyntaxKind.CallExpression)
     .find((callExpr) => callExpr.getExpression().getText() === "createEnv");
 
+  if (!createEnvCall) {
+    throw new Error(
+      "Could not find createEnv call in schema file. Make sure you have a valid env.ts file with createEnv setup."
+    );
+  }
+
   // Get the server object property
-  const opts = createEnvCall?.getArguments()[0];
+  const opts = createEnvCall.getArguments()[0];
+  if (!opts) {
+    throw new Error("createEnv call is missing options argument");
+  }
 
   const serverProperty = opts
-    ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment)
+    .getDescendantsOfKind(SyntaxKind.PropertyAssignment)
     .find((prop) => prop.getName() === "server")
     ?.getFirstDescendantByKind(SyntaxKind.ObjectLiteralExpression);
 
   const clientProperty = opts
-    ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment)
+    .getDescendantsOfKind(SyntaxKind.PropertyAssignment)
     .find((prop) => prop.getName() === "client")
     ?.getFirstDescendantByKind(SyntaxKind.ObjectLiteralExpression);
 
   const runtimeEnvProperty = opts
-    ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment)
+    .getDescendantsOfKind(SyntaxKind.PropertyAssignment)
     .find((prop) => prop.getName() === "experimental__runtimeEnv")
     ?.getFirstDescendantByKind(SyntaxKind.ObjectLiteralExpression);
 
@@ -84,13 +94,32 @@ export async function addToEnv({
     .join("\n");
 
   const dotEnvFile = path.join(projectDir, ".env");
-  const currentFile = fs.readFileSync(dotEnvFile, "utf-8");
-  fs.writeFileSync(
-    dotEnvFile,
-    `${currentFile}
+
+  // Only handle .env file if it already exists
+  if (fs.existsSync(dotEnvFile)) {
+    const currentFile = fs.readFileSync(dotEnvFile, "utf-8");
+
+    // Ensure .env is in .gitignore using command line
+    const gitIgnoreFile = path.join(projectDir, ".gitignore");
+    try {
+      let gitIgnoreContent = "";
+      if (fs.existsSync(gitIgnoreFile)) {
+        gitIgnoreContent = fs.readFileSync(gitIgnoreFile, "utf-8");
+      }
+
+      if (!gitIgnoreContent.includes(".env")) {
+        execSync(`echo ".env" >> "${gitIgnoreFile}"`, { cwd: projectDir });
+      }
+    } catch (error) {
+      // Silently ignore gitignore errors
+    }
+
+    const newContent = `${currentFile}
 ${envFileDescription ? `# ${envFileDescription}\n${envsString}` : envsString}
-    `
-  );
+    `;
+
+    fs.writeFileSync(dotEnvFile, newContent);
+  }
 
   if (!args.project) {
     await formatAndSaveSourceFiles(project);

@@ -83,7 +83,7 @@ export async function installFromRegistry(name: string) {
     spinner.succeed();
 
     const otherProofKitDependencies = getOtherProofKitDependencies(meta);
-    const previouslyInstalledTemplates = getSettings().registryTemplates;
+    let previouslyInstalledTemplates = getSettings().registryTemplates;
 
     // Handle schema requirement if template needs it
     let dataSource: DataSource | undefined;
@@ -161,6 +161,20 @@ export async function installFromRegistry(name: string) {
       url.searchParams.set("routeName", `/(main)/${routeName ?? name}`);
     }
 
+    // a (hopefully) temporary workaround because the shadcn command installs the env file in the wrong place if it's a dependency
+    if (
+      name === "fmdapi" &&
+      !previouslyInstalledTemplates.includes("utils/t3-env") &&
+      // this last guard will allow this workaroudn to be bypassed if the registry server updates to start serving the dependency again
+      meta.registryDependencies?.find((d) => d.includes("utils/t3-env")) ===
+        undefined
+    ) {
+      // install the t3-env template manually first
+      await installFromRegistry("utils/t3-env");
+      previouslyInstalledTemplates = getSettings().registryTemplates;
+    }
+
+    // now install the template using shadcn-install
     await shadcnInstall([url.toString()], meta.title);
 
     const handlebarsFiles = meta.files.filter((file) => file.handlebars);

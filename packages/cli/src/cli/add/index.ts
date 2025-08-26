@@ -6,7 +6,7 @@ import ora from "ora";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
-import { getSettings } from "~/utils/parseSettings.js";
+import { getSettings, Settings } from "~/utils/parseSettings.js";
 import { runAddReactEmailCommand } from "../react-email.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
@@ -19,12 +19,20 @@ import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
 import { installFromRegistry } from "./registry/install.js";
 import { listItems } from "./registry/listItems.js";
+import { preflightAddCommand } from "./registry/preflight.js";
 
 const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
   const settings = getSettings();
 
   const spinner = ora("Loading available components...").start();
-  const items = await listItems();
+  let items;
+  try {
+    items = await listItems();
+  } catch (error) {
+    spinner.fail("Failed to load registry components");
+    logger.error(error);
+    return;
+  }
 
   const itemsNotInstalled = items.filter(
     (item) => !settings.registryTemplates.includes(item.name)
@@ -109,13 +117,18 @@ export const runAdd = async (
     return await installFromRegistry(name);
   }
 
-  ensureProofKitProject({ commandName: "add" });
-
-  const settings = getSettings();
+  let settings: Settings;
+  try {
+    settings = getSettings();
+  } catch {
+    await preflightAddCommand();
+    return await runAddFromRegistry(options);
+  }
 
   if (settings.ui === "shadcn") {
     return await runAddFromRegistry(options);
   }
+  ensureProofKitProject({ commandName: "add" });
 
   const addType = abortIfCancel(
     await p.select({
@@ -168,8 +181,8 @@ export const makeAddCommand = () => {
       "Do not run your package manager install command",
       false
     )
-    .action((name, options) => {
-      runAdd(name, options);
+    .action(async (name, options) => {
+      await runAdd(name, options);
     });
 
   addCommand.hook("preAction", (_thisCommand, _actionCommand) => {

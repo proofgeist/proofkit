@@ -5,7 +5,7 @@ export const env = createEnv({
   server: {
     NODE_ENV: z
       .enum(["development", "test", "production"])
-      .default("development"),
+      .catch("development"),
   },
   client: {},
   experimental__runtimeEnv: {},

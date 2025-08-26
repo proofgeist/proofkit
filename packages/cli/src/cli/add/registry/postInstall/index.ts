@@ -13,7 +13,7 @@ export async function processPostInstallStep(step: PostInstallStep) {
   } else if (step.action === "next-steps") {
     logger.info(step.data.message);
   } else if (step.action === "env") {
-    addToEnv({
+    await addToEnv({
       envs: step.data.envs,
     });
   } else {

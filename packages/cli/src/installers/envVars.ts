@@ -30,12 +30,12 @@ export function findT3EnvFile(throwIfNotFound: false): string | null;
 export function findT3EnvFile(throwIfNotFound: true): string;
 export function findT3EnvFile(throwIfNotFound?: boolean): string | null {
   const possiblePaths = [
-    `/src/config/env.ts`,
-    `/src/lib/env.ts`,
-    `/src/env.ts`,
-    `/lib/env.ts`,
-    `/env.ts`,
-    `/config/env.ts`,
+    `src/config/env.ts`,
+    `src/lib/env.ts`,
+    `src/env.ts`,
+    `lib/env.ts`,
+    `env.ts`,
+    `config/env.ts`,
   ];
 
   for (const testPath of possiblePaths) {
@@ -50,7 +50,7 @@ export function findT3EnvFile(throwIfNotFound?: boolean): string | null {
   }
 
   logger.warn(
-    `Could not find the T3 env files. Run "proofkit add utils/t3-env" to initilziate it`
+    `Could not find T3 env files. Run "proofkit add utils/t3-env" to initialize them.`
   );
   throw new Error("T3 env file not found");
 }

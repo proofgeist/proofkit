@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
+    "proofkit": "proofkit",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write"

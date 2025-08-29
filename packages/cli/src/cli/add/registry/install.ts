@@ -1,17 +1,21 @@
+import * as p from "@clack/prompts";
 import { getOtherProofKitDependencies } from "@proofkit/registry";
-import { uniq, capitalize } from "es-toolkit";
+import { capitalize, uniq } from "es-toolkit";
 import ora from "ora";
 import semver from "semver";
-import * as p from "@clack/prompts";
 
-import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
-import { getVersion } from "~/utils/getProofKitVersion.js";
-import { logger } from "~/utils/logger.js";
-import { getSettings, mergeSettings, type DataSource } from "~/utils/parseSettings.js";
+import { abortIfCancel } from "~/cli/utils.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
+import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
 import { state } from "~/state.js";
-import { abortIfCancel } from "~/cli/utils.js";
+import { getVersion } from "~/utils/getProofKitVersion.js";
+import { logger } from "~/utils/logger.js";
+import {
+  getSettings,
+  mergeSettings,
+  type DataSource,
+} from "~/utils/parseSettings.js";
 import { getMetaFromRegistry } from "./getOptions.js";
 import {
   buildHandlebarsData,
@@ -57,9 +61,9 @@ async function promptForSchemaFromDataSource({
 
 export async function installFromRegistry(name: string) {
   const spinner = ora("Validating template").start();
-  await preflightAddCommand();
 
   try {
+    await preflightAddCommand();
     const meta = await getMetaFromRegistry(name);
     if (!meta) {
       spinner.fail(`Template ${name} not found in the ProofKit registry`);
@@ -79,7 +83,7 @@ export async function installFromRegistry(name: string) {
     spinner.succeed();
 
     const otherProofKitDependencies = getOtherProofKitDependencies(meta);
-    const previouslyInstalledTemplates = getSettings().registryTemplates;
+    let previouslyInstalledTemplates = getSettings().registryTemplates;
 
     // Handle schema requirement if template needs it
     let dataSource: DataSource | undefined;
@@ -87,31 +91,33 @@ export async function installFromRegistry(name: string) {
     let routeName: string | undefined;
     let pageName: string | undefined;
 
-   
     if (meta.schemaRequired) {
       const settings = getSettings();
-      
+
       if (settings.dataSources.length === 0) {
-        spinner.fail("This template requires a data source, but you don't have any. Add a data source first.");
+        spinner.fail(
+          "This template requires a data source, but you don't have any. Add a data source first."
+        );
         return;
       }
 
-      const dataSourceName = settings.dataSources.length > 1
-        ? abortIfCancel(
-            await p.select({
-              message: "Which data source should be used for this template?",
-              options: settings.dataSources.map((ds) => ({
-                value: ds.name,
-                label: ds.name,
-              })),
-            })
-          )
-        : settings.dataSources[0]?.name;
+      const dataSourceName =
+        settings.dataSources.length > 1
+          ? abortIfCancel(
+              await p.select({
+                message: "Which data source should be used for this template?",
+                options: settings.dataSources.map((ds) => ({
+                  value: ds.name,
+                  label: ds.name,
+                })),
+              })
+            )
+          : settings.dataSources[0]?.name;
 
       dataSource = settings.dataSources.find(
         (ds) => ds.name === dataSourceName
       );
-      
+
       if (!dataSource) {
         spinner.fail(`Data source ${dataSourceName} not found`);
         return;
@@ -149,25 +155,39 @@ export async function installFromRegistry(name: string) {
 
       pageName = capitalize(routeName.replace("/", "").trim());
     }
-    
 
     let url = new URL(`${getRegistryUrl()}/r/${name}`);
     if (meta.category === "page") {
-      url.searchParams.set("routeName", `/(main)/${routeName??name}`);
+      url.searchParams.set("routeName", `/(main)/${routeName ?? name}`);
     }
 
+    // a (hopefully) temporary workaround because the shadcn command installs the env file in the wrong place if it's a dependency
+    if (
+      name === "fmdapi" &&
+      !previouslyInstalledTemplates.includes("utils/t3-env") &&
+      // this last guard will allow this workaroudn to be bypassed if the registry server updates to start serving the dependency again
+      meta.registryDependencies?.find((d) => d.includes("utils/t3-env")) ===
+        undefined
+    ) {
+      // install the t3-env template manually first
+      await installFromRegistry("utils/t3-env");
+      previouslyInstalledTemplates = getSettings().registryTemplates;
+    }
+
+    // now install the template using shadcn-install
     await shadcnInstall([url.toString()], meta.title);
 
     const handlebarsFiles = meta.files.filter((file) => file.handlebars);
 
     if (handlebarsFiles.length > 0) {
       // Build template data with schema information if available
-      const templateData = dataSource && schemaName 
-        ? buildHandlebarsData({
-            dataSource,
-            schemaName,
-          })
-        : buildHandlebarsData();
+      const templateData =
+        dataSource && schemaName
+          ? buildHandlebarsData({
+              dataSource,
+              schemaName,
+            })
+          : buildHandlebarsData();
 
       // Add page information to template data if available
       if (routeName) {
@@ -176,13 +196,16 @@ export async function installFromRegistry(name: string) {
       if (pageName) {
         (templateData as any).pageName = pageName;
       }
-        
+
       // Resolve __PATH__ placeholders in file paths before handlebars processing
-      const resolvedFiles = handlebarsFiles.map(file => ({
+      const resolvedFiles = handlebarsFiles.map((file) => ({
         ...file,
-        destinationPath: file.destinationPath?.replace('__PATH__', `/(main)/${routeName??name}`)
+        destinationPath: file.destinationPath?.replace(
+          "__PATH__",
+          `/(main)/${routeName ?? name}`
+        ),
       }));
-      
+
       for (const file of resolvedFiles) {
         await randerHandlebarsToFile(file, templateData);
       }

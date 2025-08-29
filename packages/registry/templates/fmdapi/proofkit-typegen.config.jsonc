@@ -1,0 +1,11 @@
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": [
+    {
+      "layouts": [],
+      "path": "./src/lib/schemas/filemaker",
+      "clearOldFiles": true,
+      "clientSuffix": "Layout",
+    },
+  ],
+}

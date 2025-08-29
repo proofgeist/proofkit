@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import createJiti from "jiti";
 import type {
+  RegistryIndex,
   RegistryItem,  
   TemplateMetadata,
 } from "./types.js";
@@ -13,12 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const defaultTemplatesPath = path.resolve(__dirname, "../templates");
 
-export type RegistryIndexItem = {
-  name: string;
-  type: TemplateMetadata["registryType"];
-  category: TemplateMetadata["category"];
-  // files: string[]; // destination paths
-};
+
 
 /**
  * Scans the templates directory and returns all template directories with _meta.ts files
@@ -73,16 +69,18 @@ function loadTemplateMeta(templatePath: string, templatesPath: string = defaultT
   };
 }
 
-export async function getRegistryIndex(templatesPath: string = defaultTemplatesPath): Promise<RegistryIndexItem[]> {
+export async function getRegistryIndex(templatesPath: string = defaultTemplatesPath): Promise<RegistryIndex> {
   const templateDirs = getTemplateDirs(templatesPath);
 
   const index = templateDirs.map((templatePath) => {
     const meta = loadTemplateMeta(templatePath, templatesPath);
-    return {
+    const item: RegistryIndex[number] = {
       name: templatePath, // Use the path as the name
-      type: meta.registryType,
       category: meta.category,
+      title: meta.title,
+      description: meta.description,
     };
+    return item;
   });
 
   return index;

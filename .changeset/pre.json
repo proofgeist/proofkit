@@ -15,6 +15,7 @@
     "@proofkit/webviewer": "3.0.6"
   },
   "changesets": [
+    "brown-keys-float",
     "swift-swans-rush",
     "tough-forks-start",
     "ui-default-shadcn"

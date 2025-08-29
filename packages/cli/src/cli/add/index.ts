@@ -51,21 +51,23 @@ const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
         ...(categories.includes("page")
           ? [{ label: "Page", value: "page" }]
           : []),
-        {
-          label: "Schema",
-          value: "schema",
-          hint: "load data from a new table or layout from an existing data source",
-        },
 
-        ...(settings.appType === "browser"
+        // only show schema option if there is at least one data source
+        ...(settings.dataSources.length > 0
           ? [
               {
-                label: "Data Source",
-                value: "data",
-                hint: "to connect to a new database or FileMaker file",
+                label: "Schema",
+                value: "schema",
+                hint: "load data from a new table or layout from an existing data source",
               },
             ]
           : []),
+
+        {
+          label: "Data Source",
+          value: "data",
+          hint: "to connect to a new database or FileMaker file",
+        },
 
         // show the rest of the categories
         ...categories
@@ -135,21 +137,22 @@ export const runAdd = async (
       message: "What do you want to add to your project?",
       options: [
         { label: "Page", value: "page" },
-        {
-          label: "Schema",
-          value: "schema",
-          hint: "load data from a new table or layout from an existing data source",
-        },
-        { label: "React Email", value: "react-email" },
-        ...(settings.appType === "browser"
+        // only show schema option if there is at least one data source
+        ...(settings.dataSources.length > 0
           ? [
               {
-                label: "Data Source",
-                value: "data",
-                hint: "to connect to a new database or FileMaker file",
+                label: "Schema",
+                value: "schema",
+                hint: "load data from a new table or layout from an existing data source",
               },
             ]
           : []),
+        { label: "React Email", value: "react-email" },
+        {
+          label: "Data Source",
+          value: "data",
+          hint: "to connect to a new database or FileMaker file",
+        },
         ...(settings.auth.type === "none" && settings.appType === "browser"
           ? [{ label: "Auth", value: "auth" }]
           : []),

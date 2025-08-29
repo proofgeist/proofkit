@@ -1,6 +1,10 @@
 import fs from "fs-extra";
 
-import { defaultSettings } from "~/utils/parseSettings.js";
+import {
+  defaultSettings,
+  setSettings,
+  validateAndSetEnvFile,
+} from "~/utils/parseSettings.js";
 
 /**
  * Used to add a proofkit.json file to an existing project
@@ -12,6 +16,9 @@ export async function stealthInit() {
     return;
   }
 
-  // create proofkit.json
-  await fs.writeJson("proofkit.json", defaultSettings);
+  // create proofkit.json with default settings
+  setSettings(defaultSettings);
+
+  // validate and set envFile only if it exists
+  validateAndSetEnvFile();
 }

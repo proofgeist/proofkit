@@ -6,14 +6,20 @@ import { state } from "~/state.js";
 import { registryFetch } from "./http.js";
 
 export async function getMetaFromRegistry(name: string) {
-  const result = await registryFetch("@get/meta/:name", {
-    params: { name },
-  });
-  if (result.error) {
-    if (result.error.status === 404) return null;
-    throw new Error(result.error.message);
+  try {
+    const result = await registryFetch("@get/meta/:name", {
+      params: { name },
+    });
+
+    if (result.error) {
+      if (result.error.status === 404) return null;
+      throw new Error(result.error.message);
+    }
+
+    return result.data;
+  } catch (error) {
+    throw error;
   }
-  return result.data;
 }
 
 const PROJECT_SHARED_IGNORE = [

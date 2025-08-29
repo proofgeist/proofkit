@@ -54,9 +54,9 @@ export type Ui = (typeof uiTypes)[number];
 const settingsSchema = z.discriminatedUnion("ui", [
   z.object({
     ui: z.literal("mantine"),
-    appType: z.enum(appTypes).default("browser"),    
+    appType: z.enum(appTypes).default("browser"),
     auth: authSchema,
-    envFile: z.string().default(".env"),
+    envFile: z.string().optional(),
     dataSources: z.array(dataSourceSchema).default([]),
     tanstackQuery: z.boolean().catch(false),
     replacedMainPage: z.boolean().catch(false),
@@ -71,7 +71,7 @@ const settingsSchema = z.discriminatedUnion("ui", [
   z.object({
     ui: z.literal("shadcn"),
     appType: z.enum(appTypes).default("browser"),
-    envFile: z.string().default(".env"),
+    envFile: z.string().optional(),
     dataSources: z.array(dataSourceSchema).default([]),
     replacedMainPage: z.boolean().catch(false),
     registryUrl: z.url().optional(),
@@ -82,6 +82,10 @@ const settingsSchema = z.discriminatedUnion("ui", [
 export const defaultSettings = settingsSchema.parse({
   auth: { type: "none" },
   ui: "shadcn",
+  appType: "browser",
+  dataSources: [],
+  replacedMainPage: false,
+  registryTemplates: [],
 });
 
 let settings: Settings | undefined;
@@ -95,7 +99,15 @@ export const getSettings = () => {
     throw new Error(`ProofKit settings file not found at: ${settingsPath}`);
   }
 
-  const settingsFile: unknown = fs.readJSONSync(settingsPath);
+  let settingsFile: unknown = fs.readJSONSync(settingsPath);
+
+  if (
+    typeof settingsFile === "object" &&
+    settingsFile !== null &&
+    !("ui" in settingsFile)
+  ) {
+    settingsFile = { ...settingsFile, ui: "mantine" };
+  }
 
   const parsed = settingsSchema.parse(settingsFile);
 
@@ -118,4 +130,27 @@ export function setSettings(_settings: Settings) {
   });
   settings = _settings;
   return settings;
+}
+
+/**
+ * Validates and sets the envFile in settings only if the file exists.
+ * Used during stealth initialization to avoid setting non-existent env files.
+ */
+export function validateAndSetEnvFile(envFileName = ".env") {
+  const settings = getSettings();
+  const envFilePath = path.join(state.projectDir, envFileName);
+
+  if (fs.existsSync(envFilePath)) {
+    const updatedSettings = { ...settings, envFile: envFileName };
+    setSettings(updatedSettings);
+    return envFileName;
+  }
+
+  // If no env file exists, ensure envFile is undefined in settings
+  if (settings.envFile) {
+    const { envFile, ...settingsWithoutEnvFile } = settings;
+    setSettings(settingsWithoutEnvFile as Settings);
+  }
+
+  return undefined;
 }

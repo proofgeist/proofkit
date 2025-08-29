@@ -8,6 +8,7 @@ import { state } from "~/state.js";
  * @param project The ts-morph Project containing the files to format
  */
 export async function formatAndSaveSourceFiles(project: Project) {
+  project.saveSync(); // save here in case formatting fails
   try {
     const files = project.getSourceFiles();
     // run each file through the prettier formatter

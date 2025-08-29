@@ -16,7 +16,8 @@ export const meta: TemplateMetadata = {
     {
       action: "next-steps",
       data: {
-        message: "Be sure to import the env.ts file into your next.config.ts to validate at build time.",
+        message:
+          "Be sure to import the env.ts file into your next.config.ts to validate at build time.",
       },
     },
   ],

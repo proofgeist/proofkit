@@ -1,13 +1,13 @@
 import * as p from "@clack/prompts";
 import { Command } from "commander";
+import { capitalize, groupBy, uniq } from "es-toolkit";
+import ora from "ora";
 
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
-import { getSettings } from "~/utils/parseSettings.js";
-import {
-  makeAddReactEmailCommand,
-  runAddReactEmailCommand,
-} from "../react-email.js";
+import { logger } from "~/utils/logger.js";
+import { getSettings, Settings } from "~/utils/parseSettings.js";
+import { runAddReactEmailCommand } from "../react-email.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
@@ -18,6 +18,93 @@ import {
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
 import { installFromRegistry } from "./registry/install.js";
+import { listItems } from "./registry/listItems.js";
+import { preflightAddCommand } from "./registry/preflight.js";
+
+const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
+  const settings = getSettings();
+
+  const spinner = ora("Loading available components...").start();
+  let items;
+  try {
+    items = await listItems();
+  } catch (error) {
+    spinner.fail("Failed to load registry components");
+    logger.error(error);
+    return;
+  }
+
+  const itemsNotInstalled = items.filter(
+    (item) => !settings.registryTemplates.includes(item.name)
+  );
+
+  const groupedByCategory = groupBy(itemsNotInstalled, (item) => item.category);
+  const categories = uniq(itemsNotInstalled.map((item) => item.category));
+
+  spinner.succeed();
+
+  const addType = abortIfCancel(
+    await p.select({
+      message: "What do you want to add to your project?",
+      options: [
+        // if there are pages available to install, show them first
+        ...(categories.includes("page")
+          ? [{ label: "Page", value: "page" }]
+          : []),
+        {
+          label: "Schema",
+          value: "schema",
+          hint: "load data from a new table or layout from an existing data source",
+        },
+
+        ...(settings.appType === "browser"
+          ? [
+              {
+                label: "Data Source",
+                value: "data",
+                hint: "to connect to a new database or FileMaker file",
+              },
+            ]
+          : []),
+
+        // show the rest of the categories
+        ...categories
+          .filter((category) => category !== "page")
+          .map((category) => ({
+            label: capitalize(category),
+            value: category,
+          })),
+      ],
+    })
+  );
+
+  if (addType === "schema") {
+    await runAddSchemaAction();
+  } else if (addType === "data") {
+    await runAddDataSourceCommand();
+  } else if (categories.includes(addType as any)) {
+    // one of the categories
+    const itemsFromCategory =
+      groupedByCategory[addType as keyof typeof groupedByCategory];
+
+    const itemName = abortIfCancel(
+      await p.select({
+        message: `Select a ${addType} to add to your project`,
+        options: itemsFromCategory.map((item) => ({
+          label: item.title,
+          hint: item.description,
+          value: item.name,
+        })),
+      })
+    );
+
+    await installFromRegistry(itemName);
+  } else {
+    logger.error(
+      `Could not find any available components in the category "${addType}"`
+    );
+  }
+};
 
 export const runAdd = async (
   name: string | undefined,
@@ -30,10 +117,18 @@ export const runAdd = async (
     return await installFromRegistry(name);
   }
 
+  let settings: Settings;
+  try {
+    settings = getSettings();
+  } catch {
+    await preflightAddCommand();
+    return await runAddFromRegistry(options);
+  }
+
+  if (settings.ui === "shadcn") {
+    return await runAddFromRegistry(options);
+  }
   ensureProofKitProject({ commandName: "add" });
-  const settings = getSettings();
-
-
 
   const addType = abortIfCancel(
     await p.select({
@@ -55,21 +150,12 @@ export const runAdd = async (
               },
             ]
           : []),
-        ...(settings.ui === "shadcn" ? [] : settings.auth.type === "none" && settings.appType === "browser"
+        ...(settings.auth.type === "none" && settings.appType === "browser"
           ? [{ label: "Auth", value: "auth" }]
           : []),
       ],
     })
   );
-
-  // For shadcn projects, block adding new pages or auth for now
-  if (settings.ui === "shadcn") {
-    if (addType === "page" || addType === "auth") {
-      return p.cancel(
-        "Adding new pages or auth is not yet supported for shadcn-based projects."
-      );
-    }
-  }
 
   if (addType === "auth") {
     await runAddAuthAction();
@@ -95,7 +181,9 @@ export const makeAddCommand = () => {
       "Do not run your package manager install command",
       false
     )
-    .action(runAdd as any);
+    .action(async (name, options) => {
+      await runAdd(name, options);
+    });
 
   addCommand.hook("preAction", (_thisCommand, _actionCommand) => {
     // console.log("preAction", _actionCommand.opts());

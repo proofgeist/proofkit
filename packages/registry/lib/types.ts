@@ -41,9 +41,12 @@ export const templateFileSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-const buildPostInstallStepsSchema = <T extends z.AnyZodObject, A extends string>(
-  action: A, 
-  dataSchema: T
+const buildPostInstallStepsSchema = <
+  T extends z.AnyZodObject,
+  A extends string,
+>(
+  action: A,
+  dataSchema: T,
 ) => {
   return z.object({
     action: z.literal(action),
@@ -53,15 +56,44 @@ const buildPostInstallStepsSchema = <T extends z.AnyZodObject, A extends string>
 };
 
 export const postInstallStepsSchema = z.discriminatedUnion("action", [
-  buildPostInstallStepsSchema("next-steps" , z.object({
-    message: z.string(),
-  })),
-  buildPostInstallStepsSchema("package.json script", z.object({
+  buildPostInstallStepsSchema(
+    "next-steps",
+    z.object({
+      message: z.string(),
+    }),
+  ),
+  buildPostInstallStepsSchema(
+    "package.json script",
+    z.object({
       scriptName: z.string(),
       scriptCommand: z.string(),
     }),
   ),
-      buildPostInstallStepsSchema("wrap provider" , z.object({
+  buildPostInstallStepsSchema(
+    "env",
+    z.object({
+      envs: z
+        .object({
+          name: z.string(),
+          zodValue: z.string(),
+          defaultValue: z
+            .string()
+            .optional()
+            .describe(
+              "This value will be added to the .env file, unless `addToRuntimeEnv` is set to `false`.",
+            ),
+          type: z.enum(["server", "client"]),
+          addToRuntimeEnv: z
+            .boolean()
+            .optional()
+            .describe("Whether to add the env to the runtime env."),
+        })
+        .array(),
+    }),
+  ),
+  buildPostInstallStepsSchema(
+    "wrap provider",
+    z.object({
       providerOpenTag: z
         .string()
         .describe(
@@ -99,7 +131,7 @@ export const postInstallStepsSchema = z.discriminatedUnion("action", [
         .describe(
           "If set, the provider will attempt to go inside of the parent tag. The first found tag will be used as the parent. If not set or none of the tags are found, the provider will be wrapped at the very top level.",
         ),
-      }),
+    }),
   ),
 ]);
 
@@ -138,7 +170,9 @@ export const templateMetadataSchema = registryItemSchema
     schemaRequired: z
       .boolean()
       .optional()
-      .describe("Whether this template requires a database schema to be selected"),
+      .describe(
+        "Whether this template requires a database schema to be selected",
+      ),
   });
 
 export type TemplateFile = z.infer<typeof templateFileSchema>;
@@ -146,9 +180,11 @@ export type TemplateMetadata = z.infer<typeof templateMetadataSchema>;
 
 export const registryIndexSchema = templateMetadataSchema
   .pick({ title: true, category: true, description: true })
+  .extend({
+    name: z.string(),
+  })
   .array();
 
-
-
+export type RegistryIndex = z.infer<typeof registryIndexSchema>;
 
 export type RegistryItem = ShadcnRegistryItem;

@@ -13,7 +13,7 @@ export async function shadcnInstall(
   friendlyComponentName?: string
 ) {
   const componentsArray = Array.isArray(components) ? components : [components];
-  const command = ["shadcn@latest", "add", ...componentsArray, "--overwrite"];
+  const command = ["shadcn@latest", "add", ...componentsArray];
   // Use execa to run the shadcn add command directly
 
   try {

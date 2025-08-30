@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 1.2.0-beta.2
+
+### Patch Changes
+
+- c71b0d4: Add utils/fmdapi to registry
+
 ## 1.1.8
 
 ### Patch Changes

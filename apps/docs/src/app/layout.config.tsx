@@ -21,7 +21,6 @@ export const baseOptions: BaseLayoutProps = {
     ),
   },
   links: [
-    { text: "Documentation", url: "/docs", active: "none", on: "nav" },
     {
       text: "Community",
       url: "https://community.ottomatic.cloud/c/proofkit",

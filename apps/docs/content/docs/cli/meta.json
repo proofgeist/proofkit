@@ -4,7 +4,9 @@
   "icon": "Terminal",
   "root": true,
   "pages": [
+    "index",
     "guides/motivation",
+    "v2",
     "---Guides---",
     "guides/getting-started",
     "guides/adding-components",

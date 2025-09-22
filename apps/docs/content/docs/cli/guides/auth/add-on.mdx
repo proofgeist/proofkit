@@ -6,6 +6,10 @@ description: How to add FileMaker Add-on Auth to your FileMaker file
 import { CliCommand } from "@/components/CliCommand";
 
 
+<Callout type="warning" title="Deprecated">
+This component is no longer the reccomended approach for self-hosting your web app's authentication in FileMaker. Instead, check out the [Better-Auth installation guide](/docs/better-auth/installation) for a more flexible and customizable solution.
+</Callout>
+
 ProofKit includes a self-hosted authentication solution that is built to be flexible and easy to customize. Rather than using a third-party library or authentication service, the ProofKit CLI installs all of the necessary functions into your project and then you just have to install the FileMaker add-on in your FileMaker file to get the necessary tables in your database.
 
 While FileMaker Add-on Auth is built to be secure, it is more advanced than a typical third-party authentication service and does warrant a good understanding of how it works before you customize it beyond the default settings. For more details about the security principles behind it, see the [Lucia documentation](https://lucia-auth.com/).

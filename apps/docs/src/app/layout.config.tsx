@@ -7,7 +7,7 @@ import Image from "next/image";
  * Home Layout: app/(home)/layout.tsx
  * Docs Layout: app/docs/layout.tsx
  */
-export const baseOptions: BaseLayoutProps = {
+export const baseOptions = {
   nav: {
     title: (
       <>
@@ -38,4 +38,4 @@ export const baseOptions: BaseLayoutProps = {
       external: true,
     },
   ],
-};
+} satisfies BaseLayoutProps;

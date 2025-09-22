@@ -7,6 +7,7 @@ sidebar:
 
 import { Card } from "fumadocs-ui/components/card";
 import { Callout } from "fumadocs-ui/components/callout";
+import { Badge } from "@/components/ui/badge";
 
 The ProofKit CLI aims to make web development easier for beginners and more efficient for experienced devs. Its _opinionated_ structure allows for more than just a starter template or bootstrapping tool, but code-mod scripts that can modify a project after the initial setup.
 
@@ -36,11 +37,20 @@ Here is a list of the frameworks and packages that you'll come across in a Proof
 
 A well-supported open-source React framework for full-stack web applications. This means it runs code on your frontend (in the client's web browser) and backend (on the web server, or API routes). It makes it easy to get a web app up and running with all the features that we expect from a modern web app and is used by companies of all sizes to power their online presence.
 
-#### [Mantine](https://mantine.dev/)
+#### [Shadcn/ui](https://ui.shadcn.com/) <Badge className="bg-blue-200 text-blue-700 dark:bg-blue-500 dark:text-blue-50 ">NEW</Badge>
 
-A vast, themeable component library for React. We use their default components and styles to build apps very quickly, but with the option of adding custom styles or themes later if needed. Mantine also includes many helpful React hooks, and they provide a Modal and Notification system to ProofKit apps.
+A themeable component library for React. We use their default components and styles to build apps very quickly, but with the option of adding custom styles or themes later if needed. Shadcn/ui also includes many helpful React hooks, and they provide a Modal and Notification system to ProofKit apps.
 
-Why not tailwind css and/or shadcn/ui? We've chosen to focus on Mantine because it has allowed our team to work much faster for the kinds of web apps that we build for our clients. When you're working on multiple projects at once, it's actually a benefit to **not** own the component code within an individual codebase, so that it can be more easily upgraded when the time comes. However, we have not ruled out other components and style systems and may add support for them in the future.
+Using the shadcn CLI, you can install any component or utility from any compatible library. This makes shadcn the best choice for the most flexible and customizable apps. Some of our favorite shadcn-compatible libraries are:
+- [Kibu Ui](https://www.kibo-ui.com/)
+- [reui](https://reui.io/)
+- [Magic UI](https://magicui.design/)
+- [tweakcn (easily theme your components)](https://tweakcn.com/)
+- [A longer list of more...](https://github.com/birobirobiro/awesome-shadcn-ui)
+
+#### [Tailwind CSS](https://tailwindcss.com/) <Badge className="bg-blue-200 text-blue-700 dark:bg-blue-500 dark:text-blue-50 ">NEW</Badge>
+
+A utility-first CSS framework for rapidly building custom user interfaces. It's used by shadcn (and related libraries) to style the components and pages in your app.
 
 #### [Tanstack Query](https://tanstack.com/query)
 
@@ -60,17 +70,6 @@ A wrapper around Next.js actions that include middleware (for easily checking th
 
 A hosted authentication service that is extremely easy to set up and use. It's a great choice to secure most customer-facing web apps, including built-in features such as Social logins, magic link, multi-factor authentication, and more.
 
-#### Self-Hosted Auth
+#### [Better-Auth](https://better-auth.com/) (self-hosted)
 
-For when you need a bit more flexibility or if you want to self-host the authentication layer, ProofKit can also scaffold out all the security functions required for you to manage your own authentication. Learn more in this guide: [FileMaker Add-on Auth](/docs/cli/guides/auth/add-on)
-
-
-### Data Sources
-
-#### [Supabase](https://supabase.com/)
-
-An open-source set of tools that are centered around a Postgres database. They also offer an authentication layer to handle user logins all under one roof.
-
-#### [FileMaker](https://www.claris.com/)
-
-A database and application development platform that allows users to create custom apps and automate processes.
+For when you need a bit more flexibility or if you want to self-host the authentication layer within your existing FileMaker solution. Better-auth is a great choice for this, and the [proofkit/better-auth](/docs/better-auth) adapter allows you to use FileMaker as your backend database, including automated schema migrations to easily add any neccesary tables and fields to your FileMaker file.

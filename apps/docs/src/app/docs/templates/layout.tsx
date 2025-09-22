@@ -4,19 +4,12 @@ import { baseOptions } from "../../layout.config";
 import { getTemplatesByCategory } from "@/lib/templates";
 import { type TemplateMetadata } from "@proofkit/registry";
 import { PageTree } from "fumadocs-core/server";
-import { IconArrowLeft } from "@tabler/icons-react";
 import { source } from "@/lib/source";
 import { New_Tegomin } from "next/font/google";
 import { getSidebarTabs } from "fumadocs-ui/utils/get-sidebar-tabs";
-type Category = TemplateMetadata["category"];
+import { categoryConfigs, categoryConfigMap } from "./category-config";
 
-const pluralCategoryNames: Record<Category, string> = {
-  component: "Components",
-  page: "Pages",
-  utility: "Utilities",
-  email: "Emails",
-  hook: "Hooks",
-};
+type Category = TemplateMetadata["category"];
 
 async function buildTemplatesTree() {
   const templatesByCategory = await getTemplatesByCategory();
@@ -29,25 +22,26 @@ async function buildTemplatesTree() {
     },
   ];
 
-  // Add each category as a separator followed by its templates
-  Object.entries(templatesByCategory)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .forEach(([category, templates]) => {
-      // Add category separator
-      children.push({
-        name: pluralCategoryNames[category as Category],
-        type: "separator",
-      });
+  // Add each category as a separator followed by its templates in the defined order
+  categoryConfigs.forEach(({ category, name }) => {
+    const templates = templatesByCategory[category];
+    if (!templates || templates.length === 0) return;
 
-      // Add all templates in this category
-      templates.forEach((template) => {
-        children.push({
-          name: template.title,
-          url: `/docs${template.path}`,
-          type: "page",
-        });
+    // Add category separator
+    children.push({
+      name,
+      type: "separator",
+    });
+
+    // Add all templates in this category
+    templates.forEach((template) => {
+      children.push({
+        name: template.title,
+        url: `/docs${template.path}`,
+        type: "page",
       });
     });
+  });
 
   return {
     children,

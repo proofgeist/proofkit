@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Search, Package } from "lucide-react";
 import type { TemplateWithPath } from "@/lib/templates";
+import { getCategoryConfig, categoryConfigs } from "./category-config";
 
 interface TemplatesPageClientProps {
   templates: TemplateWithPath[];
@@ -42,7 +43,10 @@ export function TemplatesPageClient({
     return filtered;
   }, [templates, searchQuery, selectedCategory]);
 
-  const categories = Object.keys(templatesByCategory).sort();
+  // Use category configuration order instead of alphabetical sort
+  const categories = categoryConfigs
+    .filter((config) => templatesByCategory[config.category]?.length > 0)
+    .map((config) => config.category);
 
   return (
     <div>
@@ -74,19 +78,24 @@ export function TemplatesPageClient({
           >
             All ({templates.length})
           </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-3 py-1.5 rounded-full text-sm transition-colors capitalize ${
-                selectedCategory === category
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              }`}
-            >
-              {category} ({templatesByCategory[category].length})
-            </button>
-          ))}
+          {categories.map((category) => {
+            const config = getCategoryConfig(category as any);
+            const CategoryIcon = config.icon;
+            return (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  selectedCategory === category
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <CategoryIcon className="h-3.5 w-3.5" />
+                {config.name} ({templatesByCategory[category].length})
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -101,8 +110,8 @@ export function TemplatesPageClient({
               <span>
                 {" "}
                 in{" "}
-                <span className="capitalize font-medium">
-                  {selectedCategory}
+                <span className="font-medium">
+                  {getCategoryConfig(selectedCategory as any).name}
                 </span>
               </span>
             )}
@@ -126,7 +135,12 @@ export function TemplatesPageClient({
               >
                 <div className="flex items-start gap-3">
                   <div className="shrink-0 mt-1">
-                    <Package className="h-5 w-5 text-primary" />
+                    {(() => {
+                      const CategoryIcon = getCategoryConfig(
+                        template.category as any,
+                      ).icon;
+                      return <CategoryIcon className="h-5 w-5 text-primary" />;
+                    })()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">

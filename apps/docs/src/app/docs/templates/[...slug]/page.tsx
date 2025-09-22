@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Package, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
+import { CliCommand } from "@/components/CliCommand";
+import { getCategoryConfig } from "../category-config";
 
 interface TemplatePageProps {
   params: Promise<{ slug: string[] }>;
@@ -54,7 +56,12 @@ export default async function TemplatePage({ params }: TemplatePageProps) {
       <div className="mb-8">
         <div className="flex items-start gap-4 mb-4">
           <div className="shrink-0 mt-1">
-            <Package className="h-8 w-8 text-primary" />
+            {(() => {
+              const CategoryIcon = getCategoryConfig(
+                template.category as any,
+              ).icon;
+              return <CategoryIcon className="h-8 w-8 text-primary" />;
+            })()}
           </div>
           <div className="flex-1">
             <h1 className="text-4xl font-bold mb-2">{template.title}</h1>
@@ -67,8 +74,8 @@ export default async function TemplatePage({ params }: TemplatePageProps) {
         </div>
 
         <div className="flex items-center gap-4 text-sm">
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground capitalize font-medium">
-            {template.category}
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
+            {getCategoryConfig(template.category as any).name}
           </span>
           <span className="text-muted-foreground font-mono">
             {template.name}
@@ -76,42 +83,18 @@ export default async function TemplatePage({ params }: TemplatePageProps) {
         </div>
       </div>
 
+      {/* Installation command */}
+      <div className="not-prose mb-8">
+        <h2 className="text-lg font-semibold mb-4">Installation</h2>
+        <CliCommand
+          command={`add ${template.name}`}
+          exec
+          execPackage="proofkit@latest"
+        />
+      </div>
+
       {/* Template content */}
       <div className="prose prose-neutral dark:prose-invert max-w-none">
-        <div className="not-prose bg-muted/50 border border-border rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Template Details
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-2">
-                Installation
-              </h3>
-              <div className="bg-background border border-border rounded-md p-3 font-mono text-sm">
-                <code>npx proofkit@latest add {template.name}</code>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-2">
-                Registry Path
-              </h3>
-              <p className="text-sm font-mono bg-background border border-border rounded-md p-3">
-                {template.name}
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-2">
-                Category
-              </h3>
-              <p className="text-sm capitalize">{template.category}</p>
-            </div>
-          </div>
-        </div>
-
         {/* Placeholder content - you can expand this later */}
         <div className="border border-border rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">About this template</h2>
@@ -127,23 +110,6 @@ export default async function TemplatePage({ params }: TemplatePageProps) {
               <strong>Coming soon:</strong> Detailed documentation, code
               examples, and usage guides will be available here.
             </p>
-          </div>
-
-          <div className="flex items-center gap-4 pt-4 border-t border-border">
-            <Link
-              href="/docs"
-              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View Documentation
-            </Link>
-            <Link
-              href={`/r/${template.name}`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View Registry API
-            </Link>
           </div>
         </div>
       </div>

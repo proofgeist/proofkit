@@ -16,6 +16,7 @@
   },
   "changesets": [
     "brown-keys-float",
+    "quick-ends-drop",
     "swift-swans-rush",
     "tough-forks-start",
     "ui-default-shadcn"

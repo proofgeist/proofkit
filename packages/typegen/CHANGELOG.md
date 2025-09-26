@@ -1,5 +1,11 @@
 # @proofkit/typegen
 
+## 1.0.11-beta.1
+
+### Patch Changes
+
+- 4d9d0e9: Add type import to the `InferZodPortals` import
+
 ## 1.0.11-beta.0
 
 ### Patch Changes

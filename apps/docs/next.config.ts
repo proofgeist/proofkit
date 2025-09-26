@@ -1,6 +1,7 @@
 import { createMDX } from "fumadocs-mdx/next";
 import { type NextConfig } from "next";
 import { validateRegistry } from "@proofkit/registry";
+import { source } from "./src/lib/source";
 
 const withMDX = createMDX();
 // validateRegistry();
@@ -16,6 +17,7 @@ const config: NextConfig = {
         destination: "/r/:path*",
         permanent: true,
       },
+      { source: "/docs", destination: "/docs/cli", permanent: false },
     ];
   },
 };

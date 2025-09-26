@@ -1,10 +1,11 @@
 import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
 import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { cliVersion } from "@/lib/constants";
 
 const MANAGERS = [
-  { key: "pnpm", label: "pnpm", command: "pnpm create proofkit@latest" },
-  { key: "npm", label: "npm", command: "npx create-proofkit@latest" },
-  { key: "yarn", label: "yarn", command: "yarn create proofkit@latest" },
+  { key: "pnpm", label: "pnpm", command: `pnpm create proofkit@${cliVersion}` },
+  { key: "npm", label: "npm", command: `npx create-proofkit@${cliVersion}` },
+  { key: "yarn", label: "yarn", command: `yarn create proofkit@${cliVersion}` },
 ];
 
 export function InitCommand() {

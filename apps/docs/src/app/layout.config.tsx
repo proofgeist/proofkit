@@ -7,7 +7,7 @@ import Image from "next/image";
  * Home Layout: app/(home)/layout.tsx
  * Docs Layout: app/docs/layout.tsx
  */
-export const baseOptions: BaseLayoutProps = {
+export const baseOptions = {
   nav: {
     title: (
       <>
@@ -21,7 +21,6 @@ export const baseOptions: BaseLayoutProps = {
     ),
   },
   links: [
-    { text: "Documentation", url: "/docs", active: "none", on: "nav" },
     {
       text: "Community",
       url: "https://community.ottomatic.cloud/c/proofkit",
@@ -39,4 +38,4 @@ export const baseOptions: BaseLayoutProps = {
       external: true,
     },
   ],
-};
+} satisfies BaseLayoutProps;

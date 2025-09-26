@@ -19,8 +19,8 @@ describe("sort methods", () => {
       sort: { fieldName: "recordId", sortOrder: "descend" },
     });
     expect(resp.data.length).toBe(3);
-    const firstRecord = parseInt(resp.data[0].fieldData.recordId as string);
-    const secondRecord = parseInt(resp.data[1].fieldData.recordId as string);
+    const firstRecord = parseInt(resp.data[0]?.fieldData.recordId as string);
+    const secondRecord = parseInt(resp.data[1]?.fieldData.recordId as string);
     expect(firstRecord).toBeGreaterThan(secondRecord);
   });
   test("should sort ascending by default", async () => {
@@ -28,8 +28,8 @@ describe("sort methods", () => {
       sort: { fieldName: "recordId" },
     });
 
-    const firstRecord = parseInt(resp.data[0].fieldData.recordId as string);
-    const secondRecord = parseInt(resp.data[1].fieldData.recordId as string);
+    const firstRecord = parseInt(resp.data[0]?.fieldData.recordId as string);
+    const secondRecord = parseInt(resp.data[1]?.fieldData.recordId as string);
     expect(secondRecord).toBeGreaterThan(firstRecord);
   });
 });
@@ -48,6 +48,7 @@ describe("find methods", () => {
     const resp = await client.find({
       query: { anything: "anything" },
     });
+
     expect(Array.isArray(resp.data)).toBe(true);
   });
   test("successful findFirst with multiple return", async () => {
@@ -75,7 +76,7 @@ describe("portal methods", () => {
     const result = await layoutClient.list({
       limit: 1,
     });
-    expect(result.data[0].portalData.test.length).toBe(50); // default portal limit is 50
+    expect(result.data[0]?.portalData?.test?.length).toBe(50); // default portal limit is 50
 
     const { data } = await layoutClient.list({
       limit: 1,
@@ -83,10 +84,10 @@ describe("portal methods", () => {
     });
     expect(data.length).toBe(1);
 
-    const portalData = data[0].portalData;
-    const testPortal = portalData.test;
-    expect(testPortal.length).toBe(1);
-    expect(testPortal[0]["related::related_field"]).toContain("2"); // we should get the 2nd record
+    const portalData = data[0]?.portalData;
+    const testPortal = portalData?.test;
+    expect(testPortal?.length).toBe(1);
+    expect(testPortal?.[0]?.["related::related_field"]).toContain("2"); // we should get the 2nd record
   });
   it("should update portal data", async () => {
     await layoutClient.update({
@@ -106,13 +107,13 @@ describe("portal methods", () => {
     });
 
     expect(
-      "long_and_strange.portalName#forTesting" in data[0].portalData,
+      "long_and_strange.portalName#forTesting" in (data?.[0]?.portalData ?? {}),
     ).toBeTruthy();
 
     const portalData =
-      data[0].portalData["long_and_strange.portalName#forTesting"];
+      data[0]?.portalData["long_and_strange.portalName#forTesting"];
 
-    expect(portalData.length).toBeGreaterThan(50);
+    expect(portalData?.length).toBeGreaterThan(50);
   });
 });
 

@@ -35,6 +35,7 @@ export function buildSchema(
       schemaFile.addImportDeclaration({
         moduleSpecifier: "@proofkit/fmdapi",
         namedImports: ["InferZodPortals"],
+        isTypeOnly: true,
       });
     }
   }
@@ -349,6 +350,7 @@ export function buildOverrideFile(
     overrideFile.addImportDeclaration({
       moduleSpecifier: "@proofkit/fmdapi",
       namedImports: ["InferZodPortals"],
+      isTypeOnly: true,
     });
   }
 

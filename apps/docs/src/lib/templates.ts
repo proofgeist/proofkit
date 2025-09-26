@@ -63,7 +63,7 @@ export async function getTemplatesByCategory(): Promise<
   );
 
   // Sort templates within each category by title
-  Object.keys(grouped).forEach((category) => {
+  (Object.keys(grouped) as Category[]).forEach((category) => {
     grouped[category].sort((a, b) => a.title.localeCompare(b.title));
   });
 

@@ -1,11 +1,13 @@
-import { getRegistryIndex } from "@proofkit/registry";
+import { getRegistryIndex, type TemplateMetadata } from "@proofkit/registry";
 import path from "path";
+
+type Category = TemplateMetadata["category"];
 
 export interface TemplateWithPath {
   name: string;
   title: string;
   description?: string;
-  category: "component" | "page" | "utility" | "hook" | "email";
+  category: Category;
   path: string;
 }
 
@@ -44,7 +46,7 @@ export async function getAllTemplates(): Promise<TemplateWithPath[]> {
  * Get templates grouped by category
  */
 export async function getTemplatesByCategory(): Promise<
-  Record<string, TemplateWithPath[]>
+  Record<Category, TemplateWithPath[]>
 > {
   const templates = await getAllTemplates();
 
@@ -57,7 +59,7 @@ export async function getTemplatesByCategory(): Promise<
       acc[category].push(template);
       return acc;
     },
-    {} as Record<string, TemplateWithPath[]>,
+    {} as Record<Category, TemplateWithPath[]>,
   );
 
   // Sort templates within each category by title
@@ -99,5 +101,3 @@ export function searchTemplates(
       template.category.toLowerCase().includes(lowercaseQuery),
   );
 }
-
-

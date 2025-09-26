@@ -4,11 +4,18 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Search, Package } from "lucide-react";
 import type { TemplateWithPath } from "@/lib/templates";
-import { getCategoryConfig, categoryConfigs } from "./category-config";
+import {
+  getCategoryConfig,
+  categoryConfigs,
+  type CategoryConfig,
+} from "./category-config";
+import type { TemplateMetadata } from "@proofkit/registry";
+
+type Category = TemplateMetadata["category"];
 
 interface TemplatesPageClientProps {
   templates: TemplateWithPath[];
-  templatesByCategory: Record<string, TemplateWithPath[]>;
+  templatesByCategory: Record<Category, TemplateWithPath[]>;
 }
 
 export function TemplatesPageClient({
@@ -16,7 +23,9 @@ export function TemplatesPageClient({
   templatesByCategory,
 }: TemplatesPageClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null,
+  );
 
   const filteredTemplates = useMemo(() => {
     let filtered = templates;
@@ -79,7 +88,7 @@ export function TemplatesPageClient({
             All ({templates.length})
           </button>
           {categories.map((category) => {
-            const config = getCategoryConfig(category as any);
+            const config = getCategoryConfig(category);
             const CategoryIcon = config.icon;
             return (
               <button
@@ -111,7 +120,7 @@ export function TemplatesPageClient({
                 {" "}
                 in{" "}
                 <span className="font-medium">
-                  {getCategoryConfig(selectedCategory as any).name}
+                  {getCategoryConfig(selectedCategory).name}
                 </span>
               </span>
             )}
@@ -137,7 +146,7 @@ export function TemplatesPageClient({
                   <div className="shrink-0 mt-1">
                     {(() => {
                       const CategoryIcon = getCategoryConfig(
-                        template.category as any,
+                        template.category,
                       ).icon;
                       return <CategoryIcon className="h-5 w-5 text-primary" />;
                     })()}

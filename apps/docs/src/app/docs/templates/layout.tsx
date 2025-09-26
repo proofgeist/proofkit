@@ -88,6 +88,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
               <a
                 href="https://proofgeist.com"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="underline"
               >
                 Proof+Geist

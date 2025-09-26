@@ -49,5 +49,9 @@ export const categoryConfigMap = categoryConfigs.reduce(
 
 // Helper function to get category configuration
 export const getCategoryConfig = (category: Category): CategoryConfig => {
-  return categoryConfigMap[category];
+  const config = categoryConfigMap[category];
+  if (!config) {
+    throw new Error(`Unknown template category: ${category as string}`);
+  }
+  return config;
 };

@@ -20,7 +20,7 @@ const MANAGERS = [
     key: "yarn",
     label: "yarn",
     prefix: "yarn",
-    execPrefix: "npx",
+    execPrefix: "yarn dlx",
   },
   {
     key: "bun",

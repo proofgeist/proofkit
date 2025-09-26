@@ -8,7 +8,7 @@ import {
   ZVLYesNo as ZVLYesNo_generated,
   ZtestLayout as ZtestLayout_generated,
 } from "./generated/testLayout";
-import { InferZodPortals } from "@proofkit/fmdapi";
+import type { InferZodPortals } from "@proofkit/fmdapi";
 
 export const Ztest = Ztest_generated;
 

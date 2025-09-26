@@ -1,7 +1,5 @@
 import { getAllTemplates, getTemplateByName } from "@/lib/templates";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Package, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import { CliCommand } from "@/components/CliCommand";
 import { getCategoryConfig } from "../category-config";
@@ -86,32 +84,7 @@ export default async function TemplatePage({ params }: TemplatePageProps) {
       {/* Installation command */}
       <div className="not-prose mb-8">
         <h2 className="text-lg font-semibold mb-4">Installation</h2>
-        <CliCommand
-          command={`add ${template.name}`}
-          exec
-          execPackage="proofkit@latest"
-        />
-      </div>
-
-      {/* Template content */}
-      <div className="prose prose-neutral dark:prose-invert max-w-none">
-        {/* Placeholder content - you can expand this later */}
-        <div className="border border-border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">About this template</h2>
-          <p className="text-muted-foreground mb-4">
-            This template provides{" "}
-            {template.description?.toLowerCase() ||
-              "functionality for your ProofKit application"}
-            .
-          </p>
-
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>Coming soon:</strong> Detailed documentation, code
-              examples, and usage guides will be available here.
-            </p>
-          </div>
-        </div>
+        <CliCommand command={`add ${template.name}`} exec />
       </div>
     </div>
   );

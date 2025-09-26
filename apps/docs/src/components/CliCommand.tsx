@@ -1,5 +1,7 @@
+"use client";
 import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
 import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { cliVersion } from "@/lib/constants";
 
 const MANAGERS = [
   {
@@ -31,7 +33,7 @@ const MANAGERS = [
 export function CliCommand({
   command,
   exec,
-  execPackage = "@proofkit/cli",
+  execPackage = `@proofkit/cli@${cliVersion}`,
 }: {
   command: string;
   exec?: boolean;

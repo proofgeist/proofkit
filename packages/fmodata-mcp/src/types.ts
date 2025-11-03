@@ -65,8 +65,9 @@ export const GetRecordSchema: JSONSchema7 = {
       description: "The name of the table",
     },
     key: {
-      type: ["string", "number"],
-      description: "Primary key value of the record",
+      oneOf: [{ type: "string" }, { type: "number" }],
+      description:
+        "Primary key value of the record (can be string UUID or numeric ROWID)",
     },
     select: {
       type: "string",
@@ -105,8 +106,9 @@ export const GetFieldValueSchema: JSONSchema7 = {
       description: "The name of the table",
     },
     key: {
-      type: ["string", "number"],
-      description: "Primary key value of the record",
+      oneOf: [{ type: "string" }, { type: "number" }],
+      description:
+        "Primary key value of the record (can be string UUID or numeric ROWID)",
     },
     field: {
       type: "string",
@@ -142,8 +144,9 @@ export const UpdateRecordSchema: JSONSchema7 = {
       description: "The name of the table",
     },
     key: {
-      type: ["string", "number"],
-      description: "Primary key value of the record",
+      oneOf: [{ type: "string" }, { type: "number" }],
+      description:
+        "Primary key value of the record (can be string UUID or numeric ROWID)",
     },
     data: {
       type: "object",
@@ -163,8 +166,9 @@ export const DeleteRecordSchema: JSONSchema7 = {
       description: "The name of the table",
     },
     key: {
-      type: ["string", "number"],
-      description: "Primary key value of the record",
+      oneOf: [{ type: "string" }, { type: "number" }],
+      description:
+        "Primary key value of the record (can be string UUID or numeric ROWID)",
     },
   },
   required: ["table", "key"],
@@ -179,8 +183,9 @@ export const NavigateRelatedSchema: JSONSchema7 = {
       description: "The name of the source table",
     },
     key: {
-      type: ["string", "number"],
-      description: "Primary key value of the source record",
+      oneOf: [{ type: "string" }, { type: "number" }],
+      description:
+        "Primary key value of the source record (can be string UUID or numeric ROWID)",
     },
     navigation: {
       type: "string",

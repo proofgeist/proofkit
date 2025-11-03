@@ -41,7 +41,6 @@ import {
   buildFileMakerTablesPath,
   buildAcceptHeader,
   buildContentTypeHeader,
-  encodeKey,
   encodeODataFilter,
   parseErrorResponse,
 } from "../utils.js";
@@ -300,7 +299,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     key: string | number,
     options?: GetRecordOptions,
   ): Promise<ODataEntityResponse<T>> {
-    const path = buildRecordPath(this.database, table, encodeKey(key));
+    const path = buildRecordPath(this.database, table, key);
     const query = buildQueryString(options ?? {});
 
     return this.request<ODataEntityResponse<T>>({
@@ -350,7 +349,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     const path = buildFieldValuePath(
       this.database,
       table,
-      encodeKey(key),
+      key,
       field,
     );
 
@@ -385,7 +384,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     key: string | number,
     options: UpdateRecordOptions<T>,
   ): Promise<ODataEntityResponse<T>> {
-    const path = buildRecordPath(this.database, table, encodeKey(key));
+    const path = buildRecordPath(this.database, table, key);
 
     return this.request<ODataEntityResponse<T>>({
       path,
@@ -405,7 +404,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     key: string | number,
     options?: DeleteRecordOptions,
   ): Promise<void> {
-    const path = buildRecordPath(this.database, table, encodeKey(key));
+    const path = buildRecordPath(this.database, table, key);
 
     await this.request<void>({
       path,
@@ -424,7 +423,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     const path = buildNavigationPath(
       this.database,
       table,
-      encodeKey(key),
+      key,
       navigation,
     );
     const method = options.method ?? "POST";
@@ -451,7 +450,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     const path = buildNavigationPath(
       this.database,
       table,
-      encodeKey(key),
+      key,
       navigation,
     );
     const query = buildQueryString(options ?? {});

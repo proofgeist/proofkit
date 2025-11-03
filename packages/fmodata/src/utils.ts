@@ -210,6 +210,37 @@ export function encodeKey(key: string | number): string {
 }
 
 /**
+ * Enhance error message with helpful context for known FileMaker error codes
+ */
+function enhanceErrorMessage(
+  code: string,
+  originalMessage: string,
+): string {
+  // FileMaker error codes that need better descriptions
+  const errorCodeEnhancements: Record<string, string> = {
+    "8309": `Primary key configuration error: The table's primary key field must be configured with both "Required value" and "Unique value" options enabled. ${originalMessage}`,
+    // Add other known error codes as needed
+  };
+
+  // Check if we have an enhancement for this error code
+  const numericCode = code.match(/\d+/)?.[0];
+  if (numericCode && errorCodeEnhancements[numericCode]) {
+    return errorCodeEnhancements[numericCode];
+  }
+
+  // Also check for error messages that contain "8309" or related keywords
+  if (
+    originalMessage.toLowerCase().includes("incompatible data types") ||
+    originalMessage.toLowerCase().includes("data type") ||
+    code.includes("8309")
+  ) {
+    return `Primary key configuration error (Error ${code}): The table's primary key field must be configured with both "Required value" and "Unique value" options enabled in FileMaker. This error typically occurs when trying to navigate relationships or access records by primary key. ${originalMessage}`;
+  }
+
+  return originalMessage;
+}
+
+/**
  * Parse error response and extract error information
  */
 export function parseErrorResponse(
@@ -218,17 +249,25 @@ export function parseErrorResponse(
 ): { code: string; message: string; target?: string; details?: unknown[] } {
   if (data && typeof data === "object" && "error" in data) {
     const error = (data as { error: { code: string; message: string; target?: string; details?: unknown[] } }).error;
+    const code = error.code ?? response.status.toString();
+    const originalMessage = error.message ?? response.statusText;
+    const enhancedMessage = enhanceErrorMessage(code, originalMessage);
+    
     return {
-      code: error.code ?? response.status.toString(),
-      message: error.message ?? response.statusText,
+      code,
+      message: enhancedMessage,
       target: error.target,
       details: error.details,
     };
   }
 
+  const statusCode = response.status.toString();
+  const originalMessage = response.statusText || "Unknown error";
+  const enhancedMessage = enhanceErrorMessage(statusCode, originalMessage);
+
   return {
-    code: response.status.toString(),
-    message: response.statusText || "Unknown error",
+    code: statusCode,
+    message: enhancedMessage,
   };
 }
 

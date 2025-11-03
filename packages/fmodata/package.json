@@ -32,8 +32,9 @@
     "format": "prettier --write .",
     "dev": "tsc --watch",
     "ci": "pnpm build && pnpm check-format && pnpm publint --strict && pnpm test",
-      "test": "vitest run",
-      "test:integration": "vitest run tests/integration.test.ts",
+    "test": "vitest run",
+    "test:integration": "vitest run tests/integration.test.ts",
+    "test:integration:comprehensive": "vitest run tests/integration-comprehensive.test.ts",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish --access public",
     "knip": "knip"

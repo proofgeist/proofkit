@@ -42,6 +42,7 @@ import {
   buildAcceptHeader,
   buildContentTypeHeader,
   encodeKey,
+  encodeODataFilter,
   parseErrorResponse,
 } from "../utils.js";
 import type { BaseFetchAdapterOptions } from "./fetch-base-types.js";
@@ -184,16 +185,35 @@ export abstract class BaseFetchAdapter implements Adapter {
 
       let responseData: unknown;
       const contentType = response.headers.get("Content-Type") ?? "";
-
-      if (contentType.includes("application/json")) {
-        responseData = await response.json();
-      } else if (
-        contentType.includes("application/atom+xml") ||
-        contentType.includes("application/xml")
-      ) {
-        responseData = await response.text();
+      const contentLength = response.headers.get("Content-Length");
+      
+      // Handle empty responses (common for DELETE operations)
+      // 204 No Content means no body
+      if (response.status === 204) {
+        responseData = null;
       } else {
-        responseData = await response.text();
+        // Try to read the response body
+        const text = await response.text();
+        
+        if (!text || text.trim() === "") {
+          // Empty body
+          responseData = null;
+        } else if (contentType.includes("application/json")) {
+          try {
+            responseData = JSON.parse(text);
+          } catch (error) {
+            // If JSON parsing fails, might be malformed or empty
+            // For error responses, we'll parse it in parseErrorResponse
+            responseData = text;
+          }
+        } else if (
+          contentType.includes("application/atom+xml") ||
+          contentType.includes("application/xml")
+        ) {
+          responseData = text;
+        } else {
+          responseData = text;
+        }
       }
 
       if (!response.ok) {
@@ -299,15 +319,21 @@ export abstract class BaseFetchAdapter implements Adapter {
     options?: GetRecordCountOptions,
   ): Promise<number> {
     const path = buildTablePath(this.database, table);
-    const query = new URLSearchParams();
-    query.set("$count", "true");
+    
+    // Use custom query string for $filter to handle encoding properly
+    let queryString = "$count=true";
     if (options?.$filter) {
-      query.set("$filter", options.$filter);
+      const encodedFilter = encodeODataFilter(options.$filter);
+      queryString += `&$filter=${encodedFilter}`;
     }
+    
+    // Use manual URL construction to avoid URLSearchParams encoding issues
+    const baseUrlWithPath = new URL(path, this.baseUrl);
+    const fetchUrl = `${baseUrlWithPath.toString()}?${queryString}`;
 
     const response = await this.request<ODataResponse<unknown>>({
       path,
-      query,
+      query: queryString,
       timeout: options?.timeout,
       fetchOptions: options?.fetch,
     });

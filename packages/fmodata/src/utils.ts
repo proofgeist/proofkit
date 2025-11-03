@@ -5,7 +5,7 @@ import type { QueryOptions } from "./client-types.js";
  * FileMaker OData expects filter expressions to be minimally encoded.
  * Per FileMaker documentation examples, most characters remain literal.
  */
-function encodeODataFilter(filter: string): string {
+export function encodeODataFilter(filter: string): string {
   // FileMaker OData examples show filters with spaces, commas, quotes as literal characters
   // Only encode characters that absolutely break URL syntax: & # % (for query param safety)
   return filter
@@ -30,7 +30,15 @@ export function buildQueryString(options: QueryOptions): string {
     parts.push(`$filter=${encodedFilter}`);
   }
   if (options.$select) {
-    parts.push(`$select=${encodeURIComponent(options.$select)}`);
+    // Remove spaces from $select - FileMaker expects comma-separated with no spaces
+    // Note: commas in $select should NOT be encoded (they separate field names)
+    const selectFields = options.$select.replace(/\s+/g, "");
+    // URL-encode the field names but preserve commas
+    const encoded = selectFields
+      .split(",")
+      .map((field) => encodeURIComponent(field.trim()))
+      .join(",");
+    parts.push(`$select=${encoded}`);
   }
   if (options.$expand) {
     parts.push(`$expand=${encodeURIComponent(options.$expand)}`);
@@ -83,7 +91,7 @@ export function buildRecordPath(
   table: string,
   key: string | number,
 ): string {
-  const encodedKey = encodeURIComponent(key);
+  const encodedKey = encodeKey(key);
   return `/fmi/odata/v4/${databaseName}/${table}(${encodedKey})`;
 }
 
@@ -187,16 +195,18 @@ export function buildContentTypeHeader(
 
 /**
  * Encode primary key value for URL
+ * For OData URLs, keys are used in paths like /table(key)
+ * String keys must be quoted with single quotes: /table('key')
+ * Numeric keys are used directly: /table(123)
+ * Single quotes inside string keys must be escaped by doubling: 'key''s value'
  */
 export function encodeKey(key: string | number): string {
   if (typeof key === "number") {
     return key.toString();
   }
-  // For string keys, check if it needs quoting
-  if (key.includes("'") || key.includes(" ") || key.includes(",")) {
-    return `'${key.replace(/'/g, "''")}'`;
-  }
-  return key;
+  // String keys must be quoted with single quotes in OData URLs
+  // Escape any single quotes in the key by doubling them
+  return `'${key.replace(/'/g, "''")}'`;
 }
 
 /**

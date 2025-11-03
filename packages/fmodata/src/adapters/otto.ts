@@ -74,7 +74,7 @@ export class OttoAdapter extends BaseFetchAdapter {
     path: string;
     method?: string;
     body?: unknown;
-    query?: URLSearchParams;
+    query?: string | URLSearchParams;
     headers?: Record<string, string>;
     timeout?: number;
     fetchOptions?: RequestInit;

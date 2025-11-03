@@ -28,67 +28,117 @@ import {
 } from "./tools/scripts.js";
 
 /**
+ * Configuration options for the OData client
+ */
+export interface ODataConfig {
+  host: string;
+  database: string;
+  username?: string;
+  password?: string;
+  ottoApiKey?: string;
+  ottoPort?: number;
+}
+
+/**
+ * Helper function to clean and trim a string value
+ */
+function cleanString(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value.trim().replace(/^["']|["']$/g, "");
+}
+
+/**
+ * Read configuration from environment variables or provided config
+ */
+function readConfig(config?: Partial<ODataConfig>): ODataConfig {
+  // Prefer provided config, fall back to environment variables
+  const host =
+    config?.host ||
+    cleanString(process.env.FMODATA_HOST) ||
+    "";
+  const database =
+    config?.database ||
+    cleanString(process.env.FMODATA_DATABASE) ||
+    "";
+  const username = config?.username || cleanString(process.env.FMODATA_USERNAME);
+  const password = config?.password || cleanString(process.env.FMODATA_PASSWORD);
+  const ottoApiKey = config?.ottoApiKey || cleanString(process.env.FMODATA_OTTO_API_KEY);
+  const ottoPort =
+    config?.ottoPort ||
+    (process.env.FMODATA_OTTO_PORT
+      ? parseInt(process.env.FMODATA_OTTO_PORT.trim(), 10)
+      : undefined);
+
+  return {
+    host,
+    database,
+    username,
+    password,
+    ottoApiKey,
+    ottoPort,
+  };
+}
+
+/**
  * Create and configure MCP server with OData client
  */
-export async function createServer(): Promise<Server> {
-  // Read configuration from environment variables (trim whitespace and quotes)
-  const host = process.env.FMODATA_HOST?.trim().replace(/^["']|["']$/g, "");
-  const database = process.env.FMODATA_DATABASE?.trim().replace(/^["']|["']$/g, "");
-  const username = process.env.FMODATA_USERNAME?.trim().replace(/^["']|["']$/g, "");
-  const password = process.env.FMODATA_PASSWORD?.trim().replace(/^["']|["']$/g, "");
-  const ottoApiKey = process.env.FMODATA_OTTO_API_KEY?.trim().replace(/^["']|["']$/g, "");
-  const ottoPort = process.env.FMODATA_OTTO_PORT
-    ? parseInt(process.env.FMODATA_OTTO_PORT.trim(), 10)
-    : undefined;
+export async function createServer(
+  config?: Partial<ODataConfig>,
+): Promise<Server> {
+  // Read configuration (prefer provided config, fall back to env vars)
+  const cfg = readConfig(config);
 
   // Validate required configuration
-  if (!host) {
-    throw new Error("FMODATA_HOST environment variable is required");
+  if (!cfg.host) {
+    throw new Error("host/server is required (set via args or FMODATA_HOST)");
   }
-  if (!database) {
-    throw new Error("FMODATA_DATABASE environment variable is required");
+  if (!cfg.database) {
+    throw new Error("database is required (set via args or FMODATA_DATABASE)");
   }
 
   // Initialize OData client based on available auth config
   let client: ODataApiClient;
-  if (ottoApiKey && isOttoAPIKey(ottoApiKey)) {
+  if (cfg.ottoApiKey && isOttoAPIKey(cfg.ottoApiKey)) {
     // Use Otto adapter if API key is provided
-    if (ottoApiKey.startsWith("KEY_")) {
+    if (cfg.ottoApiKey.startsWith("KEY_")) {
       // Otto v3
       client = ODataApi({
         adapter: new OttoAdapter({
-          server: host,
-          database,
-          auth: { apiKey: ottoApiKey as `KEY_${string}`, ottoPort },
+          server: cfg.host,
+          database: cfg.database,
+          auth: {
+            apiKey: cfg.ottoApiKey as `KEY_${string}`,
+            ottoPort: cfg.ottoPort,
+          },
         }),
       });
-    } else if (ottoApiKey.startsWith("dk_")) {
+    } else if (cfg.ottoApiKey.startsWith("dk_")) {
       // OttoFMS
       client = ODataApi({
         adapter: new OttoAdapter({
-          server: host,
-          database,
-          auth: { apiKey: ottoApiKey as `dk_${string}` },
+          server: cfg.host,
+          database: cfg.database,
+          auth: { apiKey: cfg.ottoApiKey as `dk_${string}` },
         }),
       });
     } else {
       throw new Error("Invalid Otto API key format");
     }
-  } else if (username && password) {
+  } else if (cfg.username && cfg.password) {
     // Use Basic Auth adapter
     client = ODataApi({
       adapter: new FetchAdapter({
-        server: host,
-        database,
+        server: cfg.host,
+        database: cfg.database,
         auth: {
-          username,
-          password,
+          username: cfg.username,
+          password: cfg.password,
         },
       }),
     });
   } else {
     throw new Error(
-      "Either FMODATA_OTTO_API_KEY or both FMODATA_USERNAME and FMODATA_PASSWORD must be set",
+      "Either ottoApiKey (via args or FMODATA_OTTO_API_KEY) or both username and password (via args or FMODATA_USERNAME/FMODATA_PASSWORD) must be set",
     );
   }
 
@@ -139,53 +189,57 @@ export async function createServer(): Promise<Server> {
       const name = params.name;
       const args = params.arguments;
 
-    try {
-      let result: unknown;
+      try {
+        let result: unknown;
 
-      // Route to appropriate tool handler
-      if (name.startsWith("fmodata_list_tables") || 
+        // Route to appropriate tool handler
+        if (
+          name.startsWith("fmodata_list_tables") ||
           name.startsWith("fmodata_get_metadata") ||
           name.startsWith("fmodata_query") ||
           name.startsWith("fmodata_get_record") ||
           name.startsWith("fmodata_get_field_value") ||
           name.startsWith("fmodata_navigate_related") ||
-          name.startsWith("fmodata_cross_join")) {
-        result = await handleQueryTool(client, name, args);
-      } else if (
-        name.startsWith("fmodata_create_record") ||
-        name.startsWith("fmodata_update_record") ||
-        name.startsWith("fmodata_delete_record")
-      ) {
-        result = await handleCrudTool(client, name, args);
-      } else if (
-        name.startsWith("fmodata_create_table") ||
-        name.startsWith("fmodata_add_fields") ||
-        name.startsWith("fmodata_delete_table") ||
-        name.startsWith("fmodata_delete_field")
-      ) {
-        result = await handleSchemaTool(client, name, args);
-      } else if (
-        name.startsWith("fmodata_run_script") ||
-        name.startsWith("fmodata_batch")
-      ) {
-        result = await handleScriptTool(client, name, args);
-      } else {
-        throw new Error(`Unknown tool: ${name}`);
-      }
+          name.startsWith("fmodata_cross_join")
+        ) {
+          result = await handleQueryTool(client, name, args);
+        } else if (
+          name.startsWith("fmodata_create_record") ||
+          name.startsWith("fmodata_update_record") ||
+          name.startsWith("fmodata_delete_record")
+        ) {
+          result = await handleCrudTool(client, name, args);
+        } else if (
+          name.startsWith("fmodata_create_table") ||
+          name.startsWith("fmodata_add_fields") ||
+          name.startsWith("fmodata_delete_table") ||
+          name.startsWith("fmodata_delete_field")
+        ) {
+          result = await handleSchemaTool(client, name, args);
+        } else if (
+          name.startsWith("fmodata_run_script") ||
+          name.startsWith("fmodata_batch")
+        ) {
+          result = await handleScriptTool(client, name, args);
+        } else {
+          throw new Error(`Unknown tool: ${name}`);
+        }
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Tool execution failed: ${errorMessage}`);
-    }
-  });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        throw new Error(`Tool execution failed: ${errorMessage}`);
+      }
+    },
+  );
 
   return server;
 }
@@ -193,7 +247,9 @@ export async function createServer(): Promise<Server> {
 /**
  * Start the MCP server with Express HTTP transport
  */
-export async function startServer(): Promise<void> {
+export async function startServer(
+  config?: Partial<ODataConfig>,
+): Promise<void> {
   const app = express();
   app.use(express.json());
 
@@ -224,8 +280,9 @@ export async function startServer(): Promise<void> {
       // If session ID exists, try to find existing session
       if (!sessionId) {
         // New session - create server and transport
+        // Use provided config (from args) or fall back to env vars
         const newSessionId = generateSessionId();
-        const server = await createServer();
+        const server = await createServer(config);
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => newSessionId,
           onsessioninitialized: (id) => {
@@ -239,7 +296,7 @@ export async function startServer(): Promise<void> {
 
         // Connect server to transport
         await server.connect(transport);
-        
+
         // Store session
         session = { server, transport };
         sessions[newSessionId] = session;

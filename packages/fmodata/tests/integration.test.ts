@@ -73,8 +73,22 @@ function createLoggingFetch(originalFetch: typeof fetch): typeof fetch {
     
     logRequest(method, url, init);
 
+    // Add a timeout to detect hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      console.error("\n=== REQUEST TIMEOUT ===");
+      console.error(`Request to ${url} timed out after 15 seconds`);
+      console.error("==================\n");
+    }, 15000);
+
     try {
-      const response = await originalFetch(input, init);
+      const response = await originalFetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
       const clonedResponse = response.clone();
       
       let body: unknown;
@@ -96,11 +110,15 @@ function createLoggingFetch(originalFetch: typeof fetch): typeof fetch {
 
       return response;
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error("\n=== FETCH ERROR ===");
       console.error("Error:", error);
       if (error instanceof Error) {
         console.error("Message:", error.message);
         console.error("Stack:", error.stack);
+        if ("cause" in error && error.cause) {
+          console.error("Cause:", error.cause);
+        }
       }
       console.error("==================\n");
       throw error;
@@ -211,7 +229,11 @@ describe("Integration Tests", () => {
         return;
       }
 
-      const tableName = tables.value[0] as string;
+      const tableName = tables.value[0]?.name;
+      if (!tableName) {
+        console.log("⚠️  Table name not found, skipping getRecords test");
+        return;
+      }
       console.log(`📋 Using table: ${tableName}`);
 
       const result = await client.getRecords(tableName, {
@@ -234,7 +256,11 @@ describe("Integration Tests", () => {
         return;
       }
 
-      const tableName = tables.value[0] as string;
+      const tableName = tables.value[0]?.name;
+      if (!tableName) {
+        console.log("⚠️  Table name not found, skipping getRecordCount test");
+        return;
+      }
       console.log(`📋 Using table: ${tableName}`);
 
       const result = await client.getRecordCount(tableName);

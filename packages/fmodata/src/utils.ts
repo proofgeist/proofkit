@@ -1,40 +1,60 @@
 import type { QueryOptions } from "./client-types.js";
 
 /**
- * Build OData query string from query options
+ * Encode OData filter expression for FileMaker
+ * FileMaker OData expects filter expressions to be minimally encoded.
+ * Per FileMaker documentation examples, most characters remain literal.
  */
-export function buildQueryString(options: QueryOptions): URLSearchParams {
-  const params = new URLSearchParams();
+function encodeODataFilter(filter: string): string {
+  // FileMaker OData examples show filters with spaces, commas, quotes as literal characters
+  // Only encode characters that absolutely break URL syntax: & # % (for query param safety)
+  return filter
+    .replace(/%/g, "%25") // Encode % first
+    .replace(/&/g, "%26") // Ampersand
+    .replace(/#/g, "%23"); // Hash
+  // Everything else stays literal: spaces, commas, quotes, parentheses, etc.
+}
+
+/**
+ * Build OData query string from query options
+ * Note: URLSearchParams doesn't properly handle parameter names starting with $,
+ * so we manually build the query string and return it as a string.
+ * We encode values but not the entire query string since url.search will handle that.
+ */
+export function buildQueryString(options: QueryOptions): string {
+  const parts: string[] = [];
 
   if (options.$filter) {
-    params.set("$filter", options.$filter);
+    // Use custom encoding for filters to work around FileMaker OData parser issues
+    const encodedFilter = encodeODataFilter(options.$filter);
+    parts.push(`$filter=${encodedFilter}`);
   }
   if (options.$select) {
-    params.set("$select", options.$select);
+    parts.push(`$select=${encodeURIComponent(options.$select)}`);
   }
   if (options.$expand) {
-    params.set("$expand", options.$expand);
+    parts.push(`$expand=${encodeURIComponent(options.$expand)}`);
   }
   if (options.$orderby) {
-    params.set("$orderby", options.$orderby);
+    parts.push(`$orderby=${encodeURIComponent(options.$orderby)}`);
   }
   if (options.$top !== undefined) {
-    params.set("$top", options.$top.toString());
+    parts.push(`$top=${options.$top}`);
   }
   if (options.$skip !== undefined) {
-    params.set("$skip", options.$skip.toString());
+    parts.push(`$skip=${options.$skip}`);
   }
   if (options.$count) {
-    params.set("$count", "true");
+    parts.push("$count=true");
   }
   if (options.$format) {
-    params.set("$format", options.$format);
+    parts.push(`$format=${encodeURIComponent(options.$format)}`);
   }
   if (options.IEEE754Compatible) {
-    params.set("IEEE754Compatible", "true");
+    parts.push("IEEE754Compatible=true");
   }
 
-  return params;
+  return parts.join("&");
 }
 
 /**
@@ -42,6 +62,17 @@ export function buildQueryString(options: QueryOptions): URLSearchParams {
  */
 export function buildTablePath(databaseName: string, table: string): string {
   return `/fmi/odata/v4/${databaseName}/${table}`;
+}
+
+/**
+ * Build OData URL path for FileMaker_Tables system table (for schema operations)
+ */
+export function buildFileMakerTablesPath(
+  databaseName: string,
+  table?: string,
+): string {
+  const base = `/fmi/odata/v4/${databaseName}/FileMaker_Tables`;
+  return table ? `${base}/${table}` : base;
 }
 
 /**

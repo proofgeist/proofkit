@@ -14,21 +14,75 @@ yarn add @proofkit/fmodata-mcp
 
 ## Configuration
 
-The server reads configuration from environment variables:
+The server can be configured in two ways:
 
-### Required Variables
+### Option 1: Configuration via MCP Args (Recommended)
+
+Configure directly in your `mcp.json` using command-line arguments:
+
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "command": "node",
+      "args": [
+        "/path/to/fmodata-mcp/dist/index.js",
+        "--host",
+        "https://your-server.example.com",
+        "--database",
+        "YourDatabase",
+        "--ottoApiKey",
+        "dk_your-api-key"
+      ]
+    }
+  }
+}
+```
+
+**Arguments:**
+- `--host` or `--server` - FileMaker server host (required)
+- `--database`, `--db`, or `--filename` - Database name (required)
+- `--ottoApiKey`, `--apiKey`, or `--key` - Otto API key (`dk_` for OttoFMS, `KEY_` for Otto v3)
+- `--ottoPort` or `--port` - Otto port (optional, only for Otto v3)
+- `--username` or `--user` - FileMaker username (for Basic Auth)
+- `--password` or `--pass` - FileMaker password (for Basic Auth)
+
+You can also use `--key=value` format:
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "command": "node",
+      "args": [
+        "/path/to/fmodata-mcp/dist/index.js",
+        "--host=https://your-server.example.com",
+        "--database=YourDatabase",
+        "--ottoApiKey=dk_your-api-key"
+      ]
+    }
+  }
+}
+```
+
+### Option 2: Environment Variables
+
+The server can also read configuration from environment variables:
+
+**Required Variables:**
 - `FMODATA_HOST` - FileMaker server host (e.g., `https://your-server.example.com`)
 - `FMODATA_DATABASE` - Database name
 
-### Authentication (choose one)
+**Authentication (choose one):**
 
-**Option 1: Basic Auth**
+**Basic Auth:**
 - `FMODATA_USERNAME` - FileMaker username
 - `FMODATA_PASSWORD` - FileMaker password
 
-**Option 2: Otto API Key**
+**Otto API Key:**
 - `FMODATA_OTTO_API_KEY` - Otto API key (`dk_` prefix for OttoFMS, `KEY_` prefix for Otto v3)
 - `FMODATA_OTTO_PORT` - Otto port (optional, only for Otto v3, defaults to 3030)
+
+**Note:** Configuration from args takes precedence over environment variables.
 
 ## Usage
 
@@ -43,33 +97,35 @@ node dist/index.js
 
 ### MCP Client Configuration
 
-Add the server to your MCP client configuration (e.g., Claude Desktop `claude_desktop_config.json`):
+Add the server to your MCP client configuration (e.g., Cursor `mcp.json`):
 
+**Using args (recommended):**
 ```json
 {
   "mcpServers": {
     "fmodata": {
       "command": "node",
-      "args": ["/path/to/@proofkit/fmodata-mcp/dist/index.js"],
-      "env": {
-        "FMODATA_HOST": "https://your-server.example.com",
-        "FMODATA_DATABASE": "YourDatabase",
-        "FMODATA_USERNAME": "your-username",
-        "FMODATA_PASSWORD": "your-password"
-      }
+      "args": [
+        "/path/to/fmodata-mcp/dist/index.js",
+        "--host",
+        "https://your-server.example.com",
+        "--database",
+        "YourDatabase",
+        "--ottoApiKey",
+        "dk_your-api-key"
+      ]
     }
   }
 }
 ```
 
-Or with Otto:
-
+**Using environment variables:**
 ```json
 {
   "mcpServers": {
     "fmodata": {
       "command": "node",
-      "args": ["/path/to/@proofkit/fmodata-mcp/dist/index.js"],
+      "args": ["/path/to/fmodata-mcp/dist/index.js"],
       "env": {
         "FMODATA_HOST": "https://your-server.example.com",
         "FMODATA_DATABASE": "YourDatabase",
@@ -79,6 +135,55 @@ Or with Otto:
   }
 }
 ```
+
+**With Basic Auth:**
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "command": "node",
+      "args": [
+        "/path/to/fmodata-mcp/dist/index.js",
+        "--host",
+        "https://your-server.example.com",
+        "--database",
+        "YourDatabase",
+        "--username",
+        "your-username",
+        "--password",
+        "your-password"
+      ]
+    }
+  }
+}
+```
+
+### HTTP Mode (Express Server)
+
+You can also run the server as an HTTP server on `localhost:3000`:
+
+**Start the HTTP server:**
+```bash
+node dist/index.js --http --host=https://your-server.example.com --database=YourDatabase --ottoApiKey=dk_your-key
+```
+
+Or with Basic Auth:
+```bash
+node dist/index.js --http --host=https://your-server.example.com --database=YourDatabase --username=your-user --password=your-pass
+```
+
+**Then configure MCP client to use the HTTP endpoint:**
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+**Note:** When using HTTP mode, you can start the server with configuration via args (as shown above) or use environment variables. The server will run on port 3000 by default (or the port specified by the `PORT` environment variable).
 
 ## Available Tools
 

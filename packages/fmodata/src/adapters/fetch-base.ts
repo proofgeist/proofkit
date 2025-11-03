@@ -38,6 +38,7 @@ import {
   buildNavigationPath,
   buildCrossJoinPath,
   buildBatchPath,
+  buildFileMakerTablesPath,
   buildAcceptHeader,
   buildContentTypeHeader,
   encodeKey,
@@ -84,7 +85,7 @@ export abstract class BaseFetchAdapter implements Adapter {
     path: string;
     method?: string;
     body?: unknown;
-    query?: URLSearchParams;
+    query?: string | URLSearchParams;
     headers?: Record<string, string>;
     timeout?: number;
     fetchOptions?: RequestInit;
@@ -99,9 +100,24 @@ export abstract class BaseFetchAdapter implements Adapter {
       fetchOptions = {},
     } = params;
 
-    const url = new URL(path, this.baseUrl);
+    // Build the full URL
+    // For OData query strings, we need to avoid URL encoding by the URL constructor
+    // FileMaker expects $filter with minimal encoding (spaces, commas, quotes as literals)
+    const baseUrlWithPath = new URL(path, this.baseUrl);
+    let fetchUrl: string;
+
     if (query) {
-      url.search = query.toString();
+      if (typeof query === "string") {
+        // For OData $ parameters, manually construct URL string to avoid encoding
+        // The query string has minimal encoding already (only &, #, % encoded)
+        fetchUrl = `${baseUrlWithPath.toString()}?${query}`;
+      } else {
+        // For URLSearchParams, use normal construction
+        baseUrlWithPath.search = query.toString();
+        fetchUrl = baseUrlWithPath.toString();
+      }
+    } else {
+      fetchUrl = baseUrlWithPath.toString();
     }
 
     const authHeader = await this.getAuthHeader();
@@ -145,7 +161,7 @@ export abstract class BaseFetchAdapter implements Adapter {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       }
 
-      const response = await fetch(url.toString(), {
+      const response = await fetch(fetchUrl, {
         ...fetchOptions,
         method,
         headers: requestHeaders,
@@ -171,7 +187,10 @@ export abstract class BaseFetchAdapter implements Adapter {
 
       if (contentType.includes("application/json")) {
         responseData = await response.json();
-      } else if (contentType.includes("application/atom+xml") || contentType.includes("application/xml")) {
+      } else if (
+        contentType.includes("application/atom+xml") ||
+        contentType.includes("application/xml")
+      ) {
         responseData = await response.text();
       } else {
         responseData = await response.text();
@@ -183,11 +202,13 @@ export abstract class BaseFetchAdapter implements Adapter {
           errorInfo.code,
           errorInfo.message,
           errorInfo.target,
-          errorInfo.details as Array<{
-            code: string;
-            message: string;
-            target?: string;
-          }> | undefined,
+          errorInfo.details as
+            | Array<{
+                code: string;
+                message: string;
+                target?: string;
+              }>
+            | undefined,
         );
       }
 
@@ -209,7 +230,9 @@ export abstract class BaseFetchAdapter implements Adapter {
     }
   }
 
-  async getTables(options?: BaseRequestOptions): Promise<ODataResponse<ODataTable>> {
+  async getTables(
+    options?: BaseRequestOptions,
+  ): Promise<ODataResponse<ODataTable>> {
     const path = buildTablesPath(this.database);
     const query = new URLSearchParams({ $format: "json" });
 
@@ -298,7 +321,12 @@ export abstract class BaseFetchAdapter implements Adapter {
     field: string,
     options?: GetFieldValueOptions,
   ): Promise<unknown> {
-    const path = buildFieldValuePath(this.database, table, encodeKey(key), field);
+    const path = buildFieldValuePath(
+      this.database,
+      table,
+      encodeKey(key),
+      field,
+    );
 
     return this.request<unknown>({
       path,
@@ -367,7 +395,12 @@ export abstract class BaseFetchAdapter implements Adapter {
     navigation: string,
     options: UpdateRecordReferencesOptions<T>,
   ): Promise<void> {
-    const path = buildNavigationPath(this.database, table, encodeKey(key), navigation);
+    const path = buildNavigationPath(
+      this.database,
+      table,
+      encodeKey(key),
+      navigation,
+    );
     const method = options.method ?? "POST";
 
     const data = Array.isArray(options.data) ? options.data : [options.data];
@@ -389,7 +422,12 @@ export abstract class BaseFetchAdapter implements Adapter {
     navigation: string,
     options?: NavigateRelatedOptions,
   ): Promise<ODataResponse<T>> {
-    const path = buildNavigationPath(this.database, table, encodeKey(key), navigation);
+    const path = buildNavigationPath(
+      this.database,
+      table,
+      encodeKey(key),
+      navigation,
+    );
     const query = buildQueryString(options ?? {});
 
     return this.request<ODataResponse<T>>({
@@ -452,10 +490,12 @@ export abstract class BaseFetchAdapter implements Adapter {
   }
 
   async createTable(options: CreateTableOptions): Promise<void> {
-    const path = buildTablesPath(this.database);
+    // Use FileMaker_Tables system table for schema modifications
+    const path = buildFileMakerTablesPath(this.database);
 
+    // Body format per FileMaker docs: { "tableName": "...", "fields": [...] }
     const tableDefinition = {
-      name: options.tableName,
+      tableName: options.tableName,
       fields: options.fields,
     };
 
@@ -469,7 +509,8 @@ export abstract class BaseFetchAdapter implements Adapter {
   }
 
   async addFields(table: string, options: AddFieldsOptions): Promise<void> {
-    const path = buildTablePath(this.database, table);
+    // Use FileMaker_Tables system table for schema modifications
+    const path = buildFileMakerTablesPath(this.database, table);
 
     await this.request<void>({
       path,
@@ -480,8 +521,12 @@ export abstract class BaseFetchAdapter implements Adapter {
     });
   }
 
-  async deleteTable(table: string, options?: DeleteTableOptions): Promise<void> {
-    const path = buildTablePath(this.database, table);
+  async deleteTable(
+    table: string,
+    options?: DeleteTableOptions,
+  ): Promise<void> {
+    // Use FileMaker_Tables system table for schema modifications
+    const path = buildFileMakerTablesPath(this.database, table);
 
     await this.request<void>({
       path,
@@ -496,7 +541,8 @@ export abstract class BaseFetchAdapter implements Adapter {
     field: string,
     options?: DeleteFieldOptions,
   ): Promise<void> {
-    const path = `${buildTablePath(this.database, table)}/${field}`;
+    // Use FileMaker_Tables system table for schema modifications
+    const path = `${buildFileMakerTablesPath(this.database, table)}/${field}`;
 
     await this.request<void>({
       path,

@@ -1,0 +1,68 @@
+{
+  "name": "@proofkit/fmodata-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for FileMaker OData API",
+  "repository": "git@github.com:proofgeist/proofkit.git",
+  "author": "Eric <37158449+eluce2@users.noreply.github.com>",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "fmodata-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && node -e \"const fs = require('fs'); const path = require('path'); if (fs.existsSync('dist/fmodata-mcp/src')) { const src = 'dist/fmodata-mcp/src'; const dest = 'dist'; fs.cpSync(src, dest, { recursive: true }); fs.rmSync('dist/fmodata-mcp', { recursive: true }); }\" && publint --strict",
+    "build:watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "check-format": "prettier --check .",
+    "format": "prettier --write .",
+    "dev": "tsc --watch",
+    "ci": "pnpm build && pnpm check-format && pnpm publint --strict",
+    "knip": "knip",
+    "prepublishOnly": "pnpm build",
+    "pub:beta": "pnpm build && npm publish --tag beta --access public",
+    "pub:next": "pnpm build && npm publish --tag next --access public",
+    "pub:release": "pnpm build && npm publish --access public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "@proofkit/fmodata": "workspace:*",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/json-schema": "^7.0.15",
+    "@types/node": "^22.17.1",
+    "@typescript-eslint/eslint-plugin": "^8.29.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "eslint": "^9.23.0",
+    "knip": "^5.56.0",
+    "prettier": "^3.5.3",
+    "publint": "^0.3.12",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "filemaker",
+    "fms",
+    "fm",
+    "odata",
+    "mcp",
+    "model-context-protocol",
+    "proofgeist",
+    "fm-odata-mcp"
+  ]
+}

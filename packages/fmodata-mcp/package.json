@@ -20,7 +20,11 @@
     "format": "prettier --write .",
     "dev": "tsc --watch",
     "ci": "pnpm build && pnpm check-format && pnpm publint --strict",
-    "knip": "knip"
+    "knip": "knip",
+    "prepublishOnly": "pnpm build",
+    "pub:beta": "pnpm build && npm publish --tag beta --access public",
+    "pub:next": "pnpm build && npm publish --tag next --access public",
+    "pub:release": "pnpm build && npm publish --access public"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.2",
@@ -45,9 +49,12 @@
     "node": ">=18.0.0"
   },
   "files": [
-    "src",
-    "dist"
+    "dist",
+    "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "filemaker",
     "fms",

@@ -242,6 +242,25 @@ export const CrossJoinSchema: JSONSchema7 = {
   additionalProperties: false,
 };
 
+/**
+ * Valid field types for FileMaker_Tables schema modifications
+ * These are the only types accepted by the FileMaker OData API
+ */
+const VALID_FIELD_TYPES = [
+  "NUMERIC",
+  "DECIMAL",
+  "INT",
+  "DATE",
+  "TIME",
+  "TIMESTAMP",
+  "VARCHAR",
+  "CHARACTER VARYING",
+  "BLOB",
+  "VARBINARY",
+  "LONGVARBINARY",
+  "BINARY VARYING",
+];
+
 export const CreateTableSchema: JSONSchema7 = {
   type: "object",
   properties: {
@@ -255,7 +274,12 @@ export const CreateTableSchema: JSONSchema7 = {
         type: "object",
         properties: {
           name: { type: "string" },
-          type: { type: "string" },
+          type: {
+            type: "string",
+            enum: VALID_FIELD_TYPES,
+            description:
+              "Field type. Must be one of: NUMERIC, DECIMAL, INT, DATE, TIME, TIMESTAMP, VARCHAR, CHARACTER VARYING, BLOB, VARBINARY, LONGVARBINARY, or BINARY VARYING",
+          },
           nullable: { type: "boolean" },
           defaultValue: {},
         },
@@ -281,7 +305,12 @@ export const AddFieldsSchema: JSONSchema7 = {
         type: "object",
         properties: {
           name: { type: "string" },
-          type: { type: "string" },
+          type: {
+            type: "string",
+            enum: VALID_FIELD_TYPES,
+            description:
+              "Field type. Must be one of: NUMERIC, DECIMAL, INT, DATE, TIME, TIMESTAMP, VARCHAR, CHARACTER VARYING, BLOB, VARBINARY, LONGVARBINARY, or BINARY VARYING",
+          },
           nullable: { type: "boolean" },
           defaultValue: {},
         },

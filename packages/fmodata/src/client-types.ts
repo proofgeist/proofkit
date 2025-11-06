@@ -152,28 +152,64 @@ export type BatchOptions = {
 } & RequestOptions;
 
 /**
+ * Valid field types for FileMaker_Tables schema modifications
+ * These are the only types accepted by the FileMaker OData API
+ */
+export type FileMakerFieldType =
+  | "NUMERIC"
+  | "DECIMAL"
+  | "INT"
+  | "DATE"
+  | "TIME"
+  | "TIMESTAMP"
+  | "VARCHAR"
+  | "CHARACTER VARYING"
+  | "BLOB"
+  | "VARBINARY"
+  | "LONGVARBINARY"
+  | "BINARY VARYING";
+
+/**
+ * Array of valid field types (for runtime validation)
+ */
+export const VALID_FIELD_TYPES: readonly FileMakerFieldType[] = [
+  "NUMERIC",
+  "DECIMAL",
+  "INT",
+  "DATE",
+  "TIME",
+  "TIMESTAMP",
+  "VARCHAR",
+  "CHARACTER VARYING",
+  "BLOB",
+  "VARBINARY",
+  "LONGVARBINARY",
+  "BINARY VARYING",
+] as const;
+
+/**
+ * Field definition for schema modifications
+ */
+export type FieldDefinition = {
+  name: string;
+  type: FileMakerFieldType;
+  nullable?: boolean;
+  defaultValue?: unknown;
+};
+
+/**
  * Options for creating a table (schema modification)
  */
 export type CreateTableOptions = {
   tableName: string;
-  fields: Array<{
-    name: string;
-    type: string;
-    nullable?: boolean;
-    defaultValue?: unknown;
-  }>;
+  fields: Array<FieldDefinition>;
 } & RequestOptions;
 
 /**
  * Options for adding fields to a table
  */
 export type AddFieldsOptions = {
-  fields: Array<{
-    name: string;
-    type: string;
-    nullable?: boolean;
-    defaultValue?: unknown;
-  }>;
+  fields: Array<FieldDefinition>;
 } & RequestOptions;
 
 /**

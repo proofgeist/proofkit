@@ -4,12 +4,19 @@ MCP (Model Context Protocol) server for FileMaker OData API. This server exposes
 
 ## Installation
 
+### Install from npm (Recommended)
+
 ```bash
-pnpm add @proofkit/fmodata-mcp
+npm install -g @proofkit/fmodata-mcp
 # or
-npm install @proofkit/fmodata-mcp
+pnpm add -g @proofkit/fmodata-mcp
 # or
-yarn add @proofkit/fmodata-mcp
+yarn global add @proofkit/fmodata-mcp
+```
+
+Or use `npx` to run without installing:
+```bash
+npx @proofkit/fmodata-mcp --http --host=... --database=...
 ```
 
 ## Configuration
@@ -18,7 +25,49 @@ The server can be configured in two ways:
 
 ### Option 1: Configuration via MCP Args (Recommended)
 
-Configure directly in your `mcp.json` using command-line arguments:
+**If installed globally**, use the `fmodata-mcp` command:
+
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "command": "fmodata-mcp",
+      "args": [
+        "--host",
+        "https://your-server.example.com",
+        "--database",
+        "YourDatabase",
+        "--ottoApiKey",
+        "dk_your-api-key"
+      ]
+    }
+  }
+}
+```
+
+**If using npx**, use the full package name:
+
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@proofkit/fmodata-mcp",
+        "--host",
+        "https://your-server.example.com",
+        "--database",
+        "YourDatabase",
+        "--ottoApiKey",
+        "dk_your-api-key"
+      ]
+    }
+  }
+}
+```
+
+**If installed locally**, use the full path to the binary:
 
 ```json
 {
@@ -26,7 +75,7 @@ Configure directly in your `mcp.json` using command-line arguments:
     "fmodata": {
       "command": "node",
       "args": [
-        "/path/to/fmodata-mcp/dist/index.js",
+        "./node_modules/@proofkit/fmodata-mcp/dist/index.js",
         "--host",
         "https://your-server.example.com",
         "--database",
@@ -99,14 +148,34 @@ node dist/index.js
 
 Add the server to your MCP client configuration (e.g., Cursor `mcp.json`):
 
-**Using args (recommended):**
+**Using global install (recommended):**
 ```json
 {
   "mcpServers": {
     "fmodata": {
-      "command": "node",
+      "command": "fmodata-mcp",
       "args": [
-        "/path/to/fmodata-mcp/dist/index.js",
+        "--host",
+        "https://your-server.example.com",
+        "--database",
+        "YourDatabase",
+        "--ottoApiKey",
+        "dk_your-api-key"
+      ]
+    }
+  }
+}
+```
+
+**Using npx (no install required):**
+```json
+{
+  "mcpServers": {
+    "fmodata": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@proofkit/fmodata-mcp",
         "--host",
         "https://your-server.example.com",
         "--database",
@@ -163,13 +232,20 @@ Add the server to your MCP client configuration (e.g., Cursor `mcp.json`):
 You can also run the server as an HTTP server on `localhost:3000`:
 
 **Start the HTTP server:**
+
+If installed globally:
 ```bash
-node dist/index.js --http --host=https://your-server.example.com --database=YourDatabase --ottoApiKey=dk_your-key
+fmodata-mcp --http --host=https://your-server.example.com --database=YourDatabase --ottoApiKey=dk_your-key
+```
+
+Or with npx:
+```bash
+npx @proofkit/fmodata-mcp --http --host=https://your-server.example.com --database=YourDatabase --ottoApiKey=dk_your-key
 ```
 
 Or with Basic Auth:
 ```bash
-node dist/index.js --http --host=https://your-server.example.com --database=YourDatabase --username=your-user --password=your-pass
+fmodata-mcp --http --host=https://your-server.example.com --database=YourDatabase --username=your-user --password=your-pass
 ```
 
 **Then configure MCP client to use the HTTP endpoint:**
@@ -245,6 +321,50 @@ Assistant: [calls fmodata_query_records with table="Customers", filter="Name eq 
 User: Create a new customer
 Assistant: [calls fmodata_create_record with table="Customers", data={...}]
           Successfully created customer with ID 12345
+```
+
+## Self-Hosting (Optional)
+
+If you want to deploy the server as a hosted service (e.g., on Railway, Fly.io, Render), you can run it in HTTP mode:
+
+1. **Deploy the server** with your configuration:
+   ```bash
+   fmodata-mcp --http --host=YOUR_HOST --database=YOUR_DB --ottoApiKey=YOUR_KEY
+   ```
+
+2. **Configure your MCP client** to use the HTTP endpoint:
+   ```json
+   {
+     "mcpServers": {
+       "fmodata": {
+         "url": "https://your-deployed-server.com/mcp"
+       }
+     }
+   }
+   ```
+
+**Note:** Each user should deploy their own instance with their own credentials for security. Shared instances are not recommended.
+
+## Publishing
+
+To publish a new version:
+
+```bash
+# Beta release
+pnpm pub:beta
+
+# Next/RC release
+pnpm pub:next
+
+# Production release
+pnpm pub:release
+```
+
+Or use the monorepo's changeset workflow:
+```bash
+pnpm changeset
+pnpm version-packages
+pnpm release
 ```
 
 ## Development

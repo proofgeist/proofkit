@@ -1,5 +1,6 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import type { ODataApiClient } from "@proofkit/fmodata";
+import type { ODataApiClient, FieldDefinition } from "@proofkit/fmodata";
+import { VALID_FIELD_TYPES } from "@proofkit/fmodata";
 import {
   CreateTableSchema,
   AddFieldsSchema,
@@ -54,7 +55,25 @@ export async function handleSchemaTool(
           defaultValue?: unknown;
         }>;
       };
-      await client.createTable({ tableName, fields });
+      // Validate field types and cast to FieldDefinition
+      const validatedFields: FieldDefinition[] = fields.map((field) => {
+        if (
+          !VALID_FIELD_TYPES.includes(
+            field.type as (typeof VALID_FIELD_TYPES)[number],
+          )
+        ) {
+          throw new Error(
+            `Invalid field type "${field.type}". Must be one of: ${VALID_FIELD_TYPES.join(", ")}`,
+          );
+        }
+        return {
+          name: field.name,
+          type: field.type as FieldDefinition["type"],
+          nullable: field.nullable,
+          defaultValue: field.defaultValue,
+        };
+      });
+      await client.createTable({ tableName, fields: validatedFields });
       return { success: true, tableName };
     }
     case "fmodata_add_fields": {
@@ -67,8 +86,26 @@ export async function handleSchemaTool(
           defaultValue?: unknown;
         }>;
       };
-      await client.addFields(table, { fields });
-      return { success: true, table, fieldsAdded: fields.length };
+      // Validate field types and cast to FieldDefinition
+      const validatedFields: FieldDefinition[] = fields.map((field) => {
+        if (
+          !VALID_FIELD_TYPES.includes(
+            field.type as (typeof VALID_FIELD_TYPES)[number],
+          )
+        ) {
+          throw new Error(
+            `Invalid field type "${field.type}". Must be one of: ${VALID_FIELD_TYPES.join(", ")}`,
+          );
+        }
+        return {
+          name: field.name,
+          type: field.type as FieldDefinition["type"],
+          nullable: field.nullable,
+          defaultValue: field.defaultValue,
+        };
+      });
+      await client.addFields(table, { fields: validatedFields });
+      return { success: true, table, fieldsAdded: validatedFields.length };
     }
     case "fmodata_delete_table": {
       const { table } = args as { table: string };

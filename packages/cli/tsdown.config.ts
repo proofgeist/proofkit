@@ -1,7 +1,10 @@
 import path from "path";
 import { fileURLToPath } from "url";
+import replacePlugin from "@rollup/plugin-replace";
 import fsExtra from "fs-extra";
 import { defineConfig } from "tsdown";
+
+const replace = replacePlugin.default ?? replacePlugin;
 
 const { readJSONSync } = fsExtra;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,12 +41,17 @@ export default defineConfig({
   // Keep Node.js built-in module imports as-is for better compatibility
   nodeProtocol: false,
   // Inject package versions and registry URL at build time
-  define: {
-    __FMDAPI_VERSION__: JSON.stringify(FMDAPI_VERSION),
-    __BETTER_AUTH_VERSION__: JSON.stringify(BETTER_AUTH_VERSION),
-    __REGISTRY_URL__: JSON.stringify(
-      isDev ? "http://localhost:3005" : "https://proofkit.dev"
-    ),
-  },
+  plugins: [
+    replace({
+      preventAssignment: true,
+      values: {
+        __FMDAPI_VERSION__: JSON.stringify(FMDAPI_VERSION),
+        __BETTER_AUTH_VERSION__: JSON.stringify(BETTER_AUTH_VERSION),
+        __REGISTRY_URL__: JSON.stringify(
+          isDev ? "http://localhost:3005" : "https://proofkit.dev"
+        ),
+      },
+    }),
+  ],
   onSuccess: isDev ? "node dist/index.js" : undefined,
 });

@@ -39,9 +39,9 @@ function mapODataTypeToZod(edmType: string): string {
     case "Edm.Boolean":
       return "z.boolean()";
     case "Edm.Date":
-      return "z.string()"; // ISO date string
+      return "z.iso.date()"; // ISO date string
     case "Edm.DateTimeOffset":
-      return "z.string()"; // ISO datetime string
+      return "z.iso.datetime()"; // ISO datetime string
     case "Edm.Binary":
       return "z.string()"; // base64 encoded
     default:

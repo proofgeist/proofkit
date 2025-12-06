@@ -167,6 +167,20 @@ export class ResponseParseError extends FMODataError {
   }
 }
 
+export class BatchTruncatedError extends FMODataError {
+  readonly kind = "BatchTruncatedError" as const;
+  readonly operationIndex: number;
+  readonly failedAtIndex: number;
+
+  constructor(operationIndex: number, failedAtIndex: number) {
+    super(
+      `Operation ${operationIndex} was not executed because operation ${failedAtIndex} failed`,
+    );
+    this.operationIndex = operationIndex;
+    this.failedAtIndex = failedAtIndex;
+  }
+}
+
 // ============================================
 // Type Guards
 // ============================================
@@ -207,6 +221,12 @@ export function isResponseParseError(
   return error instanceof ResponseParseError;
 }
 
+export function isBatchTruncatedError(
+  error: unknown,
+): error is BatchTruncatedError {
+  return error instanceof BatchTruncatedError;
+}
+
 export function isFMODataError(error: unknown): error is FMODataError {
   return error instanceof FMODataError;
 }
@@ -237,4 +257,5 @@ export type FMODataErrorType =
   | ResponseStructureError
   | RecordCountMismatchError
   | InvalidLocationHeaderError
-  | ResponseParseError;
+  | ResponseParseError
+  | BatchTruncatedError;

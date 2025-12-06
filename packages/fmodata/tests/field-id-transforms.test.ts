@@ -162,7 +162,7 @@ describe("Field ID Transformation", () => {
         .from("users")
         .list()
         .select("id", "name")
-        .orderBy("name desc")
+        .orderBy(["name", "desc"])
         .execute({
           fetchHandler: (input, init) => {
             const url = input instanceof Request ? input.url : input.toString();

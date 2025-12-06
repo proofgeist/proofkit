@@ -15,6 +15,7 @@ import {
   transformTableName,
   getTableIdentifiers,
 } from "../transform";
+import { parseErrorResponse } from "./error-parser";
 
 /**
  * Initial update builder returned from EntitySet.update(data)
@@ -352,6 +353,15 @@ export class ExecutableUpdateBuilder<
   ): Promise<
     Result<ReturnPreference extends "minimal" ? { updatedCount: number } : T>
   > {
+    // Check for error responses (important for batch operations)
+    if (!response.ok) {
+      const error = await parseErrorResponse(
+        response,
+        response.url || `/${this.databaseName}/${this.tableName}`,
+      );
+      return { data: undefined, error };
+    }
+
     // Check for empty response (204 No Content)
     const text = await response.text();
     if (!text || text.trim() === "") {

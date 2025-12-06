@@ -3,7 +3,10 @@ import type {
   ExecutionContext,
   Result,
   ExecuteOptions,
+  BatchResult,
+  BatchItemResult,
 } from "../types";
+import { BatchTruncatedError } from "../errors";
 import { type FFetchOptions } from "@fetchkit/ffetch";
 import {
   formatBatchRequestFromNative,
@@ -57,10 +60,11 @@ function parsedToResponse(parsed: ParsedBatchResponse): Response {
 /**
  * Builder for batch operations that allows multiple queries to be executed together
  * in a single transactional request.
+ *
+ * Note: BatchBuilder does not implement ExecutableBuilder because execute() returns
+ * BatchResult instead of Result, which is a different return type structure.
  */
-export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]>
-  implements ExecutableBuilder<ExtractTupleTypes<Builders>>
-{
+export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
   private builders: ExecutableBuilder<any>[];
   private readonly originalBuilders: Builders;
 
@@ -141,14 +145,16 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]>
    * Execute the batch operation.
    *
    * @param options - Optional fetch options and batch-specific options (includes beforeRequest hook)
-   * @returns A tuple of results matching the input builders
+   * @returns A BatchResult containing individual results for each operation
    */
   async execute<EO extends ExecuteOptions>(
     options?: RequestInit & FFetchOptions & EO,
-  ): Promise<Result<ExtractTupleTypes<Builders>>> {
+  ): Promise<BatchResult<ExtractTupleTypes<Builders>>> {
     const baseUrl = this.context._getBaseUrl?.();
     if (!baseUrl) {
-      return {
+      // Return BatchResult with all operations marked as failed
+      const errorCount = this.builders.length;
+      const results: BatchItemResult<any>[] = this.builders.map((_, i) => ({
         data: undefined,
         error: {
           name: "ConfigurationError",
@@ -156,6 +162,15 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]>
             "Base URL not available - execution context must implement _getBaseUrl()",
           timestamp: new Date(),
         } as any,
+        status: 0,
+      }));
+
+      return {
+        results: results as any,
+        successCount: 0,
+        errorCount,
+        truncated: false,
+        firstErrorIndex: 0,
       };
     }
 
@@ -187,7 +202,21 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]>
       );
 
       if (response.error) {
-        return { data: undefined, error: response.error };
+        // Return BatchResult with all operations marked as failed
+        const errorCount = this.builders.length;
+        const results: BatchItemResult<any>[] = this.builders.map((_, i) => ({
+          data: undefined,
+          error: response.error,
+          status: 0,
+        }));
+
+        return {
+          results: results as any,
+          successCount: 0,
+          errorCount,
+          truncated: false,
+          firstErrorIndex: 0,
+        };
       }
 
       // Extract the actual boundary from the response
@@ -205,30 +234,46 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]>
         contentTypeHeader,
       );
 
-      // Check if we got the expected number of responses
-      if (parsedResponses.length !== this.builders.length) {
-        return {
-          data: undefined,
-          error: {
-            name: "BatchError",
-            message: `Expected ${this.builders.length} responses but got ${parsedResponses.length}`,
-            timestamp: new Date(),
-          } as any,
-        };
-      }
-
       // Process each response using the corresponding builder
-      // Build tuple by processing each builder in order
+      // Build BatchResult with per-item results
       type ResultTuple = ExtractTupleTypes<Builders>;
 
+      const results: BatchItemResult<any>[] = [];
+      let successCount = 0;
+      let errorCount = 0;
+      let firstErrorIndex: number | null = null;
+      const truncated = parsedResponses.length < this.builders.length;
+
       // Process builders sequentially to preserve tuple order
-      const processedResults: any[] = [];
-      for (let i = 0; i < this.originalBuilders.length; i++) {
-        const builder = this.originalBuilders[i];
+      for (let i = 0; i < this.builders.length; i++) {
+        const builder = this.builders[i];
         const parsed = parsedResponses[i];
 
-        if (!builder || !parsed) {
-          processedResults.push(undefined);
+        if (!parsed) {
+          // Truncated - operation never executed
+          const failedAtIndex = firstErrorIndex ?? i;
+          results.push({
+            data: undefined,
+            error: new BatchTruncatedError(i, failedAtIndex),
+            status: 0,
+          });
+          errorCount++;
+          continue;
+        }
+
+        if (!builder) {
+          // Should not happen, but handle gracefully
+          results.push({
+            data: undefined,
+            error: {
+              name: "BatchError",
+              message: `Builder at index ${i} is undefined`,
+              timestamp: new Date(),
+            } as any,
+            status: parsed.status,
+          });
+          errorCount++;
+          if (firstErrorIndex === null) firstErrorIndex = i;
           continue;
         }
 
@@ -239,26 +284,49 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]>
         const result = await builder.processResponse(nativeResponse, options);
 
         if (result.error) {
-          processedResults.push(undefined);
+          results.push({
+            data: undefined,
+            error: result.error,
+            status: parsed.status,
+          });
+          errorCount++;
+          if (firstErrorIndex === null) firstErrorIndex = i;
         } else {
-          processedResults.push(result.data);
+          results.push({
+            data: result.data,
+            error: undefined,
+            status: parsed.status,
+          });
+          successCount++;
         }
       }
 
-      // Use a type assertion that TypeScript will respect
-      // ExtractTupleTypes ensures this is a proper tuple type
       return {
-        data: processedResults as unknown as ResultTuple,
-        error: undefined,
+        results: results as any,
+        successCount,
+        errorCount,
+        truncated,
+        firstErrorIndex,
       };
     } catch (err) {
-      return {
+      // On exception, return a BatchResult with all operations marked as failed
+      const errorCount = this.builders.length;
+      const results: BatchItemResult<any>[] = this.builders.map((_, i) => ({
         data: undefined,
         error: {
           name: "BatchError",
           message: err instanceof Error ? err.message : "Unknown error",
           timestamp: new Date(),
         } as any,
+        status: 0,
+      }));
+
+      return {
+        results: results as any,
+        successCount: 0,
+        errorCount,
+        truncated: false,
+        firstErrorIndex: 0,
       };
     }
   }

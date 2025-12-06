@@ -19,7 +19,7 @@
  * that will be correctly parsed by OData endpoints.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { createMockClient } from "./utils/test-setup";
 
 describe("OData Query String Generation", () => {
@@ -46,7 +46,9 @@ describe("OData Query String Generation", () => {
 
       const base = db.from("Users").list();
 
-      expect(base.select("id").getQueryString()).toBe('/Users?$select="id"&$top=1000');
+      expect(base.select("id").getQueryString()).toBe(
+        '/Users?$select="id"&$top=1000',
+      );
       expect(base.select("name with spaces").getQueryString()).toBe(
         "/Users?$select=name with spaces&$top=1000",
       );
@@ -239,13 +241,31 @@ describe("OData Query String Generation", () => {
       expect(queryString).toContain("desc");
     });
 
-    it("should generate $orderby with multiple fields", () => {
+    /**
+     * ESCAPE HATCH: Raw string orderBy for untyped databases
+     *
+     * This test demonstrates the legacy/escape hatch pattern where a raw string
+     * is passed to orderBy(). This approach works but provides NO type safety.
+     *
+     * ⚠️ DISCOURAGED USAGE:
+     * - No autocomplete for field names
+     * - No compile-time validation of field existence
+     * - Typos in field names will only fail at runtime
+     *
+     * ✅ PREFERRED USAGE (for typed databases):
+     * - Use tuple syntax: .orderBy(["name", "asc"]) for single field
+     * - Use array of tuples: .orderBy([["name", "asc"], ["age", "desc"]]) for multiple
+     * - Use single field name: .orderBy("name") for ascending single field
+     *
+     * See typescript.test.ts for type-safe orderBy examples.
+     */
+    it("should support raw string orderBy as escape hatch for untyped databases", () => {
       const client = createClient();
-      const db = client.database("TestDB");
+      const db = client.database("TestDB"); // No schema - untyped database
       const queryString = db
         .from("Users")
         .list()
-        .orderBy("name, age desc")
+        .orderBy("name, age desc") // Raw string - no type safety
         .getQueryString();
 
       expect(queryString).toContain("$orderby");

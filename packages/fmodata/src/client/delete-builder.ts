@@ -10,6 +10,7 @@ import type { TableOccurrence } from "./table-occurrence";
 import { QueryBuilder } from "./query-builder";
 import { type FFetchOptions } from "@fetchkit/ffetch";
 import { getTableIdentifiers } from "../transform";
+import { parseErrorResponse } from "./error-parser";
 
 /**
  * Initial delete builder returned from EntitySet.delete()
@@ -267,6 +268,15 @@ export class ExecutableDeleteBuilder<T extends Record<string, any>>
     response: Response,
     options?: ExecuteOptions,
   ): Promise<Result<{ deletedCount: number }>> {
+    // Check for error responses (important for batch operations)
+    if (!response.ok) {
+      const error = await parseErrorResponse(
+        response,
+        response.url || `/${this.databaseName}/${this.tableName}`,
+      );
+      return { data: undefined, error };
+    }
+
     // Check for empty response (204 No Content)
     const text = await response.text();
     if (!text || text.trim() === "") {

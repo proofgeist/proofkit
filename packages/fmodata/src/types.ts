@@ -89,6 +89,21 @@ export type Result<T, E = import("./errors").FMODataErrorType> =
   | { data: T; error: undefined }
   | { data: undefined; error: E };
 
+// Batch operation result types
+export type BatchItemResult<T> = {
+  data: T | undefined;
+  error: import("./errors").FMODataErrorType | undefined;
+  status: number; // HTTP status code (0 for truncated)
+};
+
+export type BatchResult<T extends readonly any[]> = {
+  results: { [K in keyof T]: BatchItemResult<T[K]> };
+  successCount: number;
+  errorCount: number;
+  truncated: boolean;
+  firstErrorIndex: number | null;
+};
+
 // Make specific keys required, rest optional
 export type MakeFieldsRequired<T, Keys extends keyof T> = Partial<T> &
   Required<Pick<T, Keys>>;

@@ -27,7 +27,11 @@ import {
   FMServerConnection,
 } from "../src/index";
 import { createMockFetch } from "./utils/mock-fetch";
-import { createMockClient } from "./utils/test-setup";
+import {
+  createMockClient,
+  occurrences,
+  occurrencesWithIds,
+} from "./utils/test-setup";
 
 describe("fmodata", () => {
   it("should be defined", () => {
@@ -479,6 +483,177 @@ describe("fmodata", () => {
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
       expect(result.data?.length).toBe(1);
+    });
+  });
+
+  describe("Type-safe orderBy API", () => {
+    /**
+     * These tests document the DESIRED orderBy API for typed databases.
+     *
+     * DESIRED API:
+     * - .orderBy("name")                           → single field, default asc
+     * - .orderBy(["name", "desc"])                 → single field with direction (tuple)
+     * - .orderBy([["name", "asc"], ["id", "desc"]]) → multiple fields (array of tuples)
+     *
+     * The tuple syntax should ONLY accept "asc" or "desc" as the second value,
+     * NOT field names. This provides:
+     * - Clear autocomplete: second position shows only "asc" | "desc"
+     * - Unambiguous syntax: no confusion between [field, field] vs [field, direction]
+     *
+     * Uses existing occurrences from test-setup.ts.
+     */
+
+    it("should support single field orderBy with default ascending", () => {
+      const client = createMockClient();
+      const db = client.database("fmdapi_test.fmp12", {
+        occurrences: occurrences,
+      });
+
+      // ✅ Single field name - defaults to ascending
+      const query = db.from("users").list().orderBy("name");
+
+      expect(query).toBeDefined();
+      expect(query.getQueryString()).toContain("$orderby");
+      expect(query.getQueryString()).toContain("name");
+
+      // ✅ Invalid field names are now caught at compile time
+      // @ts-expect-error - "anyInvalidField" is not a valid field
+      db.from("users").list().orderBy("anyInvalidField");
+    });
+
+    it("should support tuple syntax for single field with explicit direction", () => {
+      const client = createMockClient();
+      const db = client.database("fmdapi_test.fmp12", {
+        occurrences: occurrences,
+      });
+
+      // ✅ Tuple syntax: [fieldName, direction]
+      // Second value autocompletes to "asc" | "desc" ONLY
+      const ascQuery = db.from("users").list().orderBy(["name", "asc"]);
+      const descQuery = db.from("users").list().orderBy(["id", "desc"]);
+
+      expect(ascQuery.getQueryString()).toContain("$orderby");
+      expect(ascQuery.getQueryString()).toBe(
+        "/users?$orderby=name asc&$top=1000",
+      );
+      expect(descQuery.getQueryString()).toContain("$orderby");
+      expect(descQuery.getQueryString()).toBe(
+        "/users?$orderby=id desc&$top=1000",
+      );
+
+      // ✅ Second value must be "asc" or "desc" - field names are rejected
+      // @ts-expect-error - "name" is not a valid direction
+      db.from("users").list().orderBy(["name", "name"]);
+    });
+
+    it("should support tuple syntax with entity IDs and transform field names to FMFIDs", () => {
+      const client = createMockClient();
+      const db = client.database("test.fmp12", {
+        occurrences: occurrencesWithIds,
+      });
+
+      // ✅ Tuple syntax: [fieldName, direction]
+      // Field names are transformed to FMFIDs in the query string
+      // Table name is also transformed to FMTID when using entity IDs
+      const ascQuery = db.from("users").list().orderBy(["name", "asc"]);
+      const descQuery = db.from("users").list().orderBy(["id", "desc"]);
+
+      expect(ascQuery.getQueryString()).toContain("$orderby");
+      expect(ascQuery.getQueryString()).toBe(
+        "/FMTID:1065093?$orderby=FMFID:6 asc&$top=1000",
+      );
+      expect(descQuery.getQueryString()).toContain("$orderby");
+      expect(descQuery.getQueryString()).toBe(
+        "/FMTID:1065093?$orderby=FMFID:1 desc&$top=1000",
+      );
+
+      // ✅ Second value must be "asc" or "desc" - field names are rejected
+      // @ts-expect-error - "name" is not a valid direction
+      db.from("users").list().orderBy(["name", "name"]);
+    });
+
+    it("should support array of tuples for multiple fields", () => {
+      const client = createMockClient();
+      const db = client.database("fmdapi_test.fmp12", {
+        occurrences: occurrences,
+      });
+
+      // ✅ Array of tuples for multiple fields with explicit directions
+      const query = db
+        .from("users")
+        .list()
+        .orderBy([
+          ["name", "asc"],
+          ["id", "desc"],
+        ]);
+
+      expect(query).toBeDefined();
+      expect(query.getQueryString()).toContain("$orderby");
+    });
+
+    it("should chain orderBy with other query methods", () => {
+      const client = createMockClient();
+      const db = client.database("fmdapi_test.fmp12", {
+        occurrences: occurrences,
+      });
+
+      const query = db
+        .from("users")
+        .list()
+        .select("name", "id", "active")
+        .filter({ active: { eq: true } })
+        .orderBy(["name", "asc"])
+        .top(10)
+        .skip(0);
+
+      const queryString = query.getQueryString();
+
+      expect(queryString).toContain("$select");
+      expect(queryString).toContain("$filter");
+      expect(queryString).toContain("$orderby");
+      expect(queryString).toContain("$top");
+      expect(queryString).toContain("$skip");
+    });
+
+    it("should allow raw string orderBy for untyped databases (escape hatch)", () => {
+      const client = createMockClient();
+      const untypedDb = client.database("TestDB"); // No schema
+
+      // For untyped databases, string passthrough is allowed as escape hatch
+      const query = untypedDb.from("AnyTable").list().orderBy("someField desc");
+
+      expect(query.getQueryString()).toContain("$orderby");
+      expect(query.getQueryString()).toContain("someField");
+    });
+
+    /**
+     * Type error tests - validates compile-time type checking for orderBy.
+     *
+     * Custom TypeSafeOrderBy<T> type enforces:
+     * - Single field: keyof T
+     * - Tuple: [keyof T, 'asc' | 'desc'] - second position MUST be direction
+     * - Multiple fields: Array<[keyof T, 'asc' | 'desc']> - array of tuples
+     */
+    it("should reject invalid usage at compile time", () => {
+      const client = createMockClient();
+      const db = client.database("fmdapi_test.fmp12", {
+        occurrences: occurrences,
+      });
+
+      const _typeChecks = () => {
+        // ✅ Invalid field name is caught
+        // @ts-expect-error - "nonexistent" is not a valid field name
+        db.from("users").list().orderBy(["nonexistent", "asc"]);
+
+        // ✅ Second position must be "asc" or "desc", not a field name
+        // @ts-expect-error - "name" is not a valid direction
+        db.from("users").list().orderBy(["name", "name"]);
+
+        // ✅ Ambiguous [field, field] syntax is now rejected
+        // @ts-expect-error - "id" is not a valid direction
+        db.from("users").list().orderBy(["name", "id"]);
+      };
+      void _typeChecks;
     });
   });
 });

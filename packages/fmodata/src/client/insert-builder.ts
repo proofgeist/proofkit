@@ -19,6 +19,7 @@ import {
 } from "../transform";
 import { InvalidLocationHeaderError } from "../errors";
 import { safeJsonParse } from "./sanitize-json";
+import { parseErrorResponse } from "./error-parser";
 
 export type InsertOptions = {
   return?: "minimal" | "representation";
@@ -282,6 +283,15 @@ export class InsertBuilder<
   ): Promise<
     Result<ReturnPreference extends "minimal" ? { ROWID: number } : T>
   > {
+    // Check for error responses (important for batch operations)
+    if (!response.ok) {
+      const error = await parseErrorResponse(
+        response,
+        response.url || `/${this.databaseName}/${this.tableName}`,
+      );
+      return { data: undefined, error };
+    }
+
     // Handle 204 No Content (common in batch/changeset operations)
     // FileMaker uses return=minimal for changeset operations regardless of Prefer header
     if (response.status === 204) {

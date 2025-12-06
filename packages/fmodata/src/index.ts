@@ -25,6 +25,8 @@ export type {
 // Utility types for type annotations
 export type {
   Result,
+  BatchResult,
+  BatchItemResult,
   InferSchemaType,
   InsertData,
   UpdateData,
@@ -63,6 +65,7 @@ export {
   ResponseStructureError,
   RecordCountMismatchError,
   ResponseParseError,
+  BatchTruncatedError,
   isHTTPError,
   isValidationError,
   isODataError,
@@ -70,6 +73,7 @@ export {
   isResponseStructureError,
   isRecordCountMismatchError,
   isResponseParseError,
+  isBatchTruncatedError,
   isFMODataError,
 } from "./errors";
 

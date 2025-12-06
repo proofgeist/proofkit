@@ -19,6 +19,7 @@ import {
   transformFieldNamesArray,
 } from "../transform";
 import { safeJsonParse } from "./sanitize-json";
+import { parseErrorResponse } from "./error-parser";
 import { QueryBuilder } from "./query-builder";
 import {
   validateSingleResponse,
@@ -494,7 +495,8 @@ export class RecordBuilder<
     if (!select || select.length === 0) return "";
 
     // Transform to field IDs if using entity IDs AND the feature is enabled
-    const shouldTransform = baseTable && (useEntityIds ?? this.databaseUseEntityIds);
+    const shouldTransform =
+      baseTable && (useEntityIds ?? this.databaseUseEntityIds);
     const transformedFields = shouldTransform
       ? transformFieldNamesArray(select, baseTable)
       : select;
@@ -650,7 +652,6 @@ export class RecordBuilder<
 
     return `?${parts.join("&")}`;
   }
-
 
   async execute<EO extends ExecuteOptions>(
     options?: RequestInit & FFetchOptions & EO,
@@ -823,6 +824,15 @@ export class RecordBuilder<
   ): Promise<
     Result<RecordReturnType<T, IsSingleField, FieldKey, Selected, Expands>>
   > {
+    // Check for error responses (important for batch operations)
+    if (!response.ok) {
+      const error = await parseErrorResponse(
+        response,
+        response.url || `/${this.databaseName}/${this.tableName}`,
+      );
+      return { data: undefined, error };
+    }
+
     // Use safeJsonParse to handle FileMaker's invalid JSON with unquoted ? values
     const rawResponse = await safeJsonParse(response);
 

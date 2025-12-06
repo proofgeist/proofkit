@@ -26,6 +26,7 @@ import {
   getTableIdentifiers,
 } from "../transform";
 import { safeJsonParse } from "./sanitize-json";
+import { parseErrorResponse } from "./error-parser";
 
 /**
  * Default maximum number of records to return in a list query.
@@ -33,6 +34,22 @@ import { safeJsonParse } from "./sanitize-json";
  * allowing substantial data retrieval. Users can override with .top().
  */
 const DEFAULT_TOP = 1000;
+
+/**
+ * Type-safe orderBy type that provides better DX than odata-query's default.
+ *
+ * Supported forms:
+ * - `keyof T` - single field name (defaults to ascending)
+ * - `[keyof T, 'asc' | 'desc']` - single field with explicit direction
+ * - `Array<[keyof T, 'asc' | 'desc']>` - multiple fields with directions
+ *
+ * This type intentionally EXCLUDES `Array<keyof T>` to avoid ambiguity
+ * between [field1, field2] and [field, direction].
+ */
+export type TypeSafeOrderBy<T> =
+  | (keyof T & string) // Single field name
+  | [keyof T & string, "asc" | "desc"] // Single field with direction
+  | Array<[keyof T & string, "asc" | "desc"]>; // Multiple fields with directions
 
 // Helper type to extract navigation relation names from an occurrence
 type ExtractNavigationNames<
@@ -358,23 +375,78 @@ export class QueryBuilder<
     return this;
   }
 
+  /**
+   * Specify the sort order for query results.
+   *
+   * @example Single field (ascending by default)
+   * ```ts
+   * .orderBy("name")
+   * ```
+   *
+   * @example Single field with explicit direction
+   * ```ts
+   * .orderBy(["name", "desc"])
+   * ```
+   *
+   * @example Multiple fields with directions
+   * ```ts
+   * .orderBy([["name", "asc"], ["createdAt", "desc"]])
+   * ```
+   */
   orderBy(
-    orderBy: QueryOptions<T>["orderBy"],
+    orderBy: TypeSafeOrderBy<T>,
   ): QueryBuilder<T, Selected, SingleMode, IsCount, Occ, Expands> {
     // Transform field names to FMFIDs if using entity IDs
     if (this.occurrence?.baseTable && orderBy) {
       if (Array.isArray(orderBy)) {
-        this.queryOptions.orderBy = orderBy.map((field) =>
-          transformOrderByField(String(field), this.occurrence!.baseTable),
-        );
+        // Check if it's a single tuple [field, direction] or array of tuples
+        if (
+          orderBy.length === 2 &&
+          typeof orderBy[0] === "string" &&
+          (orderBy[1] === "asc" || orderBy[1] === "desc")
+        ) {
+          // Single tuple: [field, direction]
+          const [field, direction] = orderBy as [string, "asc" | "desc"];
+          this.queryOptions.orderBy = `${transformOrderByField(field, this.occurrence.baseTable)} ${direction}`;
+        } else {
+          // Array of tuples: [[field, dir], [field, dir], ...]
+          this.queryOptions.orderBy = (
+            orderBy as Array<[string, "asc" | "desc"]>
+          ).map(([field, direction]) => {
+            const transformedField = transformOrderByField(
+              field,
+              this.occurrence!.baseTable,
+            );
+            return `${transformedField} ${direction}`;
+          });
+        }
       } else {
+        // Single field name (string)
         this.queryOptions.orderBy = transformOrderByField(
           String(orderBy),
           this.occurrence.baseTable,
         );
       }
     } else {
-      this.queryOptions.orderBy = orderBy;
+      // No occurrence/baseTable - pass through as-is
+      if (Array.isArray(orderBy)) {
+        if (
+          orderBy.length === 2 &&
+          typeof orderBy[0] === "string" &&
+          (orderBy[1] === "asc" || orderBy[1] === "desc")
+        ) {
+          // Single tuple: [field, direction]
+          const [field, direction] = orderBy as [string, "asc" | "desc"];
+          this.queryOptions.orderBy = `${field} ${direction}`;
+        } else {
+          // Array of tuples
+          this.queryOptions.orderBy = (
+            orderBy as Array<[string, "asc" | "desc"]>
+          ).map(([field, direction]) => `${field} ${direction}`);
+        }
+      } else {
+        this.queryOptions.orderBy = orderBy;
+      }
     }
     return this;
   }
@@ -1311,6 +1383,15 @@ export class QueryBuilder<
   ): Promise<
     Result<QueryReturnType<T, Selected, SingleMode, IsCount, Expands>>
   > {
+    // Check for error responses (important for batch operations)
+    if (!response.ok) {
+      const error = await parseErrorResponse(
+        response,
+        response.url || `/${this.databaseName}/${this.tableName}`,
+      );
+      return { data: undefined, error };
+    }
+
     // Handle 204 No Content (shouldn't happen for queries, but handle it gracefully)
     if (response.status === 204) {
       // Return empty list for list queries, null for single queries

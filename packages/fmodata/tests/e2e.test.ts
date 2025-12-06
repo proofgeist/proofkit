@@ -615,20 +615,21 @@ describe("Batch Operations", () => {
     // Execute batch
     const result = await db.batch([query1, query2]).execute();
 
-    // Verify no error
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
-
-    if (!result.data) {
-      throw new Error("Expected result.data to be defined");
-    }
-
-    // Verify we got a tuple with two elements
-    expect(Array.isArray(result.data)).toBe(true);
-    expect(result.data.length).toBe(2);
+    // Verify we got results
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(2);
 
     // Verify first result (contacts)
-    const [contactsResult, usersResult] = result.data;
+    const [r1, r2] = result.results;
+    expect(r1.error).toBeUndefined();
+    expect(r2.error).toBeUndefined();
+
+    const contactsResult = r1.data;
+    const usersResult = r2.data;
+
+    if (!contactsResult) {
+      throw new Error("Expected contactsResult to be defined");
+    }
 
     // Contacts should be an array
     expect(Array.isArray(contactsResult)).toBe(true);
@@ -644,8 +645,14 @@ describe("Batch Operations", () => {
     batch.addRequest(db.from("contacts").list().top(2));
     const result = await batch.execute();
 
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(1);
+    const r1 = (result.results as unknown as any[])[0];
+    if (!r1) {
+      throw new Error("Expected result at index 0");
+    }
+    expect(r1.error).toBeUndefined();
+    expect(r1.data).toBeDefined();
   });
 
   it("should execute batch with mixed operations (GET + POST)", async () => {
@@ -659,19 +666,20 @@ describe("Batch Operations", () => {
     // Execute batch with mixed operations
     const result = await db.batch([listQuery, insertQuery]).execute();
 
-    // Verify no error
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
+    // Verify we got results
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(2);
 
-    if (!result.data) {
-      throw new Error("Expected result.data to be defined");
+    const [r1, r2] = result.results;
+    expect(r1.error).toBeUndefined();
+    expect(r2.error).toBeUndefined();
+
+    const listResult = r1.data;
+    const insertResult = r2.data;
+
+    if (!listResult) {
+      throw new Error("Expected listResult to be defined");
     }
-
-    // Verify we got a tuple with two elements
-    expect(Array.isArray(result.data)).toBe(true);
-    expect(result.data.length).toBe(2);
-
-    const [listResult, insertResult] = result.data;
 
     // Verify list result is an array
     expect(Array.isArray(listResult)).toBe(true);
@@ -702,27 +710,22 @@ describe("Batch Operations", () => {
     // Execute batch with multiple POST operations
     const result = await db.batch([insert1, insert2, insert3]).execute();
 
-    // Verify no error
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
+    // Verify we got results
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(3);
 
-    if (!result.data) {
-      throw new Error("Expected result.data to be defined");
-    }
+    const [r1, r2, r3] = result.results;
+    expect(r1.error).toBeUndefined();
+    expect(r2.error).toBeUndefined();
+    expect(r3.error).toBeUndefined();
 
-    // Verify we got three results
-    expect(Array.isArray(result.data)).toBe(true);
-    expect(result.data.length).toBe(3);
-
-    const [result1, result2, result3] = result.data;
-
-    // All inserts should return empty objects (204 No Content)
-    expect(result1).toBeDefined();
-    expect(typeof result1).toBe("object");
-    expect(result2).toBeDefined();
-    expect(typeof result2).toBe("object");
-    expect(result3).toBeDefined();
-    expect(typeof result3).toBe("object");
+    // All inserts should return empty objects (204 No Content in batch)
+    expect(r1.data).toBeDefined();
+    expect(typeof r1.data).toBe("object");
+    expect(r2.data).toBeDefined();
+    expect(typeof r2.data).toBe("object");
+    expect(r3.data).toBeDefined();
+    expect(typeof r3.data).toBe("object");
   });
 
   it("should execute complex batch with multiple operation types", async () => {
@@ -761,37 +764,42 @@ describe("Batch Operations", () => {
       .batch([listQuery, insertOp, updateOp, deleteOp])
       .execute();
 
-    // Verify no error
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
+    // Verify we got results
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(4);
 
-    if (!result.data) {
-      throw new Error("Expected result.data to be defined");
+    const [r1, r2, r3, r4] = result.results;
+    expect(r1.error).toBeUndefined();
+    expect(r2.error).toBeUndefined();
+    expect(r3.error).toBeUndefined();
+    expect(r4.error).toBeUndefined();
+
+    const listResult = r1.data;
+    const insertResult = r2.data;
+    const updateResult = r3.data;
+    const deleteResult = r4.data;
+
+    if (!listResult) {
+      throw new Error("Expected listResult to be defined");
     }
-
-    // Verify we got four results
-    expect(Array.isArray(result.data)).toBe(true);
-    expect(result.data.length).toBe(4);
-
-    const [listResult, insertResult, updateResult, deleteResult] = result.data;
 
     // Verify list result
     expect(Array.isArray(listResult)).toBe(true);
     expect(listResult.length).toBe(1);
 
-    // Verify insert result (204 No Content)
+    // Verify insert result (204 No Content in batch)
     expect(insertResult).toBeDefined();
     expect(typeof insertResult).toBe("object");
 
     // Verify update result
     expect(updateResult).toBeDefined();
     expect(typeof updateResult).toBe("object");
-    expect(updateResult.updatedCount).toBeDefined();
+    expect((updateResult as any).updatedCount).toBeDefined();
 
     // Verify delete result
     expect(deleteResult).toBeDefined();
     expect(typeof deleteResult).toBe("object");
-    expect(deleteResult.deletedCount).toBeDefined();
+    expect((deleteResult as any).deletedCount).toBeDefined();
   });
 
   it("should correctly infer tuple types for batch results", async () => {
@@ -805,18 +813,23 @@ describe("Batch Operations", () => {
 
     const result = await db.batch([query1, query2, insert]).execute();
 
-    expect(result.error).toBeUndefined();
-    expect(result.data).toBeDefined();
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(3);
 
-    if (!result.data) {
-      throw new Error("Expected result.data to be defined");
+    const [r1, r2, r3] = result.results;
+    expect(r1.error).toBeUndefined();
+    expect(r2.error).toBeUndefined();
+    expect(r3.error).toBeUndefined();
+
+    if (!r1.data || !r2.data || !r3.data) {
+      throw new Error("Expected all results to have data");
     }
 
-    expectTypeOf(result.data).not.toBeAny();
+    expectTypeOf(result.results).not.toBeAny();
 
-    const contacts = result.data[0];
-    const users = result.data[1];
-    const insertedContact = result.data[2];
+    const contacts = r1.data;
+    const users = r2.data;
+    const insertedContact = r3.data;
     expectTypeOf(contacts).not.toBeAny();
     expectTypeOf(users).not.toBeAny();
     expectTypeOf(insertedContact).not.toBeAny();
@@ -841,5 +854,55 @@ describe("Batch Operations", () => {
     if (insertedContact.PrimaryKey) {
       batchCreatedRecordIds.push(insertedContact.PrimaryKey);
     }
+  });
+
+  it("should execute batch with 3 GET operations each with a filter", async () => {
+    // Create three GET queries with different filters
+    const query1 = db.from("contacts").list().filter({ hobby: "static-value" });
+    const query2 = db.from("contacts").list().filter({ id_user: "never" });
+    const query3 = db
+      .from("users")
+      .list()
+      .filter({ name: { ne: null } });
+
+    let flag = 1;
+    // Execute batch
+    const result = await db.batch([query1, query2, query3]).execute({
+      hooks: {
+        after: () => {
+          flag = 2;
+        },
+      },
+    });
+
+    // ensure the hook was called
+    expect(flag).toBe(2);
+
+    // Verify we got results
+    expect(result.results).toBeDefined();
+    expect(result.results.length).toBe(3);
+
+    const [r1, r2, r3] = result.results;
+    expect(r1.error).toBeUndefined();
+    expect(r2.error).toBeUndefined();
+    expect(r3.error).toBeUndefined();
+
+    const result1 = r1.data;
+    const result2 = r2.data;
+    const result3 = r3.data;
+
+    // Verify first result (contacts filtered by hobby)
+    expect(Array.isArray(result1)).toBe(true);
+    if (result1 && result1.length > 0) {
+      const firstContact = result1[0]!;
+      expect(firstContact).toBeDefined();
+      expect(firstContact.hobby).toBe("static-value");
+    }
+
+    // Verify second result (contacts filtered by name not null)
+    expect(Array.isArray(result2)).toBe(true);
+
+    // Verify third result (users filtered by name not null)
+    expect(Array.isArray(result3)).toBe(true);
   });
 });

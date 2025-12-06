@@ -116,14 +116,7 @@ export class FMServerConnection implements ExecutionContext {
         headers,
       };
 
-      // For batch requests, use native fetch to avoid any potential serialization issues with ffetch
-      const resp = url.includes("/$batch")
-        ? await fetch(fullUrl, {
-            method: finalOptions.method,
-            headers: finalOptions.headers,
-            body: finalOptions.body,
-          })
-        : await clientToUse(fullUrl, finalOptions);
+      const resp = await clientToUse(fullUrl, finalOptions);
 
       // Handle HTTP errors
       if (!resp.ok) {

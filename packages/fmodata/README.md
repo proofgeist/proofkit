@@ -403,20 +403,69 @@ const result = await db
 
 ### Sorting
 
-Sort results using `orderBy()`:
+Sort results using `orderBy()`. The method is fully type-safe for typed databases, providing autocomplete for field names and sort directions.
+
+#### Single Field
 
 ```typescript
-// Sort ascending
+// Sort ascending (default direction)
 const result = await db.from("users").list().orderBy("name").execute();
 
-// Sort descending
-const result = await db.from("users").list().orderBy("name desc").execute();
-
-// Multiple sort fields
+// Explicit direction using tuple syntax
 const result = await db
   .from("users")
   .list()
-  .orderBy("lastName, firstName desc")
+  .orderBy(["name", "desc"])
+  .execute();
+```
+
+#### Multiple Fields
+
+Use an array of tuples to sort by multiple fields:
+
+```typescript
+// Multiple fields with explicit directions
+const result = await db
+  .from("users")
+  .list()
+  .orderBy([
+    ["lastName", "asc"],
+    ["firstName", "desc"],
+  ])
+  .execute();
+```
+
+#### Type Safety
+
+For typed databases, `orderBy()` provides full type safety:
+
+```typescript
+// ✅ Valid - "name" is a field in the schema
+db.from("users").list().orderBy("name");
+
+// ✅ Valid - tuple with field and direction
+db.from("users").list().orderBy(["name", "asc"]);
+
+// ❌ TypeScript Error - "invalid" is not a field
+db.from("users").list().orderBy("invalid");
+
+// ❌ TypeScript Error - "name" is not a valid direction
+db.from("users").list().orderBy(["email", "name"]);
+
+// ❌ TypeScript Error - second value must be "asc" or "desc"
+db.from("users").list().orderBy(["email", "invalid"]);
+```
+
+#### Escape Hatch (Untyped Databases)
+
+For untyped databases (no schema), raw strings are still accepted:
+
+```typescript
+const untypedDb = connection.database("MyDB"); // No occurrences
+const result = await untypedDb
+  .from("users")
+  .list()
+  .orderBy("name desc") // Raw string accepted
   .execute();
 ```
 
@@ -831,6 +880,26 @@ console.log(result.result.recordId);
 
 Batch operations allow you to execute multiple queries and operations together in a single request. All operations in a batch are executed atomically - they all succeed or all fail together. This is both more efficient (fewer network round-trips) and ensures data consistency across related operations.
 
+### Batch Result Structure
+
+Batch operations return a `BatchResult` object that contains individual results for each operation. Each result has its own `data`, `error`, and `status` properties, allowing you to handle success and failure on a per-operation basis:
+
+```typescript
+type BatchItemResult<T> = {
+  data: T | undefined;
+  error: FMODataErrorType | undefined;
+  status: number; // HTTP status code (0 for truncated operations)
+};
+
+type BatchResult<T extends readonly any[]> = {
+  results: { [K in keyof T]: BatchItemResult<T[K]> };
+  successCount: number;
+  errorCount: number;
+  truncated: boolean; // true if FileMaker stopped processing due to an error
+  firstErrorIndex: number | null; // Index of the first operation that failed
+};
+```
+
 ### Basic Batch with Multiple Queries
 
 Execute multiple read operations in a single batch:
@@ -843,13 +912,23 @@ const usersQuery = db.from("users").list().top(5);
 // Execute both queries in a single batch
 const result = await db.batch([contactsQuery, usersQuery]).execute();
 
-if (result.data) {
-  // Result is a tuple matching the input builders
-  const [contacts, users] = result.data;
+// Access individual results
+const [r1, r2] = result.results;
 
-  console.log("Contacts:", contacts);
-  console.log("Users:", users);
+if (r1.error) {
+  console.error("Contacts query failed:", r1.error);
+} else {
+  console.log("Contacts:", r1.data);
 }
+
+if (r2.error) {
+  console.error("Users query failed:", r2.error);
+} else {
+  console.log("Users:", r2.data);
+}
+
+// Check summary statistics
+console.log(`Success: ${result.successCount}, Errors: ${result.errorCount}`);
 ```
 
 ### Mixed Operations (Reads and Writes)
@@ -868,12 +947,63 @@ const updateOp = db.from("users").update({ active: true }).byId("user-123");
 // All operations execute atomically
 const result = await db.batch([listQuery, insertOp, updateOp]).execute();
 
-if (result.data) {
-  const [contactsList, insertResult, updateResult] = result.data;
+// Access individual results
+const [r1, r2, r3] = result.results;
 
-  console.log("Fetched contacts:", contactsList);
-  console.log("Inserted contact:", insertResult);
-  console.log("Updated user:", updateResult);
+if (r1.error) {
+  console.error("List query failed:", r1.error);
+} else {
+  console.log("Fetched contacts:", r1.data);
+}
+
+if (r2.error) {
+  console.error("Insert failed:", r2.error);
+} else {
+  console.log("Inserted contact:", r2.data);
+}
+
+if (r3.error) {
+  console.error("Update failed:", r3.error);
+} else {
+  console.log("Updated user:", r3.data);
+}
+```
+
+### Handling Errors in Batches
+
+When FileMaker encounters an error in a batch operation, it **stops processing** subsequent operations. Operations that were never executed due to an earlier error will have a `BatchTruncatedError`:
+
+```typescript
+import { BatchTruncatedError, isBatchTruncatedError } from "@proofkit/fmodata";
+
+const result = await db.batch([query1, query2, query3]).execute();
+
+const [r1, r2, r3] = result.results;
+
+// First operation succeeded
+if (r1.error) {
+  console.error("First query failed:", r1.error);
+} else {
+  console.log("First query succeeded:", r1.data);
+}
+
+// Second operation failed
+if (r2.error) {
+  console.error("Second query failed:", r2.error);
+  console.log("HTTP Status:", r2.status); // e.g., 404
+}
+
+// Third operation was never executed (truncated)
+if (r3.error && isBatchTruncatedError(r3.error)) {
+  console.log("Third operation was not executed");
+  console.log(`Failed at operation ${r3.error.failedAtIndex}`);
+  console.log(`This operation index: ${r3.error.operationIndex}`);
+  console.log("Status:", r3.status); // 0 (never executed)
+}
+
+// Check if batch was truncated
+if (result.truncated) {
+  console.log(`Batch stopped early at index ${result.firstErrorIndex}`);
 }
 ```
 
@@ -890,11 +1020,24 @@ const result = await db
   ])
   .execute();
 
-if (result.error) {
+// Check individual results
+const [r1, r2, r3] = result.results;
+
+if (r1.error || r2.error || r3.error) {
   // All three inserts are rolled back - no users were created
-  console.error("Batch failed:", result.error);
+  console.error("Batch had errors:");
+  if (r1.error) console.error("Operation 1:", r1.error);
+  if (r2.error) console.error("Operation 2:", r2.error);
+  if (r3.error) console.error("Operation 3:", r3.error);
 }
 ```
+
+### Important Notes
+
+- **FileMaker stops on first error**: When an error occurs, FileMaker stops processing subsequent operations in the batch. Truncated operations will have `BatchTruncatedError` with `status: 0`.
+- **Insert operations in batches**: FileMaker ignores `Prefer: return=representation` in batch requests. Insert operations return `{}` or `{ ROWID?: number }` instead of the full created record.
+- **All results are always defined**: Every operation in the batch will have a corresponding result in `result.results`, even if it was never executed (truncated operations).
+- **Summary statistics**: Use `result.successCount`, `result.errorCount`, `result.truncated`, and `result.firstErrorIndex` for quick batch status checks.
 
 **Note:** Batch operations automatically group write operations (POST, PATCH, DELETE) into changesets for transactional behavior, while read operations (GET) are executed individually within the batch.
 

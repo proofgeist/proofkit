@@ -6,7 +6,15 @@
  */
 
 import { describe, it, afterEach, expect, assert, expectTypeOf } from "vitest";
-import { FMServerConnection, Metadata } from "../src/index";
+import {
+  FMServerConnection,
+  fmTableOccurrence,
+  Metadata,
+  textField,
+  contains,
+  eq,
+  isNotNull,
+} from "@proofkit/fmodata";
 import { jsonCodec } from "./utils/helpers";
 import { z } from "zod/v4";
 import { mockResponses } from "./fixtures/responses";
@@ -17,13 +25,9 @@ import {
   password,
   apiKey,
   database,
-  contactsTO,
-  usersTO,
+  contacts,
+  users,
   contactsTOWithIds,
-  usersTOWithIds,
-  contactsTOForBatch,
-  usersTOForBatch,
-  occurrencesWithIds,
 } from "./e2e/setup";
 
 if (!serverUrl) {
@@ -45,11 +49,9 @@ afterEach(async () => {
     serverUrl: serverUrl!,
     auth: { apiKey },
   });
-  const db = connection.database(database!, {
-    occurrences: [contactsTO, usersTO] as const,
-  });
+  const db = connection.database(database!);
 
-  const entitySet = db.from("contacts");
+  const entitySet = db.from(contacts);
 
   // Delete records by ID
   for (const recordId of createdRecordIds) {
@@ -67,7 +69,7 @@ afterEach(async () => {
     try {
       await entitySet
         .delete()
-        .where((q) => q.filter({ name: { contains: marker } }))
+        .where((q) => q.where(contains(contacts.name, marker)))
         .execute();
     } catch (error) {
       // Ignore errors - records may have already been deleted
@@ -87,12 +89,10 @@ describe("Basic E2E Operations", () => {
     serverUrl: serverUrl!,
     auth: { apiKey },
   });
-  const db = connection.database(database!, {
-    occurrences: [contactsTO, usersTO] as const,
-  });
+  const db = connection.database(database!);
 
   it("should connect to the server and list records", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // Test basic list query (limit to 10 records to avoid timeout)
     const result = await entitySet.list().top(10).execute();
@@ -100,6 +100,7 @@ describe("Basic E2E Operations", () => {
       console.log(result.error);
       throw new Error("Expected data to be defined");
     }
+
     assert(result.data, "Expected data to be defined");
 
     // Verify we got a response
@@ -139,7 +140,7 @@ describe("Basic E2E Operations", () => {
   });
 
   it("should insert a record and verify count increased", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // Get initial count
     const initialCountResult = await entitySet.list().count().execute();
@@ -177,7 +178,7 @@ describe("Basic E2E Operations", () => {
   });
 
   it("should update a record by ID and return count", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // First, insert a record to update
     const uniqueName = `Update Test ${Date.now()}`;
@@ -207,7 +208,7 @@ describe("Basic E2E Operations", () => {
   });
 
   it("should update multiple records by filter and return count", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // Insert multiple records with a unique marker
     const marker = `Bulk Update ${Date.now()}`;
@@ -221,7 +222,7 @@ describe("Basic E2E Operations", () => {
     // Update all records with the marker
     const updateResult = await entitySet
       .update({ hobby: "Updated Hobby" })
-      .where((q) => q.filter({ name: { contains: marker } }))
+      .where((q) => q.where(contains(contacts.name, marker)))
       .execute();
 
     assert(updateResult.data, "Expected update data to be defined");
@@ -230,7 +231,7 @@ describe("Basic E2E Operations", () => {
   });
 
   it("should delete a record by ID and return count", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // First, insert a record to delete
     const uniqueName = `Delete Test ${Date.now()}`;
@@ -263,7 +264,7 @@ describe("Basic E2E Operations", () => {
   });
 
   it("should delete multiple records by filter and return count", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // Insert multiple records with a unique marker
     const marker = `Bulk Delete ${Date.now()}`;
@@ -278,7 +279,7 @@ describe("Basic E2E Operations", () => {
     // Delete all records with the marker
     const deleteResult = await entitySet
       .delete()
-      .where((q) => q.filter({ name: { contains: marker } }))
+      .where((q) => q.where(contains(contacts.name, marker)))
       .execute();
 
     assert(deleteResult.data, "Expected delete data to be defined");
@@ -294,12 +295,12 @@ describe("Basic E2E Operations", () => {
   });
 
   it("should properly type and validate expanded properties", async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // Test expand with type safety
     const result = await entitySet
       .list()
-      .expand("users", (b) => b.select("name"))
+      .expand(users, (b: any) => b.select({ name: users.name }))
       .execute();
 
     // Verify we got a response
@@ -315,13 +316,15 @@ describe("Basic E2E Operations", () => {
     expect(firstRecord.users.length).toBeGreaterThan(0);
   });
 
-  it("should validate all fields in the expand are valid", async () => {
+  it("the server should validate all fields in the expand are valid", async () => {
+    const notRealUsers = fmTableOccurrence("users", {
+      not_real_field: textField(),
+    });
     const result = await db
-      .from("contacts")
+      .from(contacts)
       .list()
-      .expand("users", (b) => {
-        // @ts-expect-error - this field is not real
-        return b.select("not_real_field");
+      .expand(users, (b: any) => {
+        return b.select({ notReal: notRealUsers.not_real_field });
       })
       .execute({
         fetchHandler: createMockFetch(
@@ -392,22 +395,22 @@ describe("Entity IDs", () => {
     auth: { username, password },
   });
 
-  const db = connection.database(database!, {
-    occurrences: occurrencesWithIds,
-  });
+  const db = connection.database(database!, { useEntityIds: true });
 
   const dbWithoutIds = connection.database(database!, {
-    occurrences: occurrencesWithIds,
     useEntityIds: false,
   });
 
   it("should not use entity IDs in the queryString if useEntityIds is false", async () => {
     const query = dbWithoutIds
-      .from("contacts")
+      .from(contactsTOWithIds)
       .list()
-      .select("name_renamed", "hobby")
-      .expand("users")
-      .filter({ hobby: "Testing" })
+      .select({
+        name_renamed: contactsTOWithIds.name_renamed,
+        hobby: contactsTOWithIds.hobby,
+      })
+      .expand(users)
+      .where(eq(contactsTOWithIds.hobby, "Testing"))
       .top(1);
     const queryString = query.getQueryString();
     console.log(queryString);
@@ -417,9 +420,12 @@ describe("Entity IDs", () => {
 
   it("should replace field names in select statements with entity IDs", async () => {
     const query = db
-      .from("contacts")
+      .from(contactsTOWithIds)
       .list()
-      .select("name_renamed", "hobby")
+      .select({
+        name_renamed: contactsTOWithIds.name_renamed,
+        hobby: contactsTOWithIds.hobby,
+      })
       .top(1);
 
     const queryString = query.getQueryString();
@@ -433,12 +439,12 @@ describe("Entity IDs", () => {
     let rawResponseData: any;
 
     let capturedPreferHeader: string | null = null;
-    db.from("contacts")
+    db.from(contactsTOWithIds)
       .list()
       .top(1)
       .execute({
         hooks: {
-          before: async (req) => {
+          before: async (req: any) => {
             const headers = req.headers;
             capturedPreferHeader = headers.get("Prefer");
             return;
@@ -449,12 +455,12 @@ describe("Entity IDs", () => {
     expect(capturedPreferHeader).toBe("fmodata.entity-ids");
 
     const result = await db
-      .from("contacts")
+      .from(contactsTOWithIds)
       .list()
       .top(1)
       .execute({
         hooks: {
-          after: async (req, res) => {
+          after: async (req: any, res: any) => {
             // Clone the response so we can read it without consuming the original
             const clonedRes = res.clone();
             rawResponseData = await clonedRes.json();
@@ -504,7 +510,11 @@ describe("Entity IDs", () => {
   it("should not transform if the feature is disabled (even if ids are provided)", async () => {
     let rawResponseData: any;
 
-    const query = dbWithoutIds.from("contacts").list().select("hobby").top(1);
+    const query = dbWithoutIds
+      .from(contacts)
+      .list()
+      .select({ hobby: contacts.hobby })
+      .top(1);
 
     // should not use ids when useEntityIds is false
     expect(query.getQueryString()).toContain("contacts");
@@ -513,7 +523,7 @@ describe("Entity IDs", () => {
 
     const result = await query.execute({
       hooks: {
-        after: async (req, res) => {
+        after: async (req: any, res: any) => {
           // Clone the response so we can read it without consuming the original
           const clonedRes = res.clone();
           rawResponseData = await clonedRes.json();
@@ -555,20 +565,23 @@ describe("Entity IDs", () => {
   it("should properly type and validate expanded properties with entity IDs", async () => {
     // get the first record
     const result = await db
-      .from("contacts")
+      .from(contactsTOWithIds)
       .list()
       .top(1)
-      .select("PrimaryKey")
+      .select({ PrimaryKey: contactsTOWithIds.PrimaryKey })
       .execute();
 
     const firstRecord = result.data?.[0];
     assert(firstRecord, "Should have a first record");
+    if (!firstRecord.PrimaryKey) {
+      throw new Error("Expected PrimaryKey to be defined");
+    }
 
     // now expand the users property
     const expandedResult = await db
-      .from("contacts")
+      .from(contactsTOWithIds)
       .get(firstRecord.PrimaryKey)
-      .expand("users");
+      .expand(users);
 
     // should use the table id in the query string
     expect(expandedResult.getQueryString()).not.toContain("/contacts(");
@@ -586,14 +599,12 @@ describe("Batch Operations", () => {
     auth: { username, password },
   });
 
-  const db = connection.database(database!, {
-    occurrences: [contactsTOForBatch, usersTOForBatch],
-  });
+  const db = connection.database(database!);
 
   const batchCreatedRecordIds: string[] = [];
 
   afterEach(async () => {
-    const entitySet = db.from("contacts");
+    const entitySet = db.from(contacts);
 
     // Delete records by ID
     for (const recordId of batchCreatedRecordIds) {
@@ -609,8 +620,8 @@ describe("Batch Operations", () => {
 
   it("should execute simple batch with two GET queries", async () => {
     // Create two different query builders
-    const query1 = db.from("contacts").list().top(2);
-    const query2 = db.from("users").list().top(2);
+    const query1 = db.from(contacts).list().top(2);
+    const query2 = db.from(users).list().top(2);
 
     // Execute batch
     const result = await db.batch([query1, query2]).execute();
@@ -637,12 +648,12 @@ describe("Batch Operations", () => {
     expect(firstContact).toBeDefined();
     expect(firstContact).not.toHaveProperty("@odata.id");
     expect(firstContact).not.toHaveProperty("@odata.editLink");
-    expect(firstContact.hobby).toBe("static-value");
+    expect(firstContact.hobby).toBe("Board games");
   });
 
   it("should allow adding to a batch after it has been created", async () => {
     const batch = db.batch([]);
-    batch.addRequest(db.from("contacts").list().top(2));
+    batch.addRequest(db.from(contacts).list().top(2));
     const result = await batch.execute();
 
     expect(result.results).toBeDefined();
@@ -657,8 +668,8 @@ describe("Batch Operations", () => {
 
   it("should execute batch with mixed operations (GET + POST)", async () => {
     // Create a GET query and a POST insert
-    const listQuery = db.from("contacts").list().top(2);
-    const insertQuery = db.from("contacts").insert({
+    const listQuery = db.from(contacts).list().top(2);
+    const insertQuery = db.from(contacts).insert({
       name: "Batch Test User",
       hobby: "Testing",
     });
@@ -692,17 +703,17 @@ describe("Batch Operations", () => {
 
   it("should execute batch with multiple POST operations in a changeset", async () => {
     // Create multiple insert operations
-    const insert1 = db.from("contacts").insert({
+    const insert1 = db.from(contacts).insert({
       name: "Batch User 1",
       hobby: "Reading",
     });
 
-    const insert2 = db.from("contacts").insert({
+    const insert2 = db.from(contacts).insert({
       name: "Batch User 2",
       hobby: "Writing",
     });
 
-    const insert3 = db.from("contacts").insert({
+    const insert3 = db.from(contacts).insert({
       name: "Batch User 3",
       hobby: "Gaming",
     });
@@ -731,7 +742,7 @@ describe("Batch Operations", () => {
   it("should execute complex batch with multiple operation types", async () => {
     // First, create a record we can update/delete
     const setupInsert = await db
-      .from("contacts")
+      .from(contacts)
       .insert({
         name: "Test Record for Batch",
         hobby: "Testing",
@@ -746,18 +757,18 @@ describe("Batch Operations", () => {
     batchCreatedRecordIds.push(testRecordId);
 
     // Create a complex batch with multiple operation types
-    const listQuery = db.from("contacts").list().top(1);
-    const insertOp = db.from("contacts").insert({
+    const listQuery = db.from(contacts).list().top(1);
+    const insertOp = db.from(contacts).insert({
       name: "Complex Batch Insert",
       hobby: "Batch Testing",
     });
     const updateOp = db
-      .from("contacts")
+      .from(contacts)
       .update({
         name: "Updated via Batch",
       })
       .byId(testRecordId);
-    const deleteOp = db.from("contacts").delete().byId(testRecordId);
+    const deleteOp = db.from(contacts).delete().byId(testRecordId);
 
     // Execute the complex batch
     const result = await db
@@ -804,9 +815,9 @@ describe("Batch Operations", () => {
 
   it("should correctly infer tuple types for batch results", async () => {
     // Create a batch with different operation types
-    const query1 = db.from("contacts").list().top(1);
-    const query2 = db.from("users").list().top(1);
-    const insert = db.from("contacts").insert({
+    const query1 = db.from(contacts).list().top(1);
+    const query2 = db.from(users).list().top(1);
+    const insert = db.from(contacts).insert({
       name: "Type Test User",
       hobby: "Testing Types",
     });
@@ -827,25 +838,25 @@ describe("Batch Operations", () => {
 
     expectTypeOf(result.results).not.toBeAny();
 
-    const contacts = r1.data;
-    const users = r2.data;
+    const contactsData = r1.data;
+    const usersData = r2.data;
     const insertedContact = r3.data;
-    expectTypeOf(contacts).not.toBeAny();
-    expectTypeOf(users).not.toBeAny();
+    expectTypeOf(contactsData).not.toBeAny();
+    expectTypeOf(usersData).not.toBeAny();
     expectTypeOf(insertedContact).not.toBeAny();
 
     // Verify types are correctly inferred
-    expect(Array.isArray(contacts)).toBe(true);
-    expect(Array.isArray(users)).toBe(true);
+    expect(Array.isArray(contactsData)).toBe(true);
+    expect(Array.isArray(usersData)).toBe(true);
     expect(typeof insertedContact).toBe("object");
 
-    const firstContact = contacts[0]!;
+    const firstContact = contactsData[0]!;
     expect(firstContact).toBeDefined();
 
-    const hobby: string = firstContact.hobby;
+    const hobby: string | null = firstContact.hobby;
     expect(typeof hobby).toBe("string");
 
-    const firstUser = users[0]!;
+    const firstUser = usersData[0]!;
     expect(firstUser).toBeDefined();
 
     expectTypeOf(firstUser.name).not.toBeAny();
@@ -858,12 +869,15 @@ describe("Batch Operations", () => {
 
   it("should execute batch with 3 GET operations each with a filter", async () => {
     // Create three GET queries with different filters
-    const query1 = db.from("contacts").list().filter({ hobby: "static-value" });
-    const query2 = db.from("contacts").list().filter({ id_user: "never" });
-    const query3 = db
-      .from("users")
+    const query1 = db
+      .from(contacts)
       .list()
-      .filter({ name: { ne: null } });
+      .where(eq(contacts.hobby, "static-value"));
+    const query2 = db
+      .from(contacts)
+      .list()
+      .where(eq(contacts.id_user, "never"));
+    const query3 = db.from(users).list().where(isNotNull(users.name));
 
     let flag = 1;
     // Execute batch

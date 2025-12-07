@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/fmodata",
-  "version": "0.1.0-alpha.13",
+  "version": "0.1.0-alpha.17",
   "description": "FileMaker OData API client",
   "repository": "git@github.com:proofgeist/proofkit.git",
   "author": "Eric <37158449+eluce2@users.noreply.github.com>",
@@ -25,12 +25,16 @@
     "format": "prettier --write .",
     "dev": "tsc --watch",
     "test": "vitest run --typecheck",
+    "tsc": "tsc --noEmit",
     "test:typecheck": "vitest run --typecheck",
     "test:watch": "vitest --typecheck",
+    "test:build": "pnpm build && TEST_BUILD=true vitest run --typecheck",
+    "test:watch:build": "TEST_BUILD=true vitest --typecheck",
     "test:e2e": "op inject -i op.env -o .env.local -f && vitest run tests/e2e.test.ts",
     "capture": "op inject -i op.env -o .env.local -f && tsx scripts/capture-responses.ts",
     "knip": "knip",
-    "pub:alpha": "bun run scripts/publish-alpha.ts"
+    "pub:alpha": "bun run scripts/publish-alpha.ts",
+    "global:link": "pnpm link --global"
   },
   "dependencies": {
     "@fetchkit/ffetch": "^4.2.0",
@@ -51,6 +55,7 @@
     "@standard-schema/spec": "^1.0.0",
     "@tanstack/vite-config": "^0.2.0",
     "@types/node": "^22.17.1",
+    "fast-xml-parser": "^5.3.2",
     "prettier": "^3.5.3",
     "publint": "^0.3.12",
     "tsx": "^4.19.2",

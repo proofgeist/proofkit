@@ -135,6 +135,17 @@ function hasUncommittedChanges(): { hasChanges: boolean; details: string } {
 function commitChanges(message: string): void {
   const repoRoot = resolve(__dirname, "../..");
   try {
+    // Check if there are any changes to commit
+    const status = execSync("git status --porcelain", {
+      cwd: repoRoot,
+      encoding: "utf-8",
+    }).trim();
+
+    if (!status) {
+      console.log(`ℹ️  No changes to commit`);
+      return;
+    }
+
     // Stage all changes
     execSync("git add -A", {
       cwd: repoRoot,
@@ -228,6 +239,51 @@ function autoBumpPatch(fromVersion?: string): string {
   return bumpVersion(fromVersion ?? version, "patch");
 }
 
+function checkNpmAuth(): boolean {
+  try {
+    execSync("npm whoami", {
+      cwd: resolve(__dirname, ".."),
+      stdio: "pipe",
+    });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function ensureNpmAuth(): Promise<void> {
+  if (checkNpmAuth()) {
+    console.log("✅ Authenticated with npm");
+    return;
+  }
+
+  console.log("\n⚠️  Not authenticated with npm");
+  console.log("   You need to log in to npm before publishing.\n");
+
+  const answer = await question("Would you like to log in now? (y/n): ");
+
+  if (answer.toLowerCase() !== "y" && answer.toLowerCase() !== "yes") {
+    console.log("❌ Publish cancelled - npm authentication required.");
+    rl.close();
+    process.exit(0);
+  }
+
+  console.log("\n🔐 Opening npm login...");
+  console.log("   (This will open your browser for authentication)\n");
+
+  try {
+    execSync("npm login", {
+      cwd: resolve(__dirname, ".."),
+      stdio: "inherit",
+    });
+    console.log("\n✅ Successfully logged in to npm");
+  } catch (error) {
+    console.error("\n❌ Failed to log in to npm");
+    rl.close();
+    process.exit(1);
+  }
+}
+
 async function updateVersion(newVersion: string) {
   packageJson.version = newVersion;
   writeFileSync(
@@ -241,25 +297,6 @@ async function updateVersion(newVersion: string) {
 
 async function main() {
   try {
-    // Check for uncommitted changes first
-    const gitStatus = hasUncommittedChanges();
-    if (gitStatus.hasChanges) {
-      console.log(`\n⚠️  You have uncommitted changes (${gitStatus.details})`);
-      console.log("   These must be committed before publishing.\n");
-
-      const commitMessage = await question(
-        "Enter commit message (or leave empty to cancel): ",
-      );
-
-      if (!commitMessage.trim()) {
-        console.log("❌ Publish cancelled - no commit message provided.");
-        rl.close();
-        process.exit(0);
-      }
-
-      commitChanges(commitMessage.trim());
-    }
-
     console.log(`\n📦 Checking npm registry for ${packageName}...`);
 
     // Check npm for published version
@@ -281,19 +318,40 @@ async function main() {
         console.log(`   Local git hash: ${localGitHash.substring(0, 7)}`);
       }
 
-      const comparison = compareVersions(version, publishedVersion);
       const gitHashesMatch =
         publishedGitHash && localGitHash && publishedGitHash === localGitHash;
+
+      // Only check for uncommitted changes if git hashes match
+      // If hashes match but there are uncommitted changes, that's fine - we'll commit later
+      // If hashes match and there are NO uncommitted changes, prevent republishing same code
+      if (gitHashesMatch) {
+        const gitStatus = hasUncommittedChanges();
+        if (!gitStatus.hasChanges) {
+          console.log(
+            `\n⚠️  Git hashes match and there are no uncommitted changes.`,
+          );
+          console.log(
+            "❌ Cannot republish the exact same code that's already on npm.",
+          );
+          rl.close();
+          process.exit(0);
+        }
+        // If hashes match but there are uncommitted changes, proceed (will commit later)
+      }
+
+      const comparison = compareVersions(version, publishedVersion);
 
       if (comparison <= 0) {
         // Version needs to be bumped
         if (gitHashesMatch) {
+          // Git hashes match but we have uncommitted changes (already checked above)
+          // Auto-bump patch version from the HIGHER version
+          const versionToBumpFrom = comparison < 0 ? publishedVersion : version;
           console.log(
-            `\n⚠️  Local version (${version}) is not greater than published version (${publishedVersion}), but git hashes match.`,
+            `\n🔄 Git hashes match but you have uncommitted changes - automatically bumping from ${versionToBumpFrom}...`,
           );
-          console.log("❌ Cannot publish without bumping version.");
-          rl.close();
-          process.exit(0);
+          const newVersion = autoBumpPatch(versionToBumpFrom);
+          await updateVersion(newVersion);
         } else {
           // Git hashes differ, auto-bump patch version from the HIGHER version
           // (usually the published version when local is behind)
@@ -313,6 +371,9 @@ async function main() {
       }
     } else {
       console.log(`   No published version found (first publish)`);
+      // If version hasn't been published, ensure we have a valid version
+      // The current version should be fine, but we could bump if needed
+      console.log(`   Using current version: ${version}`);
     }
 
     console.log(`\n📦 Ready to publish:`);
@@ -340,6 +401,9 @@ async function main() {
       process.exit(0);
     }
 
+    // Check and ensure npm authentication
+    await ensureNpmAuth();
+
     // Publish with npm (will prompt for 2FA interactively if needed)
     console.log("\n🚀 Publishing to npm with tag 'alpha'...");
     execSync("npm publish --tag alpha --access public --", {
@@ -355,6 +419,10 @@ async function main() {
     });
 
     console.log("\n✅ Successfully published!");
+
+    // Commit the version change with the version number as the commit message
+    console.log(`\n📝 Committing version change...`);
+    commitChanges(version);
   } catch (error) {
     console.error("\n❌ Error:", error);
     rl.close();

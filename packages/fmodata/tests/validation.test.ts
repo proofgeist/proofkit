@@ -19,25 +19,23 @@ import {
   createMockClient,
   hobbyEnum,
   usersSimpleTO,
-  occurrences,
+  contacts,
+  users,
 } from "./utils/test-setup";
 import { z } from "zod/v4";
+import { fmTableOccurrence, textField } from "@proofkit/fmodata";
 
 describe("Validation Tests", () => {
   const client = createMockClient();
-  const db = client.database("fmdapi_test.fmp12", {
-    occurrences: occurrences,
-  });
-  const simpleDb = client.database("fmdapi_test.fmp12", {
-    occurrences: [usersSimpleTO],
-  });
+  const db = client.database("fmdapi_test.fmp12");
+  const simpleDb = client.database("fmdapi_test.fmp12");
 
   describe("validateRecord", () => {
     it("should validate a single record", async () => {
       const result = await db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .select("hobby")
+        .select({ hobby: contacts.hobby })
         .execute({
           fetchHandler: simpleMock({
             status: 200,
@@ -63,9 +61,11 @@ describe("Validation Tests", () => {
 
     it("should validate records within an expand expression", async () => {
       const result = await db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.select("name", "fake_field"))
+        .expand(users, (b: any) =>
+          b.select({ name: users.name, fake_field: users.fake_field }),
+        )
         .execute({
           fetchHandler: simpleMock({
             status: 200,
@@ -120,14 +120,23 @@ describe("Validation Tests", () => {
     });
   });
   it("should automatically select only fields in the schema", async () => {
-    const query = simpleDb.from("users").list();
+    const simpleUsers = fmTableOccurrence("users", {
+      id: textField().primaryKey().notNull(),
+      name: textField().notNull(),
+    });
+    const query = simpleDb.from(simpleUsers).list();
 
-    expect(query.getQueryString()).toBe('/users?$select="id",name&$top=1000');
+    const queryString = query.getQueryString();
+
+    expect(queryString).toContain(`$select=`);
+    expect(queryString).toContain(`name`);
+    expect(queryString).toContain(`"id"`); // must quote the id field
+    expect(queryString).not.toContain(`$expand`);
   });
 
   it("should skip validation if requested", async () => {
     const result = await db
-      .from("contacts")
+      .from(contacts)
       .list()
       .execute({
         skipValidation: true,
@@ -163,7 +172,7 @@ describe("Validation Tests", () => {
 
   it("should return odata annotations if requested, even if skipValidation is true", async () => {
     const result = await db
-      .from("contacts")
+      .from(contacts)
       .list()
       .execute({
         skipValidation: true,

@@ -1,0 +1,43 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    /* Strict any checking for tests */
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    /* Disallow explicit any (using @ts-expect-error for intentional any testing) */
+    /* Note: TypeScript doesn't have a built-in noExplicitAny, but we can use eslint */
+
+    /* Path mappings for package name imports - point to dist for build testing */
+    "baseUrl": "..",
+    "paths": {
+      "@proofkit/fmodata": ["./dist/esm"],
+      "@proofkit/fmodata/*": ["./dist/esm/*"]
+    },
+
+    /* Ensure node_modules types are accessible */
+    "skipLibCheck": false,
+    "moduleResolution": "Bundler",
+
+    /* Include test files */
+    "rootDir": "..",
+    "outDir": "../dist"
+  },
+  "include": [
+    "../dist/esm/**/*.d.ts",
+    "../node_modules/@fetchkit/**/*.d.ts",
+    "./**/*.ts"
+  ],
+  "exclude": ["../src/**/*", "../dist/**/*.js", "../dist/**/*.js.map"]
+}
+
+
+
+
+
+

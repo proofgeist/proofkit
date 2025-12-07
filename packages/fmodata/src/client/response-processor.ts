@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { BaseTable } from "./base-table";
+import type { FMTable } from "../orm/table";
 import type { ExecuteOptions } from "../types";
 import type { ExpandValidationConfig } from "../validation";
 import { ValidationError, ResponseStructureError } from "../errors";
@@ -23,16 +23,15 @@ export type ODataRecordResponse<T = unknown> = ODataResponse<
   }
 >;
 
-
 /**
- * Transform field IDs back to names using the base table configuration
+ * Transform field IDs back to names using the table configuration
  */
 export function applyFieldTransformation<T extends Record<string, unknown>>(
   response: ODataResponse<T> | ODataListResponse<T>,
-  baseTable: BaseTable<Record<string, StandardSchemaV1>, any, any, any>,
+  table: FMTable<any, any>,
   expandConfigs?: ExpandValidationConfig[],
 ): ODataResponse<T> | ODataListResponse<T> {
-  return transformResponseFields(response, baseTable, expandConfigs) as
+  return transformResponseFields(response, table, expandConfigs) as
     | ODataResponse<T>
     | ODataListResponse<T>;
 }

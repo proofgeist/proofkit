@@ -8,11 +8,10 @@
 import path from "path";
 import { config } from "dotenv";
 import {
-  FMServerConnection,
-  defineBaseTable,
-  defineTableOccurrence,
-  buildOccurrences,
-} from "../../src/index";
+  fmTableOccurrence,
+  textField,
+  timestampField,
+} from "@proofkit/fmodata";
 import { z } from "zod/v4";
 
 config({ path: path.resolve(__dirname, "../../.env.local") });
@@ -24,177 +23,103 @@ export const username = process.env.FMODATA_USERNAME;
 export const password = process.env.FMODATA_PASSWORD;
 export const database = process.env.FMODATA_DATABASE;
 
-// Schema for contacts table (used in basic E2E tests)
-export const contactsBase = defineBaseTable({
-  schema: {
-    PrimaryKey: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    hobby: z.string().nullable(),
-    id_user: z.string().nullable(),
+// Define TOs with navigationPaths
+export const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    PrimaryKey: textField().primaryKey(),
+    CreationTimestamp: timestampField(),
+    CreatedBy: textField(),
+    ModificationTimestamp: timestampField(),
+    ModifiedBy: textField(),
+    name: textField(),
+    hobby: textField(),
+    id_user: textField(),
   },
-  idField: "PrimaryKey",
-});
-
-// Schema for users table (used in basic E2E tests)
-export const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    id_customer: z.string().nullable(),
+  {
+    navigationPaths: ["users"],
   },
-  idField: "id",
-});
+);
 
-// Phase 1: Define base TOs (without navigation)
-const _contactsTO = defineTableOccurrence({
-  name: "contacts",
-  baseTable: contactsBase,
-});
-
-const _usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-});
-
-// Phase 2: Build final TOs with navigation
-export const [contactsTO, usersTO] = buildOccurrences({
-  occurrences: [_contactsTO, _usersTO],
-  navigation: {
-    contacts: ["users"],
-    users: ["contacts"],
+export const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey(),
+    CreationTimestamp: timestampField(),
+    CreatedBy: textField(),
+    ModificationTimestamp: timestampField(),
+    ModifiedBy: textField(),
+    name: textField(),
+    id_customer: textField(),
   },
-});
-
-// Schema for contacts table with IDs (used in entity-ids tests)
-export const contactsBaseWithIds = defineBaseTable({
-  schema: {
-    PrimaryKey: z.string(),
-    CreationTimestamp: z.string(),
-    CreatedBy: z.string(),
-    ModificationTimestamp: z.string(),
-    ModifiedBy: z.string(),
-    name_renamed: z.string().nullable(),
-    hobby: z.string().nullable(),
-    id_user: z.string().nullable(),
+  {
+    navigationPaths: ["contacts"],
   },
-  idField: "PrimaryKey",
-  readOnly: [
-    "CreationTimestamp",
-    "CreatedBy",
-    "ModificationTimestamp",
-    "ModifiedBy",
-  ] as const,
-  fmfIds: {
-    PrimaryKey: "FMFID:4296032390",
-    CreationTimestamp: "FMFID:8590999686",
-    CreatedBy: "FMFID:12885966982",
-    ModificationTimestamp: "FMFID:17180934278",
-    ModifiedBy: "FMFID:21475901574",
-    name_renamed: "FMFID:25770868870", // in FM: "name"
-    hobby: "FMFID:30065836166",
-    id_user: "FMFID:38655770758",
+);
+
+// Define TOs with entity IDs and navigationPaths
+export const contactsTOWithIds = fmTableOccurrence(
+  "contacts",
+  {
+    PrimaryKey: textField().primaryKey().entityId("FMFID:4296032390"),
+    CreationTimestamp: timestampField().readOnly().entityId("FMFID:8590999686"),
+    CreatedBy: textField().readOnly().entityId("FMFID:12885966982"),
+    ModificationTimestamp: timestampField()
+      .readOnly()
+      .entityId("FMFID:17180934278"),
+    ModifiedBy: textField().readOnly().entityId("FMFID:21475901574"),
+    name_renamed: textField().entityId("FMFID:25770868870"), // in FM: "name"
+    hobby: textField().entityId("FMFID:30065836166"),
+    id_user: textField().entityId("FMFID:38655770758"),
   },
-});
-
-// Schema for users table with IDs (used in entity-ids tests)
-export const usersBaseWithIds = defineBaseTable({
-  schema: {
-    id: z.string(),
-    CreationTimestamp: z.string(),
-    CreatedBy: z.string(),
-    ModificationTimestamp: z.string(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    id_customer: z.string().nullable(),
+  {
+    entityId: "FMTID:1065094",
+    navigationPaths: ["users"],
   },
-  idField: "id",
-  readOnly: [
-    "CreationTimestamp",
-    "CreatedBy",
-    "ModifiedBy",
-    "ModificationTimestamp",
-  ] as const,
-  fmfIds: {
-    id: "FMFID:4296032389",
-    CreationTimestamp: "FMFID:8590999685",
-    CreatedBy: "FMFID:12885966981",
-    ModificationTimestamp: "FMFID:17180934277",
-    ModifiedBy: "FMFID:21475901573",
-    name: "FMFID:25770868869",
-    id_customer: "FMFID:30065836165",
+);
+
+export const usersTOWithIds = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey().entityId("FMFID:4296032389"),
+    CreationTimestamp: timestampField().readOnly().entityId("FMFID:8590999685"),
+    CreatedBy: textField().readOnly().entityId("FMFID:12885966981"),
+    ModificationTimestamp: timestampField()
+      .readOnly()
+      .entityId("FMFID:17180934277"),
+    ModifiedBy: textField().readOnly().entityId("FMFID:21475901573"),
+    name: textField().entityId("FMFID:25770868869"),
+    id_customer: textField().entityId("FMFID:30065836165"),
   },
-});
-
-// Phase 1: Define base TOs with entity IDs (without navigation)
-const _contactsTOWithIds = defineTableOccurrence({
-  fmtId: "FMTID:1065094",
-  name: "contacts",
-  baseTable: contactsBaseWithIds,
-});
-
-const _usersTOWithIds = defineTableOccurrence({
-  fmtId: "FMTID:1065093",
-  name: "users",
-  baseTable: usersBaseWithIds,
-});
-
-// Phase 2: Build final TOs with navigation
-export const occurrencesWithIds = buildOccurrences({
-  occurrences: [_contactsTOWithIds, _usersTOWithIds],
-  navigation: {
-    contacts: ["users"],
-    users: ["contacts"],
+  {
+    entityId: "FMTID:1065093",
+    navigationPaths: ["contacts"],
   },
-});
+);
 
-// Export individual TOs for tests that need them
-export const [contactsTOWithIds, usersTOWithIds] = occurrencesWithIds;
+// Export occurrences array for backward compatibility
+export const occurrencesWithIds = [contactsTOWithIds, usersTOWithIds] as const;
 
 // Schema for batch operations tests
-export const contactsBaseForBatch = defineBaseTable({
-  schema: {
-    PrimaryKey: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    hobby: z
-      .string()
-      .nullable()
-      .transform((val) => "static-value"),
-    id_user: z.string().nullable(),
-  },
-  idField: "PrimaryKey",
+export const contactsTOForBatch = fmTableOccurrence("contacts", {
+  PrimaryKey: textField().primaryKey(),
+  CreationTimestamp: timestampField(),
+  CreatedBy: textField(),
+  ModificationTimestamp: timestampField(),
+  ModifiedBy: textField(),
+  name: textField(),
+  hobby: textField().readValidator(
+    z.string().transform((val) => "static-value"),
+  ),
+  id_user: textField(),
 });
 
-export const usersBaseForBatch = defineBaseTable({
-  schema: {
-    id: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    id_customer: z.string().nullable(),
-  },
-  idField: "id",
-});
-
-export const contactsTOForBatch = defineTableOccurrence({
-  name: "contacts" as const,
-  baseTable: contactsBaseForBatch,
-});
-
-export const usersTOForBatch = defineTableOccurrence({
-  name: "users" as const,
-  baseTable: usersBaseForBatch,
+export const usersTOForBatch = fmTableOccurrence("users", {
+  id: textField().primaryKey(),
+  CreationTimestamp: timestampField(),
+  CreatedBy: textField(),
+  ModificationTimestamp: timestampField(),
+  ModifiedBy: textField(),
+  name: textField(),
+  id_customer: textField(),
 });

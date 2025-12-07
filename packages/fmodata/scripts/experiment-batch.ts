@@ -15,8 +15,10 @@ import { fileURLToPath } from "url";
 import { z } from "zod/v4";
 import {
   FMServerConnection,
-  defineBaseTable,
-  defineTableOccurrence,
+  fmTableOccurrence,
+  textField,
+  timestampField,
+  eq,
 } from "../src/index";
 
 // Get __dirname equivalent in ES modules
@@ -38,23 +40,15 @@ if (!serverUrl || !username || !password || !database) {
 }
 
 // Define schemas
-const contactsBase = defineBaseTable({
-  schema: {
-    PrimaryKey: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    hobby: z.string().nullable(),
-    id_user: z.string().nullable(),
-  },
-  idField: "PrimaryKey",
-});
-
-const contactsTO = defineTableOccurrence({
-  name: "contacts" as const,
-  baseTable: contactsBase,
+const contactsTO = fmTableOccurrence("contacts", {
+  PrimaryKey: textField().primaryKey(),
+  CreationTimestamp: timestampField(),
+  CreatedBy: textField(),
+  ModificationTimestamp: timestampField(),
+  ModifiedBy: textField(),
+  name: textField(),
+  hobby: textField(),
+  id_user: textField(),
 });
 
 // Create connection
@@ -124,7 +118,9 @@ async function experiment1_MultipleInserts() {
 
 async function experiment2_MixedOperations() {
   console.log("\n" + "=".repeat(60));
-  console.log("EXPERIMENT 2: Mixed Operations (GET + INSERT + UPDATE + DELETE)");
+  console.log(
+    "EXPERIMENT 2: Mixed Operations (GET + INSERT + UPDATE + DELETE)",
+  );
   console.log("=".repeat(60));
 
   // First, create a record we can update/delete
@@ -172,7 +168,11 @@ async function experiment2_MixedOperations() {
   if (result.data) {
     // Track insert result for cleanup
     const insertResult = result.data[1];
-    if (insertResult && typeof insertResult === "object" && "PrimaryKey" in insertResult) {
+    if (
+      insertResult &&
+      typeof insertResult === "object" &&
+      "PrimaryKey" in insertResult
+    ) {
       createdRecordIds.push(insertResult.PrimaryKey as string);
     }
   }
@@ -205,8 +205,12 @@ async function experiment3_FailingOperation() {
     hobby: "Should this succeed?",
   });
 
-  console.log("\nExecuting batch with: INSERT (valid), UPDATE (invalid ID), INSERT (valid)...");
-  console.log("Question: What happens to the third operation when the second fails?");
+  console.log(
+    "\nExecuting batch with: INSERT (valid), UPDATE (invalid ID), INSERT (valid)...",
+  );
+  console.log(
+    "Question: What happens to the third operation when the second fails?",
+  );
 
   const result = await db.batch([insert1, failingUpdate, insert2]).execute();
 
@@ -269,7 +273,9 @@ async function experiment4_FailingDelete() {
 
 async function experiment5_AllGetWithOneFailure() {
   console.log("\n" + "=".repeat(60));
-  console.log("EXPERIMENT 5: Multiple GETs with One Filter that Returns Nothing");
+  console.log(
+    "EXPERIMENT 5: Multiple GETs with One Filter that Returns Nothing",
+  );
   console.log("=".repeat(60));
 
   // Query that should return results
@@ -277,14 +283,16 @@ async function experiment5_AllGetWithOneFailure() {
 
   // Query with a filter that returns empty (not an error, just no results)
   const query2 = db
-    .from("contacts")
+    .from(contactsTO)
     .list()
-    .filter({ name: "THIS_NAME_DEFINITELY_DOES_NOT_EXIST_12345" });
+    .where(eq(contactsTO.name, "THIS_NAME_DEFINITELY_DOES_NOT_EXIST_12345"));
 
   // Another query that should return results
   const query3 = db.from("contacts").list().top(1);
 
-  console.log("\nExecuting batch with: GET (valid), GET (empty filter), GET (valid)...");
+  console.log(
+    "\nExecuting batch with: GET (valid), GET (empty filter), GET (valid)...",
+  );
 
   const result = await db.batch([query1, query2, query3]).execute();
 
@@ -302,10 +310,10 @@ async function experiment6_RawResponseInspection() {
   // Make a direct batch request to see raw response
   const timestamp = Date.now();
   const boundary = "batch_direct_test_123";
-  
+
   const baseUrl = `${serverUrl}/fmi/odata/v4/${database}`;
   const batchUrl = `${baseUrl}/$batch`;
-  
+
   // Build a simple batch body with one GET
   const batchBody = [
     `--${boundary}`,
@@ -327,7 +335,7 @@ async function experiment6_RawResponseInspection() {
   const response = await fetch(batchUrl, {
     method: "POST",
     headers: {
-      "Authorization": authHeader,
+      Authorization: authHeader,
       "Content-Type": `multipart/mixed; boundary=${boundary}`,
       "OData-Version": "4.0",
     },
@@ -352,10 +360,10 @@ async function experiment7_RawResponseWithInsert() {
   const timestamp = Date.now();
   const boundary = "batch_insert_test_456";
   const changesetBoundary = "changeset_insert_789";
-  
+
   const baseUrl = `${serverUrl}/fmi/odata/v4/${database}`;
   const batchUrl = `${baseUrl}/$batch`;
-  
+
   const insertBody = JSON.stringify({
     name: `Direct Insert Test - ${timestamp}`,
     hobby: "Testing",
@@ -388,7 +396,7 @@ async function experiment7_RawResponseWithInsert() {
   const response = await fetch(batchUrl, {
     method: "POST",
     headers: {
-      "Authorization": authHeader,
+      Authorization: authHeader,
       "Content-Type": `multipart/mixed; boundary=${boundary}`,
       "OData-Version": "4.0",
     },
@@ -403,7 +411,7 @@ async function experiment7_RawResponseWithInsert() {
   console.log("\n--- Raw Response Body ---");
   console.log(responseText);
   console.log("--- End Raw Response ---");
-  
+
   // Try to extract created record ID for cleanup
   const pkMatch = responseText.match(/"PrimaryKey":\s*"([^"]+)"/);
   if (pkMatch && pkMatch[1]) {
@@ -454,7 +462,7 @@ async function experiment8_TrueError() {
   const response = await fetch(batchUrl, {
     method: "POST",
     headers: {
-      "Authorization": authHeader,
+      Authorization: authHeader,
       "Content-Type": `multipart/mixed; boundary=${boundary}`,
       "OData-Version": "4.0",
     },
@@ -479,13 +487,19 @@ async function experiment9_RawResponseWithFailure() {
   const boundary = "batch_fail_test";
   const cs1 = "changeset_1";
   const cs2 = "changeset_2";
-  
+
   const baseUrl = `${serverUrl}/fmi/odata/v4/${database}`;
   const batchUrl = `${baseUrl}/$batch`;
-  
-  const insertBody1 = JSON.stringify({ name: `Before Fail - ${timestamp}`, hobby: "Test" });
+
+  const insertBody1 = JSON.stringify({
+    name: `Before Fail - ${timestamp}`,
+    hobby: "Test",
+  });
   const updateBody = JSON.stringify({ hobby: "Should fail" });
-  const insertBody2 = JSON.stringify({ name: `After Fail - ${timestamp}`, hobby: "Test" });
+  const insertBody2 = JSON.stringify({
+    name: `After Fail - ${timestamp}`,
+    hobby: "Test",
+  });
 
   // Build: INSERT (valid), UPDATE (invalid ID), INSERT (valid)
   const batchBody = [
@@ -527,7 +541,7 @@ async function experiment9_RawResponseWithFailure() {
     "Content-Transfer-Encoding: binary",
     "",
     `POST ${baseUrl}/contacts HTTP/1.1`,
-    "Content-Type: application/json", 
+    "Content-Type: application/json",
     "Prefer: return=representation",
     `Content-Length: ${insertBody2.length}`,
     "",
@@ -543,7 +557,7 @@ async function experiment9_RawResponseWithFailure() {
   const response = await fetch(batchUrl, {
     method: "POST",
     headers: {
-      "Authorization": authHeader,
+      Authorization: authHeader,
       "Content-Type": `multipart/mixed; boundary=${boundary}`,
       "OData-Version": "4.0",
     },
@@ -557,7 +571,7 @@ async function experiment9_RawResponseWithFailure() {
   console.log("\n--- Raw Response Body ---");
   console.log(responseText);
   console.log("--- End Raw Response ---");
-  
+
   // Extract created record IDs for cleanup
   const pkMatches = responseText.matchAll(/"PrimaryKey":\s*"([^"]+)"/g);
   for (const match of pkMatches) {
@@ -598,4 +612,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

@@ -4,48 +4,47 @@ import type {
   Result,
   WithSystemFields,
   ExecuteOptions,
+  ExecuteMethodOptions,
 } from "../types";
 import { getAcceptHeader } from "../types";
-import type { TableOccurrence } from "./table-occurrence";
-import type { BaseTable } from "./base-table";
+import type { FMTable, InferSchemaOutputFromFMTable } from "../orm/table";
+import {
+  getTableName,
+  getTableId as getTableIdHelper,
+  getBaseTableConfig,
+  isUsingEntityIds,
+} from "../orm/table";
 import { QueryBuilder } from "./query-builder";
 import { type FFetchOptions } from "@fetchkit/ffetch";
-import {
-  transformFieldNamesToIds,
-  transformTableName,
-  getTableIdentifiers,
-} from "../transform";
+import { transformFieldNamesToIds } from "../transform";
 import { parseErrorResponse } from "./error-parser";
+import { validateAndTransformInput } from "../validation";
 
 /**
  * Initial update builder returned from EntitySet.update(data)
  * Requires calling .byId() or .where() before .execute() is available
  */
 export class UpdateBuilder<
-  T extends Record<string, any>,
-  BT extends BaseTable<any, any, any, any>,
+  Occ extends FMTable<any, any>,
   ReturnPreference extends "minimal" | "representation" = "minimal",
 > {
-  private tableName: string;
   private databaseName: string;
   private context: ExecutionContext;
-  private occurrence?: TableOccurrence<any, any, any, any>;
-  private data: Partial<T>;
+  private table: Occ;
+  private data: Partial<InferSchemaOutputFromFMTable<Occ>>;
   private returnPreference: ReturnPreference;
 
   private databaseUseEntityIds: boolean;
 
   constructor(config: {
-    occurrence?: TableOccurrence<any, any, any, any>;
-    tableName: string;
+    occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
-    data: Partial<T>;
+    data: Partial<InferSchemaOutputFromFMTable<Occ>>;
     returnPreference: ReturnPreference;
     databaseUseEntityIds?: boolean;
   }) {
-    this.occurrence = config.occurrence;
-    this.tableName = config.tableName;
+    this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.data = config.data;
@@ -59,10 +58,9 @@ export class UpdateBuilder<
    */
   byId(
     id: string | number,
-  ): ExecutableUpdateBuilder<T, true, ReturnPreference> {
-    return new ExecutableUpdateBuilder<T, true, ReturnPreference>({
-      occurrence: this.occurrence,
-      tableName: this.tableName,
+  ): ExecutableUpdateBuilder<Occ, true, ReturnPreference> {
+    return new ExecutableUpdateBuilder<Occ, true, ReturnPreference>({
+      occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       data: this.data,
@@ -79,20 +77,11 @@ export class UpdateBuilder<
    * @param fn Callback that receives a QueryBuilder for building the filter
    */
   where(
-    fn: (
-      q: QueryBuilder<WithSystemFields<T>>,
-    ) => QueryBuilder<WithSystemFields<T>>,
-  ): ExecutableUpdateBuilder<T, true, ReturnPreference> {
+    fn: (q: QueryBuilder<Occ>) => QueryBuilder<Occ>,
+  ): ExecutableUpdateBuilder<Occ, true, ReturnPreference> {
     // Create a QueryBuilder for the user to configure
-    const queryBuilder = new QueryBuilder<
-      WithSystemFields<T>,
-      keyof WithSystemFields<T>,
-      false,
-      false,
-      undefined
-    >({
-      occurrence: undefined,
-      tableName: this.tableName,
+    const queryBuilder = new QueryBuilder<Occ>({
+      occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
     });
@@ -100,9 +89,8 @@ export class UpdateBuilder<
     // Let the user configure it
     const configuredBuilder = fn(queryBuilder);
 
-    return new ExecutableUpdateBuilder<T, true, ReturnPreference>({
-      occurrence: this.occurrence,
-      tableName: this.tableName,
+    return new ExecutableUpdateBuilder<Occ, true, ReturnPreference>({
+      occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       data: this.data,
@@ -120,39 +108,38 @@ export class UpdateBuilder<
  * Can return either updated count or full record based on returnFullRecord option
  */
 export class ExecutableUpdateBuilder<
-  T extends Record<string, any>,
+  Occ extends FMTable<any, any>,
   IsByFilter extends boolean,
   ReturnPreference extends "minimal" | "representation" = "minimal",
 > implements
     ExecutableBuilder<
-      ReturnPreference extends "minimal" ? { updatedCount: number } : T
+      ReturnPreference extends "minimal"
+        ? { updatedCount: number }
+        : InferSchemaOutputFromFMTable<Occ>
     >
 {
-  private tableName: string;
   private databaseName: string;
   private context: ExecutionContext;
-  private occurrence?: TableOccurrence<any, any, any, any>;
-  private data: Partial<T>;
+  private table: Occ;
+  private data: Partial<InferSchemaOutputFromFMTable<Occ>>;
   private mode: "byId" | "byFilter";
   private recordId?: string | number;
-  private queryBuilder?: QueryBuilder<any>;
+  private queryBuilder?: QueryBuilder<Occ>;
   private returnPreference: ReturnPreference;
   private databaseUseEntityIds: boolean;
 
   constructor(config: {
-    occurrence?: TableOccurrence<any, any, any, any>;
-    tableName: string;
+    occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
-    data: Partial<T>;
+    data: Partial<InferSchemaOutputFromFMTable<Occ>>;
     mode: "byId" | "byFilter";
     recordId?: string | number;
-    queryBuilder?: QueryBuilder<any>;
+    queryBuilder?: QueryBuilder<Occ>;
     returnPreference: ReturnPreference;
     databaseUseEntityIds?: boolean;
   }) {
-    this.occurrence = config.occurrence;
-    this.tableName = config.tableName;
+    this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.data = config.data;
@@ -181,30 +168,29 @@ export class ExecutableUpdateBuilder<
    * @param useEntityIds - Optional override for entity ID usage
    */
   private getTableId(useEntityIds?: boolean): string {
-    if (!this.occurrence) {
-      return this.tableName;
-    }
-
     const contextDefault = this.context._getUseEntityIds?.() ?? false;
     const shouldUseIds = useEntityIds ?? contextDefault;
 
     if (shouldUseIds) {
-      const identifiers = getTableIdentifiers(this.occurrence);
-      if (!identifiers.id) {
+      if (!isUsingEntityIds(this.table)) {
         throw new Error(
-          `useEntityIds is true but TableOccurrence "${identifiers.name}" does not have an fmtId defined`,
+          `useEntityIds is true but table "${getTableName(this.table)}" does not have entity IDs configured`,
         );
       }
-      return identifiers.id;
+      return getTableIdHelper(this.table);
     }
 
-    return this.occurrence.getTableName();
+    return getTableName(this.table);
   }
 
   async execute(
-    options?: RequestInit & FFetchOptions & { useEntityIds?: boolean },
+    options?: ExecuteMethodOptions<ExecuteOptions>,
   ): Promise<
-    Result<ReturnPreference extends "minimal" ? { updatedCount: number } : T>
+    Result<
+      ReturnPreference extends "minimal"
+        ? { updatedCount: number }
+        : InferSchemaOutputFromFMTable<Occ>
+    >
   > {
     // Merge database-level useEntityIds with per-request options
     const mergedOptions = this.mergeExecuteOptions(options);
@@ -212,14 +198,31 @@ export class ExecutableUpdateBuilder<
     // Get table identifier with override support
     const tableId = this.getTableId(mergedOptions.useEntityIds);
 
+    // Validate and transform input data using input validators (writeValidators)
+    let validatedData = this.data;
+    if (this.table) {
+      const baseTableConfig = getBaseTableConfig(this.table);
+      const inputSchema = baseTableConfig.inputSchema;
+
+      try {
+        validatedData = await validateAndTransformInput(this.data, inputSchema);
+      } catch (error) {
+        // If validation fails, return error immediately
+        return {
+          data: undefined,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as any;
+      }
+    }
+
     // Transform field names to FMFIDs if using entity IDs
     // Only transform if useEntityIds resolves to true (respects per-request override)
     const shouldUseIds = mergedOptions.useEntityIds ?? false;
 
     const transformedData =
-      this.occurrence?.baseTable && shouldUseIds
-        ? transformFieldNamesToIds(this.data, this.occurrence.baseTable)
-        : this.data;
+      this.table && shouldUseIds
+        ? transformFieldNamesToIds(validatedData, this.table)
+        : validatedData;
 
     let url: string;
 
@@ -236,10 +239,11 @@ export class ExecutableUpdateBuilder<
       const queryString = this.queryBuilder.getQueryString();
       // The query string will have the tableId already transformed by QueryBuilder
       // Remove the leading "/" and table name from the query string as we'll build our own URL
+      const tableName = getTableName(this.table);
       const queryParams = queryString.startsWith(`/${tableId}`)
         ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${this.tableName}`)
-          ? queryString.slice(`/${this.tableName}`.length)
+        : queryString.startsWith(`/${tableName}`)
+          ? queryString.slice(`/${tableName}`.length)
           : queryString;
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
@@ -274,7 +278,7 @@ export class ExecutableUpdateBuilder<
       return {
         data: response as ReturnPreference extends "minimal"
           ? { updatedCount: number }
-          : T,
+          : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
     } else {
@@ -291,7 +295,7 @@ export class ExecutableUpdateBuilder<
       return {
         data: { updatedCount } as ReturnPreference extends "minimal"
           ? { updatedCount: number }
-          : T,
+          : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
     }
@@ -299,12 +303,13 @@ export class ExecutableUpdateBuilder<
 
   getRequestConfig(): { method: string; url: string; body?: any } {
     // For batch operations, use database-level setting (no per-request override available here)
+    // Note: Input validation happens in execute() and processResponse() for batch operations
     const tableId = this.getTableId(this.databaseUseEntityIds);
 
     // Transform field names to FMFIDs if using entity IDs
     const transformedData =
-      this.occurrence?.baseTable && this.databaseUseEntityIds
-        ? transformFieldNamesToIds(this.data, this.occurrence.baseTable)
+      this.table && this.databaseUseEntityIds
+        ? transformFieldNamesToIds(this.data, this.table)
         : this.data;
 
     let url: string;
@@ -317,10 +322,11 @@ export class ExecutableUpdateBuilder<
       }
 
       const queryString = this.queryBuilder.getQueryString();
+      const tableName = getTableName(this.table);
       const queryParams = queryString.startsWith(`/${tableId}`)
         ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${this.tableName}`)
-          ? queryString.slice(`/${this.tableName}`.length)
+        : queryString.startsWith(`/${tableName}`)
+          ? queryString.slice(`/${tableName}`.length)
           : queryString;
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
@@ -351,13 +357,18 @@ export class ExecutableUpdateBuilder<
     response: Response,
     options?: ExecuteOptions,
   ): Promise<
-    Result<ReturnPreference extends "minimal" ? { updatedCount: number } : T>
+    Result<
+      ReturnPreference extends "minimal"
+        ? { updatedCount: number }
+        : InferSchemaOutputFromFMTable<Occ>
+    >
   > {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
+      const tableName = getTableName(this.table);
       const error = await parseErrorResponse(
         response,
-        response.url || `/${this.databaseName}/${this.tableName}`,
+        response.url || `/${this.databaseName}/${tableName}`,
       );
       return { data: undefined, error };
     }
@@ -371,12 +382,29 @@ export class ExecutableUpdateBuilder<
       return {
         data: { updatedCount } as ReturnPreference extends "minimal"
           ? { updatedCount: number }
-          : T,
+          : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
     }
 
     const rawResponse = JSON.parse(text);
+
+    // Validate and transform input data using input validators (writeValidators)
+    // This is needed for processResponse because it's called from batch operations
+    // where the data hasn't been validated yet
+    let validatedData = this.data;
+    if (this.table) {
+      const baseTableConfig = getBaseTableConfig(this.table);
+      const inputSchema = baseTableConfig.inputSchema;
+      try {
+        validatedData = await validateAndTransformInput(this.data, inputSchema);
+      } catch (error) {
+        return {
+          data: undefined,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as any;
+      }
+    }
 
     // Handle based on return preference
     if (this.returnPreference === "representation") {
@@ -384,7 +412,7 @@ export class ExecutableUpdateBuilder<
       return {
         data: rawResponse as ReturnPreference extends "minimal"
           ? { updatedCount: number }
-          : T,
+          : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
     } else {
@@ -401,7 +429,7 @@ export class ExecutableUpdateBuilder<
       return {
         data: { updatedCount } as ReturnPreference extends "minimal"
           ? { updatedCount: number }
-          : T,
+          : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
     }

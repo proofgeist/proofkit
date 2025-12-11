@@ -11,12 +11,11 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod/v4";
 import {
-  defineBaseTable,
-  defineTableOccurrence,
-  buildOccurrences,
+  fmTableOccurrence,
+  textField,
   isODataError,
   isResponseStructureError,
-} from "../src/index";
+} from "@proofkit/fmodata";
 import { createMockClient } from "./utils/test-setup";
 
 /**
@@ -50,27 +49,12 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
   const client = createMockClient();
 
   // Define simple schemas for batch testing
-  const addressesBase = defineBaseTable({
-    schema: {
-      id: z.string(),
-      street: z.string().nullable(),
-    },
-    idField: "id",
+  const addressesTO = fmTableOccurrence("addresses", {
+    id: textField().primaryKey(),
+    street: textField(),
   });
 
-  const _addressesTO = defineTableOccurrence({
-    name: "addresses",
-    baseTable: addressesBase,
-  });
-
-  const [addressesTO] = buildOccurrences({
-    occurrences: [_addressesTO],
-    navigation: {},
-  });
-
-  const db = client.database("test_db", {
-    occurrences: [addressesTO],
-  });
+  const db = client.database("test_db");
 
   it("should return ODataError with helpful message instead of vague ResponseStructureError", async () => {
     // This simulates the exact scenario from the user's error:
@@ -118,9 +102,9 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
     ].join("\r\n");
 
     // Create three queries (simulating user's punchlistQuery, purchaseOrdersQuery, ticketsQuery)
-    const query1 = db.from("addresses").list();
-    const query2 = db.from("addresses").list(); // Will fail with 404 in mock
-    const query3 = db.from("addresses").list();
+    const query1 = db.from(addressesTO).list();
+    const query2 = db.from(addressesTO).list(); // Will fail with 404 in mock
+    const query3 = db.from(addressesTO).list();
 
     // Execute batch with mock
     const result = await db.batch([query1, query2, query3]).execute({
@@ -184,7 +168,7 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
       "--batch_boundary--",
     ].join("\r\n");
 
-    const badQuery = db.from("addresses").list();
+    const badQuery = db.from(addressesTO).list();
 
     const result = await db.batch([badQuery]).execute({
       fetchHandler: createBatchMockFetch(mockBatchResponse),
@@ -208,4 +192,3 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
     }
   });
 });
-

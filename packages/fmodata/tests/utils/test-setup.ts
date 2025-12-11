@@ -1,29 +1,29 @@
 /**
  * Shared Test Setup Components
  *
- * Provides reusable base tables, table occurrences, and mock client
+ * Provides reusable table occurrences and mock client
  * for use across test files. Based on e2e.test.ts schemas.
  */
 
 import {
   FMServerConnection,
-  defineBaseTable,
-  defineTableOccurrence,
-  buildOccurrences,
-} from "../../src/index";
+  fmTableOccurrence,
+  textField,
+  numberField,
+  timestampField,
+  dateField,
+  type InferTableSchema,
+  type FieldBuilder,
+} from "@proofkit/fmodata";
 import { z } from "zod/v4";
-import { InferSchemaType } from "../../src/types";
 
-// Base Tables matching e2e.test.ts schemas
-
-export const usersSimpleBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    name: z.string(),
-    // intentionally missing fields to test validation
-  },
-  idField: "id",
-});
+// Helper function for boolean fields (FileMaker stores as 0/1)
+const booleanField = (): FieldBuilder<boolean, boolean, number | null, false> =>
+  numberField()
+    // Parses the number to a boolean when reading from the database
+    .readValidator(z.coerce.boolean())
+    // Allows the user to pass a boolean when inserting or updating, converting it back to number
+    .writeValidator(z.boolean().transform((val) => (val ? 1 : 0)));
 
 export const hobbyEnum = z.enum([
   "Board games",
@@ -32,234 +32,180 @@ export const hobbyEnum = z.enum([
   "Unknown",
 ]);
 
-export const contactsBase = defineBaseTable({
-  schema: {
-    PrimaryKey: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    hobby: hobbyEnum.nullable().catch("Unknown"),
-    id_user: z.string().nullable(),
+// Table occurrences using new ORM patterns
+
+export const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    PrimaryKey: textField().primaryKey(),
+    CreationTimestamp: timestampField().readOnly(),
+    CreatedBy: textField().readOnly(),
+    ModificationTimestamp: timestampField().readOnly(),
+    ModifiedBy: textField(),
+    name: textField(),
+    hobby: textField().readValidator(hobbyEnum.nullable().catch("Unknown")),
+    id_user: textField(),
+    image: containerField(), // should not be included in the default select when set to "all" or "schema"
   },
-  idField: "PrimaryKey",
-});
-
-export const usersBase = defineBaseTable({
-  schema: {
-    id: z.uuid(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    active: z.coerce.boolean(),
-    fake_field: z
-      .string()
-      .catch("I only exist in the schema, not the database"),
-    id_customer: z.string().nullable(),
+  {
+    defaultSelect: "all",
+    navigationPaths: ["users", "invoices"],
   },
-  idField: "id",
-});
+);
 
-export const invoicesBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    invoiceNumber: z.string(),
-    id_contact: z.string().nullable(),
-    invoiceDate: z.string().nullable(),
-    dueDate: z.string().nullable(),
-    total: z.number().nullable(),
-    status: z.enum(["draft", "sent", "paid", "overdue"]).nullable(),
+export const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey().readValidator(z.uuid()),
+    CreationTimestamp: timestampField(),
+    CreatedBy: textField(),
+    ModificationTimestamp: timestampField(),
+    ModifiedBy: textField(),
+    name: textField(),
+    active: booleanField(),
+    fake_field: textField().readValidator(
+      z.string().catch("I only exist in the schema, not the database"),
+    ),
+    id_customer: textField(),
   },
-  idField: "id",
-});
-
-export const lineItemsBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    id_invoice: z.string().nullable(),
-    description: z.string().nullable(),
-    quantity: z.number().nullable(),
-    unitPrice: z.number().nullable(),
-    lineTotal: z.number().nullable(),
+  {
+    defaultSelect: "all",
+    navigationPaths: ["contacts"],
   },
-  idField: "id",
-});
+);
 
-export const contactsBaseWithIds = defineBaseTable({
-  schema: {
-    PrimaryKey: z.string(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    hobby: hobbyEnum.nullable().catch("Unknown"),
-    id_user: z.string().nullable(),
+export const invoices = fmTableOccurrence(
+  "invoices",
+  {
+    id: textField().primaryKey(),
+    invoiceNumber: textField().notNull(),
+    id_contact: textField(),
+    invoiceDate: dateField(),
+    dueDate: dateField(),
+    total: numberField(),
+    status: textField().readValidator(
+      z.enum(["draft", "sent", "paid", "overdue"]).nullable(),
+    ),
   },
-  idField: "PrimaryKey",
-  fmfIds: {
-    PrimaryKey: "FMFID:10",
-    CreationTimestamp: "FMFID:11",
-    CreatedBy: "FMFID:12",
-    ModificationTimestamp: "FMFID:13",
-    ModifiedBy: "FMFID:14",
-    name: "FMFID:15",
-    hobby: "FMFID:16",
-    id_user: "FMFID:17",
+  {
+    defaultSelect: "all",
+    navigationPaths: ["lineItems", "contacts"],
   },
-});
+);
 
-export const usersBaseWithIds = defineBaseTable({
-  schema: {
-    id: z.uuid(),
-    CreationTimestamp: z.string().nullable(),
-    CreatedBy: z.string().nullable(),
-    ModificationTimestamp: z.string().nullable(),
-    ModifiedBy: z.string().nullable(),
-    name: z.string().nullable(),
-    active: z.coerce.boolean(),
-    fake_field: z
-      .string()
-      .catch("I only exist in the schema, not the database"),
-    id_customer: z.string().nullable(),
+export const lineItems = fmTableOccurrence(
+  "lineItems",
+  {
+    id: textField().primaryKey(),
+    id_invoice: textField(),
+    description: textField(),
+    quantity: numberField(),
+    unitPrice: numberField(),
+    lineTotal: numberField(),
   },
-  idField: "id",
-  fmfIds: {
-    id: "FMFID:1",
-    CreationTimestamp: "FMFID:2",
-    CreatedBy: "FMFID:3",
-    ModificationTimestamp: "FMFID:4",
-    ModifiedBy: "FMFID:5",
-    name: "FMFID:6",
-    active: "FMFID:7",
-    fake_field: "FMFID:8",
-    id_customer: "FMFID:9",
+  {
+    defaultSelect: "all",
+    navigationPaths: ["invoices"],
   },
-});
+);
 
-// Phase 1: Define base TableOccurrences (without navigation)
-const _contactsTO = defineTableOccurrence({
-  name: "contacts",
-  baseTable: contactsBase,
-  defaultSelect: "all",
-});
-
-const _usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-  defaultSelect: "all",
-});
-
-const _invoicesTO = defineTableOccurrence({
-  name: "invoices",
-  baseTable: invoicesBase,
-  defaultSelect: "all",
-});
-
-const _lineItemsTO = defineTableOccurrence({
-  name: "lineItems",
-  baseTable: lineItemsBase,
-  defaultSelect: "all",
-});
-
-// Phase 2: Build final TOs with navigation
-export const occurrences = buildOccurrences({
-  occurrences: [_contactsTO, _usersTO, _invoicesTO, _lineItemsTO],
-  navigation: {
-    contacts: ["users", "invoices"],
-    users: ["contacts"],
-    invoices: ["lineItems", "contacts"],
-    lineItems: ["invoices"],
+// Table occurrences with entity IDs
+export const contactsTOWithIds = fmTableOccurrence(
+  "contacts",
+  {
+    PrimaryKey: textField().primaryKey().entityId("FMFID:10"),
+    CreationTimestamp: timestampField().entityId("FMFID:11"),
+    CreatedBy: textField().entityId("FMFID:12"),
+    ModificationTimestamp: timestampField().entityId("FMFID:13"),
+    ModifiedBy: textField().entityId("FMFID:14"),
+    name: textField().entityId("FMFID:15"),
+    hobby: textField()
+      .entityId("FMFID:16")
+      .readValidator(hobbyEnum.nullable().catch("Unknown")),
+    id_user: textField().entityId("FMFID:17"),
   },
-});
-
-// Phase 1: Define base TOs with entity IDs (without navigation)
-const _contactsTOWithIds = defineTableOccurrence({
-  name: "contacts",
-  baseTable: contactsBaseWithIds,
-  fmtId: "FMTID:200",
-  defaultSelect: "all",
-});
-
-const _usersTOWithIds = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBaseWithIds,
-  fmtId: "FMTID:1065093",
-  defaultSelect: "all",
-});
-
-// type check only, don't run this
-() => {
-  buildOccurrences({
-    occurrences: [_contactsTO, _usersTO],
-    navigation: {
-      // @ts-expect-error - navigation to self is not allowed
-      contacts: ["contacts"],
-      // @ts-expect-error - navigation to nonexistent table is not allowed
-      users: ["other"],
-    },
-  });
-
-  // Full navigation
-  buildOccurrences({
-    occurrences: [_contactsTOWithIds, _usersTOWithIds],
-    navigation: {
-      contacts: ["users"],
-      users: ["contacts"],
-    },
-  });
-
-  // Partial navigation
-  buildOccurrences({
-    occurrences: [_contactsTOWithIds, _usersTOWithIds],
-    navigation: {
-      contacts: ["users"],
-    },
-  });
-
-  // No navigation
-  buildOccurrences({
-    occurrences: [_contactsTOWithIds, _usersTOWithIds],
-  });
-};
-
-// Phase 2: Build final TOs with navigation
-export const occurrencesWithIds = buildOccurrences({
-  occurrences: [_contactsTOWithIds, _usersTOWithIds],
-  navigation: {
-    contacts: ["users"],
-    users: ["contacts"],
+  {
+    entityId: "FMTID:200",
+    useEntityIds: true,
+    defaultSelect: "all",
+    navigationPaths: ["users"],
   },
-});
+);
 
-export const usersSimpleTO = defineTableOccurrence({
-  name: "users", // same name as usersTO to test validation
-  baseTable: usersSimpleBase,
-});
-
-defineBaseTable({
-  schema: {
-    id: z.string(),
-    name: z.string(),
-    // extra: z.string(), // try omitting this field
+export const usersTOWithIds = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey().entityId("FMFID:1").readValidator(z.uuid()),
+    CreationTimestamp: timestampField().entityId("FMFID:2"),
+    CreatedBy: textField().entityId("FMFID:3"),
+    ModificationTimestamp: timestampField().entityId("FMFID:4"),
+    ModifiedBy: textField().entityId("FMFID:5"),
+    name: textField().entityId("FMFID:6"),
+    active: booleanField().entityId("FMFID:7"),
+    fake_field: textField()
+      .entityId("FMFID:8")
+      .readValidator(
+        z.string().catch("I only exist in the schema, not the database"),
+      ),
+    id_customer: textField().entityId("FMFID:9"),
   },
-  idField: "id",
-  required: ["extra"],
-  fmfIds: {
-    id: "FMFID:1",
-    name: "FMFID:2",
-    extra: "FMFID:3", // no TS error
+  {
+    entityId: "FMTID:1065093",
+    useEntityIds: true,
+    defaultSelect: "all",
+    navigationPaths: ["contacts"],
   },
+);
+
+export const arbitraryTable = fmTableOccurrence("arbitrary_table", {
+  id: textField().primaryKey(),
+  name: textField().notNull(),
 });
 
-// Types
-export type ContactSchema = InferSchemaType<typeof contactsBase.schema>;
-export type UserSchema = InferSchemaType<typeof usersBase.schema>;
-export type InvoiceSchema = InferSchemaType<typeof invoicesBase.schema>;
-export type LineItemSchema = InferSchemaType<typeof lineItemsBase.schema>;
+// Simple users table occurrence (same name as usersTO to test validation)
+export const usersSimpleTO = fmTableOccurrence("users", {
+  id: textField().primaryKey().notNull(),
+  name: textField().notNull(),
+  // intentionally missing fields to test validation
+});
+
+// Types - extract from table occurrences for backward compatibility
+export type ContactSchema = InferTableSchema<typeof contacts>;
+export type UserSchema = InferTableSchema<typeof users>;
+export type InvoiceSchema = InferTableSchema<typeof invoices>;
+export type LineItemSchema = InferTableSchema<typeof lineItems>;
+
+// Backward-compatible base table exports for tests that need .schema property
+// These extract the schema from the new FMTable instances
+import { containerField, FMTable } from "@proofkit/fmodata";
+
+function getSchemaFromTable<T extends FMTable<any, any>>(table: T) {
+  return (table as any)[FMTable.Symbol.Schema];
+}
+
+// export const contactsBase = {
+//   schema: getSchemaFromTable(contactsTO),
+// } as const;
+
+// export const usersBase = {
+//   schema: getSchemaFromTable(usersTO),
+// } as const;
+
+// export const invoicesBase = {
+//   schema: getSchemaFromTable(invoicesTO),
+// } as const;
+
+// export const lineItemsBase = {
+//   schema: getSchemaFromTable(lineItemsTO),
+// } as const;
+
+// export const contactsBaseWithIds = {
+//   schema: getSchemaFromTable(contactsTOWithIds),
+// } as const;
+
+// export const usersBaseWithIds = {
+//   schema: getSchemaFromTable(usersTOWithIds),
+// } as const;
 
 // Mock client factory - ensures unit tests never hit real databases
 export function createMockClient(): FMServerConnection {

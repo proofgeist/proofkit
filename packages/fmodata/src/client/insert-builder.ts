@@ -6,16 +6,24 @@ import type {
   InferSchemaType,
   ExecuteOptions,
   ConditionallyWithODataAnnotations,
+  ExecuteMethodOptions,
 } from "../types";
 import { getAcceptHeader } from "../types";
-import type { TableOccurrence } from "./table-occurrence";
-import { validateSingleResponse } from "../validation";
+import type { FMTable } from "../orm/table";
+import {
+  getBaseTableConfig,
+  getTableName,
+  getTableId as getTableIdHelper,
+  isUsingEntityIds,
+} from "../orm/table";
+import {
+  validateSingleResponse,
+  validateAndTransformInput,
+} from "../validation";
 import { type FFetchOptions } from "@fetchkit/ffetch";
 import {
   transformFieldNamesToIds,
-  transformTableName,
   transformResponseFields,
-  getTableIdentifiers,
 } from "../transform";
 import { InvalidLocationHeaderError } from "../errors";
 import { safeJsonParse } from "./sanitize-json";
@@ -25,35 +33,35 @@ export type InsertOptions = {
   return?: "minimal" | "representation";
 };
 
+import type { InferSchemaOutputFromFMTable } from "../orm/table";
+
 export class InsertBuilder<
-  T extends Record<string, any>,
-  Occ extends TableOccurrence<any, any, any, any> | undefined = undefined,
+  Occ extends FMTable<any, any> | undefined = undefined,
   ReturnPreference extends "minimal" | "representation" = "representation",
 > implements
     ExecutableBuilder<
-      ReturnPreference extends "minimal" ? { ROWID: number } : T
+      ReturnPreference extends "minimal"
+        ? { ROWID: number }
+        : InferSchemaOutputFromFMTable<NonNullable<Occ>>
     >
 {
-  private occurrence?: Occ;
-  private tableName: string;
+  private table?: Occ;
   private databaseName: string;
   private context: ExecutionContext;
-  private data: Partial<T>;
+  private data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
   private returnPreference: ReturnPreference;
 
   private databaseUseEntityIds: boolean;
 
   constructor(config: {
     occurrence?: Occ;
-    tableName: string;
     databaseName: string;
     context: ExecutionContext;
-    data: Partial<T>;
+    data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
     returnPreference?: ReturnPreference;
     databaseUseEntityIds?: boolean;
   }) {
-    this.occurrence = config.occurrence;
-    this.tableName = config.tableName;
+    this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.data = config.data;
@@ -74,7 +82,6 @@ export class InsertBuilder<
       useEntityIds: options?.useEntityIds ?? this.databaseUseEntityIds,
     };
   }
-
 
   /**
    * Parse ROWID from Location header
@@ -116,52 +123,69 @@ export class InsertBuilder<
    * @param useEntityIds - Optional override for entity ID usage
    */
   private getTableId(useEntityIds?: boolean): string {
-    if (!this.occurrence) {
-      return this.tableName;
+    if (!this.table) {
+      throw new Error("Table occurrence is required");
     }
 
     const contextDefault = this.context._getUseEntityIds?.() ?? false;
     const shouldUseIds = useEntityIds ?? contextDefault;
 
     if (shouldUseIds) {
-      const identifiers = getTableIdentifiers(this.occurrence);
-      if (!identifiers.id) {
+      if (!isUsingEntityIds(this.table)) {
         throw new Error(
-          `useEntityIds is true but TableOccurrence "${identifiers.name}" does not have an fmtId defined`
+          `useEntityIds is true but table "${getTableName(this.table)}" does not have entity IDs configured`,
         );
       }
-      return identifiers.id;
+      return getTableIdHelper(this.table);
     }
 
-    return this.occurrence.getTableName();
+    return getTableName(this.table);
   }
 
   async execute<EO extends ExecuteOptions>(
-    options?: RequestInit & FFetchOptions & EO,
+    options?: ExecuteMethodOptions<EO>,
   ): Promise<
     Result<
       ReturnPreference extends "minimal"
         ? { ROWID: number }
         : ConditionallyWithODataAnnotations<
-            T,
+            InferSchemaOutputFromFMTable<NonNullable<Occ>>,
             EO["includeODataAnnotations"] extends true ? true : false
           >
     >
   > {
     // Merge database-level useEntityIds with per-request options
     const mergedOptions = this.mergeExecuteOptions(options);
-    
+
     // Get table identifier with override support
     const tableId = this.getTableId(mergedOptions.useEntityIds);
     const url = `/${this.databaseName}/${tableId}`;
 
+    // Validate and transform input data using input validators (writeValidators)
+    let validatedData = this.data;
+    if (this.table) {
+      const baseTableConfig = getBaseTableConfig(this.table);
+      const inputSchema = baseTableConfig.inputSchema;
+
+      try {
+        validatedData = await validateAndTransformInput(this.data, inputSchema);
+      } catch (error) {
+        // If validation fails, return error immediately
+        return {
+          data: undefined,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as any;
+      }
+    }
+
     // Transform field names to FMFIDs if using entity IDs
     // Only transform if useEntityIds resolves to true (respects per-request override)
     const shouldUseIds = mergedOptions.useEntityIds ?? false;
-    
-    const transformedData = this.occurrence?.baseTable && shouldUseIds
-      ? transformFieldNamesToIds(this.data, this.occurrence.baseTable)
-      : this.data;
+
+    const transformedData =
+      this.table && shouldUseIds
+        ? transformFieldNamesToIds(validatedData, this.table)
+        : validatedData;
 
     // Set Prefer header based on return preference
     const preferHeader =
@@ -205,19 +229,31 @@ export class InsertBuilder<
 
     // Transform response field IDs back to names if using entity IDs
     // Only transform if useEntityIds resolves to true (respects per-request override)
-    if (this.occurrence?.baseTable && shouldUseIds) {
+    if (this.table && shouldUseIds) {
       response = transformResponseFields(
         response,
-        this.occurrence.baseTable,
+        this.table,
         undefined, // No expand configs for insert
       );
     }
 
-    // Get schema from occurrence if available
-    const schema = this.occurrence?.baseTable?.schema;
+    // Get schema from table if available, excluding container fields
+    let schema: Record<string, any> | undefined;
+    if (this.table) {
+      const baseTableConfig = getBaseTableConfig(this.table);
+      const containerFields = baseTableConfig.containerFields || [];
+
+      // Filter out container fields from schema
+      schema = { ...baseTableConfig.schema };
+      for (const containerField of containerFields) {
+        delete schema[containerField as string];
+      }
+    }
 
     // Validate the response (FileMaker returns the created record)
-    const validation = await validateSingleResponse<T>(
+    const validation = await validateSingleResponse<
+      InferSchemaOutputFromFMTable<NonNullable<Occ>>
+    >(
       response,
       schema,
       undefined, // No selected fields for insert
@@ -242,12 +278,14 @@ export class InsertBuilder<
 
   getRequestConfig(): { method: string; url: string; body?: any } {
     // For batch operations, use database-level setting (no per-request override available here)
+    // Note: Input validation happens in execute() and processResponse() for batch operations
     const tableId = this.getTableId(this.databaseUseEntityIds);
 
     // Transform field names to FMFIDs if using entity IDs
-    const transformedData = this.occurrence?.baseTable && this.databaseUseEntityIds
-      ? transformFieldNamesToIds(this.data, this.occurrence.baseTable)
-      : this.data;
+    const transformedData =
+      this.table && this.databaseUseEntityIds
+        ? transformFieldNamesToIds(this.data, this.table)
+        : this.data;
 
     return {
       method: "POST",
@@ -281,13 +319,18 @@ export class InsertBuilder<
     response: Response,
     options?: ExecuteOptions,
   ): Promise<
-    Result<ReturnPreference extends "minimal" ? { ROWID: number } : T>
+    Result<
+      ReturnPreference extends "minimal"
+        ? { ROWID: number }
+        : InferSchemaOutputFromFMTable<NonNullable<Occ>>
+    >
   > {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
+      const tableName = this.table ? getTableName(this.table) : "unknown";
       const error = await parseErrorResponse(
         response,
-        response.url || `/${this.databaseName}/${this.tableName}`,
+        response.url || `/${this.databaseName}/${tableName}`,
       );
       return { data: undefined, error };
     }
@@ -346,24 +389,53 @@ export class InsertBuilder<
       };
     }
 
+    // Validate and transform input data using input validators (writeValidators)
+    // This is needed for processResponse because it's called from batch operations
+    // where the data hasn't been validated yet
+    let validatedData = this.data;
+    if (this.table) {
+      const baseTableConfig = getBaseTableConfig(this.table);
+      const inputSchema = baseTableConfig.inputSchema;
+      try {
+        validatedData = await validateAndTransformInput(this.data, inputSchema);
+      } catch (error) {
+        return {
+          data: undefined,
+          error: error instanceof Error ? error : new Error(String(error)),
+        } as any;
+      }
+    }
+
     // Transform response field IDs back to names if using entity IDs
     // Only transform if useEntityIds resolves to true (respects per-request override)
     const shouldUseIds = options?.useEntityIds ?? this.databaseUseEntityIds;
-    
+
     let transformedResponse = rawResponse;
-    if (this.occurrence?.baseTable && shouldUseIds) {
+    if (this.table && shouldUseIds) {
       transformedResponse = transformResponseFields(
         rawResponse,
-        this.occurrence.baseTable,
+        this.table,
         undefined, // No expand configs for insert
       );
     }
 
-    // Get schema from occurrence if available
-    const schema = this.occurrence?.baseTable?.schema;
+    // Get schema from table if available, excluding container fields
+    let schema: Record<string, any> | undefined;
+    if (this.table) {
+      const baseTableConfig = getBaseTableConfig(this.table);
+      const containerFields = baseTableConfig.containerFields || [];
+
+      // Filter out container fields from schema
+      schema = { ...baseTableConfig.schema };
+      for (const containerField of containerFields) {
+        delete schema[containerField as string];
+      }
+    }
 
     // Validate the response (FileMaker returns the created record)
-    const validation = await validateSingleResponse<T>(
+    const validation = await validateSingleResponse<
+      InferSchemaOutputFromFMTable<NonNullable<Occ>>
+    >(
       transformedResponse,
       schema,
       undefined, // No selected fields for insert

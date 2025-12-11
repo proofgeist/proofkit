@@ -1,24 +1,32 @@
-import type { BaseTable } from "./client/base-table";
-import type { TableOccurrence } from "./client/table-occurrence";
+import type { FMTable } from "./orm/table";
+import {
+  getBaseTableConfig,
+  getFieldId,
+  getFieldName,
+  getTableId,
+  getTableName,
+  isUsingEntityIds,
+} from "./orm/table";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 /**
  * Transforms field names to FileMaker field IDs (FMFID) in an object
  * @param data - Object with field names as keys
- * @param baseTable - BaseTable instance to get field IDs from
+ * @param table - FMTable instance to get field IDs from
  * @returns Object with FMFID keys instead of field names
  */
 export function transformFieldNamesToIds<T extends Record<string, any>>(
   data: T,
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any>,
 ): Record<string, any> {
-  if (!baseTable.isUsingFieldIds()) {
+  const config = getBaseTableConfig(table);
+  if (!config.fmfIds) {
     return data;
   }
 
   const transformed: Record<string, any> = {};
   for (const [fieldName, value] of Object.entries(data)) {
-    const fieldId = baseTable.getFieldId(fieldName as any);
+    const fieldId = getFieldId(table, fieldName);
     transformed[fieldId] = value;
   }
   return transformed;
@@ -27,14 +35,15 @@ export function transformFieldNamesToIds<T extends Record<string, any>>(
 /**
  * Transforms FileMaker field IDs (FMFID) to field names in an object
  * @param data - Object with FMFID keys
- * @param baseTable - BaseTable instance to get field names from
+ * @param table - FMTable instance to get field names from
  * @returns Object with field names as keys instead of FMFIDs
  */
 export function transformFieldIdsToNames<T extends Record<string, any>>(
   data: T,
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any>,
 ): Record<string, any> {
-  if (!baseTable.isUsingFieldIds()) {
+  const config = getBaseTableConfig(table);
+  if (!config.fmfIds) {
     return data;
   }
 
@@ -46,7 +55,7 @@ export function transformFieldIdsToNames<T extends Record<string, any>>(
       continue;
     }
 
-    const fieldName = baseTable.getFieldName(key);
+    const fieldName = getFieldName(table, key);
     transformed[fieldName] = value;
   }
   return transformed;
@@ -55,38 +64,36 @@ export function transformFieldIdsToNames<T extends Record<string, any>>(
 /**
  * Transforms a field name to FMFID or returns the field name if not using IDs
  * @param fieldName - The field name to transform
- * @param baseTable - BaseTable instance to get field ID from
+ * @param table - FMTable instance to get field ID from
  * @returns The FMFID or field name
  */
 export function transformFieldName(
   fieldName: string,
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any>,
 ): string {
-  return baseTable.getFieldId(fieldName as any);
+  return getFieldId(table, fieldName);
 }
 
 /**
- * Transforms a table occurrence name to FMTID or returns the name if not using IDs
- * @param occurrence - TableOccurrence instance to get table ID from
+ * Transforms a table name to FMTID or returns the name if not using IDs
+ * @param table - FMTable instance to get table ID from
  * @returns The FMTID or table name
  */
-export function transformTableName(
-  occurrence: TableOccurrence<any, any, any, any>,
-): string {
-  return occurrence.getTableId();
+export function transformTableName(table: FMTable<any, any>): string {
+  return getTableId(table);
 }
 
 /**
- * Gets both table name and ID from an occurrence
- * @param occurrence - TableOccurrence instance
+ * Gets both table name and ID from a table
+ * @param table - FMTable instance
  * @returns Object with name (always present) and id (may be undefined if not using IDs)
  */
 export function getTableIdentifiers(
-  occurrence: TableOccurrence<any, any, any, any>,
+  table: FMTable<any, any>,
 ): { name: string; id: string | undefined } {
   return {
-    name: occurrence.getTableName(),
-    id: occurrence.isUsingTableId() ? occurrence.getTableId() : undefined,
+    name: getTableName(table),
+    id: isUsingEntityIds(table) ? getTableId(table) : undefined,
   };
 }
 
@@ -95,19 +102,20 @@ export function getTableIdentifiers(
  * Handles both single records and arrays of records, as well as nested expand relationships.
  *
  * @param data - Response data from FileMaker (can be single record, array, or wrapped in value property)
- * @param baseTable - BaseTable instance for the main table
+ * @param table - FMTable instance for the main table
  * @param expandConfigs - Configuration for expanded relations (optional)
  * @returns Transformed data with field names instead of IDs
  */
 export function transformResponseFields(
   data: any,
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any>,
   expandConfigs?: Array<{
     relation: string;
-    occurrence?: TableOccurrence<any, any, any, any>;
+    table?: FMTable<any, any>;
   }>,
 ): any {
-  if (!baseTable.isUsingFieldIds()) {
+  const config = getBaseTableConfig(table);
+  if (!config.fmfIds) {
     return data;
   }
 
@@ -121,7 +129,7 @@ export function transformResponseFields(
     return {
       ...data,
       value: data.value.map((record: any) =>
-        transformSingleRecord(record, baseTable, expandConfigs),
+        transformSingleRecord(record, table, expandConfigs),
       ),
     };
   }
@@ -129,12 +137,12 @@ export function transformResponseFields(
   // Handle array of records
   if (Array.isArray(data)) {
     return data.map((record) =>
-      transformSingleRecord(record, baseTable, expandConfigs),
+      transformSingleRecord(record, table, expandConfigs),
     );
   }
 
   // Handle single record
-  return transformSingleRecord(data, baseTable, expandConfigs);
+  return transformSingleRecord(data, table, expandConfigs);
 }
 
 /**
@@ -142,10 +150,10 @@ export function transformResponseFields(
  */
 function transformSingleRecord(
   record: any,
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any>,
   expandConfigs?: Array<{
     relation: string;
-    occurrence?: TableOccurrence<any, any, any, any>;
+    table?: FMTable<any, any>;
   }>,
 ): any {
   if (!record || typeof record !== "object") {
@@ -169,13 +177,11 @@ function transformSingleRecord(
     if (!expandConfig && key.startsWith("FMTID:")) {
       expandConfig = expandConfigs?.find(
         (ec) =>
-          ec.occurrence &&
-          ec.occurrence.isUsingTableId() &&
-          ec.occurrence.getTableId() === key,
+          ec.table && isUsingEntityIds(ec.table) && getTableId(ec.table) === key,
       );
     }
 
-    if (expandConfig && expandConfig.occurrence) {
+    if (expandConfig && expandConfig.table) {
       // Transform the expanded relation data recursively
       // Use the relation name (not the FMTID) as the key
       const relationKey = expandConfig.relation;
@@ -184,14 +190,14 @@ function transformSingleRecord(
         transformed[relationKey] = value.map((nestedRecord) =>
           transformSingleRecord(
             nestedRecord,
-            expandConfig.occurrence!.baseTable,
+            expandConfig.table!,
             undefined, // Don't pass nested expand configs for now
           ),
         );
       } else if (value && typeof value === "object") {
         transformed[relationKey] = transformSingleRecord(
           value,
-          expandConfig.occurrence.baseTable,
+          expandConfig.table,
           undefined,
         );
       } else {
@@ -201,7 +207,7 @@ function transformSingleRecord(
     }
 
     // Transform field ID to field name
-    const fieldName = baseTable.getFieldName(key);
+    const fieldName = getFieldName(table, key);
     transformed[fieldName] = value;
   }
 
@@ -211,39 +217,47 @@ function transformSingleRecord(
 /**
  * Transforms an array of field names to FMFIDs
  * @param fieldNames - Array of field names
- * @param baseTable - BaseTable instance to get field IDs from
+ * @param table - FMTable instance to get field IDs from
  * @returns Array of FMFIDs or field names
  */
 export function transformFieldNamesArray(
   fieldNames: string[],
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any>,
 ): string[] {
-  if (!baseTable.isUsingFieldIds()) {
+  const config = getBaseTableConfig(table);
+  if (!config.fmfIds) {
     return fieldNames;
   }
 
-  return fieldNames.map((fieldName) => baseTable.getFieldId(fieldName as any));
+  return fieldNames.map((fieldName) => getFieldId(table, fieldName));
 }
 
 /**
  * Transforms a field name in an orderBy string (e.g., "name desc" -> "FMFID:1 desc")
  * @param orderByString - The orderBy string (field name with optional asc/desc)
- * @param baseTable - BaseTable instance to get field ID from
+ * @param table - FMTable instance to get field ID from
  * @returns Transformed orderBy string with FMFID
  */
 export function transformOrderByField(
   orderByString: string,
-  baseTable: BaseTable<any, any, any, any>,
+  table: FMTable<any, any> | undefined,
 ): string {
-  if (!baseTable.isUsingFieldIds()) {
+  if (!table) {
+    return orderByString;
+  }
+  const config = getBaseTableConfig(table);
+  if (!config || !config.fmfIds) {
     return orderByString;
   }
 
   // Parse the orderBy string to extract field name and direction
   const parts = orderByString.trim().split(/\s+/);
   const fieldName = parts[0];
+  if (!fieldName) {
+    return orderByString;
+  }
   const direction = parts[1]; // "asc" or "desc" or undefined
 
-  const fieldId = baseTable.getFieldId(fieldName as any);
+  const fieldId = getFieldId(table, fieldName);
   return direction ? `${fieldId} ${direction}` : fieldId;
 }

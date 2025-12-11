@@ -1,143 +1,83 @@
-import type {
-  ExecutionContext,
-  InferSchemaType,
-  WithSystemFields,
-  InsertData,
-  UpdateData,
-} from "../types";
+import type { ExecutionContext } from "../types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { BaseTable } from "./base-table";
-import type { TableOccurrence } from "./table-occurrence";
-import { QueryBuilder } from "./query-builder";
+import { QueryBuilder } from "./query/index";
 import { RecordBuilder } from "./record-builder";
 import { InsertBuilder } from "./insert-builder";
 import { DeleteBuilder } from "./delete-builder";
 import { UpdateBuilder } from "./update-builder";
 import { Database } from "./database";
+import type {
+  FMTable,
+  InferSchemaOutputFromFMTable,
+  InsertDataFromFMTable,
+  UpdateDataFromFMTable,
+  ValidExpandTarget,
+  ColumnMap,
+} from "../orm/table";
+import {
+  FMTable as FMTableClass,
+  getDefaultSelect,
+  getTableName,
+  getTableColumns,
+} from "../orm/table";
+import type { FieldBuilder } from "../orm/field-builders";
+import { createLogger, InternalLogger } from "../logger";
 
-// Helper type to extract navigation relation names from an occurrence
-type ExtractNavigationNames<
-  O extends TableOccurrence<any, any, any, any> | undefined,
-> =
-  O extends TableOccurrence<any, any, infer Nav, any>
-    ? Nav extends Record<string, any>
-      ? keyof Nav & string
-      : never
-    : never;
-
-// Helper type to extract schema from a TableOccurrence
-type ExtractSchemaFromOccurrence<O> =
-  O extends TableOccurrence<infer BT, any, any, any>
-    ? BT extends BaseTable<infer S, any, any, any>
-      ? S
-      : never
-    : never;
-
-// Helper type to extract defaultSelect from a TableOccurrence
+// Helper type to extract defaultSelect from an FMTable
+// Since TypeScript can't extract Symbol-indexed properties at the type level,
+// we simplify to return keyof InferSchemaFromFMTable<O> when O is an FMTable.
+// The actual defaultSelect logic is handled at runtime.
 type ExtractDefaultSelect<O> =
-  O extends TableOccurrence<infer BT, any, any, infer DefSelect>
-    ? BT extends BaseTable<infer S, any, any, any>
-      ? DefSelect extends "all"
-        ? keyof S
-        : DefSelect extends "schema"
-          ? keyof S
-          : DefSelect extends readonly (infer K)[]
-            ? K & keyof S
-            : keyof S
+  O extends FMTable<any, any> ? keyof InferSchemaOutputFromFMTable<O> : never;
+
+/**
+ * Helper type to extract properly-typed columns from an FMTable.
+ * This preserves the specific column types instead of widening to `any`.
+ */
+type ExtractColumnsFromOcc<T> =
+  T extends FMTable<infer TFields, infer TName, any>
+    ? TFields extends Record<string, FieldBuilder<any, any, any, any>>
+      ? ColumnMap<TFields, TName>
       : never
     : never;
 
-// Helper type to find target occurrence by relation name
-type FindNavigationTarget<
-  O extends TableOccurrence<any, any, any, any> | undefined,
-  Name extends string,
-> =
-  O extends TableOccurrence<any, any, infer Nav, any>
-    ? Nav extends Record<string, any>
-      ? Name extends keyof Nav
-        ? Nav[Name]
-        : TableOccurrence<
-            BaseTable<Record<string, StandardSchemaV1>, any, any, any>,
-            any,
-            any,
-            any
-          >
-      : TableOccurrence<
-          BaseTable<Record<string, StandardSchemaV1>, any, any, any>,
-          any,
-          any,
-          any
-        >
-    : TableOccurrence<
-        BaseTable<Record<string, StandardSchemaV1>, any, any, any>,
-        any,
-        any,
-        any
-      >;
-
-// Helper type to get the inferred schema type from a target occurrence
-type GetTargetSchemaType<
-  O extends TableOccurrence<any, any, any, any> | undefined,
-  Rel extends string,
-> = [FindNavigationTarget<O, Rel>] extends [
-  TableOccurrence<infer BT, any, any, any>,
-]
-  ? [BT] extends [BaseTable<infer S, any, any, any>]
-    ? [S] extends [Record<string, StandardSchemaV1>]
-      ? InferSchemaType<S>
-      : Record<string, any>
-    : Record<string, any>
-  : Record<string, any>;
-
-export class EntitySet<
-  Schema extends Record<string, StandardSchemaV1> = any,
-  Occ extends TableOccurrence<any, any, any, any> | undefined = undefined,
-> {
-  private occurrence?: Occ;
-  private tableName: string;
+export class EntitySet<Occ extends FMTable<any, any>> {
+  private occurrence: Occ;
   private databaseName: string;
   private context: ExecutionContext;
-  private database: Database<any>; // Database instance for accessing occurrences
+  private database: Database; // Database instance for accessing occurrences
   private isNavigateFromEntitySet?: boolean;
   private navigateRelation?: string;
   private navigateSourceTableName?: string;
   private navigateBasePath?: string; // Full base path for chained navigations
+  private databaseUseEntityIds: boolean;
+  private logger: InternalLogger;
 
   constructor(config: {
-    occurrence?: Occ;
-    tableName: string;
+    occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
     database?: any;
   }) {
     this.occurrence = config.occurrence;
-    this.tableName = config.tableName;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.database = config.database;
+    // Get useEntityIds from database if available, otherwise default to false
+    this.databaseUseEntityIds =
+      (config.database as any)?._useEntityIds ?? false;
+    this.logger = config.context?._getLogger?.() ?? createLogger();
   }
 
-  // Type-only method to help TypeScript infer the schema from occurrence
-  static create<
-    OccurrenceSchema extends Record<string, StandardSchemaV1>,
-    Occ extends
-      | TableOccurrence<
-          BaseTable<OccurrenceSchema, any, any, any>,
-          any,
-          any,
-          any
-        >
-      | undefined = undefined,
-  >(config: {
-    occurrence?: Occ;
-    tableName: string;
+  // Type-only method to help TypeScript infer the schema from table
+  static create<Occ extends FMTable<any, any>>(config: {
+    occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
-    database: Database<any>;
-  }): EntitySet<OccurrenceSchema, Occ> {
-    return new EntitySet<OccurrenceSchema, Occ>({
+    database: Database;
+  }): EntitySet<Occ> {
+    return new EntitySet<Occ>({
       occurrence: config.occurrence,
-      tableName: config.tableName,
       databaseName: config.databaseName,
       context: config.context,
       database: config.database,
@@ -145,58 +85,80 @@ export class EntitySet<
   }
 
   list(): QueryBuilder<
-    InferSchemaType<Schema>,
-    Occ extends TableOccurrence<any, any, any, any>
-      ? ExtractDefaultSelect<Occ>
-      : keyof InferSchemaType<Schema>,
+    Occ,
+    keyof InferSchemaOutputFromFMTable<Occ>,
     false,
     false,
-    Occ
+    {}
   > {
-    const builder = new QueryBuilder<
-      InferSchemaType<Schema>,
-      Occ extends TableOccurrence<any, any, any, any>
-        ? ExtractDefaultSelect<Occ>
-        : keyof InferSchemaType<Schema>,
-      false,
-      false,
-      Occ
-    >({
+    const builder = new QueryBuilder<Occ>({
       occurrence: this.occurrence as Occ,
-      tableName: this.tableName,
       databaseName: this.databaseName,
       context: this.context,
-      databaseUseEntityIds: this.database?.isUsingEntityIds() ?? false,
+      databaseUseEntityIds: this.databaseUseEntityIds,
     });
 
     // Apply defaultSelect if occurrence exists and select hasn't been called
     if (this.occurrence) {
-      const defaultSelect = this.occurrence.defaultSelect;
+      // FMTable - access via helper functions
+      const defaultSelectValue = getDefaultSelect(this.occurrence);
+      const tableSchema = (this.occurrence as any)[FMTableClass.Symbol.Schema];
+      let schema: Record<string, StandardSchemaV1> | undefined;
 
-      if (defaultSelect === "schema") {
-        // Extract field names from schema
-        const schema = this.occurrence.baseTable.schema;
-        const fields = Object.keys(schema) as (keyof InferSchemaType<Schema>)[];
-        // Deduplicate fields (same as select method)
-        const uniqueFields = [...new Set(fields)];
-        return builder.select(...uniqueFields).top(1000);
-      } else if (Array.isArray(defaultSelect)) {
-        // Use the provided field names, deduplicated
-        const uniqueFields = [
-          ...new Set(defaultSelect),
-        ] as (keyof InferSchemaType<Schema>)[];
-        return builder.select(...uniqueFields).top(1000);
+      if (tableSchema) {
+        // Extract schema from StandardSchemaV1
+        const zodSchema = tableSchema["~standard"]?.schema;
+        if (
+          zodSchema &&
+          typeof zodSchema === "object" &&
+          "shape" in zodSchema
+        ) {
+          schema = zodSchema.shape as Record<string, StandardSchemaV1>;
+        }
+      }
+
+      if (defaultSelectValue === "schema") {
+        // Use getTableColumns to get all columns and select them
+        // This is equivalent to select(getTableColumns(occurrence))
+        // Cast to the declared return type - runtime behavior handles the actual selection
+        const allColumns = getTableColumns(
+          this.occurrence,
+        ) as ExtractColumnsFromOcc<Occ>;
+        return builder.select(allColumns).top(1000) as QueryBuilder<
+          Occ,
+          keyof InferSchemaOutputFromFMTable<Occ>,
+          false,
+          false,
+          {}
+        >;
+      } else if (typeof defaultSelectValue === "object") {
+        // defaultSelectValue is a select object (Record<string, Column>)
+        // Cast to the declared return type - runtime behavior handles the actual selection
+        return builder
+          .select(defaultSelectValue as ExtractColumnsFromOcc<Occ>)
+          .top(1000) as QueryBuilder<
+          Occ,
+          keyof InferSchemaOutputFromFMTable<Occ>,
+          false,
+          false,
+          {}
+        >;
       }
       // If defaultSelect is "all", no changes needed (current behavior)
     }
 
     // Propagate navigation context if present
-    if (this.isNavigateFromEntitySet) {
-      (builder as any).isNavigate = true;
-      (builder as any).navigateRelation = this.navigateRelation;
-      (builder as any).navigateSourceTableName = this.navigateSourceTableName;
-      (builder as any).navigateBasePath = this.navigateBasePath;
-      // navigateRecordId is intentionally not set (undefined) to indicate navigation from EntitySet
+    if (
+      this.isNavigateFromEntitySet &&
+      this.navigateRelation &&
+      this.navigateSourceTableName
+    ) {
+      (builder as any).navigation = {
+        relation: this.navigateRelation,
+        sourceTableName: this.navigateSourceTableName,
+        basePath: this.navigateBasePath,
+        // recordId is intentionally not set (undefined) to indicate navigation from EntitySet
+      };
     }
 
     // Apply default pagination limit of 1000 records to prevent stack overflow
@@ -207,60 +169,82 @@ export class EntitySet<
   get(
     id: string | number,
   ): RecordBuilder<
-    InferSchemaType<Schema>,
-    false,
-    keyof InferSchemaType<Schema>,
     Occ,
-    Occ extends TableOccurrence<any, any, any, any>
-      ? ExtractDefaultSelect<Occ>
-      : keyof InferSchemaType<Schema>,
+    false,
+    undefined,
+    keyof InferSchemaOutputFromFMTable<Occ>,
     {}
   > {
-    const builder = new RecordBuilder<
-      InferSchemaType<Schema>,
-      false,
-      keyof InferSchemaType<Schema>,
-      Occ,
-      keyof InferSchemaType<Schema>,
-      {}
-    >({
+    const builder = new RecordBuilder<Occ>({
       occurrence: this.occurrence,
-      tableName: this.tableName,
       databaseName: this.databaseName,
       context: this.context,
       recordId: id,
-      databaseUseEntityIds: this.database?.isUsingEntityIds() ?? false,
+      databaseUseEntityIds: this.databaseUseEntityIds,
     });
 
     // Apply defaultSelect if occurrence exists
     if (this.occurrence) {
-      const defaultSelect = this.occurrence.defaultSelect;
+      // FMTable - access via helper functions
+      const defaultSelectValue = getDefaultSelect(this.occurrence);
+      const tableSchema = (this.occurrence as any)[FMTableClass.Symbol.Schema];
+      let schema: Record<string, StandardSchemaV1> | undefined;
 
-      if (defaultSelect === "schema") {
-        // Extract field names from schema
-        const schema = this.occurrence.baseTable.schema;
-        const fields = Object.keys(schema) as (keyof InferSchemaType<Schema>)[];
-        // Deduplicate fields (same as select method)
-        const uniqueFields = [...new Set(fields)];
-        const selectedBuilder = builder.select(...uniqueFields);
+      if (tableSchema) {
+        // Extract schema from StandardSchemaV1
+        const zodSchema = tableSchema["~standard"]?.schema;
+        if (
+          zodSchema &&
+          typeof zodSchema === "object" &&
+          "shape" in zodSchema
+        ) {
+          schema = zodSchema.shape as Record<string, StandardSchemaV1>;
+        }
+      }
+
+      if (defaultSelectValue === "schema") {
+        // Use getTableColumns to get all columns and select them
+        // This is equivalent to select(getTableColumns(occurrence))
+        // Use ExtractColumnsFromOcc to preserve the properly-typed column types
+        const allColumns = getTableColumns(
+          this.occurrence as any,
+        ) as ExtractColumnsFromOcc<Occ>;
+        const selectedBuilder = builder.select(allColumns);
         // Propagate navigation context if present
-        if (this.isNavigateFromEntitySet) {
-          (selectedBuilder as any).isNavigateFromEntitySet = true;
-          (selectedBuilder as any).navigateRelation = this.navigateRelation;
-          (selectedBuilder as any).navigateSourceTableName = this.navigateSourceTableName;
+        if (
+          this.isNavigateFromEntitySet &&
+          this.navigateRelation &&
+          this.navigateSourceTableName
+        ) {
+          (selectedBuilder as any).navigation = {
+            relation: this.navigateRelation,
+            sourceTableName: this.navigateSourceTableName,
+            basePath: this.navigateBasePath,
+          };
         }
         return selectedBuilder as any;
-      } else if (Array.isArray(defaultSelect)) {
-        // Use the provided field names, deduplicated
-        const uniqueFields = [
-          ...new Set(defaultSelect),
-        ] as (keyof InferSchemaType<Schema>)[];
-        const selectedBuilder = builder.select(...uniqueFields);
+      } else if (
+        typeof defaultSelectValue === "object" &&
+        defaultSelectValue !== null &&
+        !Array.isArray(defaultSelectValue)
+      ) {
+        // defaultSelectValue is a select object (Record<string, Column>)
+        // Use it directly with select()
+        // Use ExtractColumnsFromOcc to preserve the properly-typed column types
+        const selectedBuilder = builder.select(
+          defaultSelectValue as ExtractColumnsFromOcc<Occ>,
+        );
         // Propagate navigation context if present
-        if (this.isNavigateFromEntitySet) {
-          (selectedBuilder as any).isNavigateFromEntitySet = true;
-          (selectedBuilder as any).navigateRelation = this.navigateRelation;
-          (selectedBuilder as any).navigateSourceTableName = this.navigateSourceTableName;
+        if (
+          this.isNavigateFromEntitySet &&
+          this.navigateRelation &&
+          this.navigateSourceTableName
+        ) {
+          (selectedBuilder as any).navigation = {
+            relation: this.navigateRelation,
+            sourceTableName: this.navigateSourceTableName,
+            basePath: this.navigateBasePath,
+          };
         }
         return selectedBuilder as any;
       }
@@ -268,173 +252,126 @@ export class EntitySet<
     }
 
     // Propagate navigation context if present
-    if (this.isNavigateFromEntitySet) {
-      (builder as any).isNavigateFromEntitySet = true;
-      (builder as any).navigateRelation = this.navigateRelation;
-      (builder as any).navigateSourceTableName = this.navigateSourceTableName;
+    if (
+      this.isNavigateFromEntitySet &&
+      this.navigateRelation &&
+      this.navigateSourceTableName
+    ) {
+      (builder as any).navigation = {
+        relation: this.navigateRelation,
+        sourceTableName: this.navigateSourceTableName,
+        basePath: this.navigateBasePath,
+      };
     }
     return builder as any;
   }
 
-  // Overload: when returnFullRecord is explicitly false
+  // Overload: when returnFullRecord is false
   insert(
-    data: Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? InsertData<BT>
-        : Partial<InferSchemaType<Schema>>
-      : Partial<InferSchemaType<Schema>>,
+    data: InsertDataFromFMTable<Occ>,
     options: { returnFullRecord: false },
-  ): InsertBuilder<InferSchemaType<Schema>, Occ, "minimal">;
+  ): InsertBuilder<Occ, "minimal">;
 
   // Overload: when returnFullRecord is true or omitted (default)
   insert(
-    data: Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? InsertData<BT>
-        : Partial<InferSchemaType<Schema>>
-      : Partial<InferSchemaType<Schema>>,
+    data: InsertDataFromFMTable<Occ>,
     options?: { returnFullRecord?: true },
-  ): InsertBuilder<InferSchemaType<Schema>, Occ, "representation">;
+  ): InsertBuilder<Occ, "representation">;
 
   // Implementation
   insert(
-    data: Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? InsertData<BT>
-        : Partial<InferSchemaType<Schema>>
-      : Partial<InferSchemaType<Schema>>,
+    data: InsertDataFromFMTable<Occ>,
     options?: { returnFullRecord?: boolean },
-  ): InsertBuilder<InferSchemaType<Schema>, Occ, "minimal" | "representation"> {
-    const returnPref =
+  ): InsertBuilder<Occ, "minimal" | "representation"> {
+    const returnPreference =
       options?.returnFullRecord === false ? "minimal" : "representation";
-    return new InsertBuilder<InferSchemaType<Schema>, Occ, typeof returnPref>({
+
+    return new InsertBuilder<Occ, typeof returnPreference>({
       occurrence: this.occurrence,
-      tableName: this.tableName,
       databaseName: this.databaseName,
       context: this.context,
-      data: data as Partial<InferSchemaType<Schema>>,
-      returnPreference: returnPref as any,
-      databaseUseEntityIds: this.database?.isUsingEntityIds() ?? false,
+      data: data as any, // Input type is validated/transformed at runtime
+      returnPreference: returnPreference as any,
+      databaseUseEntityIds: this.databaseUseEntityIds,
     });
   }
 
   // Overload: when returnFullRecord is explicitly true
   update(
-    data: Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? UpdateData<BT>
-        : Partial<InferSchemaType<Schema>>
-      : Partial<InferSchemaType<Schema>>,
+    data: UpdateDataFromFMTable<Occ>,
     options: { returnFullRecord: true },
-  ): UpdateBuilder<
-    InferSchemaType<Schema>,
-    Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? BT
-        : BaseTable<Schema, any, any, any>
-      : BaseTable<Schema, any, any, any>,
-    "representation"
-  >;
+  ): UpdateBuilder<Occ, "representation">;
 
-  // Overload: when returnFullRecord is false or omitted (default returns count)
+  // Overload: when returnFullRecord is false or omitted (default)
   update(
-    data: Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? UpdateData<BT>
-        : Partial<InferSchemaType<Schema>>
-      : Partial<InferSchemaType<Schema>>,
+    data: UpdateDataFromFMTable<Occ>,
     options?: { returnFullRecord?: false },
-  ): UpdateBuilder<
-    InferSchemaType<Schema>,
-    Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? BT
-        : BaseTable<Schema, any, any, any>
-      : BaseTable<Schema, any, any, any>,
-    "minimal"
-  >;
+  ): UpdateBuilder<Occ, "minimal">;
 
   // Implementation
   update(
-    data: Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? UpdateData<BT>
-        : Partial<InferSchemaType<Schema>>
-      : Partial<InferSchemaType<Schema>>,
+    data: UpdateDataFromFMTable<Occ>,
     options?: { returnFullRecord?: boolean },
-  ): UpdateBuilder<
-    InferSchemaType<Schema>,
-    Occ extends TableOccurrence<infer BT, any, any, any>
-      ? BT extends BaseTable<any, any, any, any>
-        ? BT
-        : BaseTable<Schema, any, any, any>
-      : BaseTable<Schema, any, any, any>,
-    "minimal" | "representation"
-  > {
-    const returnPref =
+  ): UpdateBuilder<Occ, "minimal" | "representation"> {
+    const returnPreference =
       options?.returnFullRecord === true ? "representation" : "minimal";
-    return new UpdateBuilder<
-      InferSchemaType<Schema>,
-      Occ extends TableOccurrence<infer BT, any, any, any>
-        ? BT extends BaseTable<any, any, any, any>
-          ? BT
-          : BaseTable<Schema, any, any, any>
-        : BaseTable<Schema, any, any, any>,
-      typeof returnPref
-    >({
+
+    return new UpdateBuilder<Occ, typeof returnPreference>({
       occurrence: this.occurrence,
-      tableName: this.tableName,
       databaseName: this.databaseName,
       context: this.context,
-      data: data as Partial<InferSchemaType<Schema>>,
-      returnPreference: returnPref as any,
-      databaseUseEntityIds: this.database?.isUsingEntityIds() ?? false,
+      data: data as any, // Input type is validated/transformed at runtime
+      returnPreference: returnPreference as any,
+      databaseUseEntityIds: this.databaseUseEntityIds,
     });
   }
 
-  delete(): DeleteBuilder<InferSchemaType<Schema>> {
-    return new DeleteBuilder<InferSchemaType<Schema>>({
+  delete(): DeleteBuilder<Occ> {
+    return new DeleteBuilder<Occ>({
       occurrence: this.occurrence,
-      tableName: this.tableName,
       databaseName: this.databaseName,
       context: this.context,
-      databaseUseEntityIds: this.database?.isUsingEntityIds() ?? false,
-    });
+      databaseUseEntityIds: this.databaseUseEntityIds,
+    }) as any;
   }
 
-  // Overload for valid relation names - returns typed EntitySet
-  navigate<RelationName extends ExtractNavigationNames<Occ>>(
-    relationName: RelationName,
-  ): EntitySet<
-    ExtractSchemaFromOccurrence<
-      FindNavigationTarget<Occ, RelationName>
-    > extends Record<string, StandardSchemaV1>
-      ? ExtractSchemaFromOccurrence<FindNavigationTarget<Occ, RelationName>>
-      : Record<string, StandardSchemaV1>,
-    FindNavigationTarget<Occ, RelationName>
-  >;
-  // Overload for arbitrary strings - returns generic EntitySet
-  navigate(
-    relationName: string,
-  ): EntitySet<Record<string, StandardSchemaV1>, undefined>;
   // Implementation
-  navigate(relationName: string): EntitySet<any, any> {
-    // Use the target occurrence if available, otherwise allow untyped navigation
-    // (useful when types might be incomplete)
-    const targetOccurrence = this.occurrence?.navigation[relationName];
-    const entitySet = new EntitySet<any, any>({
-      occurrence: targetOccurrence,
-      tableName: targetOccurrence?.name ?? relationName,
+  navigate<TargetTable extends FMTable<any, any>>(
+    targetTable: ValidExpandTarget<Occ, TargetTable>,
+  ): EntitySet<TargetTable extends FMTable<any, any> ? TargetTable : never> {
+    // Check if it's an FMTable object or a string
+    let relationName: string;
+
+    // FMTable object - extract name and validate
+    relationName = getTableName(targetTable);
+
+    // Runtime validation: Check if relation name is in navigationPaths
+    if (
+      this.occurrence &&
+      FMTableClass.Symbol.NavigationPaths in this.occurrence
+    ) {
+      const navigationPaths = (this.occurrence as any)[
+        FMTableClass.Symbol.NavigationPaths
+      ] as readonly string[];
+      if (navigationPaths && !navigationPaths.includes(relationName)) {
+        this.logger.warn(
+          `Cannot navigate to "${relationName}". Valid navigation paths: ${navigationPaths.length > 0 ? navigationPaths.join(", ") : "none"}`,
+        );
+      }
+    }
+
+    // Create EntitySet with target table
+    const entitySet = new EntitySet<any>({
+      occurrence: targetTable,
       databaseName: this.databaseName,
       context: this.context,
+      database: this.database,
     });
     // Store the navigation info in the EntitySet
-    // We'll need to pass this through when creating QueryBuilders
     (entitySet as any).isNavigateFromEntitySet = true;
     (entitySet as any).navigateRelation = relationName;
 
     // Build the full base path for chained navigations
-    // The base path should contain all segments BEFORE the final relation
     if (this.isNavigateFromEntitySet && this.navigateBasePath) {
       // Already have a base path from previous navigation - extend it with current relation
       (entitySet as any).navigateBasePath =
@@ -447,7 +384,9 @@ export class EntitySet<
       (entitySet as any).navigateSourceTableName = this.navigateSourceTableName;
     } else {
       // Initial navigation - source is just the table name
-      (entitySet as any).navigateSourceTableName = this.tableName;
+      (entitySet as any).navigateSourceTableName = getTableName(
+        this.occurrence,
+      );
     }
     return entitySet;
   }

@@ -13,6 +13,13 @@
     /* Disallow explicit any (using @ts-expect-error for intentional any testing) */
     /* Note: TypeScript doesn't have a built-in noExplicitAny, but we can use eslint */
 
+    /* Path mappings for package name imports */
+    "baseUrl": "..",
+    "paths": {
+      "@proofkit/fmodata": ["./src"],
+      "@proofkit/fmodata/*": ["./src/*"]
+    },
+
     /* Include test files */
     "rootDir": "..",
     "outDir": "../dist"

@@ -11,9 +11,13 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { createMockClient } from "./utils/test-setup";
-import { occurrencesWithIds } from "./utils/test-setup";
+import {
+  createMockClient,
+  contactsTOWithIds,
+  usersTOWithIds,
+} from "./utils/test-setup";
 import { simpleMock } from "./utils/mock-fetch";
+import { eq } from "@proofkit/fmodata";
 
 describe("Field ID Transformation", () => {
   let capturedRequests: Array<{ url: string; options: any }> = [];
@@ -26,7 +30,7 @@ describe("Field ID Transformation", () => {
     it("should send request with FMFIDs and FMTID", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = {
@@ -44,11 +48,15 @@ describe("Field ID Transformation", () => {
       };
 
       await db
-        .from("users")
+        .from(usersTOWithIds)
         .list()
-        .select("id", "name", "active")
+        .select({
+          id: usersTOWithIds.id,
+          name: usersTOWithIds.name,
+          active: usersTOWithIds.active,
+        })
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -67,9 +75,7 @@ describe("Field ID Transformation", () => {
 
     it("should transform FMFID response keys back to field names", async () => {
       const connection = createMockClient();
-      const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
-      });
+      const db = connection.database("test.fmp12");
 
       const mockResponse = {
         "@context": "https://api.example.com/$metadata#users",
@@ -94,11 +100,15 @@ describe("Field ID Transformation", () => {
       };
 
       const result = await db
-        .from("users")
+        .from(usersTOWithIds)
         .list()
-        .select("id", "name", "active")
+        .select({
+          id: usersTOWithIds.id,
+          name: usersTOWithIds.name,
+          active: usersTOWithIds.active,
+        })
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -124,18 +134,18 @@ describe("Field ID Transformation", () => {
     it("should transform field names to FMFIDs in filter", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = { value: [] };
 
       await db
-        .from("users")
+        .from(usersTOWithIds)
         .list()
-        .select("id", "name")
-        .filter({ active: { eq: true } })
+        .select({ id: usersTOWithIds.id, name: usersTOWithIds.name })
+        .where(eq(usersTOWithIds.active, true))
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -145,7 +155,7 @@ describe("Field ID Transformation", () => {
       // Verify filter uses FMFID for the field name
       const request = capturedRequests[0]!;
       expect(decodeURIComponent(request.url)).toContain("FMFID:7"); // active field in filter
-      expect(request.url).toContain("eq%20true");
+      expect(request.url).toContain("eq%201");
     });
   });
 
@@ -153,18 +163,18 @@ describe("Field ID Transformation", () => {
     it("should transform field names to FMFIDs in orderBy", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = { value: [] };
 
       await db
-        .from("users")
+        .from(usersTOWithIds)
         .list()
-        .select("id", "name")
+        .select({ id: usersTOWithIds.id, name: usersTOWithIds.name })
         .orderBy(["name", "desc"])
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -181,7 +191,7 @@ describe("Field ID Transformation", () => {
     it("should use FMTID in URL", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = {
@@ -193,10 +203,10 @@ describe("Field ID Transformation", () => {
       };
 
       await db
-        .from("users")
+        .from(usersTOWithIds)
         .get("550e8400-e29b-41d4-a716-446655440001")
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -213,7 +223,7 @@ describe("Field ID Transformation", () => {
     it("should transform response field IDs back to names", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = {
@@ -232,10 +242,10 @@ describe("Field ID Transformation", () => {
       };
 
       const result = await db
-        .from("users")
+        .from(usersTOWithIds)
         .get("550e8400-e29b-41d4-a716-446655440001")
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -255,7 +265,7 @@ describe("Field ID Transformation", () => {
     it("should transform field names to FMFIDs in request body", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = {
@@ -274,12 +284,12 @@ describe("Field ID Transformation", () => {
 
       let capturedBody: any;
       const result = await db
-        .from("users")
+        .from(usersTOWithIds)
         .insert({
           name: "Charlie",
           active: true,
           fake_field: "test",
-        } as any) // Cast to bypass required field validation in tests
+        })
         .execute({
           fetchHandler: async (input, init) => {
             let url = input instanceof Request ? input.url : input.toString();
@@ -303,7 +313,7 @@ describe("Field ID Transformation", () => {
       // Check that the body has FMFIDs (not field names)
       expect(capturedBody).toMatchObject({
         "FMFID:6": "Charlie", // name
-        "FMFID:7": true, // active
+        "FMFID:7": 1, // active (number field, 1 = true)
         "FMFID:8": "test", // fake_field
       });
     });
@@ -311,7 +321,7 @@ describe("Field ID Transformation", () => {
     it("should transform response field IDs back to names", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = {
@@ -330,12 +340,12 @@ describe("Field ID Transformation", () => {
       };
 
       const result = await db
-        .from("users")
+        .from(usersTOWithIds)
         .insert({
           name: "Charlie",
           active: true,
           fake_field: "test",
-        } as any)
+        })
         .execute({
           fetchHandler: async (input, init) => {
             const url = input instanceof Request ? input.url : input.toString();
@@ -356,12 +366,12 @@ describe("Field ID Transformation", () => {
     it("should transform field names to FMFIDs in update body", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       let capturedBody: any;
       await db
-        .from("users")
+        .from(usersTOWithIds)
         .update({
           name: "Alice Updated",
           active: false,
@@ -390,7 +400,7 @@ describe("Field ID Transformation", () => {
       // Check that the body has FMFIDs (not field names)
       expect(capturedBody).toMatchObject({
         "FMFID:6": "Alice Updated", // name
-        "FMFID:7": false, // active
+        "FMFID:7": 0, // active (number field, 0 = false)
       });
     });
   });
@@ -399,17 +409,19 @@ describe("Field ID Transformation", () => {
     it("should use FMFIDs for expanded relation fields", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = { value: [] };
 
       await db
-        .from("contacts")
+        .from(contactsTOWithIds)
         .list()
-        .expand("users", (b) => b.select("id", "name"))
+        .expand(usersTOWithIds, (b: any) =>
+          b.select({ id: usersTOWithIds.id, name: usersTOWithIds.name }),
+        )
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -426,7 +438,7 @@ describe("Field ID Transformation", () => {
     it("should transform expanded relation response fields back to names", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = {
@@ -464,11 +476,13 @@ describe("Field ID Transformation", () => {
       };
 
       const result = await db
-        .from("contacts")
+        .from(contactsTOWithIds)
         .list()
-        .expand("users", (b) => b.select("id", "name"))
+        .expand(usersTOWithIds, (b: any) =>
+          b.select({ id: usersTOWithIds.id, name: usersTOWithIds.name }),
+        )
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init });
             return simpleMock({ body: mockResponse, status: 200 })(input, init);
@@ -507,17 +521,17 @@ describe("Field ID Transformation", () => {
     it("should include 'Prefer: fmodata.entity-ids' header when using entity IDs", async () => {
       const connection = createMockClient();
       const db = connection.database("test.fmp12", {
-        occurrences: occurrencesWithIds,
+        useEntityIds: true,
       });
 
       const mockResponse = { value: [] };
 
       await db
-        .from("users")
+        .from(usersTOWithIds)
         .list()
-        .select("id", "name")
+        .select({ id: usersTOWithIds.id, name: usersTOWithIds.name })
         .execute({
-          fetchHandler: (input, init) => {
+          fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
             const headers = (init as RequestInit)?.headers as Record<
               string,

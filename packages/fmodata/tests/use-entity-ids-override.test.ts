@@ -10,10 +10,22 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod/v4";
 import {
   FMServerConnection,
-  defineBaseTable,
-  defineTableOccurrence,
-} from "../src/index";
+  fmTableOccurrence,
+  textField,
+} from "@proofkit/fmodata";
 import { simpleMock } from "./utils/mock-fetch";
+
+// Create database with entity IDs
+const contactsTO = fmTableOccurrence(
+  "contacts",
+  {
+    id: textField().primaryKey().entityId("FMFID:1"),
+    name: textField().entityId("FMFID:2"),
+  },
+  {
+    entityId: "FMTID:100",
+  },
+);
 
 describe("Per-request useEntityIds override", () => {
   it("should allow disabling entity IDs for a specific request", async () => {
@@ -23,35 +35,14 @@ describe("Per-request useEntityIds override", () => {
       auth: { username: "test", password: "test" },
     });
 
-    // Create database with entity IDs
-    const contactsBase = defineBaseTable({
-      schema: {
-        id: z.string(),
-        name: z.string(),
-      },
-      idField: "id",
-      fmfIds: {
-        id: "FMFID:1",
-        name: "FMFID:2",
-      },
-    });
-
-    const contactsTO = defineTableOccurrence({
-      name: "contacts",
-      baseTable: contactsBase,
-      fmtId: "FMTID:100",
-    });
-
-    const db = connection.database("TestDB", {
-      occurrences: [contactsTO] as const,
-    });
+    const db = connection.database("TestDB");
 
     // First request: use default (should have entity ID header)
     await db
-      .from("contacts")
+      .from(contactsTO)
       .list()
       .execute({
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -63,11 +54,11 @@ describe("Per-request useEntityIds override", () => {
 
     // Second request: explicitly disable entity IDs for this request only
     await db
-      .from("contacts")
+      .from(contactsTO)
       .list()
       .execute({
         useEntityIds: false,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -79,11 +70,11 @@ describe("Per-request useEntityIds override", () => {
 
     // Third request: explicitly enable entity IDs for this request
     await db
-      .from("contacts")
+      .from(contactsTO)
       .list()
       .execute({
         useEntityIds: true,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -107,10 +98,10 @@ describe("Per-request useEntityIds override", () => {
 
     // First request: use default (should NOT have entity ID header)
     await db
-      .from("contacts")
+      .from(contactsTO)
       .list()
       .execute({
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -122,11 +113,11 @@ describe("Per-request useEntityIds override", () => {
 
     // Second request: explicitly enable entity IDs for this request only
     await db
-      .from("contacts")
+      .from(contactsTO)
       .list()
       .execute({
         useEntityIds: true,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -138,10 +129,10 @@ describe("Per-request useEntityIds override", () => {
 
     // Third request: confirm default is still disabled
     await db
-      .from("contacts")
+      .from(contactsTO)
       .list()
       .execute({
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -158,34 +149,25 @@ describe("Per-request useEntityIds override", () => {
       auth: { username: "test", password: "test" },
     });
 
-    const contactsBase = defineBaseTable({
-      schema: {
-        id: z.string(),
-        name: z.string(),
+    const contactsTO = fmTableOccurrence(
+      "contacts",
+      {
+        id: textField().primaryKey().entityId("FMFID:1"),
+        name: textField().entityId("FMFID:2"),
       },
-      idField: "id",
-      fmfIds: {
-        id: "FMFID:1",
-        name: "FMFID:2",
+      {
+        entityId: "FMTID:100",
       },
-    });
+    );
 
-    const contactsTO = defineTableOccurrence({
-      name: "contacts",
-      baseTable: contactsBase,
-      fmtId: "FMTID:100",
-    });
-
-    const db = connection.database("TestDB", {
-      occurrences: [contactsTO] as const,
-    });
+    const db = connection.database("TestDB");
 
     // Insert with default settings (entity IDs enabled)
     await db
-      .from("contacts")
+      .from(contactsTO)
       .insert({ name: "Test" })
       .execute({
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -200,11 +182,11 @@ describe("Per-request useEntityIds override", () => {
 
     // Insert with entity IDs disabled for this request
     await db
-      .from("contacts")
+      .from(contactsTO)
       .insert({ name: "Test" })
       .execute({
         useEntityIds: false,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -224,36 +206,27 @@ describe("Per-request useEntityIds override", () => {
       auth: { username: "test", password: "test" },
     });
 
-    const contactsBase = defineBaseTable({
-      schema: {
-        id: z.string(),
-        name: z.string(),
+    const contactsTO = fmTableOccurrence(
+      "contacts",
+      {
+        id: textField().primaryKey().entityId("FMFID:1"),
+        name: textField().entityId("FMFID:2"),
       },
-      idField: "id",
-      fmfIds: {
-        id: "FMFID:1",
-        name: "FMFID:2",
+      {
+        entityId: "FMTID:100",
       },
-    });
+    );
 
-    const contactsTO = defineTableOccurrence({
-      name: "contacts",
-      baseTable: contactsBase,
-      fmtId: "FMTID:100",
-    });
-
-    const db = connection.database("TestDB", {
-      occurrences: [contactsTO] as const,
-    });
+    const db = connection.database("TestDB");
 
     // Update with entity IDs disabled
     await db
-      .from("contacts")
+      .from(contactsTO)
       .update({ name: "Updated" })
       .byId("123")
       .execute({
         useEntityIds: false,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -269,12 +242,12 @@ describe("Per-request useEntityIds override", () => {
 
     // Update with entity IDs enabled
     await db
-      .from("contacts")
+      .from(contactsTO)
       .update({ name: "Updated" })
       .byId("123")
       .execute({
         useEntityIds: true,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -295,36 +268,27 @@ describe("Per-request useEntityIds override", () => {
       auth: { username: "test", password: "test" },
     });
 
-    const contactsBase = defineBaseTable({
-      schema: {
-        id: z.string(),
-        name: z.string(),
+    const contactsTO = fmTableOccurrence(
+      "contacts",
+      {
+        id: textField().primaryKey().entityId("FMFID:1"),
+        name: textField().entityId("FMFID:2"),
       },
-      idField: "id",
-      fmfIds: {
-        id: "FMFID:1",
-        name: "FMFID:2",
+      {
+        entityId: "FMTID:100",
       },
-    });
+    );
 
-    const contactsTO = defineTableOccurrence({
-      name: "contacts",
-      baseTable: contactsBase,
-      fmtId: "FMTID:100",
-    });
-
-    const db = connection.database("TestDB", {
-      occurrences: [contactsTO] as const,
-    });
+    const db = connection.database("TestDB");
 
     // Delete with entity IDs enabled
     await db
-      .from("contacts")
+      .from(contactsTO)
       .delete()
       .byId("123")
       .execute({
         useEntityIds: true,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string
@@ -340,12 +304,12 @@ describe("Per-request useEntityIds override", () => {
 
     // Delete with entity IDs disabled
     await db
-      .from("contacts")
+      .from(contactsTO)
       .delete()
       .byId("123")
       .execute({
         useEntityIds: false,
-        fetchHandler: (input, init) => {
+        fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
           const headers = (init as RequestInit)?.headers as Record<
             string,
             string

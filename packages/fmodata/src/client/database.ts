@@ -1,50 +1,11 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { ExecutionContext, ExecutableBuilder, Metadata } from "../types";
-import type { BaseTable } from "./base-table";
-import type { TableOccurrence } from "./table-occurrence";
 import { EntitySet } from "./entity-set";
 import { BatchBuilder } from "./batch-builder";
 import { SchemaManager } from "./schema-manager";
+import { FMTable } from "../orm/table";
 
-// Helper type to extract schema from a TableOccurrence
-type ExtractSchemaFromOccurrence<O> =
-  O extends TableOccurrence<infer BT, any, any, any>
-    ? BT extends BaseTable<infer S, any, any, any>
-      ? S
-      : never
-    : never;
-
-// Helper type to find an occurrence by name in the occurrences tuple
-type FindOccurrenceByName<
-  Occurrences extends readonly TableOccurrence<any, any, any, any>[],
-  Name extends string,
-> = Occurrences extends readonly [
-  infer First,
-  ...infer Rest extends readonly TableOccurrence<any, any, any, any>[],
-]
-  ? First extends TableOccurrence<any, any, any, any>
-    ? First["name"] extends Name
-      ? First
-      : FindOccurrenceByName<Rest, Name>
-    : never
-  : never;
-
-// Helper type to extract all occurrence names from the tuple
-type ExtractOccurrenceNames<
-  Occurrences extends readonly TableOccurrence<any, any, any, any>[],
-> = Occurrences extends readonly []
-  ? string // If no occurrences, allow any string
-  : Occurrences[number]["name"]; // Otherwise, extract union of names
-
-export class Database<
-  Occurrences extends readonly TableOccurrence<
-    any,
-    any,
-    any,
-    any
-  >[] = readonly [],
-> {
-  private occurrenceMap: Map<string, TableOccurrence<any, any, any, any>>;
+export class Database {
   private _useEntityIds: boolean = false;
   public readonly schema: SchemaManager;
 
@@ -52,7 +13,6 @@ export class Database<
     private readonly databaseName: string,
     private readonly context: ExecutionContext,
     config?: {
-      occurrences?: Occurrences | undefined;
       /**
        * Whether to use entity IDs instead of field names in the actual requests to the server
        * Defaults to true if all occurrences use entity IDs, false otherwise
@@ -61,129 +21,28 @@ export class Database<
       useEntityIds?: boolean;
     },
   ) {
-    this.occurrenceMap = new Map();
-    if (config?.occurrences) {
-      // Validate consistency: either all occurrences use entity IDs or none do
-      const occurrencesWithIds: string[] = [];
-      const occurrencesWithoutIds: string[] = [];
-
-      for (const occ of config.occurrences) {
-        this.occurrenceMap.set(occ.name, occ);
-
-        const hasTableId = occ.isUsingTableId();
-        const hasFieldIds = occ.baseTable.isUsingFieldIds();
-
-        // An occurrence uses entity IDs if it has both fmtId and fmfIds
-        if (hasTableId && hasFieldIds) {
-          occurrencesWithIds.push(occ.name);
-        } else if (!hasTableId && !hasFieldIds) {
-          occurrencesWithoutIds.push(occ.name);
-        } else {
-          // Partial entity ID usage (only one of fmtId or fmfIds) - this is an error
-          throw new Error(
-            `TableOccurrence "${occ.name}" has inconsistent entity ID configuration. ` +
-              `Both fmtId (${hasTableId ? "present" : "missing"}) and fmfIds (${hasFieldIds ? "present" : "missing"}) must be defined together.`,
-          );
-        }
-      }
-
-      // Determine default value: true if all occurrences use entity IDs, false otherwise
-      const allOccurrencesUseEntityIds =
-        occurrencesWithIds.length > 0 && occurrencesWithoutIds.length === 0;
-      const hasMixedUsage =
-        occurrencesWithIds.length > 0 && occurrencesWithoutIds.length > 0;
-
-      // Handle explicit useEntityIds config
-      if (config.useEntityIds !== undefined) {
-        if (config.useEntityIds === false) {
-          // If explicitly set to false, allow mixed usage and use false
-          this._useEntityIds = false;
-        } else if (config.useEntityIds === true) {
-          // If explicitly set to true, validate that all occurrences use entity IDs
-          if (hasMixedUsage || occurrencesWithoutIds.length > 0) {
-            throw new Error(
-              `useEntityIds is set to true but some occurrences do not use entity IDs. ` +
-                `Occurrences without entity IDs: [${occurrencesWithoutIds.join(", ")}]. ` +
-                `Either set useEntityIds to false or configure all occurrences with entity IDs.`,
-            );
-          }
-          this._useEntityIds = true;
-        }
-      } else {
-        // Default: true if all occurrences use entity IDs, false otherwise
-        // But throw error if there's mixed usage when using defaults
-        if (hasMixedUsage) {
-          throw new Error(
-            `Cannot mix TableOccurrence instances with and without entity IDs in the same database. ` +
-              `Occurrences with entity IDs: [${occurrencesWithIds.join(", ")}]. ` +
-              `Occurrences without entity IDs: [${occurrencesWithoutIds.join(", ")}]. ` +
-              `Either all table occurrences must use entity IDs (fmtId + fmfIds), none should, or explicitly set useEntityIds to false.`,
-          );
-        }
-        this._useEntityIds = allOccurrencesUseEntityIds;
-      }
-    } else {
-      // No occurrences provided, use explicit config or default to false
-      this._useEntityIds = config?.useEntityIds ?? false;
-    }
-
-    // Inform the execution context whether to use entity IDs
-    if (this.context._setUseEntityIds) {
-      this.context._setUseEntityIds(this._useEntityIds);
-    }
-
     // Initialize schema manager
     this.schema = new SchemaManager(this.databaseName, this.context);
+    this._useEntityIds = config?.useEntityIds ?? false;
   }
 
-  /**
-   * Returns true if any table occurrence in this database is using entity IDs.
-   */
-  isUsingEntityIds(): boolean {
-    return this._useEntityIds;
-  }
-
-  /**
-   * Gets a table occurrence by name.
-   * @internal
-   */
-  getOccurrence(name: string): TableOccurrence<any, any, any, any> | undefined {
-    return this.occurrenceMap.get(name);
-  }
-
-  from<Name extends ExtractOccurrenceNames<Occurrences> | (string & {})>(
-    name: Name,
-  ): Occurrences extends readonly []
-    ? EntitySet<Record<string, StandardSchemaV1>, undefined>
-    : Name extends ExtractOccurrenceNames<Occurrences>
-      ? EntitySet<
-          ExtractSchemaFromOccurrence<FindOccurrenceByName<Occurrences, Name>>,
-          FindOccurrenceByName<Occurrences, Name>
-        >
-      : EntitySet<Record<string, StandardSchemaV1>, undefined> {
-    const occurrence = this.occurrenceMap.get(name as string);
-
-    if (occurrence) {
-      // Use EntitySet.create to preserve types better
-      type OccType = FindOccurrenceByName<Occurrences, Name>;
-      type SchemaType = ExtractSchemaFromOccurrence<OccType>;
-
-      return EntitySet.create<SchemaType, OccType>({
-        occurrence: occurrence as OccType,
-        tableName: name as string,
-        databaseName: this.databaseName,
-        context: this.context,
-        database: this,
-      }) as any;
-    } else {
-      // Return untyped EntitySet for dynamic table access
-      return new EntitySet<Record<string, StandardSchemaV1>, undefined>({
-        tableName: name as string,
-        databaseName: this.databaseName,
-        context: this.context,
-        database: this,
-      }) as any;
+  from<T extends FMTable<any, any>>(table: T): EntitySet<T> {
+    // Only override database-level useEntityIds if table explicitly sets it
+    // (not if it's undefined, which would override the database setting)
+    if (
+      Object.prototype.hasOwnProperty.call(table, FMTable.Symbol.UseEntityIds)
+    ) {
+      const tableUseEntityIds = (table as any)[FMTable.Symbol.UseEntityIds];
+      if (typeof tableUseEntityIds === "boolean") {
+        this._useEntityIds = tableUseEntityIds;
+      }
     }
+    return new EntitySet<T>({
+      occurrence: table as T,
+      databaseName: this.databaseName,
+      context: this.context,
+      database: this,
+    });
   }
 
   /**

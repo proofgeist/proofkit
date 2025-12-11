@@ -9,8 +9,8 @@ import { describe, it, expect } from "vitest";
 import {
   sanitizeFileMakerJson,
   safeJsonParse,
-} from "../src/client/sanitize-json";
-import { ResponseParseError } from "../src/errors";
+} from "@proofkit/fmodata/client/sanitize-json";
+import { ResponseParseError } from "@proofkit/fmodata/errors";
 
 describe("sanitizeFileMakerJson", () => {
   describe("basic sanitization", () => {

@@ -1,19 +1,91 @@
 import type { ODataRecordMetadata } from "./types";
 import { StandardSchemaV1 } from "@standard-schema/spec";
-import type { TableOccurrence } from "./client/table-occurrence";
+import type { FMTable } from "./orm/table";
 import {
   ValidationError,
   ResponseStructureError,
   RecordCountMismatchError,
 } from "./errors";
 
+/**
+ * Validates and transforms input data for insert/update operations.
+ * Applies input validators (writeValidators) to transform user input to database format.
+ * Fields without input validators are passed through unchanged.
+ *
+ * @param data - The input data to validate and transform
+ * @param inputSchema - Optional schema containing input validators for each field
+ * @returns Transformed data ready to send to the server
+ * @throws ValidationError if any field fails validation
+ */
+export async function validateAndTransformInput<T extends Record<string, any>>(
+  data: Partial<T>,
+  inputSchema?: Record<string, StandardSchemaV1>,
+): Promise<Partial<T>> {
+  // If no input schema, return data as-is
+  if (!inputSchema) {
+    return data;
+  }
+
+  const transformedData: Record<string, any> = { ...data };
+
+  // Process each field that has an input validator
+  for (const [fieldName, fieldSchema] of Object.entries(inputSchema)) {
+    // Only process fields that are present in the input data
+    if (fieldName in data) {
+      const inputValue = data[fieldName];
+
+      try {
+        // Run the input validator to transform the value
+        let result = fieldSchema["~standard"].validate(inputValue);
+        if (result instanceof Promise) {
+          result = await result;
+        }
+
+        // Check for validation errors
+        if (result.issues) {
+          throw new ValidationError(
+            `Input validation failed for field '${fieldName}'`,
+            result.issues,
+            {
+              field: fieldName,
+              value: inputValue,
+              cause: result.issues,
+            },
+          );
+        }
+
+        // Store the transformed value
+        transformedData[fieldName] = result.value;
+      } catch (error) {
+        // If it's already a ValidationError, re-throw it
+        if (error instanceof ValidationError) {
+          throw error;
+        }
+
+        // Otherwise, wrap the error
+        throw new ValidationError(
+          `Input validation failed for field '${fieldName}'`,
+          [],
+          {
+            field: fieldName,
+            value: inputValue,
+            cause: error,
+          },
+        );
+      }
+    }
+  }
+
+  // Fields without input validators are already in transformedData (passed through)
+  return transformedData as Partial<T>;
+}
+
 // Type for expand validation configuration
 export type ExpandValidationConfig = {
   relation: string;
   targetSchema?: Record<string, StandardSchemaV1>;
-  targetOccurrence?: TableOccurrence<any, any, any, any>;
-  targetBaseTable?: any; // BaseTable instance for transformation
-  occurrence?: TableOccurrence<any, any, any, any>; // For transformation
+  targetTable?: FMTable<any, any>;
+  table?: FMTable<any, any>; // For transformation
   selectedFields?: string[];
   nestedExpands?: ExpandValidationConfig[];
 };

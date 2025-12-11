@@ -15,20 +15,23 @@ import {
   ResponseParseError,
 } from "../errors";
 import { Database } from "./database";
-import { TableOccurrence } from "./table-occurrence";
 import { safeJsonParse } from "./sanitize-json";
 import { get } from "es-toolkit/compat";
+import { createLogger, type Logger, type InternalLogger } from "../logger";
 
 export class FMServerConnection implements ExecutionContext {
   private fetchClient: ReturnType<typeof createClient>;
   private serverUrl: string;
   private auth: Auth;
   private useEntityIds: boolean = false;
+  private logger: InternalLogger;
   constructor(config: {
     serverUrl: string;
     auth: Auth;
     fetchClientOptions?: FFetchOptions;
+    logger?: Logger;
   }) {
+    this.logger = createLogger(config.logger);
     this.fetchClient = createClient({
       retries: 0,
       ...config.fetchClientOptions,
@@ -70,11 +73,20 @@ export class FMServerConnection implements ExecutionContext {
 
   /**
    * @internal
+   * Gets the logger instance
+   */
+  _getLogger(): InternalLogger {
+    return this.logger;
+  }
+
+  /**
+   * @internal
    */
   async _makeRequest<T>(
     url: string,
     options?: RequestInit & FFetchOptions & { useEntityIds?: boolean },
   ): Promise<Result<T>> {
+    const logger = this._getLogger();
     const baseUrl = `${this.serverUrl}${"apiKey" in this.auth ? `/otto` : ""}/fmi/odata/v4`;
     const fullUrl = baseUrl + url;
 
@@ -94,6 +106,10 @@ export class FMServerConnection implements ExecutionContext {
       ...(useEntityIds ? { Prefer: "fmodata.entity-ids" } : {}),
       ...(options?.headers || {}),
     };
+
+    // Prepare loggableHeaders by omitting the Authorization key
+    const { Authorization, ...loggableHeaders } = headers;
+    logger.debug("Request headers:", loggableHeaders);
 
     // TEMPORARY WORKAROUND: Hopefully this feature will be fixed in the ffetch library
     // Extract fetchHandler and headers separately, only for tests where we're overriding the fetch handler per-request
@@ -117,6 +133,7 @@ export class FMServerConnection implements ExecutionContext {
       };
 
       const resp = await clientToUse(fullUrl, finalOptions);
+      logger.debug(`${finalOptions.method ?? "GET"} ${resp.status} ${fullUrl}`);
 
       // Handle HTTP errors
       if (!resp.ok) {
@@ -254,15 +271,12 @@ export class FMServerConnection implements ExecutionContext {
     }
   }
 
-  database<
-    const Occurrences extends readonly TableOccurrence<any, any, any, any>[],
-  >(
+  database(
     name: string,
     config?: {
-      occurrences?: Occurrences | undefined;
       useEntityIds?: boolean;
     },
-  ): Database<Occurrences> {
+  ): Database {
     return new Database(name, this, config);
   }
 

@@ -7,18 +7,16 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { createMockFetch } from "./utils/mock-fetch";
 import { mockResponses } from "./fixtures/responses";
-import { createMockClient, occurrences } from "./utils/test-setup";
+import { createMockClient, contacts, users } from "./utils/test-setup";
 
 describe("insert and update operations with returnFullRecord", () => {
   const client = createMockClient();
 
   it("should insert a record and return the created record with metadata", async () => {
-    const db = client.database("fmdapi_test.fmp12", {
-      occurrences: occurrences,
-    });
+    const db = client.database("fmdapi_test.fmp12", {});
 
     const result = await db
-      .from("contacts")
+      .from(contacts)
       .insert({
         name: "Capture test",
       })
@@ -54,12 +52,10 @@ describe("insert and update operations with returnFullRecord", () => {
   });
 
   it("should allow returnFullRecord=false to get just ROWID", async () => {
-    const db = client.database("fmdapi_test.fmp12", {
-      occurrences: occurrences,
-    });
+    const db = client.database("fmdapi_test.fmp12");
 
     const result = await db
-      .from("contacts")
+      .from(contacts)
       .insert(
         {
           name: "Capture test",
@@ -76,7 +72,7 @@ describe("insert and update operations with returnFullRecord", () => {
 
     // Type check: when returnFullRecord is true or omitted, result should have full record
     const fullResult = await db
-      .from("contacts")
+      .from(contacts)
       .insert(
         {
           name: "anything",
@@ -101,13 +97,11 @@ describe("insert and update operations with returnFullRecord", () => {
   });
 
   it("should allow returnFullRecord=true for update to get full record", async () => {
-    const db = client.database("fmdapi_test.fmp12", {
-      occurrences: occurrences,
-    });
+    const db = client.database("fmdapi_test.fmp12");
 
     // Test with returnFullRecord=true
     const result = await db
-      .from("contacts")
+      .from(contacts)
       .update({ name: "Updated name" }, { returnFullRecord: true })
       .byId("331F5862-2ABF-4FB6-AA24-A00F7359BDDA")
       .execute({
@@ -121,7 +115,7 @@ describe("insert and update operations with returnFullRecord", () => {
 
     // Test without returnFullRecord (default - returns count)
     const countResult = await db
-      .from("contacts")
+      .from(contacts)
       .update({ name: "Updated name" })
       .byId("331F5862-2ABF-4FB6-AA24-A00F7359BDDA")
       .execute({

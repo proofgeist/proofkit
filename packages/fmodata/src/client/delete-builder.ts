@@ -4,34 +4,36 @@ import type {
   Result,
   WithSystemFields,
   ExecuteOptions,
+  ExecuteMethodOptions,
 } from "../types";
 import { getAcceptHeader } from "../types";
-import type { TableOccurrence } from "./table-occurrence";
+import type { FMTable, InferSchemaOutputFromFMTable } from "../orm/table";
+import {
+  getTableName,
+  getTableId as getTableIdHelper,
+  isUsingEntityIds,
+} from "../orm/table";
 import { QueryBuilder } from "./query-builder";
 import { type FFetchOptions } from "@fetchkit/ffetch";
-import { getTableIdentifiers } from "../transform";
 import { parseErrorResponse } from "./error-parser";
 
 /**
  * Initial delete builder returned from EntitySet.delete()
  * Requires calling .byId() or .where() before .execute() is available
  */
-export class DeleteBuilder<T extends Record<string, any>> {
-  private tableName: string;
+export class DeleteBuilder<Occ extends FMTable<any, any>> {
   private databaseName: string;
   private context: ExecutionContext;
-  private occurrence?: TableOccurrence<any, any, any, any>;
+  private table: Occ;
   private databaseUseEntityIds: boolean;
 
   constructor(config: {
-    occurrence?: TableOccurrence<any, any, any, any>;
-    tableName: string;
+    occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
     databaseUseEntityIds?: boolean;
   }) {
-    this.occurrence = config.occurrence;
-    this.tableName = config.tableName;
+    this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
@@ -40,10 +42,9 @@ export class DeleteBuilder<T extends Record<string, any>> {
   /**
    * Delete a single record by ID
    */
-  byId(id: string | number): ExecutableDeleteBuilder<T> {
-    return new ExecutableDeleteBuilder<T>({
-      occurrence: this.occurrence,
-      tableName: this.tableName,
+  byId(id: string | number): ExecutableDeleteBuilder<Occ> {
+    return new ExecutableDeleteBuilder<Occ>({
+      occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       mode: "byId",
@@ -57,20 +58,11 @@ export class DeleteBuilder<T extends Record<string, any>> {
    * @param fn Callback that receives a QueryBuilder for building the filter
    */
   where(
-    fn: (
-      q: QueryBuilder<WithSystemFields<T>>,
-    ) => QueryBuilder<WithSystemFields<T>>,
-  ): ExecutableDeleteBuilder<T> {
+    fn: (q: QueryBuilder<Occ>) => QueryBuilder<Occ>,
+  ): ExecutableDeleteBuilder<Occ> {
     // Create a QueryBuilder for the user to configure
-    const queryBuilder = new QueryBuilder<
-      WithSystemFields<T>,
-      keyof WithSystemFields<T>,
-      false,
-      false,
-      undefined
-    >({
-      occurrence: undefined,
-      tableName: this.tableName,
+    const queryBuilder = new QueryBuilder<Occ>({
+      occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
     });
@@ -78,9 +70,8 @@ export class DeleteBuilder<T extends Record<string, any>> {
     // Let the user configure it
     const configuredBuilder = fn(queryBuilder);
 
-    return new ExecutableDeleteBuilder<T>({
-      occurrence: this.occurrence,
-      tableName: this.tableName,
+    return new ExecutableDeleteBuilder<Occ>({
+      occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       mode: "byFilter",
@@ -94,30 +85,27 @@ export class DeleteBuilder<T extends Record<string, any>> {
  * Executable delete builder - has execute() method
  * Returned after calling .byId() or .where()
  */
-export class ExecutableDeleteBuilder<T extends Record<string, any>>
+export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
   implements ExecutableBuilder<{ deletedCount: number }>
 {
-  private tableName: string;
   private databaseName: string;
   private context: ExecutionContext;
-  private occurrence?: TableOccurrence<any, any, any, any>;
+  private table: Occ;
   private mode: "byId" | "byFilter";
   private recordId?: string | number;
-  private queryBuilder?: QueryBuilder<any>;
+  private queryBuilder?: QueryBuilder<Occ>;
   private databaseUseEntityIds: boolean;
 
   constructor(config: {
-    occurrence?: TableOccurrence<any, any, any, any>;
-    tableName: string;
+    occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
     mode: "byId" | "byFilter";
     recordId?: string | number;
-    queryBuilder?: QueryBuilder<any>;
+    queryBuilder?: QueryBuilder<Occ>;
     databaseUseEntityIds?: boolean;
   }) {
-    this.occurrence = config.occurrence;
-    this.tableName = config.tableName;
+    this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.mode = config.mode;
@@ -144,28 +132,23 @@ export class ExecutableDeleteBuilder<T extends Record<string, any>>
    * @param useEntityIds - Optional override for entity ID usage
    */
   private getTableId(useEntityIds?: boolean): string {
-    if (!this.occurrence) {
-      return this.tableName;
-    }
-
     const contextDefault = this.context._getUseEntityIds?.() ?? false;
     const shouldUseIds = useEntityIds ?? contextDefault;
 
     if (shouldUseIds) {
-      const identifiers = getTableIdentifiers(this.occurrence);
-      if (!identifiers.id) {
+      if (!isUsingEntityIds(this.table)) {
         throw new Error(
-          `useEntityIds is true but TableOccurrence "${identifiers.name}" does not have an fmtId defined`,
+          `useEntityIds is true but table "${getTableName(this.table)}" does not have entity IDs configured`,
         );
       }
-      return identifiers.id;
+      return getTableIdHelper(this.table);
     }
 
-    return this.occurrence.getTableName();
+    return getTableName(this.table);
   }
 
   async execute(
-    options?: RequestInit & FFetchOptions & { useEntityIds?: boolean },
+    options?: ExecuteMethodOptions<ExecuteOptions>,
   ): Promise<Result<{ deletedCount: number }>> {
     // Merge database-level useEntityIds with per-request options
     const mergedOptions = this.mergeExecuteOptions(options);
@@ -187,10 +170,11 @@ export class ExecutableDeleteBuilder<T extends Record<string, any>>
       // Get the query string from the configured QueryBuilder
       const queryString = this.queryBuilder.getQueryString();
       // Remove the leading "/" and table name from the query string as we'll build our own URL
+      const tableName = getTableName(this.table);
       const queryParams = queryString.startsWith(`/${tableId}`)
         ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${this.tableName}`)
-          ? queryString.slice(`/${this.tableName}`.length)
+        : queryString.startsWith(`/${tableName}`)
+          ? queryString.slice(`/${tableName}`.length)
           : queryString;
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
@@ -237,10 +221,11 @@ export class ExecutableDeleteBuilder<T extends Record<string, any>>
       }
 
       const queryString = this.queryBuilder.getQueryString();
+      const tableName = getTableName(this.table);
       const queryParams = queryString.startsWith(`/${tableId}`)
         ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${this.tableName}`)
-          ? queryString.slice(`/${this.tableName}`.length)
+        : queryString.startsWith(`/${tableName}`)
+          ? queryString.slice(`/${tableName}`.length)
           : queryString;
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
@@ -270,9 +255,10 @@ export class ExecutableDeleteBuilder<T extends Record<string, any>>
   ): Promise<Result<{ deletedCount: number }>> {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
+      const tableName = getTableName(this.table);
       const error = await parseErrorResponse(
         response,
-        response.url || `/${this.databaseName}/${this.tableName}`,
+        response.url || `/${this.databaseName}/${tableName}`,
       );
       return { data: undefined, error };
     }

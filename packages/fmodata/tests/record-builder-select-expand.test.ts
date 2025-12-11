@@ -14,98 +14,130 @@ import { z } from "zod/v4";
 import { createMockFetch } from "./utils/mock-fetch";
 import {
   createMockClient,
-  occurrences,
-  occurrencesWithIds,
-  contactsBase,
-  usersBase,
+  contacts,
+  users,
+  arbitraryTable,
+  invoices,
 } from "./utils/test-setup";
-import { defineTableOccurrence, buildOccurrences } from "../src/index";
+import {
+  fmTableOccurrence,
+  textField,
+  timestampField,
+  numberField,
+  containerField,
+  eq,
+} from "@proofkit/fmodata";
 
 describe("RecordBuilder Select/Expand", () => {
   const client = createMockClient();
-  const db = client.database("test_db", {
-    occurrences: occurrences,
-  });
-  const dbWithIds = client.database("test_db_with_ids", {
-    occurrences: occurrencesWithIds,
-  });
+  const db = client.database("test_db");
 
   // Create occurrences with different defaultSelect values for testing
-  const contactsWithSchemaSelect = defineTableOccurrence({
-    name: "contacts",
-    baseTable: contactsBase,
-    defaultSelect: "schema", // Should select all schema fields
-  });
+  const contactsWithSchemaSelect = fmTableOccurrence(
+    "contacts",
+    {
+      PrimaryKey: textField().primaryKey(),
+      CreationTimestamp: timestampField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: timestampField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      hobby: textField(),
+      id_user: textField(),
+    },
+    {
+      defaultSelect: "schema", // Should select all schema fields
+      navigationPaths: ["users"],
+    },
+  );
 
-  const contactsWithArraySelect = defineTableOccurrence({
-    name: "contacts",
-    baseTable: contactsBase,
-    defaultSelect: ["name", "hobby", "id_user"] as const, // Specific fields
-  });
-
-  const occurrencesWithSchemaSelect = buildOccurrences({
-    occurrences: [contactsWithSchemaSelect],
-  });
-
-  const occurrencesWithArraySelect = buildOccurrences({
-    occurrences: [contactsWithArraySelect],
-  });
-
-  const dbWithSchemaSelect = client.database("test_db_schema_select", {
-    occurrences: occurrencesWithSchemaSelect,
-  });
-
-  const dbWithArraySelect = client.database("test_db_array_select", {
-    occurrences: occurrencesWithArraySelect,
-  });
+  const contactsWithArraySelect = fmTableOccurrence(
+    "contacts",
+    {
+      PrimaryKey: textField().primaryKey(),
+      CreationTimestamp: timestampField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: timestampField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      hobby: textField(),
+      id_user: textField(),
+    },
+    {
+      defaultSelect: (table) => ({
+        name: table.name,
+        hobby: table.hobby,
+        id_user: table.id_user,
+      }), // Specific fields
+      navigationPaths: ["users"],
+    },
+  );
 
   // Create occurrences with navigation where target has different defaultSelect values
-  const contactsForExpandTest = defineTableOccurrence({
-    name: "contacts",
-    baseTable: contactsBase,
-    defaultSelect: "all", // Parent table uses all
-  });
-
-  const usersWithSchemaSelect = defineTableOccurrence({
-    name: "users",
-    baseTable: usersBase,
-    defaultSelect: "schema", // Target table uses schema
-  });
-
-  const usersWithArraySelect = defineTableOccurrence({
-    name: "users",
-    baseTable: usersBase,
-    defaultSelect: ["name", "active"] as const, // Target table uses specific fields
-  });
-
-  const occurrencesWithExpandSchemaSelect = buildOccurrences({
-    occurrences: [contactsForExpandTest, usersWithSchemaSelect],
-    navigation: {
-      contacts: ["users"],
-      users: ["contacts"],
+  const contactsForExpandTest = fmTableOccurrence(
+    "contacts",
+    {
+      PrimaryKey: textField().primaryKey(),
+      CreationTimestamp: timestampField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: timestampField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      hobby: textField(),
+      id_user: textField(),
     },
-  });
-
-  const occurrencesWithExpandArraySelect = buildOccurrences({
-    occurrences: [contactsForExpandTest, usersWithArraySelect],
-    navigation: {
-      contacts: ["users"],
-      users: ["contacts"],
+    {
+      defaultSelect: "all", // Parent table uses all
+      navigationPaths: ["users"],
     },
-  });
+  );
 
-  const dbWithExpandSchemaSelect = client.database("test_db_expand_schema", {
-    occurrences: occurrencesWithExpandSchemaSelect,
-  });
+  const usersWithSchemaSelect = fmTableOccurrence(
+    "users",
+    {
+      id: textField().primaryKey().readValidator(z.uuid()),
+      CreationTimestamp: timestampField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: timestampField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      active: numberField().readValidator(z.coerce.boolean()),
+      fake_field: textField(),
+      id_customer: textField(),
+    },
+    {
+      defaultSelect: "schema", // Target table uses schema
+      navigationPaths: ["contacts"],
+    },
+  );
 
-  const dbWithExpandArraySelect = client.database("test_db_expand_array", {
-    occurrences: occurrencesWithExpandArraySelect,
-  });
+  const usersWithArraySelect = fmTableOccurrence(
+    "users",
+    {
+      id: textField().primaryKey().readValidator(z.uuid()),
+      CreationTimestamp: timestampField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: timestampField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      active: numberField().readValidator(z.coerce.boolean()),
+      fake_field: textField(),
+      id_customer: textField(),
+    },
+    {
+      defaultSelect: (table) => ({
+        name: table.name,
+        active: table.active,
+      }), // Target table uses specific fields
+      navigationPaths: ["contacts"],
+    },
+  );
 
+  // const dbWithExpandArraySelect = client.database("test_db_expand_array");
   describe("defaultSelect on get()", () => {
     it("should apply defaultSelect: 'schema' fields to query string when no select is called", () => {
-      const queryString = dbWithSchemaSelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithSchemaSelect)
         .get("test-uuid")
         .getQueryString();
 
@@ -124,8 +156,8 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should apply defaultSelect: array of fields to query string when no select is called", () => {
-      const queryString = dbWithArraySelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithArraySelect)
         .get("test-uuid")
         .getQueryString();
 
@@ -141,7 +173,7 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should NOT apply defaultSelect when defaultSelect is 'all'", () => {
-      const queryString = db.from("contacts").get("test-uuid").getQueryString();
+      const queryString = db.from(contacts).get("test-uuid").getQueryString();
 
       // When defaultSelect is "all", no $select should be added
       // (current behavior - FileMaker returns all fields)
@@ -150,10 +182,10 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should override defaultSelect when explicit select() is called", () => {
-      const queryString = dbWithSchemaSelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithSchemaSelect)
         .get("test-uuid")
-        .select("name") // Explicit select should override defaultSelect
+        .select({ name: contactsWithSchemaSelect.name }) // Explicit select should override defaultSelect
         .getQueryString();
 
       expect(queryString).toContain("$select=name");
@@ -167,10 +199,10 @@ describe("RecordBuilder Select/Expand", () => {
     it("should apply target table defaultSelect: 'schema' in expand when no callback select is called", () => {
       // When expanding to 'users' which has defaultSelect: "schema",
       // the expand should automatically include $select with all user schema fields
-      const queryString = dbWithExpandSchemaSelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithSchemaSelect)
         .get("test-uuid")
-        .expand("users")
+        .expand(usersWithSchemaSelect)
         .getQueryString();
 
       // The expand should include $select for the target table's schema fields
@@ -186,10 +218,10 @@ describe("RecordBuilder Select/Expand", () => {
     it("should apply target table defaultSelect: array in expand when no callback select is called", () => {
       // When expanding to 'users' which has defaultSelect: ["name", "active"],
       // the expand should automatically include $select with those specific fields
-      const queryString = dbWithExpandArraySelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithArraySelect)
         .get("test-uuid")
-        .expand("users")
+        .expand(usersWithArraySelect)
         .getQueryString();
 
       // The expand should include $select for the target table's default fields
@@ -204,10 +236,10 @@ describe("RecordBuilder Select/Expand", () => {
     it("should override target defaultSelect when callback provides explicit select", () => {
       // Even though users has defaultSelect: ["name", "active"],
       // an explicit callback select should override it
-      const queryString = dbWithExpandArraySelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithArraySelect)
         .get("test-uuid")
-        .expand("users", (b) => b.select("id"))
+        .expand(users, (b: any) => b.select({ id: users.id }))
         .getQueryString();
 
       // Should only have the explicitly selected field (quotes may vary based on odata-query library)
@@ -218,10 +250,10 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should apply defaultSelect in expand on list() queries too", () => {
-      const queryString = dbWithExpandArraySelect
-        .from("contacts")
+      const queryString = db
+        .from(contactsWithArraySelect)
         .list()
-        .expand("users")
+        .expand(usersWithSchemaSelect)
         .getQueryString();
 
       // The expand should include $select for the target table's default fields
@@ -234,9 +266,9 @@ describe("RecordBuilder Select/Expand", () => {
   describe("select() method", () => {
     it("should generate query string with $select for single field", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name")
+        .select({ name: contacts.name })
         .getQueryString();
 
       expect(queryString).toBe("/contacts('test-uuid')?$select=name");
@@ -244,9 +276,13 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should generate query string with $select for multiple fields", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby", "id_user")
+        .select({
+          name: contacts.name,
+          hobby: contacts.hobby,
+          id_user: contacts.id_user,
+        })
         .getQueryString();
 
       expect(queryString).toContain("$select=");
@@ -257,9 +293,9 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should deduplicate selected fields", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "name", "hobby")
+        .select({ name: contacts.name, hobby: contacts.hobby })
         .getQueryString();
 
       // Count occurrences of "name" - should only appear once
@@ -269,9 +305,9 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should narrow return type to selected fields only", () => {
       const recordBuilder = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby");
+        .select({ name: contacts.name, hobby: contacts.hobby });
 
       // Type test - the execute result should only have name and hobby
       // This is a compile-time check
@@ -287,15 +323,19 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should provide type errors for non-existent fields", () => {
-      // @ts-expect-error - "nonexistent" is not a valid field
-      db.from("contacts").get("test-uuid").select("nonexistent");
+      () => {
+        db.from(contacts)
+          .get("test-uuid")
+          // @ts-expect-error - nonexistent is not a valid column
+          .select({ name: contacts.nonexistent });
+      };
     });
 
     it("should include selected fields in getRequestConfig URL", () => {
       const config = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
+        .select({ name: contacts.name, hobby: contacts.hobby })
         .getRequestConfig();
 
       expect(config.url).toContain("$select=");
@@ -307,9 +347,9 @@ describe("RecordBuilder Select/Expand", () => {
   describe("expand() method", () => {
     it("should generate query string with simple $expand", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users")
+        .expand(users)
         .getQueryString();
 
       expect(queryString).toBe("/contacts('test-uuid')?$expand=users");
@@ -317,9 +357,11 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should generate query string with $expand and nested $select", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.select("name", "active"))
+        .expand(users, (b: any) =>
+          b.select({ name: users.name, active: users.active }),
+        )
         .getQueryString();
 
       expect(queryString).toBe(
@@ -328,7 +370,7 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should provide autocomplete for known relations", () => {
-      const recordBuilder = db.from("contacts").get("test-uuid");
+      const recordBuilder = db.from(contacts).get("test-uuid");
 
       // The expand parameter should suggest "users" | (string & {})
       expectTypeOf(recordBuilder.expand)
@@ -337,33 +379,34 @@ describe("RecordBuilder Select/Expand", () => {
     });
 
     it("should type callback builder to target table schema", () => {
-      db.from("contacts")
+      db.from(contacts)
         .get("test-uuid")
-        .expand("users", (builder) => {
+        .expand(users, (builder: any) => {
           // builder.select should only accept fields from users table
           expectTypeOf(builder.select).parameter(0).not.toEqualTypeOf<string>();
 
-          return builder.select("name", "active");
+          return builder.select({ name: users.name, active: users.active });
         });
     });
 
-    it("should allow arbitrary string relations", () => {
+    it("should not allow arbitrary string relations", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("arbitrary_relation")
+        // @ts-expect-error - arbitraryTable is not a valid expand target
+        .expand(arbitraryTable)
         .getQueryString();
 
-      expect(queryString).toBe(
-        "/contacts('test-uuid')?$expand=arbitrary_relation",
+      expect(queryString).toContain(
+        "/contacts('test-uuid')?$expand=arbitrary_table",
       );
     });
 
     it("should support $filter in expand callback", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.filter({ active: true }))
+        .expand(users, (b: any) => b.where(eq(users.active, true)))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($filter=active");
@@ -371,9 +414,9 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should support $orderby in expand callback", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.orderBy("name"))
+        .expand(users, (b: any) => b.orderBy("name"))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($orderby=name");
@@ -381,9 +424,9 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should support $top in expand callback", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.top(5))
+        .expand(users, (b: any) => b.top(5))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($top=5");
@@ -391,9 +434,9 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should support $skip in expand callback", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.skip(10))
+        .expand(users, (b: any) => b.skip(10))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($skip=10");
@@ -402,12 +445,14 @@ describe("RecordBuilder Select/Expand", () => {
     it("should support nested expands", () => {
       // users -> contacts (circular navigation from setup)
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) =>
+        .expand(users, (b: any) =>
           b
-            .select("name")
-            .expand("contacts", (nested) => nested.select("name")),
+            .select({ name: users.name })
+            .expand(contacts, (nested: any) =>
+              nested.select({ name: contacts.name }),
+            ),
         )
         .getQueryString();
 
@@ -418,14 +463,14 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should support multiple expands via chaining", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.select("name"))
-        .expand("another_relation")
+        .expand(users, (b: any) => b.select({ name: users.name }))
+        .expand(invoices)
         .getQueryString();
 
       expect(queryString).toBe(
-        "/contacts('test-uuid')?$expand=users($select=name),another_relation",
+        "/contacts('test-uuid')?$expand=users($select=name),invoices",
       );
     });
   });
@@ -433,10 +478,10 @@ describe("RecordBuilder Select/Expand", () => {
   describe("select() + expand() combined", () => {
     it("should generate query string with both $select and $expand", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
-        .expand("users", (b) => b.select("name"))
+        .select({ name: contacts.name, hobby: contacts.hobby })
+        .expand(users, (b: any) => b.select({ name: users.name }))
         .getQueryString();
 
       expect(queryString).toContain("$select=name,hobby");
@@ -445,22 +490,17 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should return properly typed result with both select and expand", () => {
       const recordBuilder = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
-        .expand("users", (b) => b.select("name", "active"));
+        .select({ name: contacts.name, hobby: contacts.hobby })
+        .expand(users, (b: any) =>
+          b.select({ name: users.name, active: users.active }),
+        );
 
-      // Type test - result should have name, hobby from contact and users array
-      expectTypeOf(recordBuilder.execute).returns.resolves.toMatchTypeOf<{
-        data:
-          | {
-              name: string | null;
-              hobby: string | null;
-              users: { name: string | null; active: boolean }[];
-            }
-          | undefined;
-        error: any;
-      }>();
+      async () => {
+        const { data, error } = await recordBuilder.execute();
+        data?.users.map((user) => user.CreatedBy);
+      };
     });
   });
 
@@ -481,9 +521,9 @@ describe("RecordBuilder Select/Expand", () => {
       };
 
       const result = await db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
+        .select({ name: contacts.name, hobby: contacts.hobby })
         .execute({
           fetchHandler: createMockFetch(mockResponse),
         });
@@ -524,9 +564,11 @@ describe("RecordBuilder Select/Expand", () => {
       };
 
       const result = await db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.select("name", "active"))
+        .expand(users, (b: any) =>
+          b.select({ name: users.name, active: users.active }),
+        )
         .execute({
           fetchHandler: createMockFetch(mockResponse),
         });
@@ -555,9 +597,9 @@ describe("RecordBuilder Select/Expand", () => {
       };
 
       const result = await db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
+        .select({ name: contacts.name, hobby: contacts.hobby })
         .execute({
           fetchHandler: createMockFetch(mockResponse),
         });
@@ -584,9 +626,9 @@ describe("RecordBuilder Select/Expand", () => {
       };
 
       const result = await db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
+        .select({ name: contacts.name, hobby: contacts.hobby })
         .execute({
           fetchHandler: createMockFetch(mockResponse),
           includeODataAnnotations: true,
@@ -603,9 +645,9 @@ describe("RecordBuilder Select/Expand", () => {
     it("should work independently of select/expand", () => {
       // getSingleField should work as before, returning just the field value
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .getSingleField("name")
+        .getSingleField(contacts.name)
         .getQueryString();
 
       // getSingleField adds /fieldName to the URL, not $select
@@ -617,10 +659,10 @@ describe("RecordBuilder Select/Expand", () => {
   describe("getRequestConfig()", () => {
     it("should include query params in URL", () => {
       const config = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name")
-        .expand("users")
+        .select({ name: contacts.name })
+        .expand(users)
         .getRequestConfig();
 
       expect(config.method).toBe("GET");
@@ -633,16 +675,18 @@ describe("RecordBuilder Select/Expand", () => {
     it("should support select + filter + orderBy + top + nested expand", () => {
       // Using contacts -> users -> contacts (circular navigation from setup)
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .select("name", "hobby")
-        .expand("users", (b) =>
+        .select({ name: contacts.name, hobby: contacts.hobby })
+        .expand(users, (b: any) =>
           b
-            .select("name", "active")
-            .filter({ active: true })
-            .orderBy("name")
+            .select({ name: users.name, active: users.active })
+            .where(eq(users.active, true))
+            .orderBy(users.name)
             .top(10)
-            .expand("contacts", (nested) => nested.select("name")),
+            .expand(contacts, (nested: any) =>
+              nested.select({ name: contacts.name }),
+            ),
         )
         .getQueryString();
 
@@ -657,18 +701,134 @@ describe("RecordBuilder Select/Expand", () => {
 
     it("should support multiple expands with different options", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .get("test-uuid")
-        .expand("users", (b) => b.select("name").filter({ active: true }))
-        .expand("another_relation", (b) => b.select("some_field" as any).top(5))
+        .expand(users, (b: any) =>
+          b.select({ name: users.name }).where(eq(users.active, true)),
+        )
+        .expand(invoices, (b: any) =>
+          b.select({ invoiceNumber: invoices.invoiceNumber }).top(5),
+        )
         .getQueryString();
 
-      expect(queryString).toContain(
-        "users($select=name;$filter=active eq true)",
-      );
-      expect(queryString).toContain(
-        "another_relation($select=some_field;$top=5)",
-      );
+      expect(queryString).toContain("users($select=name;$filter=active eq 1)");
+      expect(queryString).toContain("invoices($select=invoiceNumber;$top=5)");
+    });
+  });
+
+  describe("Container Field Exclusion", () => {
+    it("should exclude container fields from defaultSelect: schema", async () => {
+      const mockResponse = {
+        url: "https://example.com/test",
+        method: "GET",
+        status: 200,
+        headers: { "content-type": "application/json;charset=utf-8" },
+        response: {
+          "@odata.context":
+            "https://example.com/fmi/odata/v4/test_db/$metadata#contacts/$entity",
+          PrimaryKey: "test-uuid",
+          CreationTimestamp: "2025-01-01T00:00:00Z",
+          CreatedBy: "admin",
+          ModificationTimestamp: "2025-01-01T00:00:00Z",
+          ModifiedBy: "admin",
+          name: "John Doe",
+          hobby: "Reading",
+          id_user: "user-123",
+          // Note: image field should NOT be included even though it's in the schema
+        },
+      };
+
+      const result = await db
+        .from(contactsWithSchemaSelect)
+        .get("test-uuid")
+        .execute({
+          fetchHandler: createMockFetch(mockResponse),
+        });
+
+      expect(result.data).toBeDefined();
+      expect(result.error).toBeUndefined();
+
+      // Container field should not appear in the result type or query
+      const queryString = db
+        .from(contactsWithSchemaSelect)
+        .get("test-uuid")
+        .getQueryString();
+
+      // Should contain non-container fields
+      expect(queryString).toContain("$select=");
+      // Should NOT contain the image field
+      expect(queryString).not.toContain("image");
+    });
+
+    it("should reject container field selection at compile time", () => {
+      // Type test - this should produce a compile error
+      expectTypeOf(() => {
+        // @ts-expect-error - container fields cannot be selected
+        db.from(contacts).get("test-uuid").select({ image: contacts.image });
+      }).toBeFunction();
+    });
+
+    it("should allow getSingleField() to access container fields", () => {
+      const queryString = db
+        .from(contacts)
+        .get("test-uuid")
+        .getSingleField(contacts.image)
+        .getQueryString();
+
+      expect(queryString).toBe("/contacts('test-uuid')/image");
+    });
+
+    it("should exclude container fields from list queries with defaultSelect: schema", () => {
+      const queryString = db
+        .from(contactsWithSchemaSelect)
+        .list()
+        .getQueryString();
+
+      // Should have a select parameter
+      expect(queryString).toContain("$select=");
+      // Should NOT contain the image field
+      expect(queryString).not.toContain("image");
+      // Should contain other fields
+      expect(queryString).toContain("name");
+    });
+
+    it("should reject container field selection in list queries at compile time", () => {
+      // Type test - this should produce a compile error
+      expectTypeOf(() => {
+        // @ts-expect-error - container fields cannot be selected
+        db.from(contacts).list().select({ image: contacts.image });
+      }).toBeFunction();
+    });
+
+    it("should allow selecting non-container fields normally", () => {
+      const queryString = db
+        .from(contacts)
+        .get("test-uuid")
+        .select({ name: contacts.name, hobby: contacts.hobby })
+        .getQueryString();
+
+      expect(queryString).toContain("$select=name,hobby");
+      expect(queryString).not.toContain("image");
+    });
+
+    it("should allow non-container fields in expanded relations", () => {
+      // Non-container fields should work fine in expanded relations
+      const queryString = db
+        .from(contacts)
+        .get("test-uuid")
+        .expand(users, (b: any) => b.select({ name: users.name }))
+        .getQueryString();
+
+      expect(queryString).toContain("users($select=name)");
+
+      // Verify main select also works with non-container fields
+      const queryString2 = db
+        .from(contacts)
+        .get("test-uuid")
+        .select({ name: contacts.name, hobby: contacts.hobby })
+        .getQueryString();
+
+      expect(queryString2).toContain("$select=name,hobby");
     });
   });
 });

@@ -26,8 +26,10 @@ Here's a minimal example to get you started:
 ```typescript
 import {
   FMServerConnection,
-  defineBaseTable,
-  defineTableOccurrence,
+  fmTableOccurrence,
+  textField,
+  numberField,
+  eq,
 } from "@proofkit/fmodata";
 import { z } from "zod/v4";
 
@@ -44,30 +46,21 @@ const connection = new FMServerConnection({
   },
 });
 
-// 2. Define your table schema
-const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    username: z.string(),
-    email: z.string(),
-    active: z.boolean(),
-  },
-  idField: "id",
+// 2. Define your table schema using field builders
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(),
+  username: textField().notNull(),
+  email: textField().notNull(),
+  active: numberField()
+    .readValidator(z.coerce.boolean())
+    .writeValidator(z.boolean().transform((v) => (v ? 1 : 0))),
 });
 
-// 3. Create a table occurrence
-const usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-});
+// 3. Create a database instance
+const db = connection.database("MyDatabase.fmp12");
 
-// 4. Create a database instance
-const db = connection.database("MyDatabase.fmp12", {
-  occurrences: [usersTO],
-});
-
-// 5. Query your data
-const { data, error } = await db.from("users").list().execute();
+// 4. Query your data
+const { data, error } = await db.from(users).list().execute();
 
 if (error) {
   console.error(error);
@@ -86,8 +79,7 @@ This library relies heavily on the builder pattern for defining your queries and
 As such, there are layers to the library to help you build your queries and operations.
 
 - `FMServerConnection` - hold server connection details and authentication
-- `BaseTable` - defines the fields and validators for a base table
-- `TableOccurrence` - references a base table, and other table occurrences for navigation
+- `FMTable` (created via `fmTableOccurrence()`) - defines the fields, validators, and metadata for a table occurrence
 - `Database` - connects the table occurrences to the server connection
 
 ### FileMaker Server prerequisites
@@ -100,7 +92,7 @@ To use this library you need:
 
 A note on best practices:
 
-OData relies entirely on the table occurances in the relationship graph for data access. Relationships between table occurrences are also used, but maybe not as you expect (in short, only the simplest relationships are supported). Given these constraints, it may be best for you to have a seperate FileMaker file for your OData connection, using external data sources to link to your actual data. We've found this especially helpful for larger projects that have very large graphs with lots of duplicated table occurances compared to actual base tables.
+OData relies entirely on the table occurances in the relationship graph for data access. Relationships between table occurrences are also used, but maybe not as you expect (in short, only the simplest relationships are supported). Given these constraints, it may be best for you to have a seperate FileMaker file for your OData connection, using external data sources to link to your actual data file. We've found this especially helpful for larger projects that have very large graphs with lots of redundant table occurances compared to actual number of base tables.
 
 ### Server Connection
 
@@ -127,85 +119,116 @@ const connection = new FMServerConnection({
 
 ### Schema Definitions
 
-This library relies on a schema-first approach for good type-safety and optional runtime validation. These are abstracted into BaseTable and TableOccurrence types to match FileMaker concepts.
+This library relies on a schema-first approach for good type-safety and optional runtime validation. Use **`fmTableOccurrence()`** with field builders to create your schemas. This provides full TypeScript type inference for field names in queries.
 
-Use **`defineBaseTable()`** and **`defineTableOccurrence()`** to create your schemas. These functions provide full TypeScript type inference for field names in queries.
+#### Field Builders
 
-A `BaseTable` defines the schema for your FileMaker table using Standard Schema. These examples show zod, but you can use any other validation library that supports Standard Schema.
+Field builders provide a fluent API for defining table fields with type-safe metadata. These field types map directly to the FileMaker field types
+
+- `textField()`
+- `numberField()`
+- `dateField()`
+- `timeField()`
+- `timestampField()`
+- `containerField()`
+- `calcField()`
+
+Each field builder supports chainable methods:
+
+- `.primaryKey()` - Mark as primary key (automatically read-only)
+- `.notNull()` - Make field non-nullable (required for inserts)
+- `.readOnly()` - Exclude from insert/update operations
+- `.entityId(id)` - Assign FileMaker field ID (FMFID), allowing your API calls to survive FileMaker name changes
+- `.readValidator(validator)` - Transform/validate data when reading from database
+- `.writeValidator(validator)` - Transform/validate data when writing to database
+
+#### Defining Tables
+
+Use `fmTableOccurrence()` to define a table with field builders:
 
 ```typescript
 import { z } from "zod/v4";
-import { defineBaseTable } from "@proofkit/fmodata";
+import {
+  fmTableOccurrence,
+  textField,
+  numberField,
+  timestampField,
+} from "@proofkit/fmodata";
 
-const contactsBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    name: z.string(),
-    email: z.string(),
-    phone: z.string().optional(),
-    createdAt: z.string(),
+const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    id: textField().primaryKey().entityId("FMFID:1"),
+    name: textField().notNull().entityId("FMFID:2"),
+    email: textField().notNull().entityId("FMFID:3"),
+    phone: textField().entityId("FMFID:4"), // Optional (nullable by default)
+    createdAt: timestampField().readOnly().entityId("FMFID:5"),
   },
-  idField: "id", // The primary key field (automatically read-only)
-  required: ["phone"], // optional: additional required fields for insert (beyond auto-inferred)
-  readOnly: ["createdAt"], // optional: fields excluded from insert/update
-});
+  {
+    entityId: "FMTID:100", // Optional: FileMaker table occurrence ID
+    defaultSelect: "schema", // Optional: "all", "schema", or function. Defaults to "schema".
+    navigationPaths: ["users"], // Optional: valid navigation targets to provide type-errors when navigating/expanding
+  },
+);
 ```
 
-A `TableOccurrence` is the actual entry point for the OData service on the FileMaker server. It allows you to reference the same base table multiple times with different names.
+The function returns a table object that provides:
 
-```typescript
-import { defineTableOccurrence } from "@proofkit/fmodata";
-
-const contactsTO = defineTableOccurrence({
-  name: "contacts", // The table occurrence name in FileMaker
-  baseTable: contactsBase,
-});
-```
+- Column references for each field (e.g., `contacts.id`, `contacts.name`)
+- Type-safe schema for queries and operations
+- Metadata stored via Symbols (hidden from IDE autocomplete)
 
 #### Default Field Selection
 
-FileMaker will automatically return all non-container fields from a schema if you don't specify a $select parameter in your query. This library forces you to be a bit more explicit about what fields you want to return so that the types will more accurately reflect the full data you will get back. To modify this behavior, change the `defaultSelect` option when creating the `TableOccurrence`.
+FileMaker will automatically return all non-container fields from a schema if you don't specify a $select parameter in your query. This library allows you to configure default field selection behavior using the `defaultSelect` option:
 
 ```typescript
-// Option 1 (default): "schema" - Select all fields from the schema (same as "all" but more explicit)
-const usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-  defaultSelect: "schema", // a $select parameter will be always be added to the query for only the fields you've defined in the BaseTable schema
-});
+// Option 1 (default): "schema" - Select all fields from the schema
+const users = fmTableOccurrence(
+  "users",
+  {
+    /* fields */
+  },
+  {
+    defaultSelect: "schema", // A $select parameter will always be added for only the fields defined in the schema
+  },
+);
 
-// Option 2: "all" - Select all fields (default behavior)
-const usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-  defaultSelect: "all", // Don't always a $select parameter to the query; FileMaker will return all non-container fields from the table
-});
+// Option 2: "all" - Select all fields (FileMaker default behavior)
+const users = fmTableOccurrence(
+  "users",
+  {
+    /* fields */
+  },
+  {
+    defaultSelect: "all", // No $select parameter by default; FileMaker returns all non-container fields
+  },
+);
 
-// Option 3: Array of field names - Select only specific fields by default
-const usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-  defaultSelect: ["username", "email"], // Only select these fields by default
-});
+// Option 3: Function - Select specific columns by default
+const users = fmTableOccurrence(
+  "users",
+  {
+    /* fields */
+  },
+  {
+    defaultSelect: (cols) => ({
+      username: cols.username,
+      email: cols.email,
+    }), // Only select these fields by default
+  },
+);
 
-// When you call list(), the defaultSelect is applied automatically
-const result = await db.from("users").list().execute();
-// If defaultSelect is ["username", "email"], result.data will only contain those fields
+// When you call list() or get(), the defaultSelect is applied automatically
+const result = await db.from(users).list().execute();
+// If defaultSelect is a function returning { username, email }, result.data will only contain those fields
 
 // You can still override with explicit select()
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .select("username", "email", "age") // Always overrides at the per-request level
+  .select({ username: users.username, email: users.email, age: users.age }) // Always overrides at the per-request level
   .execute();
-```
-
-Lastly, you can combine all table occurrences into a database instance for the full type-safe experience. This is a method on the main `FMServerConnection` client class.
-
-```typescript
-const db = connection.database("MyDatabase.fmp12", {
-  occurrences: [contactsTO, usersTO], // Register your table occurrences
-});
 ```
 
 ## Querying Data
@@ -239,9 +262,9 @@ Get a single field value:
 
 ```typescript
 const result = await db
-  .from("users")
+  .from(users)
   .get("user-123")
-  .getSingleField("email")
+  .getSingleField(users.email)
   .execute();
 
 if (result.data) {
@@ -251,186 +274,85 @@ if (result.data) {
 
 ### Filtering
 
-fmodata provides type-safe filter operations that prevent common errors at compile time. The filter system supports three syntaxes: shorthand, single operator objects, and arrays for multiple operators.
+fmodata provides type-safe filter operations that prevent common errors at compile time. You can use either the new ORM-style API with operators and column references, or the legacy filter API.
 
-#### Operator Syntax
+#### New ORM-Style API (Recommended)
 
-You can use filters in three ways:
-
-**1. Shorthand (direct value):**
+Use the `where()` method with filter operators and column references for type-safe filtering:
 
 ```typescript
-.filter({ name: "John" })
-// Equivalent to: { name: [{ eq: "John" }] }
-```
+import { eq, gt, and, or, contains } from "@proofkit/fmodata";
 
-**2. Single operator object:**
-
-```typescript
-.filter({ age: { gt: 18 } })
-```
-
-**3. Array of operators (for multiple operators on same field):**
-
-```typescript
-.filter({ age: [{ gt: 18 }, { lt: 65 }] })
-// Result: age gt 18 and age lt 65
-```
-
-The array pattern prevents duplicate operators on the same field and allows multiple conditions with implicit AND.
-
-#### Available Operators
-
-**String fields:**
-
-- `eq`, `ne` - equality/inequality
-- `contains`, `startswith`, `endswith` - string functions
-- `gt`, `ge`, `lt`, `le` - comparison
-- `in` - match any value in array
-
-**Number fields:**
-
-- `eq`, `ne`, `gt`, `ge`, `lt`, `le` - comparisons
-- `in` - match any value in array
-
-**Boolean fields:**
-
-- `eq`, `ne` - equality only
-
-**Date fields:**
-
-- `eq`, `ne`, `gt`, `ge`, `lt`, `le` - date comparisons
-- `in` - match any date in array
-
-#### Shorthand Syntax
-
-For simple equality checks, use the shorthand:
-
-```typescript
-const result = await db.from("users").list().filter({ name: "John" }).execute();
-// Equivalent to: { name: [{ eq: "John" }] }
-```
-
-#### Examples
-
-```typescript
-// Equality filter (single operator)
-const activeUsers = await db
-  .from("users")
-  .list()
-  .filter({ active: { eq: true } })
-  .execute();
-
-// Comparison operators (single operator)
-const adultUsers = await db
-  .from("users")
-  .list()
-  .filter({ age: { gt: 18 } })
-  .execute();
-
-// String operators (single operator)
-const johns = await db
-  .from("users")
-  .list()
-  .filter({ name: { contains: "John" } })
-  .execute();
-
-// Multiple operators on same field (array syntax, implicit AND)
-const rangeQuery = await db
-  .from("users")
-  .list()
-  .filter({ age: [{ gt: 18 }, { lt: 65 }] })
-  .execute();
-
-// Combine filters with AND
+// Simple equality
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .filter({
-    and: [{ active: [{ eq: true }] }, { age: [{ gt: 18 }] }],
-  })
+  .where(eq(users.active, true))
   .execute();
 
-// Combine filters with OR
+// Comparison operators
+const result = await db.from(users).list().where(gt(users.age, 18)).execute();
+
+// String operators
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .filter({
-    or: [{ name: [{ eq: "John" }] }, { name: [{ eq: "Jane" }] }],
-  })
+  .where(contains(users.name, "John"))
   .execute();
 
-// IN operator
+// Combine with AND
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .filter({ age: [{ in: [18, 21, 25] }] })
+  .where(and(eq(users.active, true), gt(users.age, 18)))
   .execute();
 
-// Null checks
+// Combine with OR
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .filter({ deletedAt: [{ eq: null }] })
+  .where(or(eq(users.role, "admin"), eq(users.role, "moderator")))
   .execute();
 ```
 
-#### Logical Operators
+Available operators:
 
-Combine multiple conditions with `and`, `or`, `not`:
-
-```typescript
-const result = await db
-  .from("users")
-  .list()
-  .filter({
-    and: [{ name: [{ contains: "John" }] }, { age: [{ gt: 18 }] }],
-  })
-  .execute();
-```
-
-#### Escape Hatch
-
-For unsupported edge cases, pass a raw OData filter string:
-
-```typescript
-const result = await db
-  .from("users")
-  .list()
-  .filter("substringof('John', name)")
-  .execute();
-```
+- **Comparison**: `eq()`, `ne()`, `gt()`, `gte()`, `lt()`, `lte()`
+- **String**: `contains()`, `startsWith()`, `endsWith()`
+- **Array**: `inArray()`, `notInArray()`
+- **Null**: `isNull()`, `isNotNull()`
+- **Logical**: `and()`, `or()`, `not()`
 
 ### Sorting
 
-Sort results using `orderBy()`. The method is fully type-safe for typed databases, providing autocomplete for field names and sort directions.
+Sort results using `orderBy()`. The method supports both column references (new ORM API) and string field names (legacy API).
 
-#### Single Field
+#### Using Column References (New ORM API)
 
 ```typescript
-// Sort ascending (default direction)
-const result = await db.from("users").list().orderBy("name").execute();
+import { asc, desc } from "@proofkit/fmodata";
 
-// Explicit direction using tuple syntax
+// Single field (ascending by default)
+const result = await db.from(users).list().orderBy(users.name).execute();
+
+// Single field with explicit direction
+const result = await db.from(users).list().orderBy(asc(users.name)).execute();
+const result = await db.from(users).list().orderBy(desc(users.age)).execute();
+
+// Multiple fields (variadic)
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .orderBy(["name", "desc"])
+  .orderBy(asc(users.lastName), desc(users.firstName))
   .execute();
-```
 
-#### Multiple Fields
-
-Use an array of tuples to sort by multiple fields:
-
-```typescript
-// Multiple fields with explicit directions
+// Multiple fields (array syntax)
 const result = await db
-  .from("users")
+  .from(users)
   .list()
   .orderBy([
-    ["lastName", "asc"],
-    ["firstName", "desc"],
+    [users.lastName, "asc"],
+    [users.firstName, "desc"],
   ])
   .execute();
 ```
@@ -441,32 +363,14 @@ For typed databases, `orderBy()` provides full type safety:
 
 ```typescript
 // ✅ Valid - "name" is a field in the schema
-db.from("users").list().orderBy("name");
+db.from(users).list().orderBy(users.name);
 
 // ✅ Valid - tuple with field and direction
-db.from("users").list().orderBy(["name", "asc"]);
+db.from(users).list().orderBy(asc(users.name));
+db.from(users).list().orderBy(desc(users.name));
 
-// ❌ TypeScript Error - "invalid" is not a field
-db.from("users").list().orderBy("invalid");
-
-// ❌ TypeScript Error - "name" is not a valid direction
-db.from("users").list().orderBy(["email", "name"]);
-
-// ❌ TypeScript Error - second value must be "asc" or "desc"
-db.from("users").list().orderBy(["email", "invalid"]);
-```
-
-#### Escape Hatch (Untyped Databases)
-
-For untyped databases (no schema), raw strings are still accepted:
-
-```typescript
-const untypedDb = connection.database("MyDB"); // No occurrences
-const result = await untypedDb
-  .from("users")
-  .list()
-  .orderBy("name desc") // Raw string accepted
-  .execute();
+// ✅ Valid - multiple fields
+db.from(users).list().orderBy(asc(users.lastName), desc(users.firstName));
 ```
 
 ### Pagination
@@ -475,24 +379,29 @@ Control the number of records returned and pagination:
 
 ```typescript
 // Limit results
-const result = await db.from("users").list().top(10).execute();
+const result = await db.from(users).list().top(10).execute();
 
 // Skip records (pagination)
-const result = await db.from("users").list().top(10).skip(20).execute();
+const result = await db.from(users).list().top(10).skip(20).execute();
 
 // Count total records
-const result = await db.from("users").list().count().execute();
+const result = await db.from(users).list().count().execute();
 ```
 
 ### Selecting Fields
 
-Select specific fields to return:
+Select specific fields to return. You can use either column references (new ORM API) or string field names (legacy API):
 
 ```typescript
+// New ORM API: Using column references (type-safe, supports renaming)
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .select("username", "email")
+  .select({
+    username: users.username,
+    email: users.email,
+    userId: users.id, // Renamed from "id" to "userId"
+  })
   .execute();
 
 // result.data[0] will only have username and email fields
@@ -504,9 +413,9 @@ Use `single()` to ensure exactly one record is returned (returns an error if zer
 
 ```typescript
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .filter({ email: { eq: "user@example.com" } })
+  .where(eq(users.email, "user@example.com"))
   .single()
   .execute();
 
@@ -520,9 +429,9 @@ Use `maybeSingle()` when you want at most one record (returns `null` if no recor
 
 ```typescript
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .filter({ email: { eq: "user@example.com" } })
+  .where(eq(users.email, "user@example.com"))
   .maybeSingle()
   .execute();
 
@@ -545,12 +454,17 @@ if (result.data) {
 All query methods can be chained together:
 
 ```typescript
+// Using new ORM API
 const result = await db
-  .from("users")
+  .from(users)
   .list()
-  .select("username", "email", "age")
-  .filter({ age: { gt: 18 } })
-  .orderBy("username")
+  .select({
+    username: users.username,
+    email: users.email,
+    age: users.age,
+  })
+  .where(gt(users.age, 18))
+  .orderBy(asc(users.username))
   .top(10)
   .skip(0)
   .execute();
@@ -565,7 +479,7 @@ Insert new records with type-safe data:
 ```typescript
 // Insert a new user
 const result = await db
-  .from("users")
+  .from(users)
   .insert({
     username: "johndoe",
     email: "john@example.com",
@@ -578,30 +492,25 @@ if (result.data) {
 }
 ```
 
-Fields are automatically required for insert if their validator doesn't allow `null` or `undefined`. You can specify additional required fields:
+Fields are automatically required for insert if they use `.notNull()`. Read-only fields (including primary keys) are automatically excluded:
 
 ```typescript
-const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(), // Auto-required (not nullable), but excluded from insert (idField)
-    username: z.string(), // Auto-required (not nullable)
-    email: z.string(), // Auto-required (not nullable)
-    phone: z.string().nullable(), // Optional by default
-    createdAt: z.string(), // Auto-required, but excluded (readOnly)
-  },
-  idField: "id", // Automatically excluded from insert/update
-  required: ["phone"], // Make phone required for inserts despite being nullable
-  readOnly: ["createdAt"], // Exclude from insert/update operations
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(), // Auto-required, but excluded from insert (primaryKey)
+  username: textField().notNull(), // Auto-required (notNull)
+  email: textField().notNull(), // Auto-required (notNull)
+  phone: textField(), // Optional by default (nullable)
+  createdAt: timestampField().readOnly(), // Excluded from insert/update
 });
 
-// TypeScript enforces: username, email, and phone are required
+// TypeScript enforces: username and email are required
 // TypeScript excludes: id and createdAt cannot be provided
 const result = await db
-  .from("users")
+  .from(users)
   .insert({
     username: "johndoe",
     email: "john@example.com",
-    phone: "+1234567890", // Required because specified in 'required' array
+    phone: "+1234567890", // Optional
   })
   .execute();
 ```
@@ -613,7 +522,7 @@ Update records by ID or filter:
 ```typescript
 // Update by ID
 const result = await db
-  .from("users")
+  .from(users)
   .update({ username: "newname" })
   .byId("user-123")
   .execute();
@@ -622,29 +531,27 @@ if (result.data) {
   console.log(`Updated ${result.data.updatedCount} record(s)`);
 }
 
-// Update by filter
+// Update by filter (using new ORM API)
+import { lt, and, eq } from "@proofkit/fmodata";
+
 const result = await db
-  .from("users")
+  .from(users)
   .update({ active: false })
-  .where((q) => q.filter({ lastLogin: { lt: "2023-01-01" } }))
+  .where(lt(users.lastLogin, "2023-01-01"))
   .execute();
 
 // Complex filter example
 const result = await db
-  .from("users")
+  .from(users)
   .update({ active: false })
-  .where((q) =>
-    q.filter({
-      and: [{ active: true }, { count: { lt: 5 } }],
-    }),
-  )
+  .where(and(eq(users.active, true), lt(users.count, 5)))
   .execute();
 
-// Update with additional query options
+// Update with additional query options (legacy filter API)
 const result = await db
   .from("users")
   .update({ active: false })
-  .where((q) => q.filter({ active: true }).top(10))
+  .where((q) => q.where(eq(users.active, true)).top(10))
   .execute();
 ```
 
@@ -654,28 +561,26 @@ Delete records by ID or filter:
 
 ```typescript
 // Delete by ID
-const result = await db.from("users").delete().byId("user-123").execute();
+const result = await db.from(users).delete().byId("user-123").execute();
 
 if (result.data) {
   console.log(`Deleted ${result.data.deletedCount} record(s)`);
 }
 
-// Delete by filter
+// Delete by filter (using new ORM API)
+import { eq, and, lt } from "@proofkit/fmodata";
+
 const result = await db
-  .from("users")
+  .from(users)
   .delete()
-  .where((q) => q.filter({ active: false }))
+  .where(eq(users.active, false))
   .execute();
 
 // Delete with complex filters
 const result = await db
-  .from("users")
+  .from(users)
   .delete()
-  .where((q) =>
-    q.filter({
-      and: [{ active: false }, { lastLogin: { lt: "2023-01-01" } }],
-    }),
-  )
+  .where(and(eq(users.active, false), lt(users.lastLogin, "2023-01-01")))
   .execute();
 ```
 
@@ -683,148 +588,145 @@ const result = await db
 
 ### Defining Navigation
 
-Use `buildOccurrences()` to define relationships between tables. This function takes an array of table occurrences and a configuration object that specifies navigation relationships using type-safe string references:
+Define navigation relationships using the `navigationPaths` option when creating table occurrences:
 
 ```typescript
-import {
-  defineBaseTable,
-  defineTableOccurrence,
-  buildOccurrences,
-} from "@proofkit/fmodata";
+import { fmTableOccurrence, textField } from "@proofkit/fmodata";
 
-const contactsBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    name: z.string(),
-    userId: z.string(),
+const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    id: textField().primaryKey(),
+    name: textField().notNull(),
+    userId: textField().notNull(),
   },
-  idField: "id",
-});
-
-const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    username: z.string(),
-    email: z.string(),
+  {
+    navigationPaths: ["users"], // Valid navigation targets
   },
-  idField: "id",
-});
+);
 
-// Step 1: Define base table occurrences (without navigation)
-const _contactsTO = defineTableOccurrence({
-  name: "contacts",
-  baseTable: contactsBase,
-});
-
-const _usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-});
-
-// Step 2: Build occurrences with navigation using string references
-// The strings autocomplete to valid table occurrence names!
-const occurrences = buildOccurrences({
-  occurrences: [_contactsTO, _usersTO],
-  navigation: {
-    contacts: ["users"],
-    users: ["contacts"],
+const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey(),
+    username: textField().notNull(),
+    email: textField().notNull(),
   },
-});
+  {
+    navigationPaths: ["contacts"], // Valid navigation targets
+  },
+);
 
 // Use with your database
 const db = connection.database("MyDB", {
-  occurrences: occurrences,
+  occurrences: [contacts, users],
 });
 ```
 
-The `buildOccurrences` function accepts an object with:
+The `navigationPaths` option:
 
-- `occurrences` - Array of TableOccurrences to build
-- `navigation` - Optional object mapping TO names to arrays of navigation targets
-
-It returns a tuple in the same order as the input array, with full autocomplete for navigation target names. Self-navigation is prevented at the type level.
-
-- Handles circular references automatically
-- Returns fully typed `TableOccurrence` instances with resolved navigation
+- Specifies which table occurrences can be navigated to from this table
+- Enables runtime validation when using `expand()` or `navigate()`
+- Throws descriptive errors if you try to navigate to an invalid path
 
 ### Navigating Between Tables
 
 Navigate to related records:
 
 ```typescript
-// Navigate from a specific record
+// Navigate from a specific record (using column references)
 const result = await db
-  .from("contacts")
+  .from(contacts)
   .get("contact-123")
-  .navigate("users")
-  .select("username", "email")
+  .navigate(users)
+  .select({
+    username: users.username,
+    email: users.email,
+  })
   .execute();
 
 // Navigate without specifying a record first
-const result = await db.from("contacts").navigate("users").list().execute();
+const result = await db.from(contacts).navigate(users).list().execute();
 
-// You can navigate to arbitrary tables not in your schema
+// Using legacy API with string field names
 const result = await db
-  .from("contacts")
-  .navigate("some_other_table")
-  .list()
+  .from(contacts)
+  .get("contact-123")
+  .navigate(users)
+  .select({ username: users.username, email: users.email })
   .execute();
 ```
 
 ### Expanding Related Records
 
-Use `expand()` to include related records in your query results:
+Use `expand()` to include related records in your query results. The library validates that the target table is in the source table's `navigationPaths`:
 
 ```typescript
 // Simple expand
-const result = await db.from("contacts").list().expand("users").execute();
+const result = await db.from(contacts).list().expand(users).execute();
 
-// Expand with field selection
+// Expand with field selection (using column references)
 const result = await db
-  .from("contacts")
+  .from(contacts)
   .list()
-  .expand("users", (b) => b.select("username", "email"))
+  .expand(users, (b) =>
+    b.select({
+      username: users.username,
+      email: users.email,
+    }),
+  )
   .execute();
 
-// Expand with filtering
+// Expand with filtering (using new ORM API)
+import { eq } from "@proofkit/fmodata";
+
 const result = await db
-  .from("contacts")
+  .from(contacts)
   .list()
-  .expand("users", (b) => b.filter({ active: true }))
+  .expand(users, (b) => b.where(eq(users.active, true)))
   .execute();
 
 // Multiple expands
 const result = await db
-  .from("contacts")
+  .from(contacts)
   .list()
-  .expand("users", (b) => b.select("username"))
-  .expand("orders", (b) => b.select("total").top(5))
+  .expand(users, (b) => b.select({ username: users.username }))
+  .expand(orders, (b) => b.select({ total: orders.total }).top(5))
   .execute();
 
 // Nested expands
 const result = await db
-  .from("contacts")
+  .from(contacts)
   .list()
-  .expand("users", (usersBuilder) =>
+  .expand(users, (usersBuilder) =>
     usersBuilder
-      .select("username", "email")
-      .expand("customer", (customerBuilder) =>
-        customerBuilder.select("name", "tier"),
+      .select({
+        username: users.username,
+        email: users.email,
+      })
+      .expand(customers, (customerBuilder) =>
+        customerBuilder.select({
+          name: customers.name,
+          tier: customers.tier,
+        }),
       ),
   )
   .execute();
 
 // Complex expand with multiple options
 const result = await db
-  .from("contacts")
+  .from(contacts)
   .list()
-  .expand("users", (b) =>
+  .expand(users, (b) =>
     b
-      .select("username", "email")
-      .filter({ active: true })
-      .orderBy("username")
+      .select({
+        username: users.username,
+        email: users.email,
+      })
+      .where(eq(users.active, true))
+      .orderBy(asc(users.username))
       .top(10)
-      .expand("customer", (nested) => nested.select("name")),
+      .expand(customers, (nested) => nested.select({ name: customers.name })),
   )
   .execute();
 ```
@@ -906,8 +808,8 @@ Execute multiple read operations in a single batch:
 
 ```typescript
 // Create query builders
-const contactsQuery = db.from("contacts").list().top(5);
-const usersQuery = db.from("users").list().top(5);
+const contactsQuery = db.from(contacts).list().top(5);
+const usersQuery = db.from(users).list().top(5);
 
 // Execute both queries in a single batch
 const result = await db.batch([contactsQuery, usersQuery]).execute();
@@ -937,12 +839,12 @@ Combine queries, inserts, updates, and deletes in a single batch:
 
 ```typescript
 // Mix different operation types
-const listQuery = db.from("contacts").list().top(10);
-const insertOp = db.from("contacts").insert({
+const listQuery = db.from(contacts).list().top(10);
+const insertOp = db.from(contacts).insert({
   name: "John Doe",
   email: "john@example.com",
 });
-const updateOp = db.from("users").update({ active: true }).byId("user-123");
+const updateOp = db.from(users).update({ active: true }).byId("user-123");
 
 // All operations execute atomically
 const result = await db.batch([listQuery, insertOp, updateOp]).execute();
@@ -1014,9 +916,9 @@ Batch operations are transactional for write operations (inserts, updates, delet
 ```typescript
 const result = await db
   .batch([
-    db.from("users").insert({ username: "alice", email: "alice@example.com" }),
-    db.from("users").insert({ username: "bob", email: "bob@example.com" }),
-    db.from("users").insert({ username: "charlie", email: "invalid" }), // This fails
+    db.from(users).insert({ username: "alice", email: "alice@example.com" }),
+    db.from(users).insert({ username: "bob", email: "bob@example.com" }),
+    db.from(users).insert({ username: "charlie", email: "invalid" }), // This fails
   ])
   .execute();
 
@@ -1300,94 +1202,50 @@ await db.schema.createIndex("users", "email");
 
 ## Advanced Features
 
-### Type Safety
-
-The library provides full TypeScript type inference:
-
-```typescript
-const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    username: z.string(),
-    email: z.string(),
-  },
-  idField: "id",
-});
-
-const usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-});
-
-const db = connection.database("MyDB", {
-  occurrences: [usersTO],
-});
-
-// TypeScript knows these are valid field names
-db.from("users").list().select("username", "email");
-
-// TypeScript error: "invalid" is not a field name
-db.from("users").list().select("invalid"); // TS Error
-
-// Type-safe filters
-db.from("users")
-  .list()
-  .filter({ username: { eq: "john" } }); // ✓
-db.from("users")
-  .list()
-  .filter({ invalid: { eq: "john" } }); // TS Error
-```
-
 ### Required and Read-Only Fields
 
-The library automatically infers which fields are required based on whether their validator allows `null` or `undefined`:
+The library automatically infers which fields are required based on field builder configuration:
 
 ```typescript
-const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(), // Auto-required, auto-readOnly (idField)
-    username: z.string(), // Auto-required (not nullable)
-    email: z.string(), // Auto-required (not nullable)
-    status: z.string().nullable(), // Optional (nullable)
-    createdAt: z.string(), // Read-only system field
-    updatedAt: z.string().nullable(), // Optional
-  },
-  idField: "id", // Automatically excluded from insert/update
-  required: ["status"], // Make status required despite being nullable
-  readOnly: ["createdAt"], // Exclude createdAt from insert/update
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(), // Auto-required, auto-readOnly (primaryKey)
+  username: textField().notNull(), // Auto-required (notNull)
+  email: textField().notNull(), // Auto-required (notNull)
+  status: textField(), // Optional (nullable by default)
+  createdAt: timestampField().readOnly(), // Read-only system field
+  updatedAt: timestampField(), // Optional (nullable)
 });
 
-// Insert: username, email, and status are required
-// Insert: id and createdAt are excluded (cannot be provided)
-db.from("users").insert({
+// Insert: username and email are required
+// Insert: id and createdAt are excluded (cannot be provided - read-only)
+db.from(users).insert({
   username: "john",
   email: "john@example.com",
-  status: "active", // Required due to 'required' array
+  status: "active", // Optional
   updatedAt: new Date().toISOString(), // Optional
 });
 
 // Update: all fields are optional except id and createdAt are excluded
-db.from("users")
+db.from(users)
   .update({
     status: "active", // Optional
-    // id and createdAt cannot be modified
+    // id and createdAt cannot be modified (read-only)
   })
   .byId("user-123");
 ```
 
 **Key Features:**
 
-- **Auto-inference:** Non-nullable fields are automatically required for insert
-- **Additional requirements:** Use `required` to make nullable fields required for new records
-- **Read-only fields:** Use `readOnly` to exclude fields from insert/update (e.g., timestamps)
-- **Automatic ID exclusion:** The `idField` is always read-only without needing to specify it
+- **Auto-inference:** Fields with `.notNull()` are automatically required for insert
+- **Primary keys:** Fields with `.primaryKey()` are automatically read-only
+- **Read-only fields:** Use `.readOnly()` to exclude fields from insert/update (e.g., timestamps, calculated fields)
 - **Update flexibility:** All fields are optional for updates (except read-only fields)
 
 ### Prefer: fmodata.entity-ids
 
 This library supports using FileMaker's internal field identifiers (FMFID) and table occurrence identifiers (FMTID) instead of names. This protects your integration from both field and table occurrence name changes.
 
-To enable this feature, simply define your schema with entity IDs using the `defineBaseTable` and `defineTableOccurrence` functions. Behind the scenes, the library will transform your request and the response back to the names you specify in these schemas. This is an all-or-nothing feature. For it to work properly, you must define all table occurrences passed to a `Database` with entity IDs (both `fmfIds` on the base table and `fmtId` on the table occurrence).
+To enable this feature, simply define your schema with entity IDs using the `.entityId()` method on field builders and the `entityId` option in `fmTableOccurrence()`. Behind the scenes, the library will transform your request and the response back to the names you specify in your schema. This is an all-or-nothing feature. For it to work properly, you must define all table occurrences passed to a `Database` with entity IDs (both field IDs via `.entityId()` and table ID via the `entityId` option).
 
 _Note for OttoFMS proxy: This feature requires version 4.14 or later of OttoFMS_
 
@@ -1396,32 +1254,25 @@ How do I find these ids? They can be found in the XML version of the `$metadata`
 #### Basic Usage
 
 ```typescript
-import { defineBaseTable, defineTableOccurrence } from "@proofkit/fmodata";
-import { z } from "zod/v4";
+import {
+  fmTableOccurrence,
+  textField,
+  timestampField,
+} from "@proofkit/fmodata";
 
-// Define a base table with FileMaker field IDs
-const usersBase = defineBaseTable({
-  schema: {
-    id: z.string(),
-    username: z.string(),
-    email: z.string().nullable(),
-    createdAt: z.string(),
+// Define a table with FileMaker field IDs and table occurrence ID
+const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey().entityId("FMFID:12039485"),
+    username: textField().notNull().entityId("FMFID:34323433"),
+    email: textField().entityId("FMFID:12232424"),
+    createdAt: timestampField().readOnly().entityId("FMFID:43234355"),
   },
-  idField: "id",
-  fmfIds: {
-    id: "FMFID:12039485",
-    username: "FMFID:34323433",
-    email: "FMFID:12232424",
-    createdAt: "FMFID:43234355",
+  {
+    entityId: "FMTID:12432533", // FileMaker table occurrence ID
   },
-});
-
-// Create a table occurrence with a FileMaker table occurrence ID
-const usersTO = defineTableOccurrence({
-  name: "users",
-  baseTable: usersBase,
-  fmtId: "FMTID:12432533",
-});
+);
 ```
 
 ### Error Handling
@@ -1431,7 +1282,7 @@ All operations return a `Result` type with either `data` or `error`. The library
 #### Basic Error Checking
 
 ```typescript
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   console.error("Query failed:", result.error.message);
@@ -1450,7 +1301,7 @@ Handle HTTP status codes (4xx, 5xx) with the `HTTPError` class:
 ```typescript
 import { HTTPError, isHTTPError } from "@proofkit/fmodata";
 
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   if (isHTTPError(result.error)) {
@@ -1487,7 +1338,7 @@ import {
   CircuitOpenError,
 } from "@proofkit/fmodata";
 
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   if (result.error instanceof TimeoutError) {
@@ -1513,7 +1364,7 @@ When schema validation fails, you get a `ValidationError` with rich context:
 ```typescript
 import { ValidationError, isValidationError } from "@proofkit/fmodata";
 
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   if (isValidationError(result.error)) {
@@ -1532,7 +1383,7 @@ The library uses [Standard Schema](https://github.com/standard-schema/standard-s
 ```typescript
 import { ValidationError } from "@proofkit/fmodata";
 
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error instanceof ValidationError) {
   // The cause property (ES2022 Error.cause) contains the Standard Schema issues array
@@ -1585,7 +1436,7 @@ Handle OData-specific protocol errors:
 ```typescript
 import { ODataError, isODataError } from "@proofkit/fmodata";
 
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   if (isODataError(result.error)) {
@@ -1608,7 +1459,7 @@ import {
   NetworkError,
 } from "@proofkit/fmodata";
 
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   if (result.error instanceof TimeoutError) {
@@ -1630,7 +1481,7 @@ if (result.error) {
 **Pattern 2: Using kind property (for exhaustive matching):**
 
 ```typescript
-const result = await db.from("users").list().execute();
+const result = await db.from(users).list().execute();
 
 if (result.error) {
   switch (result.error.kind) {
@@ -1786,7 +1637,7 @@ const queryString = db
   .from("users")
   .list()
   .select("username", "email")
-  .filter({ active: true })
+  .where(eq(users.active, true))
   .orderBy("username")
   .top(10)
   .getQueryString();

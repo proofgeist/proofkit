@@ -1,6 +1,14 @@
 import { defineConfig } from "vitest/config";
+import { resolve } from "path";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@proofkit/fmodata": process.env.TEST_BUILD
+        ? resolve(__dirname, "./dist/esm")
+        : resolve(__dirname, "./src"),
+    },
+  },
   test: {
     testTimeout: 15000,
     // Exclude E2E tests from default test runs
@@ -11,7 +19,9 @@ export default defineConfig({
     typecheck: {
       enabled: true,
       include: ["src/**/*.ts", "tests/**/*.test.ts", "tests/**/*.test-d.ts"],
-      tsconfig: "./tests/tsconfig.json",
+      tsconfig: process.env.TEST_BUILD
+        ? "./tests/tsconfig.build.json"
+        : "./tests/tsconfig.json",
     },
   },
 });

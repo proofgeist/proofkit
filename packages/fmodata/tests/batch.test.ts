@@ -8,14 +8,15 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod/v4";
 import {
-  defineBaseTable,
-  defineTableOccurrence,
-  buildOccurrences,
+  fmTableOccurrence,
+  textField,
   BatchTruncatedError,
   isBatchTruncatedError,
   isODataError,
   ODataError,
-} from "../src/index";
+  eq,
+  isNotNull,
+} from "@proofkit/fmodata";
 import { createMockClient } from "./utils/test-setup";
 
 /**
@@ -49,41 +50,18 @@ describe("Batch Operations - Mock Tests", () => {
   const client = createMockClient();
 
   // Define simple schemas for batch testing
-  const contactsBase = defineBaseTable({
-    schema: {
-      PrimaryKey: z.string(),
-      name: z.string().nullable(),
-      hobby: z.string().nullable(),
-    },
-    idField: "PrimaryKey",
+  const contactsTO = fmTableOccurrence("contacts", {
+    PrimaryKey: textField().primaryKey(),
+    name: textField(),
+    hobby: textField(),
   });
 
-  const usersBase = defineBaseTable({
-    schema: {
-      id: z.string(),
-      name: z.string().nullable(),
-    },
-    idField: "id",
+  const usersTO = fmTableOccurrence("users", {
+    id: textField().primaryKey(),
+    name: textField(),
   });
 
-  const _contactsTO = defineTableOccurrence({
-    name: "contacts",
-    baseTable: contactsBase,
-  });
-
-  const _usersTO = defineTableOccurrence({
-    name: "users",
-    baseTable: usersBase,
-  });
-
-  const [contactsTO, usersTO] = buildOccurrences({
-    occurrences: [_contactsTO, _usersTO],
-    navigation: {},
-  });
-
-  const db = client.database("test_db", {
-    occurrences: [contactsTO, usersTO],
-  });
+  const db = client.database("test_db");
 
   describe("Mixed success/failure responses", () => {
     it("should handle batch response where first succeeds, second fails (404), and third is truncated", async () => {
@@ -127,12 +105,18 @@ describe("Batch Operations - Mock Tests", () => {
       ].join("\r\n");
 
       // Create three queries
-      const query1 = db.from("contacts").list().filter({ hobby: "Testing" });
-      const query2 = db.from("users").list().filter({ name: "NonExistent" });
-      const query3 = db
-        .from("contacts")
+      const query1 = db
+        .from(contactsTO)
         .list()
-        .filter({ name: { ne: null } });
+        .where(eq(contactsTO.hobby, "Testing"));
+      const query2 = db
+        .from(usersTO)
+        .list()
+        .where(eq(usersTO.name, "NonExistent"));
+      const query3 = db
+        .from(contactsTO)
+        .list()
+        .where(isNotNull(contactsTO.name));
 
       // Execute batch with mock
       const result = await db.batch([query1, query2, query3]).execute({
@@ -226,9 +210,15 @@ describe("Batch Operations - Mock Tests", () => {
         "--b_success_boundary--",
       ].join("\r\n");
 
-      const query1 = db.from("contacts").list().filter({ hobby: "Reading" });
-      const query2 = db.from("users").list().top(1);
-      const query3 = db.from("contacts").list().filter({ hobby: "Gaming" });
+      const query1 = db
+        .from(contactsTO)
+        .list()
+        .where(eq(contactsTO.hobby, "Reading"));
+      const query2 = db.from(usersTO).list().top(1);
+      const query3 = db
+        .from(contactsTO)
+        .list()
+        .where(eq(contactsTO.hobby, "Gaming"));
 
       const result = await db.batch([query1, query2, query3]).execute({
         fetchHandler: createBatchMockFetch(mockBatchResponse),
@@ -303,9 +293,12 @@ describe("Batch Operations - Mock Tests", () => {
         "--b_empty_boundary--",
       ].join("\r\n");
 
-      const query1 = db.from("contacts").list().top(1);
-      const query2 = db.from("users").list().filter({ name: "NonExistent" });
-      const query3 = db.from("contacts").list().top(1);
+      const query1 = db.from(contactsTO).list().top(1);
+      const query2 = db
+        .from(usersTO)
+        .list()
+        .where(eq(usersTO.name, "NonExistent"));
+      const query3 = db.from(contactsTO).list().top(1);
 
       const result = await db.batch([query1, query2, query3]).execute({
         fetchHandler: createBatchMockFetch(mockBatchResponse),

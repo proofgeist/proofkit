@@ -5,6 +5,7 @@ import type {
   ExecuteOptions,
   BatchResult,
   BatchItemResult,
+  ExecuteMethodOptions,
 } from "../types";
 import { BatchTruncatedError } from "../errors";
 import { type FFetchOptions } from "@fetchkit/ffetch";
@@ -148,7 +149,7 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
    * @returns A BatchResult containing individual results for each operation
    */
   async execute<EO extends ExecuteOptions>(
-    options?: RequestInit & FFetchOptions & EO,
+    options?: ExecuteMethodOptions<EO>,
   ): Promise<BatchResult<ExtractTupleTypes<Builders>>> {
     const baseUrl = this.context._getBaseUrl?.();
     if (!baseUrl) {

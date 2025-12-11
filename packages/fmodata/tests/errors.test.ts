@@ -13,8 +13,9 @@
 import { describe, it, expect, assert } from "vitest";
 import { z, ZodError } from "zod/v4";
 import {
-  defineBaseTable,
-  defineTableOccurrence,
+  fmTableOccurrence,
+  textField,
+  numberField,
   HTTPError,
   ODataError,
   SchemaLockedError,
@@ -27,7 +28,7 @@ import {
   isSchemaLockedError,
   isResponseStructureError,
   isRecordCountMismatchError,
-} from "../src/index";
+} from "@proofkit/fmodata";
 import { createMockClient } from "./utils/test-setup";
 import { simpleMock, createMockFetch } from "./utils/mock-fetch";
 import { validateHeaderValue } from "http";
@@ -35,27 +36,19 @@ import { validateHeaderValue } from "http";
 describe("Error Handling", () => {
   const client = createMockClient();
 
-  const usersBase = defineBaseTable({
-    schema: {
-      id: z.string(),
-      username: z.string(),
-      email: z.string().email(),
-      active: z.boolean(),
-      age: z.number().int().min(0).max(150),
-    },
-    idField: "id",
-  });
-
-  const usersTO = defineTableOccurrence({
-    name: "users",
-    baseTable: usersBase,
+  const users = fmTableOccurrence("users", {
+    id: textField().primaryKey(),
+    username: textField(),
+    email: textField().readValidator(z.string().email()),
+    active: numberField().readValidator(z.coerce.boolean()),
+    age: numberField().readValidator(z.number().int().min(0).max(150)),
   });
 
   describe("HTTP Errors", () => {
     it("should return HTTPError for 404 Not Found", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 404 }),
@@ -73,9 +66,9 @@ describe("Error Handling", () => {
     });
 
     it("should return HTTPError for 401 Unauthorized", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 401 }),
@@ -90,9 +83,9 @@ describe("Error Handling", () => {
     });
 
     it("should return HTTPError for 500 Server Error", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 500 }),
@@ -109,9 +102,9 @@ describe("Error Handling", () => {
 
     it("should include response body in HTTPError", async () => {
       const errorBody = { message: "Custom error message" };
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({
@@ -136,9 +129,9 @@ describe("Error Handling", () => {
         },
       };
 
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -166,9 +159,9 @@ describe("Error Handling", () => {
         },
       };
 
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -198,9 +191,9 @@ describe("Error Handling", () => {
         },
       };
 
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -219,7 +212,7 @@ describe("Error Handling", () => {
 
   describe("Validation Errors", () => {
     it("should return ValidationError when schema validation fails", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       // Return data that doesn't match schema (email is invalid, age is out of range)
       const invalidData = [
@@ -233,7 +226,7 @@ describe("Error Handling", () => {
       ];
 
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch(invalidData),
@@ -250,7 +243,7 @@ describe("Error Handling", () => {
     });
 
     it("should preserve Standard Schema issues in cause property", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       const invalidData = [
         {
@@ -263,7 +256,7 @@ describe("Error Handling", () => {
       ];
 
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch(invalidData),
@@ -290,7 +283,7 @@ describe("Error Handling", () => {
     });
 
     it("should include field name in ValidationError", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       const invalidData = [
         {
@@ -303,7 +296,7 @@ describe("Error Handling", () => {
       ];
 
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch(invalidData),
@@ -319,11 +312,11 @@ describe("Error Handling", () => {
 
   describe("Response Structure Errors", () => {
     it("should return ResponseStructureError for invalid response structure", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       // Return invalid structure (not an object)
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -343,10 +336,10 @@ describe("Error Handling", () => {
     });
 
     it("should return ResponseStructureError when value is not an array", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -365,7 +358,7 @@ describe("Error Handling", () => {
 
   describe("Record Count Mismatch Errors", () => {
     it("should return RecordCountMismatchError for single() when multiple records found", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       const multipleRecords = [
         {
@@ -385,7 +378,7 @@ describe("Error Handling", () => {
       ];
 
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .single()
         .execute({
@@ -401,10 +394,10 @@ describe("Error Handling", () => {
     });
 
     it("should return RecordCountMismatchError for single() when no records found", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
 
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .single()
         .execute({
@@ -422,9 +415,9 @@ describe("Error Handling", () => {
 
   describe("Type Guards", () => {
     it("should correctly identify HTTPError using type guard", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 404 }),
@@ -440,9 +433,9 @@ describe("Error Handling", () => {
     });
 
     it("should correctly identify ValidationError using type guard", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch([
@@ -466,9 +459,9 @@ describe("Error Handling", () => {
     });
 
     it("should correctly identify ODataError using type guard", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -490,9 +483,9 @@ describe("Error Handling", () => {
     });
 
     it("should correctly identify SchemaLockedError using type guard", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -517,9 +510,9 @@ describe("Error Handling", () => {
     });
 
     it("should correctly identify ResponseStructureError using type guard", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: createMockFetch({
@@ -536,9 +529,9 @@ describe("Error Handling", () => {
     });
 
     it("should correctly identify RecordCountMismatchError using type guard", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .single()
         .execute({
@@ -567,9 +560,9 @@ describe("Error Handling", () => {
 
   describe("Error Properties", () => {
     it("should include timestamp in all errors", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 404 }),
@@ -582,9 +575,9 @@ describe("Error Handling", () => {
     });
 
     it("should include kind property for discriminated unions", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 404 }),
@@ -599,9 +592,9 @@ describe("Error Handling", () => {
 
   describe("Error Handling Patterns", () => {
     it("should allow instanceof checks (like ffetch pattern)", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 404 }),
@@ -617,9 +610,9 @@ describe("Error Handling", () => {
     });
 
     it("should allow switch statement on kind property", async () => {
-      const db = client.database("testdb", { occurrences: [usersTO] });
+      const db = client.database("testdb");
       const result = await db
-        .from("users")
+        .from(users)
         .list()
         .execute({
           fetchHandler: simpleMock({ status: 404 }),

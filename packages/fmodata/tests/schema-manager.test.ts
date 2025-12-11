@@ -17,7 +17,7 @@
 import path from "path";
 import { describe, it, expect, afterEach } from "vitest";
 import { config } from "dotenv";
-import { FMServerConnection } from "../src/index";
+import { FMServerConnection } from "@proofkit/fmodata";
 import type {
   Field,
   StringField,
@@ -26,7 +26,7 @@ import type {
   TimeField,
   TimestampField,
   ContainerField,
-} from "../src/index";
+} from "@proofkit/fmodata";
 
 config({ path: path.resolve(__dirname, "../.env.local") });
 

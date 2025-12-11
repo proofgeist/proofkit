@@ -1,5 +1,6 @@
 import { type FFetchOptions } from "@fetchkit/ffetch";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { InternalLogger } from "./logger";
 
 export type Auth = { username: string; password: string } | { apiKey: string };
 
@@ -36,6 +37,7 @@ export interface ExecutionContext {
   _setUseEntityIds?(useEntityIds: boolean): void;
   _getUseEntityIds?(): boolean;
   _getBaseUrl?(): string;
+  _getLogger?(): InternalLogger;
 }
 
 export type InferSchemaType<Schema extends Record<string, StandardSchemaV1>> = {
@@ -149,69 +151,6 @@ type ComputeInsertData<
       Exclude<AutoRequiredKeys<Schema>, ExcludedFields<IdField, ReadOnly>>
     >;
 
-// Extract insert data type from BaseTable
-// Auto-infers required fields from validator nullability + user-specified required fields
-// Excludes readOnly fields and idField
-export type InsertData<BT> = BT extends import("./client/base-table").BaseTable<
-  any,
-  any,
-  any,
-  any
->
-  ? BT extends {
-      schema: infer Schema;
-      idField?: infer IdField;
-      required?: infer Required;
-      readOnly?: infer ReadOnly;
-    }
-    ? Schema extends Record<string, StandardSchemaV1>
-      ? IdField extends keyof Schema | undefined
-        ? Required extends readonly any[]
-          ? ReadOnly extends readonly any[]
-            ? ComputeInsertData<
-                Schema,
-                Extract<IdField, keyof Schema | undefined>,
-                Required,
-                ReadOnly
-              >
-            : Partial<Record<string, any>>
-          : Partial<Record<string, any>>
-        : Partial<Record<string, any>>
-      : Partial<Record<string, any>>
-    : Partial<Record<string, any>>
-  : Partial<Record<string, any>>;
-
-// Extract update data type from BaseTable
-// All fields are optional for updates, excludes readOnly fields and idField
-export type UpdateData<BT> = BT extends import("./client/base-table").BaseTable<
-  any,
-  any,
-  any,
-  any
->
-  ? BT extends {
-      schema: infer Schema;
-      idField?: infer IdField;
-      readOnly?: infer ReadOnly;
-    }
-    ? Schema extends Record<string, StandardSchemaV1>
-      ? IdField extends keyof Schema | undefined
-        ? ReadOnly extends readonly any[]
-          ? Partial<
-              Omit<
-                InferSchemaType<Schema>,
-                ExcludedFields<
-                  Extract<IdField, keyof Schema | undefined>,
-                  ReadOnly
-                >
-              >
-            >
-          : Partial<Record<string, any>>
-        : Partial<Record<string, any>>
-      : Partial<Record<string, any>>
-    : Partial<Record<string, any>>
-  : Partial<Record<string, any>>;
-
 export type ExecuteOptions = {
   includeODataAnnotations?: boolean;
   skipValidation?: boolean;
@@ -220,6 +159,38 @@ export type ExecuteOptions = {
    */
   useEntityIds?: boolean;
 };
+
+/**
+ * Type for the fetchHandler callback function.
+ * This is a convenience type export that matches the fetchHandler signature in FFetchOptions.
+ *
+ * @example
+ * ```typescript
+ * import type { FetchHandler } from '@proofkit/fmodata';
+ *
+ * const myFetchHandler: FetchHandler = (input, init) => {
+ *   console.log('Custom fetch:', input);
+ *   return fetch(input, init);
+ * };
+ *
+ * await query.execute({
+ *   fetchHandler: myFetchHandler
+ * });
+ * ```
+ */
+export type FetchHandler = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
+
+/**
+ * Combined type for execute() method options.
+ *
+ * Uses FFetchOptions from @fetchkit/ffetch to ensure proper type inference.
+ * FFetchOptions is re-exported in the package to ensure type availability in consuming packages.
+ */
+export type ExecuteMethodOptions<EO extends ExecuteOptions = ExecuteOptions> =
+  RequestInit & FFetchOptions & ExecuteOptions & EO;
 
 /**
  * Get the Accept header value based on includeODataAnnotations option
@@ -242,7 +213,7 @@ export type ConditionallyWithODataAnnotations<
     }
   : T;
 
-// Helper type to extract schema from a TableOccurrence
+// Helper type to extract schema from a FMTable
 export type ExtractSchemaFromOccurrence<Occ> = Occ extends {
   baseTable: { schema: infer S };
 }

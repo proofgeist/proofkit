@@ -9,121 +9,110 @@
 
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { z } from "zod/v4";
-import { defineBaseTable, defineTableOccurrence, buildOccurrences } from "../src/index";
-import { InferSchemaType } from "../src/types";
-import { createMockFetch } from "./utils/mock-fetch";
-import { mockResponses } from "./fixtures/responses";
-import { createMockClient } from "./utils/test-setup";
+import {
+  fmTableOccurrence,
+  textField,
+  numberField,
+  eq,
+} from "@proofkit/fmodata";
+import { createMockClient, users, contacts } from "./utils/test-setup";
+import { first } from "es-toolkit/compat";
 
 describe("Expand API Specification", () => {
-  const contactsBase = defineBaseTable({
-    schema: {
-      id: z.string(),
-      name: z.string(),
-      hobby: z.string().optional(),
-      id_user: z.string(),
+  const userCustomer = fmTableOccurrence(
+    "user_customer",
+    {
+      id: textField().primaryKey(),
+      name: textField().notNull(),
+      address: textField(),
+      tier: textField().notNull(),
     },
-    idField: "id",
-  });
-
-  const usersBase = defineBaseTable({
-    schema: {
-      id: z.string(),
-      username: z.string(),
-      email: z.string(),
-      active: z.boolean(),
-      id_customer: z.string(),
+    {
+      defaultSelect: "all",
     },
-    idField: "id",
-  });
+  );
 
-  const customerBase = defineBaseTable({
-    schema: {
-      id: z.string(),
-      name: z.string(),
-      address: z.string().optional(),
-      tier: z.string(),
+  const contacts = fmTableOccurrence(
+    "contacts",
+    {
+      id: textField().primaryKey(),
+      name: textField().notNull(),
+      hobby: textField(),
+      id_user: textField().notNull(),
     },
-    idField: "id",
-  });
-
-  // Phase 1: Define base TOs (without navigation)
-  const _customerTO = defineTableOccurrence({
-    name: "user_customer",
-    baseTable: customerBase,
-    defaultSelect: "all",
-  });
-
-  const _contactsTO = defineTableOccurrence({
-    name: "contacts",
-    baseTable: contactsBase,
-    defaultSelect: "all",
-  });
-
-  const _usersTO = defineTableOccurrence({
-    name: "users",
-    baseTable: usersBase,
-    defaultSelect: "all",
-  });
-
-  // Phase 2: Build final TOs with navigation
-  const [customerTO, contactsTO, usersTO] = buildOccurrences({
-    occurrences: [_customerTO, _contactsTO, _usersTO],
-    navigation: {
-      contacts: ["users"],
-      users: ["user_customer", "contacts"],
+    {
+      defaultSelect: "all",
+      navigationPaths: ["users", "other_users"],
     },
-  });
+  );
+
+  const users = fmTableOccurrence(
+    "users",
+    {
+      id: textField().primaryKey(),
+      username: textField().notNull(),
+      email: textField().notNull(),
+      active: numberField().readValidator(z.coerce.boolean()).notNull(),
+      id_customer: textField().notNull(),
+    },
+    {
+      defaultSelect: "all",
+      navigationPaths: ["user_customer", "contacts"],
+    },
+  );
+
+  const otherUsers = fmTableOccurrence(
+    "other_users",
+    {
+      id: textField().primaryKey(),
+      username: textField().notNull(),
+      email: textField().notNull(),
+      active: numberField().readValidator(z.coerce.boolean()).notNull(),
+      id_customer: textField().notNull(),
+    },
+    {
+      defaultSelect: "all",
+    },
+  );
 
   const client = createMockClient();
 
-  type UserFieldNames = keyof InferSchemaType<typeof usersBase.schema>;
-  type CustomerFieldNames = keyof InferSchemaType<typeof customerBase.schema>;
+  // type UserFieldNames = keyof InferTableSchema<typeof usersTO>;
+  // type CustomerFieldNames = keyof InferTableSchema<typeof customerTO>;
 
-  const db = client.database("test_db", {
-    occurrences: [contactsTO, usersTO, customerTO],
-  });
+  const db = client.database("test_db");
 
   describe("Simple expand (no callback)", () => {
     it("should generate query string for simple expand", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users")
+        .expand(users)
         .getQueryString();
       expect(queryString).toBe("/contacts?$top=1000&$expand=users");
     });
 
-    it("should allow arbitrary string relations", () => {
-      const queryString = db
-        .from("contacts")
+    it("should not allow arbitrary string relations", () => {
+      db.from(contacts)
         .list()
+        // @ts-expect-error - arbitrary string relation
         .expand("arbitrary_relation")
         .getQueryString();
-      expect(queryString).toBe(
-        "/contacts?$top=1000&$expand=arbitrary_relation",
-      );
-    });
-
-    it("should provide autocomplete for known relations", () => {
-      const entitySet = db.from("contacts");
-
-      // This should show autocomplete for "users" | (string & {})
-      expectTypeOf(entitySet.list().expand)
-        .parameter(0)
-        .not.toEqualTypeOf<string>();
     });
   });
 
   describe("Expand with callback - select", () => {
     it("should type callback builder to target table schema", () => {
-      db.from("contacts")
+      db.from(contacts)
         .list()
-        .expand("users", (builder) => {
+        .expand(users, (builder: any) => {
           // builder.select should only accept fields from users table
           expectTypeOf(builder.select).parameter(0).not.toEqualTypeOf<string>();
 
-          return builder.select("username", "email");
+          return builder.select({
+            username: users.username,
+            email: users.email,
+          });
         });
     });
 
@@ -131,14 +120,10 @@ describe("Expand API Specification", () => {
       async () => {
         // checking types only, don't actually make a request
         const result = await db
-          .from("contacts")
+          .from(contacts)
           .list()
-          .expand("users", (b) =>
-            b.select(
-              "username",
-              "email",
-              // "id_customer"
-            ),
+          .expand(users, (b: any) =>
+            b.select({ username: users.username, email: users.email }),
           )
           .execute();
 
@@ -166,9 +151,11 @@ describe("Expand API Specification", () => {
 
     it("should generate query string with $select", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.select("username", "email"))
+        .expand(users, (b: any) =>
+          b.select({ username: users.username, email: users.email }),
+        )
         .getQueryString();
 
       expect(queryString).toBe(
@@ -177,11 +164,11 @@ describe("Expand API Specification", () => {
     });
 
     it("should enforce callback returns builder", () => {
-      db.from("contacts")
+      db.from(contacts)
         .list()
-        .expand("users", (b) => {
+        .expand(users, (b: any) => {
           // Must return the builder
-          return b.select("username");
+          return b.select({ username: users.username });
         });
     });
   });
@@ -189,9 +176,9 @@ describe("Expand API Specification", () => {
   describe("Expand with callback - filter", () => {
     it("should generate query string with $filter", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.filter({ active: true }))
+        .expand(users, (b: any) => b.where(eq(users.active, 1)))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($filter=active");
@@ -201,9 +188,9 @@ describe("Expand API Specification", () => {
   describe("Expand with callback - orderBy", () => {
     it("should generate query string with $orderby", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.orderBy("username"))
+        .expand(users, (b: any) => b.orderBy("username"))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($orderby=username");
@@ -213,9 +200,9 @@ describe("Expand API Specification", () => {
   describe("Expand with callback - top and skip", () => {
     it("should generate query string with $top", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.top(5))
+        .expand(users, (b: any) => b.top(5))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($top=5");
@@ -223,9 +210,9 @@ describe("Expand API Specification", () => {
 
     it("should generate query string with $skip", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.skip(10))
+        .expand(users, (b: any) => b.skip(10))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($skip=10");
@@ -235,10 +222,10 @@ describe("Expand API Specification", () => {
   describe("Multiple expands (chaining)", () => {
     it("should allow chaining multiple expand calls", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.select("username"))
-        .expand("other_users")
+        .expand(users, (b: any) => b.select({ username: users.username }))
+        .expand(otherUsers)
         .getQueryString();
 
       expect(queryString).toBe(
@@ -247,44 +234,64 @@ describe("Expand API Specification", () => {
     });
 
     it("should type each expand callback independently", () => {
-      db.from("contacts")
+      db.from(contacts)
         .list()
-        .expand("users", (builder) => {
+        .expand(users, (builder: any) => {
           // First callback typed to users
           expectTypeOf(builder.select).parameter(0).not.toEqualTypeOf<string>();
 
-          return builder.select("username");
+          return builder.select({ username: users.username });
         })
-        .expand("other_users", (builder) => {
+        .expand(otherUsers, (builder: any) => {
           // Second callback - arbitrary relation so accepts any
-          return builder.select("email");
+          return builder.select({ email: otherUsers.email });
         });
     });
   });
 
   describe("Nested expands", () => {
     it("should type nested expand callback to nested target schema", () => {
-      db.from("contacts")
+      const query = db
+        .from(contacts)
         .list()
-        .expand("users", (usersBuilder) => {
+        .expand(users, (usersBuilder) => {
           return usersBuilder
-            .select("username", "email")
-            .expand("user_customer", (customerBuilder) => {
+            .select({ username: users.username, email: users.email })
+            .expand(userCustomer, (customerBuilder) => {
               // customerBuilder should be typed to customer schema
               // Verify it accepts valid fields
-              return customerBuilder.select("name", "tier");
+              return customerBuilder.select({
+                name: userCustomer.name,
+                tier: userCustomer.tier,
+              });
             });
         });
+
+      // type tests, don't run this code
+      async () => {
+        const result = await query.execute();
+
+        const firstRecord = result.data![0]!;
+
+        const firstUser = firstRecord.users[0]!;
+
+        // @ts-expect-error - this field was not selected, so it shouldn't be in the type
+        firstUser.id_customer;
+        expectTypeOf(firstUser).not.toHaveProperty("id_customer");
+        expectTypeOf(firstUser).toHaveProperty("username");
+      };
     });
 
     it("should generate query string with nested $expand", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) =>
+        .expand(users, (b: any) =>
           b
-            .select("username")
-            .expand("user_customer", (nested) => nested.select("name")),
+            .select({ username: users.username })
+            .expand(userCustomer, (nested: any) =>
+              nested.select({ name: userCustomer.name }),
+            ),
         )
         .getQueryString();
 
@@ -295,12 +302,12 @@ describe("Expand API Specification", () => {
 
     it("should support deeply nested expands (3 levels)", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) =>
-          b.expand("user_customer", (nested) =>
+        .expand(users, (b: any) =>
+          b.expand(userCustomer, (nested: any) =>
             // If customer had relations, we could expand further
-            nested.select("name"),
+            nested.select({ name: userCustomer.name }),
           ),
         )
         .getQueryString();
@@ -312,15 +319,17 @@ describe("Expand API Specification", () => {
   describe("Complex combinations", () => {
     it("should support select + filter + orderBy + nested expand", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) =>
+        .expand(users, (b: any) =>
           b
-            .select("username", "email")
-            .filter({ active: true })
+            .select({ username: users.username, email: users.email })
+            .where(eq(users.active, 1))
             .orderBy("username")
             .top(10)
-            .expand("user_customer", (nested) => nested.select("name")),
+            .expand(userCustomer, (nested: any) =>
+              nested.select({ name: userCustomer.name }),
+            ),
         )
         .getQueryString();
 
@@ -334,48 +343,29 @@ describe("Expand API Specification", () => {
 
     it("should support multiple expands with different options", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .expand("users", (b) => b.select("username").filter({ active: true }))
-        .expand("other_users", (b) => b.select("email").top(5))
+        .expand(users, (b: any) =>
+          b.select({ username: users.username }).where(eq(users.active, 1)),
+        )
+        .expand(otherUsers, (b: any) =>
+          b.select({ email: otherUsers.email }).top(5),
+        )
         .getQueryString();
 
       expect(queryString).toBe(
-        "/contacts?$top=1000&$expand=users($select=username;$filter=active eq true),other_users($select=email;$top=5)",
+        "/contacts?$top=1000&$expand=users($select=username;$filter=active eq 1),other_users($select=email;$top=5)",
       );
-    });
-  });
-
-  describe("Arbitrary relations (string escape hatch)", () => {
-    it("should allow expanding arbitrary relations not in schema", () => {
-      const queryString = db
-        .from("contacts")
-        .list()
-        .expand("unknown_relation", (b) => b.select("arbitrary_field"))
-        .getQueryString();
-
-      expect(queryString).toBe(
-        "/contacts?$top=1000&$expand=unknown_relation($select=arbitrary_field)",
-      );
-    });
-
-    it("should type arbitrary relation callback generically", () => {
-      db.from("contacts")
-        .list()
-        .expand("unknown", (builder) => {
-          // Should allow arbitrary field names
-          return builder.select("any_field" as any);
-        });
     });
   });
 
   describe("Integration with existing query methods", () => {
     it("should work with select on parent query", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .select("name", "hobby")
-        .expand("users", (b) => b.select("username"))
+        .select({ name: contacts.name, hobby: contacts.hobby })
+        .expand(users, (b: any) => b.select({ username: users.username }))
         .getQueryString();
 
       expect(queryString).toContain("$select=name,hobby");
@@ -384,10 +374,10 @@ describe("Expand API Specification", () => {
 
     it("should work with filter on parent query", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
-        .filter({ name: { eq: "Eric" } })
-        .expand("users")
+        .where(eq(contacts.name, "Eric"))
+        .expand(users)
         .getQueryString();
 
       expect(queryString).toContain("$filter=name eq");
@@ -396,12 +386,12 @@ describe("Expand API Specification", () => {
 
     it("should work with orderBy, top, skip on parent query", () => {
       const queryString = db
-        .from("contacts")
+        .from(contacts)
         .list()
         .orderBy("name")
         .top(20)
         .skip(10)
-        .expand("users", (b) => b.select("username"))
+        .expand(users, (b: any) => b.select({ username: users.username }))
         .getQueryString();
 
       expect(queryString).toContain("$orderby=name");

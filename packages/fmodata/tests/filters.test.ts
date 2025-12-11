@@ -124,7 +124,28 @@ describe("Filter Tests", () => {
       .from(contacts)
       .list()
       .where(inArray(contacts.name, ["John", "Jane", "Bob"]));
-    expect(query.getQueryString()).toContain("in");
+
+    const queryString = query.getQueryString();
+    expect(queryString).toContain("in");
+    expect(queryString).toContain("$filter=name in ('John', 'Jane', 'Bob')");
+
+    const specialTable = fmTableOccurrence(
+      "special_table",
+      {
+        id: textField().primaryKey(),
+        name: textField(),
+      },
+      { defaultSelect: "all" },
+    );
+
+    const query2 = db
+      .from(specialTable)
+      .list()
+      .where(inArray(specialTable.id, ["John", "Jane", "Bob"]));
+
+    const queryString2 = query2.getQueryString();
+    expect(queryString2).toContain("in");
+    expect(queryString2).toContain(`$filter="id" in ('John', 'Jane', 'Bob')`);
   });
 
   it("should support null values", () => {

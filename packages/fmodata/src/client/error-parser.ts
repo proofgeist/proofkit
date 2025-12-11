@@ -21,8 +21,10 @@ export async function parseErrorResponse(
   url: string,
 ): Promise<FMODataErrorType> {
   // Try to parse error body if it's JSON
-  let errorBody: { error?: { code?: string | number; message?: string } } | undefined;
-  
+  let errorBody:
+    | { error?: { code?: string | number; message?: string } }
+    | undefined;
+
   try {
     if (response.headers.get("content-type")?.includes("application/json")) {
       errorBody = await safeJsonParse<typeof errorBody>(response);
@@ -52,14 +54,3 @@ export async function parseErrorResponse(
   // Fall back to generic HTTPError
   return new HTTPError(url, response.status, response.statusText, errorBody);
 }
-
-
-
-
-
-
-
-
-
-
-

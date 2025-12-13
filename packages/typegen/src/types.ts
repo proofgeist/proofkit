@@ -26,64 +26,116 @@ const layoutConfig = z.object({
 
 const envNames = z
   .object({
-    server: z.string(),
-    db: z.string(),
+    server: z
+      .string()
+      .optional()
+      .transform((val) => (val === "" ? undefined : val)),
+    db: z
+      .string()
+      .optional()
+      .transform((val) => (val === "" ? undefined : val)),
     auth: z.union([
       z
         .object({
-          apiKey: z.string(),
+          apiKey: z
+            .string()
+            .optional()
+            .transform((val) => (val === "" ? undefined : val)),
         })
-        .partial(),
+        .optional()
+        .transform((val) => {
+          if (val && Object.values(val).every((v) => v === undefined)) {
+            return undefined;
+          }
+          return val ?? undefined;
+        }),
       z
         .object({
-          username: z.string(),
-          password: z.string(),
+          username: z
+            .string()
+            .optional()
+            .transform((val) => (val === "" ? undefined : val)),
+          password: z
+            .string()
+            .optional()
+            .transform((val) => (val === "" ? undefined : val)),
         })
-        .partial(),
+        .optional()
+        .transform((val) => {
+          if (val && Object.values(val).every((v) => v === undefined)) {
+            return undefined;
+          }
+          return val ?? undefined;
+        }),
     ]),
   })
-  .partial()
   .optional()
+  .transform((val) => {
+    if (val && Object.values(val).every((v) => v === undefined)) {
+      return undefined;
+    }
+    return val ?? undefined;
+  })
   .meta({
     description:
       "If you're using other environment variables than the default, custom the NAMES of them here for the typegen to lookup their values when it runs.",
   });
 
-export const typegenConfigSingle = z.object({
-  envNames,
-  layouts: z.array(layoutConfig),
-  path: z
-    .string()
-    .default("schema")
-    .optional()
-    .meta({ description: "The folder path to output the generated files" }),
-  clearOldFiles: z.boolean().default(false).optional().meta({
-    description:
-      "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
-  }),
-  validator: z
-    .union([z.enum(["zod", "zod/v4", "zod/v3"]), z.literal(false)])
-    .default("zod/v4")
-    .optional()
-    .meta({
+const path = z
+  .string()
+  .default("schema")
+  .optional()
+  .meta({ description: "The folder path to output the generated files" });
+
+const typegenConfigSingleBase = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("fmdapi"),
+    configName: z.string().optional(),
+    envNames,
+    layouts: z.array(layoutConfig).default([]),
+    path,
+    clearOldFiles: z.boolean().default(false).optional().meta({
       description:
-        "If set to 'zod', 'zod/v4', or 'zod/v3', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
+        "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
     }),
-  clientSuffix: z.string().default("Layout").optional().meta({
-    description: "The suffix to be added to the schema name for each layout",
+    validator: z
+      .union([z.enum(["zod", "zod/v4", "zod/v3"]), z.literal(false)])
+      .default("zod/v4")
+      .optional()
+      .meta({
+        description:
+          "If set to 'zod', 'zod/v4', or 'zod/v3', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
+      }),
+    clientSuffix: z.string().default("Layout").optional().meta({
+      description: "The suffix to be added to the schema name for each layout",
+    }),
+    generateClient: z.boolean().default(true).optional().meta({
+      description:
+        "If true, a layout-specific client will be generated for each layout provided, otherwise it will only generate the types. This option can be overridden for each layout individually.",
+    }),
+    webviewerScriptName: z.string().optional().meta({
+      description:
+        "The name of the webviewer script to be used. If this key is set, the generated client will use the @proofkit/webviewer adapter instead of the OttoFMS or Fetch adapter, which will only work when loaded inside of a FileMaker webviewer.",
+    }),
   }),
-  generateClient: z.boolean().default(true).optional().meta({
-    description:
-      "If true, a layout-specific client will be generated for each layout provided, otherwise it will only generate the types. This option can be overridden for each layout individually.",
+  z.object({
+    type: z.literal("fmodata"),
+    configName: z.string().optional(),
+    envNames,
+    path,
   }),
-  webviewerScriptName: z.string().optional().meta({
-    description:
-      "The name of the webviewer script to be used. If this key is set, the generated client will use the @proofkit/webviewer adapter instead of the OttoFMS or Fetch adapter, which will only work when loaded inside of a FileMaker webviewer.",
-  }),
-});
+]);
+
+// Add default "type" field for backwards compatibility
+export const typegenConfigSingle = z.preprocess((data) => {
+  if (data && typeof data === "object" && !("type" in data)) {
+    return { ...data, type: "fmdapi" };
+  }
+  return data;
+}, typegenConfigSingleBase);
 
 export const typegenConfig = z.object({
-  config: z.union([typegenConfigSingle, z.array(typegenConfigSingle)]),
+  config: z.union([z.array(typegenConfigSingle), typegenConfigSingle]),
 });
 
 export type TypegenConfig = z.infer<typeof typegenConfig>;

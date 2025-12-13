@@ -28,7 +28,7 @@ export function buildSchema(
 
   if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
     schemaFile.addImportDeclaration({
-      moduleSpecifier: type,
+      moduleSpecifier: "zod/v4",
       namedImports: ["z"],
     });
     if (hasPortals) {
@@ -312,8 +312,10 @@ export function buildOverrideFile(
   { type, ...args }: BuildSchemaArgs,
 ) {
   if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
+    // Map zod/v4 to zod since we're using zod v4
+    const moduleSpecifier = type === "zod/v4" ? "zod" : type;
     overrideFile.addImportDeclaration({
-      moduleSpecifier: type,
+      moduleSpecifier,
       namedImports: ["z"],
     });
   }

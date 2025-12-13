@@ -41,17 +41,23 @@ export const generateTypedClients = async (
     return;
   }
 
-  if (Array.isArray(parsedConfig.data.config)) {
-    for (const option of parsedConfig.data.config) {
+  const configArray = Array.isArray(parsedConfig.data.config)
+    ? parsedConfig.data.config
+    : [parsedConfig.data.config];
+
+  for (const option of configArray) {
+    if (option.type === "fmdapi") {
       await generateTypedClientsSingle(option, options);
+    } else {
+      console.log(
+        chalk.yellow("WARNING: Unsupported config type: " + option.type),
+      );
     }
-  } else {
-    await generateTypedClientsSingle(parsedConfig.data.config, options);
   }
 };
 
 const generateTypedClientsSingle = async (
-  config: z.infer<typeof typegenConfigSingle>,
+  config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>,
   options?: { resetOverrides?: boolean; cwd?: string },
 ) => {
   const {
@@ -192,7 +198,8 @@ const generateTypedClientsSingle = async (
           ? validator
           : "ts",
       strictNumbers: item.strictNumbers,
-      webviewerScriptName: config.webviewerScriptName,
+      webviewerScriptName:
+        config?.type === "fmdapi" ? config.webviewerScriptName : undefined,
       envNames: {
         auth:
           "apiKey" in auth

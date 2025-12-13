@@ -1,0 +1,47 @@
+{
+  "name": "@proofkit/typegen-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fetchkit/ffetch": "^4.2.0",
+    "@headless-tree/core": "^1.6.0",
+    "@headless-tree/react": "^1.6.0",
+    "@hookform/resolvers": "^5.2.2",
+    "@proofkit/typegen": "workspace:*",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-direction": "^1.1.1",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@remixicon/react": "^4.7.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-query": "^5.76.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "hono": "^4.9.0",
+    "lucide-react": "^0.511.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hook-form": "^7.68.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.11",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.17.1",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tw-animate-css": "^1.3.6",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.4"
+  }
+}

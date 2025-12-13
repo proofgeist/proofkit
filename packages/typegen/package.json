@@ -6,8 +6,10 @@
   "main": "dist/esm/index.js",
   "scripts": {
     "dev": "pnpm build:watch",
+    "dev:ui": "concurrently -n \"web,api\" -c \"cyan,magenta\" \"pnpm -C web dev\" \"pnpm run dev:api\"",
+    "dev:api": "concurrently -n \"build,server\" -c \"cyan,magenta\" \"pnpm build:watch\" \"nodemon --watch dist/esm --delay 1 --exec 'node dist/esm/cli.js ui --port 3141 --no-open'\"",
     "test": "op inject -i op.env -o .env.local -f && vitest run",
-    "build": "vite build && publint --strict",
+    "build": "pnpm -C web build && pnpm vite build && node scripts/build-copy.js && publint --strict",
     "build:watch": "vite build --watch",
     "ci": "pnpm run build && pnpm run test",
     "prepublishOnly": "pnpm run ci"
@@ -24,6 +26,18 @@
       "import": {
         "types": "./dist/esm/types.d.ts",
         "default": "./dist/esm/types.js"
+      }
+    },
+    "./api": {
+      "import": {
+        "types": "./dist/esm/server/contract.d.ts",
+        "default": "./dist/esm/server/contract.js"
+      }
+    },
+    "./api-app": {
+      "import": {
+        "types": "./dist/esm/server/contract.d.ts",
+        "default": "./dist/esm/server/contract.js"
       }
     },
     "./package.json": "./package.json"
@@ -51,26 +65,32 @@
   "dependencies": {
     "@clack/prompts": "^0.11.0",
     "@commander-js/extra-typings": "^14.0.0",
+    "@hono/node-server": "^1.19.7",
+    "@hono/zod-validator": "^0.7.5",
     "@proofkit/fmdapi": "workspace:*",
     "@tanstack/vite-config": "^0.2.0",
     "chalk": "5.4.1",
     "commander": "^14.0.0",
     "dotenv": "^16.5.0",
     "fs-extra": "^11.3.0",
+    "hono": "^4.9.0",
     "jsonc-parser": "^3.3.1",
+    "open": "^10.1.0",
     "prettier": "^3.5.3",
     "semver": "^7.7.2",
     "ts-morph": "^26.0.0",
     "ts-toolbelt": "^9.6.0",
     "vite": "^6.3.4",
-    "zod": "3.25.64"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/semver": "^7.7.0",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.11",
     "publint": "^0.3.12",
     "type-fest": "^3.13.1",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   }
 }

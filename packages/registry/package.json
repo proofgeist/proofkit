@@ -43,13 +43,13 @@
     "chokidar-cli": "^3.0.0",
     "concurrently": "^8.2.2",
     "publint": "^0.3.12",
-    "tsdown": "^0.3.1",
-    "typescript": "^5.9.2",
-    "vitest": "^2.1.8"
+    "tsdown": "^0.14.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   },
   "dependencies": {
     "jiti": "^1.21.7",
     "shadcn": "^2.10.0",
-    "zod": "3.25.64"
+    "zod": "^4.1.13"
   }
 }

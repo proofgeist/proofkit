@@ -21,8 +21,8 @@
     "knip": "^5.56.0",
     "prettier": "^3.5.3",
     "turbo": "^2.5.4",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   },
   "packageManager": "pnpm@10.14.0",
   "engines": {

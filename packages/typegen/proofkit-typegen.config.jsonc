@@ -1,0 +1,19 @@
+{
+  "config": [
+    {
+      "type": "fmdapi",
+      "layouts": [
+        {
+          "layoutName": "customer",
+          "schemaName": "customer333",
+          "valueLists": "allowEmpty"
+        }
+      ],
+      "path": "schema",
+      "clearOldFiles": false,
+      "validator": "zod/v4",
+      "clientSuffix": "Layout",
+      "generateClient": true
+    }
+  ]
+}

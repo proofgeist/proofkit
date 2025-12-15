@@ -36,8 +36,8 @@
     },
     "./api-app": {
       "import": {
-        "types": "./dist/esm/server/contract.d.ts",
-        "default": "./dist/esm/server/contract.js"
+        "types": "./dist/esm/server/app.d.ts",
+        "default": "./dist/esm/server/app.js"
       }
     },
     "./package.json": "./package.json"

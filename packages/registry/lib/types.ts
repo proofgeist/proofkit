@@ -147,8 +147,20 @@ const categorySchema = z.enum([
 
 export const frameworkSchema = z.enum(["next-pages", "next-app", "manual"]);
 
+export type TemplateMetadata = z.infer<typeof registryItemSchema> & {
+  title: string;
+  description?: string;
+  category: z.infer<typeof categorySchema>;
+  files: TemplateFile[];
+  registryType: z.infer<typeof registryTypeSchema>;
+  postInstall?: PostInstallStep[];
+  minimumProofKitVersion?: string;
+  allowedFrameworks?: z.infer<typeof frameworkSchema>[];
+  schemaRequired?: boolean;
+};
+
 // Defines the metadata for a single template (_meta.ts)
-export const templateMetadataSchema = registryItemSchema
+export const templateMetadataSchema: z.ZodType<TemplateMetadata> = registryItemSchema
   .omit({ name: true, type: true, files: true, docs: true })
   .extend({
     title: z.string(),
@@ -176,15 +188,19 @@ export const templateMetadataSchema = registryItemSchema
   });
 
 export type TemplateFile = z.infer<typeof templateFileSchema>;
-export type TemplateMetadata = z.infer<typeof templateMetadataSchema>;
 
-export const registryIndexSchema = templateMetadataSchema
+export type RegistryIndex = Array<{
+  name: string;
+  title: string;
+  category: z.infer<typeof categorySchema>;
+  description?: string;
+}>;
+
+export const registryIndexSchema: z.ZodType<RegistryIndex> = templateMetadataSchema
   .pick({ title: true, category: true, description: true })
   .extend({
     name: z.string(),
   })
   .array();
-
-export type RegistryIndex = z.infer<typeof registryIndexSchema>;
 
 export type RegistryItem = ShadcnRegistryItem;

@@ -164,6 +164,21 @@ export const mockResponses = {
       value: [
         {
           "@id":
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
+          "@editLink":
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
+          PrimaryKey: "00000000-0000-0000-0000-000000000000",
+          CreationTimestamp: "2025-12-05T16:36:53Z",
+          CreatedBy: "admin",
+          ModificationTimestamp: "2025-12-05T16:36:53Z",
+          ModifiedBy: "admin",
+          name: null,
+          hobby: "Should fail",
+          id_user: null,
+          my_calc: "you betcha",
+        },
+        {
+          "@id":
             "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('D61B338B-B06E-4985-ABFD-CB3B2EF4F4C4')",
           "@editLink":
             "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('D61B338B-B06E-4985-ABFD-CB3B2EF4F4C4')",
@@ -179,61 +194,46 @@ export const mockResponses = {
         },
         {
           "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('015EEF6F-F63E-4C4C-95A7-3CAC3A1C59E2')",
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('1FE5EFB1-E42D-4AC1-94BF-9AA6AD11F9CE')",
           "@editLink":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('015EEF6F-F63E-4C4C-95A7-3CAC3A1C59E2')",
-          PrimaryKey: "015EEF6F-F63E-4C4C-95A7-3CAC3A1C59E2",
-          CreationTimestamp: "2025-11-18T20:33:35Z",
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('1FE5EFB1-E42D-4AC1-94BF-9AA6AD11F9CE')",
+          PrimaryKey: "1FE5EFB1-E42D-4AC1-94BF-9AA6AD11F9CE",
+          CreationTimestamp: "2025-12-05T16:35:10Z",
           CreatedBy: "admin",
-          ModificationTimestamp: "2025-11-18T20:33:35Z",
+          ModificationTimestamp: "2025-12-05T16:35:10Z",
           ModifiedBy: "admin",
-          name: "Batch Test User",
-          hobby: "Testing",
+          name: "After Delete Fail - 1764974109900",
+          hobby: "Should this succeed?",
           id_user: null,
           my_calc: "you betcha",
         },
         {
           "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('20994564-4AA2-47DA-91C3-26CA273E682D')",
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('D17802D1-7A37-494E-BE57-408129E0B251')",
           "@editLink":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('20994564-4AA2-47DA-91C3-26CA273E682D')",
-          PrimaryKey: "20994564-4AA2-47DA-91C3-26CA273E682D",
-          CreationTimestamp: "2025-11-18T20:33:45Z",
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('D17802D1-7A37-494E-BE57-408129E0B251')",
+          PrimaryKey: "D17802D1-7A37-494E-BE57-408129E0B251",
+          CreationTimestamp: "2025-12-05T16:36:21Z",
           CreatedBy: "admin",
-          ModificationTimestamp: "2025-11-18T20:33:45Z",
+          ModificationTimestamp: "2025-12-05T16:36:21Z",
           ModifiedBy: "admin",
-          name: "Batch Test User",
-          hobby: "Testing",
+          name: "After Delete Fail - 1764974181090",
+          hobby: "Should this succeed?",
           id_user: null,
           my_calc: "you betcha",
         },
         {
           "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('CF1D28C9-FA7A-4104-9FE1-29A4FD810BF5')",
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('593F9FCC-D71C-42A9-B9DF-AAF1B36C7D84')",
           "@editLink":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('CF1D28C9-FA7A-4104-9FE1-29A4FD810BF5')",
-          PrimaryKey: "CF1D28C9-FA7A-4104-9FE1-29A4FD810BF5",
-          CreationTimestamp: "2025-11-18T20:33:58Z",
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('593F9FCC-D71C-42A9-B9DF-AAF1B36C7D84')",
+          PrimaryKey: "593F9FCC-D71C-42A9-B9DF-AAF1B36C7D84",
+          CreationTimestamp: "2025-12-05T16:36:53Z",
           CreatedBy: "admin",
-          ModificationTimestamp: "2025-11-18T20:33:58Z",
+          ModificationTimestamp: "2025-12-05T16:36:53Z",
           ModifiedBy: "admin",
-          name: "Batch Test User",
-          hobby: "Testing",
-          id_user: null,
-          my_calc: "you betcha",
-        },
-        {
-          "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('BD9C8A25-7173-4378-8BA0-AAADA67C6F4D')",
-          "@editLink":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('BD9C8A25-7173-4378-8BA0-AAADA67C6F4D')",
-          PrimaryKey: "BD9C8A25-7173-4378-8BA0-AAADA67C6F4D",
-          CreationTimestamp: "2025-11-18T20:34:37Z",
-          CreatedBy: "admin",
-          ModificationTimestamp: "2025-11-18T20:34:37Z",
-          ModifiedBy: "admin",
-          name: "Batch Test User",
-          hobby: "Testing",
+          name: "After Delete Fail - 1764974213190",
+          hobby: "Should this succeed?",
           id_user: null,
           my_calc: "you betcha",
         },
@@ -293,7 +293,7 @@ export const mockResponses = {
     headers: {
       "content-type": "application/json;charset=utf-8",
       location:
-        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts(ROWID=7619)",
+        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts(ROWID=11073)",
     },
     response: null,
   },
@@ -305,19 +305,19 @@ export const mockResponses = {
     headers: {
       "content-type": "application/json;charset=utf-8",
       location:
-        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts('E15FE132-4FE2-4548-A74F-FFB3F0283CD8')",
+        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts('F88124B8-53D1-482D-9EF9-08BA79702DA5')",
     },
     response: {
       "@context":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
       "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('E15FE132-4FE2-4548-A74F-FFB3F0283CD8')",
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('F88124B8-53D1-482D-9EF9-08BA79702DA5')",
       "@editLink":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('E15FE132-4FE2-4548-A74F-FFB3F0283CD8')",
-      PrimaryKey: "E15FE132-4FE2-4548-A74F-FFB3F0283CD8",
-      CreationTimestamp: "2025-11-25T13:39:16Z",
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('F88124B8-53D1-482D-9EF9-08BA79702DA5')",
+      PrimaryKey: "F88124B8-53D1-482D-9EF9-08BA79702DA5",
+      CreationTimestamp: "2025-12-15T11:32:53Z",
       CreatedBy: "admin",
-      ModificationTimestamp: "2025-11-25T13:39:16Z",
+      ModificationTimestamp: "2025-12-15T11:32:53Z",
       ModifiedBy: "admin",
       name: "Capture test",
       hobby: null,
@@ -387,15 +387,26 @@ export const mockResponses = {
   "error-invalid-record-id": {
     url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
     method: "GET",
-    status: 404,
+    status: 200,
     headers: {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      error: {
-        code: "-1023",
-        message: "Specified record not found",
-      },
+      "@context":
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
+      "@id":
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
+      "@editLink":
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
+      PrimaryKey: "00000000-0000-0000-0000-000000000000",
+      CreationTimestamp: "2025-12-05T16:36:53Z",
+      CreatedBy: "admin",
+      ModificationTimestamp: "2025-12-05T16:36:53Z",
+      ModifiedBy: "admin",
+      name: null,
+      hobby: "Should fail",
+      id_user: null,
+      my_calc: "you betcha",
     },
   },
 
@@ -564,6 +575,91 @@ export const mockResponses = {
               "@editLink":
                 "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/user_customer('3026B56E-0C6E-4F31-B666-EE8AC5B36542')",
               name: "test",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  "list with nested expand": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/contacts?$top=2&$expand=users($expand=user_customer($select=name))",
+    method: "GET",
+    status: 200,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      "@context":
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+      value: [
+        {
+          "@id":
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
+          "@editLink":
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
+          PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
+          CreationTimestamp: "2025-10-31T10:03:27Z",
+          CreatedBy: "admin",
+          ModificationTimestamp: "2025-10-31T15:55:53Z",
+          ModifiedBy: "admin",
+          name: "Eric",
+          hobby: "Board games",
+          id_user: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
+          my_calc: "you betcha",
+          users: [
+            {
+              "@id":
+                "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
+              "@editLink":
+                "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
+              id: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
+              CreationTimestamp: "2025-08-03T11:38:20Z",
+              CreatedBy: "admin",
+              ModificationTimestamp: "2025-11-03T12:34:42Z",
+              ModifiedBy: "admin",
+              name: "Test User",
+              id_customer: "3026B56E-0C6E-4F31-B666-EE8AC5B36542",
+              user_customer: [
+                {
+                  "@id":
+                    "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/user_customer('3026B56E-0C6E-4F31-B666-EE8AC5B36542')",
+                  "@editLink":
+                    "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/user_customer('3026B56E-0C6E-4F31-B666-EE8AC5B36542')",
+                  name: "test",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          "@id":
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('D61B338B-B06E-4985-ABFD-CB3B2EF4F4C4')",
+          "@editLink":
+            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('D61B338B-B06E-4985-ABFD-CB3B2EF4F4C4')",
+          PrimaryKey: "D61B338B-B06E-4985-ABFD-CB3B2EF4F4C4",
+          CreationTimestamp: "2025-10-31T11:13:13Z",
+          CreatedBy: "admin",
+          ModificationTimestamp: "2025-10-31T15:56:07Z",
+          ModifiedBy: "admin",
+          name: "Adam",
+          hobby: "trees",
+          id_user: "53D36C9A-8F90-4C21-A38F-F278D4F77718",
+          my_calc: "you betcha",
+          users: [
+            {
+              "@id":
+                "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('53D36C9A-8F90-4C21-A38F-F278D4F77718')",
+              "@editLink":
+                "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('53D36C9A-8F90-4C21-A38F-F278D4F77718')",
+              id: "53D36C9A-8F90-4C21-A38F-F278D4F77718",
+              CreationTimestamp: "2025-10-31T15:55:56Z",
+              CreatedBy: "admin",
+              ModificationTimestamp: "2025-10-31T15:56:03Z",
+              ModifiedBy: "admin",
+              name: "adam user",
+              id_customer: null,
+              user_customer: [],
             },
           ],
         },

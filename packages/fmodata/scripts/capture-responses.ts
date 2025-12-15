@@ -396,6 +396,16 @@ const queriesToCapture: {
       return { url, response };
     },
   },
+  {
+    name: "list with nested expand",
+    description: "List query with deeply nested expand and selected fields",
+    execute: async (client) => {
+      const path = `/contacts?$top=2&$expand=users($expand=user_customer($select=name))`;
+      const response = await client(path);
+      const url = response.url;
+      return { url, response };
+    },
+  },
 ];
 
 /**

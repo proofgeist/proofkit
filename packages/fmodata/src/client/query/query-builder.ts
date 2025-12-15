@@ -452,16 +452,26 @@ export class QueryBuilder<
     return this;
   }
 
-  expand<TargetTable extends FMTable<any, any>>(
+  expand<
+    TargetTable extends FMTable<any, any>,
+    TSelected extends
+      | keyof InferSchemaOutputFromFMTable<TargetTable>
+      | Record<
+          string,
+          Column<any, any, ExtractTableName<TargetTable>>
+        > = keyof InferSchemaOutputFromFMTable<TargetTable>,
+    TNestedExpands extends ExpandedRelations = {},
+  >(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
     callback?: (
       builder: QueryBuilder<
         TargetTable,
         keyof InferSchemaOutputFromFMTable<TargetTable>,
         false,
-        false
+        false,
+        {}
       >,
-    ) => QueryBuilder<TargetTable, any, any, any, any>,
+    ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands>,
   ): QueryBuilder<
     Occ,
     Selected,
@@ -470,7 +480,8 @@ export class QueryBuilder<
     Expands & {
       [K in ExtractTableName<TargetTable>]: {
         schema: InferSchemaOutputFromFMTable<TargetTable>;
-        selected: keyof InferSchemaOutputFromFMTable<TargetTable>;
+        selected: TSelected;
+        nested: TNestedExpands;
       };
     }
   > {
@@ -479,7 +490,8 @@ export class QueryBuilder<
       TargetTable,
       keyof InferSchemaOutputFromFMTable<TargetTable>,
       false,
-      false
+      false,
+      {}
     >;
     const expandConfig = this.expandBuilder.processExpand<
       TargetTable,
@@ -487,7 +499,7 @@ export class QueryBuilder<
     >(
       targetTable,
       this.occurrence,
-      callback,
+      callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
         new QueryBuilder<TargetTable>({
           occurrence: targetTable,

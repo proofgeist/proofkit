@@ -24,7 +24,10 @@ export type ExpandConfig = {
 };
 
 // Type to represent expanded relations
-export type ExpandedRelations = Record<string, { schema: any; selected: any }>;
+export type ExpandedRelations = Record<
+  string,
+  { schema: any; selected: any; nested?: ExpandedRelations }
+>;
 
 /**
  * Extract the value type from a Column.
@@ -44,6 +47,29 @@ type MapSelectToReturnType<
   [K in keyof TSelect]: ExtractColumnType<TSelect[K]>;
 };
 
+/**
+ * Helper: Resolve a single expand's return type, including nested expands
+ */
+export type ResolveExpandType<
+  Exp extends { schema: any; selected: any; nested?: ExpandedRelations },
+> = // Handle the selected fields
+(Exp["selected"] extends Record<string, Column<any, any, any, any>>
+  ? MapSelectToReturnType<Exp["selected"], Exp["schema"]>
+  : Exp["selected"] extends keyof Exp["schema"]
+    ? Pick<Exp["schema"], Exp["selected"]>
+    : Exp["schema"]) &
+  // Recursively handle nested expands
+  (Exp["nested"] extends ExpandedRelations
+    ? ResolveExpandedRelations<Exp["nested"]>
+    : {});
+
+/**
+ * Helper: Resolve all expanded relations recursively
+ */
+export type ResolveExpandedRelations<Exps extends ExpandedRelations> = {
+  [K in keyof Exps]: ResolveExpandType<Exps[K]>[];
+};
+
 export type QueryReturnType<
   T extends Record<string, any>,
   Selected extends keyof T | Record<string, Column<any, any, any, any>>,
@@ -55,49 +81,19 @@ export type QueryReturnType<
   : // Use tuple wrapping [Selected] extends [...] to prevent distribution over unions
     [Selected] extends [Record<string, Column<any, any, any, any>>]
     ? SingleMode extends "exact"
-      ? MapSelectToReturnType<Selected, T> & {
-          [K in keyof Expands]: Pick<
-            Expands[K]["schema"],
-            Expands[K]["selected"]
-          >[];
-        }
+      ? MapSelectToReturnType<Selected, T> & ResolveExpandedRelations<Expands>
       : SingleMode extends "maybe"
         ?
-            | (MapSelectToReturnType<Selected, T> & {
-                [K in keyof Expands]: Pick<
-                  Expands[K]["schema"],
-                  Expands[K]["selected"]
-                >[];
-              })
+            | (MapSelectToReturnType<Selected, T> &
+                ResolveExpandedRelations<Expands>)
             | null
-        : (MapSelectToReturnType<Selected, T> & {
-            [K in keyof Expands]: Pick<
-              Expands[K]["schema"],
-              Expands[K]["selected"]
-            >[];
-          })[]
+        : (MapSelectToReturnType<Selected, T> &
+            ResolveExpandedRelations<Expands>)[]
     : // Use tuple wrapping to prevent distribution over union of keys
       [Selected] extends [keyof T]
       ? SingleMode extends "exact"
-        ? Pick<T, Selected> & {
-            [K in keyof Expands]: Pick<
-              Expands[K]["schema"],
-              Expands[K]["selected"]
-            >[];
-          }
+        ? Pick<T, Selected> & ResolveExpandedRelations<Expands>
         : SingleMode extends "maybe"
-          ?
-              | (Pick<T, Selected> & {
-                  [K in keyof Expands]: Pick<
-                    Expands[K]["schema"],
-                    Expands[K]["selected"]
-                  >[];
-                })
-              | null
-          : (Pick<T, Selected> & {
-              [K in keyof Expands]: Pick<
-                Expands[K]["schema"],
-                Expands[K]["selected"]
-              >[];
-            })[]
+          ? (Pick<T, Selected> & ResolveExpandedRelations<Expands>) | null
+          : (Pick<T, Selected> & ResolveExpandedRelations<Expands>)[]
       : never;

@@ -32,6 +32,10 @@ import {
   buildSelectExpandQueryString,
   createODataRequest,
 } from "./builders/index";
+import {
+  type ResolveExpandedRelations,
+  type ResolveExpandType,
+} from "./query/types";
 import { createLogger, InternalLogger, Logger } from "../logger";
 
 /**
@@ -66,20 +70,11 @@ export type RecordReturnType<
     : never
   : // Use tuple wrapping [Selected] extends [...] to prevent distribution over unions
     [Selected] extends [Record<string, Column<any, any, any, any>>]
-    ? MapSelectToReturnType<Selected, Schema> & {
-        [K in keyof Expands]: Pick<
-          Expands[K]["schema"],
-          Expands[K]["selected"]
-        >[];
-      }
+    ? MapSelectToReturnType<Selected, Schema> &
+        ResolveExpandedRelations<Expands>
     : // Use tuple wrapping to prevent distribution over union of keys
       [Selected] extends [keyof Schema]
-      ? Pick<Schema, Selected> & {
-          [K in keyof Expands]: Pick<
-            Expands[K]["schema"],
-            Expands[K]["selected"]
-          >[];
-        }
+      ? Pick<Schema, Selected> & ResolveExpandedRelations<Expands>
       : never;
 
 export class RecordBuilder<
@@ -297,16 +292,26 @@ export class RecordBuilder<
    *   .execute();
    * ```
    */
-  expand<TargetTable extends FMTable<any, any>>(
+  expand<
+    TargetTable extends FMTable<any, any>,
+    TSelected extends
+      | keyof InferSchemaOutputFromFMTable<TargetTable>
+      | Record<
+          string,
+          Column<any, any, ExtractTableName<TargetTable>>
+        > = keyof InferSchemaOutputFromFMTable<TargetTable>,
+    TNestedExpands extends ExpandedRelations = {},
+  >(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
     callback?: (
       builder: QueryBuilder<
         TargetTable,
         keyof InferSchemaOutputFromFMTable<TargetTable>,
         false,
-        false
+        false,
+        {}
       >,
-    ) => QueryBuilder<TargetTable, any, any, any, any>,
+    ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands>,
   ): RecordBuilder<
     Occ,
     false,
@@ -315,7 +320,8 @@ export class RecordBuilder<
     Expands & {
       [K in ExtractTableName<TargetTable>]: {
         schema: InferSchemaOutputFromFMTable<TargetTable>;
-        selected: keyof InferSchemaOutputFromFMTable<TargetTable>;
+        selected: TSelected;
+        nested: TNestedExpands;
       };
     }
   > {
@@ -352,7 +358,8 @@ export class RecordBuilder<
       TargetTable,
       keyof InferSchemaOutputFromFMTable<TargetTable>,
       false,
-      false
+      false,
+      {}
     >;
     const expandConfig = expandBuilder.processExpand<
       TargetTable,
@@ -360,7 +367,7 @@ export class RecordBuilder<
     >(
       targetTable,
       this.table ?? undefined,
-      callback,
+      callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
         new QueryBuilder<TargetTable>({
           occurrence: targetTable,

@@ -60,13 +60,18 @@ export class ExpandBuilder {
           : [String(config.options.select)]
         : undefined;
 
+      // Recursively build validation configs for nested expands
+      const nestedExpands = config.nestedExpandConfigs
+        ? this.buildValidationConfigs(config.nestedExpandConfigs)
+        : undefined;
+
       return {
         relation: config.relation,
         targetSchema,
         targetTable,
         table: targetTable,
         selectedFields,
-        nestedExpands: undefined,
+        nestedExpands,
       };
     });
   }
@@ -121,11 +126,10 @@ export class ExpandBuilder {
       }
 
       // If the configured builder has nested expands, we need to include them
-      if ((configuredBuilder as any).expandConfigs?.length > 0) {
+      const nestedExpandConfigs = (configuredBuilder as any).expandConfigs;
+      if (nestedExpandConfigs?.length > 0) {
         // Build nested expand string from the configured builder's expand configs
-        const nestedExpandString = this.buildExpandString(
-          (configuredBuilder as any).expandConfigs,
-        );
+        const nestedExpandString = this.buildExpandString(nestedExpandConfigs);
         if (nestedExpandString) {
           // Add nested expand to options
           expandOptions.expand = nestedExpandString as any;
@@ -136,6 +140,7 @@ export class ExpandBuilder {
         relation: relationName,
         options: expandOptions,
         targetTable,
+        nestedExpandConfigs: nestedExpandConfigs?.length > 0 ? nestedExpandConfigs : undefined,
       };
     } else {
       // Simple expand without callback - apply defaultSelect if available

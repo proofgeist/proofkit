@@ -7,7 +7,7 @@
  * DO NOT RUN THESE TESTS YET - they define the API we want to build.
  */
 
-import { describe, it, expect, expectTypeOf } from "vitest";
+import { describe, it, expect, expectTypeOf, assert } from "vitest";
 import { z } from "zod/v4";
 import {
   fmTableOccurrence,
@@ -17,8 +17,11 @@ import {
 } from "@proofkit/fmodata";
 import { createMockClient, users, contacts } from "./utils/test-setup";
 import { first } from "es-toolkit/compat";
+import { simpleMock } from "./utils/mock-fetch";
+import { mockResponses } from "./fixtures/responses";
 
 describe("Expand API Specification", () => {
+  // Spec test table definitions (simplified for type testing)
   const userCustomer = fmTableOccurrence(
     "user_customer",
     {
@@ -53,7 +56,7 @@ describe("Expand API Specification", () => {
       username: textField().notNull(),
       email: textField().notNull(),
       active: numberField().readValidator(z.coerce.boolean()).notNull(),
-      id_customer: textField().notNull(),
+      id_customer: textField(),
     },
     {
       defaultSelect: "all",
@@ -72,6 +75,43 @@ describe("Expand API Specification", () => {
     },
     {
       defaultSelect: "all",
+    },
+  );
+
+  // Real server schema table definitions (for validation tests that use captured responses)
+  const contactsReal = fmTableOccurrence(
+    "contacts",
+    {
+      PrimaryKey: textField().primaryKey(),
+      CreationTimestamp: textField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: textField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      hobby: textField(),
+      id_user: textField(),
+      my_calc: textField(),
+    },
+    {
+      defaultSelect: "all",
+      navigationPaths: ["users"],
+    },
+  );
+
+  const usersReal = fmTableOccurrence(
+    "users",
+    {
+      id: textField().primaryKey(),
+      CreationTimestamp: textField(),
+      CreatedBy: textField(),
+      ModificationTimestamp: textField(),
+      ModifiedBy: textField(),
+      name: textField(),
+      id_customer: textField(),
+    },
+    {
+      defaultSelect: "all",
+      navigationPaths: ["user_customer", "contacts"],
     },
   );
 
@@ -105,7 +145,7 @@ describe("Expand API Specification", () => {
     it("should type callback builder to target table schema", () => {
       db.from(contacts)
         .list()
-        .expand(users, (builder: any) => {
+        .expand(users, (builder) => {
           // builder.select should only accept fields from users table
           expectTypeOf(builder.select).parameter(0).not.toEqualTypeOf<string>();
 
@@ -122,7 +162,7 @@ describe("Expand API Specification", () => {
         const result = await db
           .from(contacts)
           .list()
-          .expand(users, (b: any) =>
+          .expand(users, (b) =>
             b.select({ username: users.username, email: users.email }),
           )
           .execute();
@@ -153,7 +193,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) =>
+        .expand(users, (b) =>
           b.select({ username: users.username, email: users.email }),
         )
         .getQueryString();
@@ -166,7 +206,7 @@ describe("Expand API Specification", () => {
     it("should enforce callback returns builder", () => {
       db.from(contacts)
         .list()
-        .expand(users, (b: any) => {
+        .expand(users, (b) => {
           // Must return the builder
           return b.select({ username: users.username });
         });
@@ -178,7 +218,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) => b.where(eq(users.active, 1)))
+        .expand(users, (b) => b.where(eq(users.active, 1)))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($filter=active");
@@ -190,7 +230,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) => b.orderBy("username"))
+        .expand(users, (b) => b.orderBy("username"))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($orderby=username");
@@ -202,7 +242,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) => b.top(5))
+        .expand(users, (b) => b.top(5))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($top=5");
@@ -212,7 +252,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) => b.skip(10))
+        .expand(users, (b) => b.skip(10))
         .getQueryString();
 
       expect(queryString).toContain("$expand=users($skip=10");
@@ -224,7 +264,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) => b.select({ username: users.username }))
+        .expand(users, (b) => b.select({ username: users.username }))
         .expand(otherUsers)
         .getQueryString();
 
@@ -236,13 +276,13 @@ describe("Expand API Specification", () => {
     it("should type each expand callback independently", () => {
       db.from(contacts)
         .list()
-        .expand(users, (builder: any) => {
+        .expand(users, (builder) => {
           // First callback typed to users
           expectTypeOf(builder.select).parameter(0).not.toEqualTypeOf<string>();
 
           return builder.select({ username: users.username });
         })
-        .expand(otherUsers, (builder: any) => {
+        .expand(otherUsers, (builder) => {
           // Second callback - arbitrary relation so accepts any
           return builder.select({ email: otherUsers.email });
         });
@@ -282,14 +322,164 @@ describe("Expand API Specification", () => {
       };
     });
 
+    it("should validate nested expands on single record", async () => {
+      // This test uses real server schema (contactsReal, usersReal) to match captured responses
+      const mockData = mockResponses["deep nested expand"];
+      const result = await db
+        .from(contactsReal)
+        .get("B5BFBC89-03E0-47FC-ABB6-D51401730227")
+        .expand(usersReal, (usersBuilder) => {
+          return usersBuilder
+            .select({ name: usersReal.name, id: usersReal.id })
+            .expand(userCustomer, (customerBuilder) => {
+              return customerBuilder.select({ name: userCustomer.name });
+            });
+        })
+        .execute({
+          fetchHandler: simpleMock({
+            status: mockData.status,
+            body: mockData.response,
+            headers: mockData.headers,
+          }),
+        });
+
+      assert(result.data, "Result data should be defined");
+      expect(result.data.name).toBe("Eric");
+      expect(result.data.hobby).toBe("Board games");
+      expect(result.data.users).toBeDefined();
+
+      // Type check: verify that only selected fields are typed correctly
+      const firstUser = result.data.users?.[0];
+      assert(firstUser, "First user should be defined");
+      expectTypeOf(firstUser).toHaveProperty("name");
+      expectTypeOf(firstUser).toHaveProperty("id");
+      expectTypeOf(firstUser).toHaveProperty("user_customer");
+      // @ts-expect-error - id_customer was not selected, should not be in type
+      expectTypeOf(firstUser.id_customer).toBeNever();
+
+      // Verify nested expand structure exists
+      expect(firstUser.id).toBe("1A269FA3-82E6-465A-94FA-39EE3F2F9B5D");
+      expect(firstUser.name).toBe("Test User");
+      expect(firstUser.user_customer).toBeDefined();
+      expect(Array.isArray(firstUser.user_customer)).toBe(true);
+      expect(firstUser.user_customer.length).toBe(1);
+
+      // Verify nested customer data
+      const firstCustomer = firstUser.user_customer?.[0];
+      assert(firstCustomer, "First customer should be defined");
+
+      expectTypeOf(firstCustomer).toHaveProperty("name");
+      // @ts-expect-error - other fields were not selected
+      expectTypeOf(firstCustomer.address).toBeNever();
+      // @ts-expect-error - tier was not selected
+      expectTypeOf(firstCustomer.tier).toBeNever();
+
+      expect(firstCustomer.name).toBe("test");
+    });
+
+    it("should validate nested expands on list query", async () => {
+      // This test uses real server schema (contactsReal, usersReal) to match captured responses
+      const mockData = mockResponses["list with nested expand"];
+      const result = await db
+        .from(contactsReal)
+        .list()
+        .expand(usersReal, (usersBuilder) => {
+          // No select on users - all fields should be returned
+          return usersBuilder.expand(userCustomer, (customerBuilder) => {
+            return customerBuilder.select({ name: userCustomer.name });
+          });
+        })
+        .execute({
+          fetchHandler: simpleMock({
+            status: mockData.status,
+            body: mockData.response,
+            headers: mockData.headers,
+          }),
+        });
+
+      expect(result.data).toBeDefined();
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data?.length).toBe(2);
+
+      // Type check: verify list results are properly typed
+      const firstContact = result.data?.[0];
+      if (firstContact) {
+        // Contact should have all its fields (no select was called on contacts)
+        expectTypeOf(firstContact).toHaveProperty("name");
+        expectTypeOf(firstContact).toHaveProperty("PrimaryKey");
+        expectTypeOf(firstContact).toHaveProperty("hobby");
+
+        // Verify users expand exists and is typed correctly
+        expectTypeOf(firstContact).toHaveProperty("users");
+        expectTypeOf(firstContact.users).toBeArray();
+
+        // Verify runtime data (note: response has 'name' not 'id' due to real server schema)
+        expect(firstContact.name).toBe("Eric");
+        expect(firstContact.hobby).toBe("Board games");
+        expect(firstContact.users).toBeDefined();
+        expect(Array.isArray(firstContact.users)).toBe(true);
+        expect(firstContact.users.length).toBe(1);
+
+        const firstUser = firstContact.users?.[0];
+        if (firstUser) {
+          // All user fields should be present (no select was used)
+          expectTypeOf(firstUser).toHaveProperty("id");
+          expectTypeOf(firstUser).toHaveProperty("name");
+          expectTypeOf(firstUser).toHaveProperty("id_customer");
+          expectTypeOf(firstUser).toHaveProperty("user_customer");
+
+          // Verify runtime data exists
+          expect(firstUser.id).toBe("1A269FA3-82E6-465A-94FA-39EE3F2F9B5D");
+          expect(firstUser.name).toBe("Test User");
+          expect(firstUser.id_customer).toBe(
+            "3026B56E-0C6E-4F31-B666-EE8AC5B36542",
+          );
+          expect(firstUser.user_customer).toBeDefined();
+          expect(Array.isArray(firstUser.user_customer)).toBe(true);
+          expect(firstUser.user_customer.length).toBe(1);
+
+          // Verify nested customer data with selected fields only
+          const firstCustomer = firstUser.user_customer?.[0];
+          if (firstCustomer) {
+            // Only 'name' was selected in nested expand
+            expectTypeOf(firstCustomer).toHaveProperty("name");
+            // @ts-expect-error - address was not selected, should not be in type
+            expectTypeOf(firstCustomer.address).toBeNever();
+            // @ts-expect-error - tier was not selected, should not be in type
+            expectTypeOf(firstCustomer.tier).toBeNever();
+
+            expect(firstCustomer.name).toBe("test");
+          }
+        }
+
+        // Check second contact which has a different user structure
+        const secondContact = result.data?.[1];
+        if (secondContact) {
+          expect(secondContact.name).toBe("Adam");
+          expect(secondContact.hobby).toBe("trees");
+          expect(secondContact.users).toBeDefined();
+          expect(secondContact.users.length).toBe(1);
+
+          const secondUser = secondContact.users?.[0];
+          if (secondUser) {
+            expect(secondUser.id).toBe("53D36C9A-8F90-4C21-A38F-F278D4F77718");
+            expect(secondUser.name).toBe("adam user");
+            expect(secondUser.id_customer).toBeNull();
+            // This user has no customer, should be empty array
+            expect(secondUser.user_customer).toEqual([]);
+          }
+        }
+      }
+    });
+
     it("should generate query string with nested $expand", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) =>
+        .expand(users, (b) =>
           b
             .select({ username: users.username })
-            .expand(userCustomer, (nested: any) =>
+            .expand(userCustomer, (nested) =>
               nested.select({ name: userCustomer.name }),
             ),
         )
@@ -304,8 +494,8 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) =>
-          b.expand(userCustomer, (nested: any) =>
+        .expand(users, (b) =>
+          b.expand(userCustomer, (nested) =>
             // If customer had relations, we could expand further
             nested.select({ name: userCustomer.name }),
           ),
@@ -321,13 +511,13 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) =>
+        .expand(users, (b) =>
           b
             .select({ username: users.username, email: users.email })
             .where(eq(users.active, 1))
             .orderBy("username")
             .top(10)
-            .expand(userCustomer, (nested: any) =>
+            .expand(userCustomer, (nested) =>
               nested.select({ name: userCustomer.name }),
             ),
         )
@@ -345,12 +535,10 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b: any) =>
+        .expand(users, (b) =>
           b.select({ username: users.username }).where(eq(users.active, 1)),
         )
-        .expand(otherUsers, (b: any) =>
-          b.select({ email: otherUsers.email }).top(5),
-        )
+        .expand(otherUsers, (b) => b.select({ email: otherUsers.email }).top(5))
         .getQueryString();
 
       expect(queryString).toBe(
@@ -365,7 +553,7 @@ describe("Expand API Specification", () => {
         .from(contacts)
         .list()
         .select({ name: contacts.name, hobby: contacts.hobby })
-        .expand(users, (b: any) => b.select({ username: users.username }))
+        .expand(users, (b) => b.select({ username: users.username }))
         .getQueryString();
 
       expect(queryString).toContain("$select=name,hobby");
@@ -391,7 +579,7 @@ describe("Expand API Specification", () => {
         .orderBy("name")
         .top(20)
         .skip(10)
-        .expand(users, (b: any) => b.select({ username: users.username }))
+        .expand(users, (b) => b.select({ username: users.username }))
         .getQueryString();
 
       expect(queryString).toContain("$orderby=name");

@@ -9,6 +9,7 @@ export type ExpandConfig = {
   relation: string;
   options?: Partial<QueryOptions<any>>;
   targetTable?: FMTable<any, any>;
+  nestedExpandConfigs?: ExpandConfig[];
 };
 
 /**

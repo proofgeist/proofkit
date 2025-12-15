@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import createJiti from "jiti";
-import { templateMetadataSchema } from "./types";
+import { templateMetadataSchema } from "./types.js";
 
 export interface ValidationContext {
   templatesPath: string;

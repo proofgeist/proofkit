@@ -20,5 +20,6 @@
       "@/lib/*": ["./lib/*"]
     }
   },
-  "include": ["lib/**/*", "templates/**/_meta.ts", "scripts/**/*"]
+  "include": ["lib/**/*"],
+  "exclude": ["scripts/**/*", "dist", "node_modules", "*.test.ts", "templates/**/*"]
 }

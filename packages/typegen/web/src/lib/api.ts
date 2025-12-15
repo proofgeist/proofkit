@@ -41,12 +41,3 @@ export async function saveConfig(config: SingleConfig[]) {
   // Validate response
   return data;
 }
-
-export async function runTypegen(config?: SingleConfig | SingleConfig[]) {
-  const res = await client.api.run.$post({
-    json: { config },
-  });
-  const data = await res.json();
-  // Validate response
-  return data;
-}

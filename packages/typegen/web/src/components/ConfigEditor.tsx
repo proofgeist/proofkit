@@ -33,6 +33,9 @@ export function ConfigEditor({ index }: ConfigEditorProps) {
     setValue,
   } = useFormContext<{ config: SingleConfig[] }>();
 
+  const baseId = useId();
+  const generateClientSwitchId = `${baseId}-generate-client`;
+
   const configErrors = errors.config?.[index];
   const webviewerScriptName = useWatch({
     control,
@@ -148,44 +151,41 @@ export function ConfigEditor({ index }: ConfigEditorProps) {
                 <FormField
                   control={control}
                   name={`config.${index}.generateClient` as const}
-                  render={({ field }) => {
-                    const switchId = useId();
-                    return (
-                      <FormItem>
-                        <FormLabel>Generate</FormLabel>
-                        <FormControl>
-                          <div className="flex w-full items-center">
-                            <SwitchWrapper
-                              permanent={true}
-                              className="w-full inline-grid"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Generate</FormLabel>
+                      <FormControl>
+                        <div className="flex w-full items-center">
+                          <SwitchWrapper
+                            permanent={true}
+                            className="w-full inline-grid"
+                          >
+                            <Switch
+                              id={generateClientSwitchId}
+                              size="xl"
+                              className="w-full rounded-md h-10"
+                              thumbClassName="rounded-md"
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                            <SwitchIndicator
+                              state="off"
+                              className="w-1/2 text-accent-foreground peer-data-[state=checked]:text-primary"
                             >
-                              <Switch
-                                id={switchId}
-                                size="xl"
-                                className="w-full rounded-md h-10"
-                                thumbClassName="rounded-md"
-                                checked={field.value || false}
-                                onCheckedChange={field.onChange}
-                              />
-                              <SwitchIndicator
-                                state="off"
-                                className="w-1/2 text-accent-foreground peer-data-[state=checked]:text-primary"
-                              >
-                                Full Client
-                              </SwitchIndicator>
-                              <SwitchIndicator
-                                state="on"
-                                className="w-1/2 text-accent-foreground peer-data-[state=unchecked]:text-primary"
-                              >
-                                Types Only
-                              </SwitchIndicator>
-                            </SwitchWrapper>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
+                              Full Client
+                            </SwitchIndicator>
+                            <SwitchIndicator
+                              state="on"
+                              className="w-1/2 text-accent-foreground peer-data-[state=unchecked]:text-primary"
+                            >
+                              Types Only
+                            </SwitchIndicator>
+                          </SwitchWrapper>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
 

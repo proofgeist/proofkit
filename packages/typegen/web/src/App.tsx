@@ -4,7 +4,6 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { client } from "./lib/api";
 import { ConfigEditor } from "./components/ConfigEditor";
-import "./App.css";
 import {
   Accordion,
   AccordionContent,

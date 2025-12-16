@@ -24,6 +24,7 @@ import { z } from "zod/v4";
 import { formatAndSaveSourceFiles } from "./formatting";
 import { type PackageJson } from "type-fest";
 import semver from "semver";
+import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
@@ -97,55 +98,18 @@ const generateTypedClientsSingle = async (
 
   const project = new Project({});
 
-  const server = process.env[envNames?.server ?? defaultEnvNames.server];
-  const db = process.env[envNames?.db ?? defaultEnvNames.db];
-  const apiKey =
-    (envNames?.auth && "apiKey" in envNames.auth
-      ? process.env[envNames.auth.apiKey ?? defaultEnvNames.apiKey]
-      : undefined) ?? process.env[defaultEnvNames.apiKey];
-  const username =
-    (envNames?.auth && "username" in envNames.auth
-      ? process.env[envNames.auth.username ?? defaultEnvNames.username]
-      : undefined) ?? process.env[defaultEnvNames.username];
-  const password =
-    (envNames?.auth && "password" in envNames.auth
-      ? process.env[envNames.auth.password ?? defaultEnvNames.password]
-      : undefined) ?? process.env[defaultEnvNames.password];
+  const envValues = getEnvValues(envNames);
+  const validationResult = validateAndLogEnvValues(envValues, envNames);
 
-  const auth: { apiKey: OttoAPIKey } | { username: string; password: string } =
-    apiKey
-      ? { apiKey: apiKey as OttoAPIKey }
-      : { username: username ?? "", password: password ?? "" };
-
-  if (!server || !db || (!apiKey && !username)) {
-    console.log(chalk.red("ERROR: Could not get all required config values"));
-    console.log("Ensure the following environment variables are set:");
-    if (!server) console.log(`${envNames?.server ?? defaultEnvNames.server}`);
-    if (!db) console.log(`${envNames?.db ?? defaultEnvNames.db}`);
-
-    if (!apiKey) {
-      // Determine the names to display in the error message
-      const apiKeyNameToLog =
-        envNames?.auth && "apiKey" in envNames.auth && envNames.auth.apiKey
-          ? envNames.auth.apiKey
-          : defaultEnvNames.apiKey;
-      const usernameNameToLog =
-        envNames?.auth && "username" in envNames.auth && envNames.auth.username
-          ? envNames.auth.username
-          : defaultEnvNames.username;
-      const passwordNameToLog =
-        envNames?.auth && "password" in envNames.auth && envNames.auth.password
-          ? envNames.auth.password
-          : defaultEnvNames.password;
-
-      console.log(
-        `${apiKeyNameToLog} (or ${usernameNameToLog} and ${passwordNameToLog})`,
-      );
-    }
-
-    console.log();
+  if (!validationResult || !validationResult.success) {
     return;
   }
+
+  const { server, db, auth: validatedAuth } = validationResult;
+  const auth: { apiKey: OttoAPIKey } | { username: string; password: string } =
+    "apiKey" in validatedAuth
+      ? { apiKey: validatedAuth.apiKey as OttoAPIKey }
+      : validatedAuth;
 
   await fs.ensureDir(rootDir);
   if (clearOldFiles) {
@@ -206,17 +170,17 @@ const generateTypedClientsSingle = async (
             ? {
                 apiKey:
                   envNames?.auth && "apiKey" in envNames.auth
-                    ? (envNames.auth.apiKey as OttoAPIKey)
-                    : (defaultEnvNames.apiKey as OttoAPIKey),
+                    ? (envNames.auth.apiKey ?? defaultEnvNames.apiKey)
+                    : defaultEnvNames.apiKey,
               }
             : {
                 username:
                   envNames?.auth && "username" in envNames.auth
-                    ? envNames.auth.username
+                    ? (envNames.auth.username ?? defaultEnvNames.username)
                     : defaultEnvNames.username,
                 password:
                   envNames?.auth && "password" in envNames.auth
-                    ? envNames.auth.password
+                    ? (envNames.auth.password ?? defaultEnvNames.password)
                     : defaultEnvNames.password,
               },
         db: envNames?.db ?? defaultEnvNames.db,

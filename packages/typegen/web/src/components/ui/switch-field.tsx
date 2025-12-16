@@ -38,7 +38,7 @@ export function SwitchField({
       className={cn(
         "relative flex w-full gap-2 rounded-lg border border-input p-4",
         description ? "items-start" : "items-center",
-        "has-[data-state=checked]:border-primary",
+        checked && "border-primary",
         "transition-colors",
         className,
       )}

@@ -10,9 +10,11 @@ import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
 import {
   createDataApiClient,
   createClientFromConfig,
+  createOdataClientFromConfig,
 } from "./createDataApiClient";
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { generateTypedClients } from "../typegen";
+import { FMServerConnection } from "@proofkit/fmodata";
 
 export interface ApiContext {
   cwd: string;
@@ -317,96 +319,172 @@ export function createApiApp(context: ApiContext) {
           const config = data.config;
 
           // Validate config type
-          if (config.type !== "fmdapi") {
-            return c.json(
-              {
-                ok: false,
-                error: "Only fmdapi config type is supported",
-                statusCode: 400,
-                kind: "unknown",
-                message: "Only fmdapi config type is supported",
-              },
-              400,
-            );
-          }
+          if (config.type === "fmdapi") {
+            // Create client from config
+            const clientResult = createClientFromConfig(config);
 
-          // Create client from config
-          const clientResult = createClientFromConfig(config);
-
-          // Check if client creation failed
-          if ("error" in clientResult) {
-            return c.json(
-              {
-                ok: false,
-                ...clientResult,
-              },
-              clientResult.statusCode as ContentfulStatusCode,
-            );
-          }
-
-          const { client, server, db, authType } = clientResult;
-
-          // Test connection by calling layouts()
-          try {
-            const layoutsResp = (await (client as any).layouts()) as {
-              layouts: clientTypes.LayoutOrFolder[];
-            };
-
-            return c.json({
-              ok: true,
-              server,
-              db,
-              authType,
-            });
-          } catch (err) {
-            // Handle connection errors
-            let errorMessage = "Failed to connect to FileMaker Data API";
-            let statusCode = 500;
-            let kind: "connection_error" | "unknown" = "unknown";
-            let suspectedField: "server" | "db" | "auth" | undefined;
-            let fmErrorCode: string | undefined;
-
-            if (err instanceof FileMakerError) {
-              errorMessage = err.message;
-              fmErrorCode = err.code;
-              kind = "connection_error";
-
-              // Infer suspected field from error code
-              // Common FileMaker error codes:
-              // 105 = Database not found
-              // 212 = Authentication failed
-              // 802 = Record not found (less relevant here)
-              if (err.code === "105") {
-                suspectedField = "db";
-                errorMessage = `Database not found: ${err.message}`;
-              } else if (err.code === "212" || err.code === "952") {
-                suspectedField = "auth";
-                errorMessage = `Authentication failed: ${err.message}`;
-              }
-              statusCode = 400;
-            } else if (err instanceof TypeError) {
-              // Network/URL errors
-              errorMessage = `Connection error: ${err.message}`;
-              suspectedField = "server";
-              kind = "connection_error";
-              statusCode = 400;
-            } else if (err instanceof Error) {
-              errorMessage = err.message;
-              kind = "connection_error";
-              statusCode = 500;
+            // Check if client creation failed
+            if ("error" in clientResult) {
+              return c.json(
+                {
+                  ok: false,
+                  ...clientResult,
+                },
+                clientResult.statusCode as ContentfulStatusCode,
+              );
             }
 
+            const { client, server, db, authType } = clientResult;
+
+            // Test connection by calling layouts()
+            try {
+              await client.layouts();
+
+              return c.json({
+                ok: true,
+                server,
+                db,
+                authType,
+              });
+            } catch (err) {
+              // Handle connection errors
+              let errorMessage = "Failed to connect to FileMaker Data API";
+              let statusCode = 500;
+              let kind: "connection_error" | "unknown" = "unknown";
+              let suspectedField: "server" | "db" | "auth" | undefined;
+              let fmErrorCode: string | undefined;
+
+              if (err instanceof FileMakerError) {
+                errorMessage = err.message;
+                fmErrorCode = err.code;
+                kind = "connection_error";
+
+                // Infer suspected field from error code
+                // Common FileMaker error codes:
+                // 105 = Database not found
+                // 212 = Authentication failed
+                // 802 = Record not found (less relevant here)
+                if (err.code === "105") {
+                  suspectedField = "db";
+                  errorMessage = `Database not found: ${err.message}`;
+                } else if (err.code === "212" || err.code === "952") {
+                  suspectedField = "auth";
+                  errorMessage = `Authentication failed: ${err.message}`;
+                }
+                statusCode = 400;
+              } else if (err instanceof TypeError) {
+                // Network/URL errors
+                errorMessage = `Connection error: ${err.message}`;
+                suspectedField = "server";
+                kind = "connection_error";
+                statusCode = 400;
+              } else if (err instanceof Error) {
+                errorMessage = err.message;
+                kind = "connection_error";
+                statusCode = 500;
+              }
+
+              return c.json(
+                {
+                  ok: false,
+                  error: errorMessage,
+                  statusCode,
+                  kind,
+                  suspectedField,
+                  fmErrorCode,
+                  message: errorMessage,
+                },
+                statusCode as ContentfulStatusCode,
+              );
+            }
+          } else if (config.type === "fmodata") {
+            const result = createOdataClientFromConfig(config);
+            if ("error" in result) {
+              return c.json(
+                {
+                  ok: false,
+                  ...result,
+                },
+                result.statusCode as ContentfulStatusCode,
+              );
+            }
+
+            const { db, connection, server, dbName, authType } = result;
+
+            // Test connection by calling listDatabaseNames() and listTableNames()
+            try {
+              await connection.listDatabaseNames();
+              await db.listTableNames();
+
+              return c.json({
+                ok: true,
+                server,
+                db: dbName,
+                authType,
+              });
+            } catch (err) {
+              // Handle connection errors
+              let errorMessage = "Failed to connect to FileMaker OData API";
+              let statusCode = 500;
+              let kind: "connection_error" | "unknown" = "unknown";
+              let suspectedField: "server" | "db" | "auth" | undefined;
+
+              if (err instanceof Error) {
+                errorMessage = err.message;
+                kind = "connection_error";
+
+                // Infer suspected field from error message
+                const lowerMessage = errorMessage.toLowerCase();
+                if (
+                  lowerMessage.includes("database") ||
+                  lowerMessage.includes("not found") ||
+                  lowerMessage.includes("404")
+                ) {
+                  suspectedField = "db";
+                } else if (
+                  lowerMessage.includes("auth") ||
+                  lowerMessage.includes("unauthorized") ||
+                  lowerMessage.includes("401") ||
+                  lowerMessage.includes("403")
+                ) {
+                  suspectedField = "auth";
+                } else if (
+                  lowerMessage.includes("network") ||
+                  lowerMessage.includes("connection") ||
+                  lowerMessage.includes("timeout") ||
+                  lowerMessage.includes("dns")
+                ) {
+                  suspectedField = "server";
+                }
+
+                // Network/URL errors typically indicate server issues
+                if (err instanceof TypeError) {
+                  suspectedField = "server";
+                  statusCode = 400;
+                } else {
+                  statusCode = 400;
+                }
+              }
+
+              return c.json(
+                {
+                  ok: false,
+                  error: errorMessage,
+                  statusCode,
+                  kind,
+                  suspectedField,
+                  message: errorMessage,
+                },
+                statusCode as ContentfulStatusCode,
+              );
+            }
+          } else {
             return c.json(
               {
                 ok: false,
-                error: errorMessage,
-                statusCode,
-                kind,
-                suspectedField,
-                fmErrorCode,
-                message: errorMessage,
+                error: "Invalid config type",
               },
-              statusCode as ContentfulStatusCode,
+              400,
             );
           }
         } catch (err) {

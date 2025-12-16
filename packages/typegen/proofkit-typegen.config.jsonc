@@ -2,6 +2,7 @@
   "config": [
     {
       "type": "fmdapi",
+      "configName": "",
       "layouts": [
         {
           "layoutName": "customer",
@@ -13,7 +14,13 @@
       "clearOldFiles": false,
       "validator": "zod/v4",
       "clientSuffix": "Layout",
-      "generateClient": true
+      "generateClient": true,
+      "webviewerScriptName": ""
+    },
+    {
+      "type": "fmodata",
+      "configName": "asdfdasdfd",
+      "path": "schema"
     }
   ]
 }

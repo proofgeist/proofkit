@@ -173,10 +173,6 @@ export function createOdataClientFromConfig(
   }
   const { server, db: dbName, authType, auth } = result;
 
-  console.log("server", server);
-  console.log("dbName", dbName);
-  console.log("authType", authType);
-  console.log("auth", auth);
   const connection = new FMServerConnection({
     serverUrl: server,
     auth,

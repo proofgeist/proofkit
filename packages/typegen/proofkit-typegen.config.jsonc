@@ -15,7 +15,31 @@
       "path": "schema",
       "metadataPath": "schema/metadata.xml",
       "downloadMetadata": true,
-      "clearOldFiles": false
+      "clearOldFiles": false,
+      "tables": [
+        {
+          "tableName": "customer",
+          "fields": [
+            {
+              "fieldName": "ModificationTimestamp",
+              "exclude": true
+            },
+            {
+              "fieldName": "ModifiedBy",
+              "exclude": true
+            }
+          ]
+        },
+        {
+          "tableName": "contacts",
+          "fields": [
+            {
+              "fieldName": "hobby",
+              "exclude": true
+            }
+          ]
+        }
+      ]
     }
   ]
 }

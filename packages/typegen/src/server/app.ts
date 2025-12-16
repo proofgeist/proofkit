@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { logger } from "hono/logger";
 import { zValidator } from "@hono/zod-validator";
 import fs from "fs-extra";
 import path from "path";
@@ -21,12 +20,6 @@ export interface ApiContext {
   cwd: string;
   configPath: string;
 }
-
-export const devOnlyLogger = (message: string, ...rest: string[]) => {
-  if (process.env.NODE_ENV === "development") {
-    console.log(message, ...rest);
-  }
-};
 
 /**
  * Flattens a nested layout/folder structure into a flat list with full paths
@@ -61,7 +54,6 @@ function flattenLayouts(
 export function createApiApp(context: ApiContext) {
   // Define all routes with proper chaining for type inference
   const app = new Hono()
-    .use(logger(devOnlyLogger))
     .basePath("/api")
 
     // GET /api/config

@@ -13,9 +13,54 @@ interface GeneratedTO {
 }
 
 /**
+ * Maps type override enum values to field builder functions from @proofkit/fmodata
+ */
+function mapTypeOverrideToFieldBuilder(
+  typeOverride:
+    | "text"
+    | "number"
+    | "boolean"
+    | "fmBooleanNumber"
+    | "date"
+    | "timestamp"
+    | "container",
+): string {
+  switch (typeOverride) {
+    case "text":
+      return "textField()";
+    case "number":
+      return "numberField()";
+    case "boolean":
+    case "fmBooleanNumber":
+      return "numberField().outputValidator(z.coerce.boolean())";
+    case "date":
+      return "dateField()";
+    case "timestamp":
+      return "timestampField()";
+    case "container":
+      return "containerField()";
+  }
+}
+
+/**
  * Maps OData types to field builder functions from @proofkit/fmodata
  */
-function mapODataTypeToFieldBuilder(edmType: string): string {
+function mapODataTypeToFieldBuilder(
+  edmType: string,
+  typeOverride?:
+    | "text"
+    | "number"
+    | "boolean"
+    | "fmBooleanNumber"
+    | "date"
+    | "timestamp"
+    | "container",
+): string {
+  // If typeOverride is provided, use it instead of the inferred type
+  if (typeOverride) {
+    return mapTypeOverrideToFieldBuilder(typeOverride);
+  }
+
   switch (edmType) {
     case "Edm.String":
       return "textField()";
@@ -62,6 +107,7 @@ function generateTableOccurrence(
   entitySetName: string,
   entityType: EntityType,
   entityTypeToSetMap: Map<string, string>,
+  tableOverride?: NonNullable<FmodataConfig["tables"]>[number],
 ): GeneratedTO {
   const fmtId = entityType["@TableID"];
   const keyFields = entityType.$Key || [];
@@ -121,14 +167,60 @@ function generateTableOccurrence(
     idField = autoGenField ?? idFieldName ?? firstFieldName;
   }
 
+  // Build a field overrides map from the array for easier lookup
+  type FieldOverrideType = Exclude<
+    NonNullable<NonNullable<FmodataConfig["tables"]>[number]>["fields"],
+    undefined
+  >[number];
+  const fieldOverridesMap = new Map<string, FieldOverrideType>();
+  if (tableOverride?.fields) {
+    for (const fieldOverride of tableOverride.fields) {
+      if (fieldOverride?.fieldName) {
+        fieldOverridesMap.set(fieldOverride.fieldName, fieldOverride);
+      }
+    }
+  }
+
   // Generate field builder definitions
   const fieldLines: string[] = [];
   const fieldEntries = Array.from(fields.entries());
-  for (let i = 0; i < fieldEntries.length; i++) {
-    const entry = fieldEntries[i];
+
+  // Filter out excluded fields and collect valid entries
+  const validFieldEntries: Array<
+    [string, typeof fields extends Map<infer K, infer V> ? V : never]
+  > = [];
+  for (const entry of fieldEntries) {
+    if (!entry) continue;
+    const [fieldName] = entry;
+    const fieldOverride = fieldOverridesMap.get(fieldName);
+
+    // Skip excluded fields
+    if (fieldOverride?.exclude === true) {
+      continue;
+    }
+
+    validFieldEntries.push(entry);
+  }
+
+  for (let i = 0; i < validFieldEntries.length; i++) {
+    const entry = validFieldEntries[i];
     if (!entry) continue;
     const [fieldName, metadata] = entry;
-    const fieldBuilder = mapODataTypeToFieldBuilder(metadata.$Type);
+    const fieldOverride = fieldOverridesMap.get(fieldName);
+
+    // Apply typeOverride if provided, otherwise use inferred type
+    const fieldBuilder = mapODataTypeToFieldBuilder(
+      metadata.$Type,
+      fieldOverride?.typeOverride as
+        | "text"
+        | "number"
+        | "boolean"
+        | "fmBooleanNumber"
+        | "date"
+        | "timestamp"
+        | "container"
+        | undefined,
+    );
 
     // Track which field builders are used
     if (fieldBuilder.includes("textField()")) {
@@ -153,7 +245,7 @@ function generateTableOccurrence(
     // metadata.$Nullable is false only if Nullable="false" was in XML, otherwise it's true (nullable by default)
     const isExplicitlyNotNullable = metadata.$Nullable === false;
     const isReadOnly = readOnlyFields.includes(fieldName);
-    const isLastField = i === fieldEntries.length - 1;
+    const isLastField = i === validFieldEntries.length - 1;
 
     let line = `    ${JSON.stringify(fieldName)}: ${fieldBuilder}`;
 
@@ -181,7 +273,10 @@ function generateTableOccurrence(
     fieldLines.push(line);
   }
 
-  const varName = entitySetName.replace(/[^a-zA-Z0-9_]/g, "_");
+  // Apply variableName override if provided, otherwise generate from entitySetName
+  const varName = tableOverride?.variableName
+    ? tableOverride.variableName.replace(/[^a-zA-Z0-9_]/g, "_")
+    : entitySetName.replace(/[^a-zA-Z0-9_]/g, "_");
 
   // Build options object
   const optionsParts: string[] = [];
@@ -269,7 +364,7 @@ export async function generateODataTypes(
   config: FmodataConfig,
 ): Promise<void> {
   const { entityTypes, entitySets } = metadata;
-  const { path, clearOldFiles = true } = config;
+  const { path, clearOldFiles = true, tables } = config;
   const outputPath = path ?? "schema";
 
   // Build a map from entity type name to entity set name
@@ -278,16 +373,38 @@ export async function generateODataTypes(
     entityTypeToSetMap.set(entitySet.EntityType, entitySetName);
   }
 
+  // Build a table overrides map from the array for easier lookup
+  const tableOverridesMap = new Map<
+    string,
+    NonNullable<FmodataConfig["tables"]>[number]
+  >();
+  if (tables) {
+    for (const tableOverride of tables) {
+      if (tableOverride?.tableName) {
+        tableOverridesMap.set(tableOverride.tableName, tableOverride);
+      }
+    }
+  }
+
   // Generate table occurrences for entity sets
   const generatedTOs: GeneratedTO[] = [];
 
   for (const [entitySetName, entitySet] of entitySets.entries()) {
+    // Get table override config if it exists
+    const tableOverride = tableOverridesMap.get(entitySetName);
+
+    // Skip excluded tables
+    if (tableOverride?.exclude === true) {
+      continue;
+    }
+
     const entityType = entityTypes.get(entitySet.EntityType);
     if (entityType) {
       const generated = generateTableOccurrence(
         entitySetName,
         entityType,
         entityTypeToSetMap,
+        tableOverride,
       );
       generatedTOs.push(generated);
     }

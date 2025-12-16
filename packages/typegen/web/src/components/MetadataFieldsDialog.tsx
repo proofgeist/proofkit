@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { Search, Check } from "lucide-react";
+import { useMemo, useState, useCallback, useRef } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { Search, Check, Key } from "lucide-react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,6 +12,15 @@ import { DataGrid, DataGridContainer } from "./ui/data-grid";
 import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
 import { Input, InputWrapper } from "./ui/input";
+import { Switch } from "./ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { DropdownMenuItem } from "./ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +29,15 @@ import {
   DialogBody,
 } from "./ui/dialog";
 import type { ParsedMetadataResponse } from "../hooks/useParseMetadata";
+import type { SingleConfig } from "../lib/config-utils";
+
+// Memoize model functions outside component to ensure stable references
+const coreRowModel = getCoreRowModel();
+const sortedRowModel = getSortedRowModel();
+const filteredRowModel = getFilteredRowModel();
+
+// Stable empty array to prevent infinite re-renders
+const EMPTY_FIELDS_CONFIG: any[] = [];
 
 /**
  * Maps OData types to readable field type labels
@@ -67,9 +86,11 @@ interface FieldRow {
   fieldName: string;
   fieldType: string;
   nullable: boolean | undefined;
-  calculation: boolean | undefined;
   global: boolean | undefined;
   readOnly: boolean;
+  isExcluded: boolean;
+  typeOverride?: string;
+  primaryKey: boolean;
 }
 
 interface MetadataFieldsDialogProps {
@@ -77,15 +98,297 @@ interface MetadataFieldsDialogProps {
   onOpenChange: (open: boolean) => void;
   tableName: string | null;
   parsedMetadata: ParsedMetadataResponse["parsedMetadata"] | undefined;
+  configIndex: number;
 }
 
+// Wrapper component to conditionally mount the content
 export function MetadataFieldsDialog({
   open,
   onOpenChange,
   tableName,
   parsedMetadata,
+  configIndex,
 }: MetadataFieldsDialogProps) {
+  // Only render the full content when dialog is open
+  // This prevents expensive hook computations when closed
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <MetadataFieldsDialogContent
+      open={open}
+      onOpenChange={onOpenChange}
+      tableName={tableName}
+      parsedMetadata={parsedMetadata}
+      configIndex={configIndex}
+    />
+  );
+}
+
+// Inner component that handles all the expensive hooks and rendering
+function MetadataFieldsDialogContent({
+  open,
+  onOpenChange,
+  tableName,
+  parsedMetadata,
+  configIndex,
+}: MetadataFieldsDialogProps) {
+  const { control, setValue } = useFormContext<{ config: SingleConfig[] }>();
+
   const [globalFilter, setGlobalFilter] = useState("");
+
+  // Get the config type to validate we're working with fmodata
+  const configType = useWatch({
+    control,
+    name: `config.${configIndex}.type` as const,
+  });
+
+  // Get the entire tables config - we'll extract the specific table's fields
+  const allTablesConfig = useWatch({
+    control,
+    name: `config.${configIndex}.tables` as const,
+  });
+
+  // Use a ref to store the latest fieldsConfig to avoid unstable dependencies
+  const fieldsConfigRef = useRef<any[]>(EMPTY_FIELDS_CONFIG);
+
+  // Extract only the specific table's fields config - use stable reference to prevent infinite re-renders
+  const fieldsConfig = useMemo(() => {
+    if (!tableName || !allTablesConfig || !Array.isArray(allTablesConfig)) {
+      return EMPTY_FIELDS_CONFIG;
+    }
+    const tableConfig = allTablesConfig.find((t) => t?.tableName === tableName);
+    return (tableConfig?.fields ?? EMPTY_FIELDS_CONFIG) as any[];
+  }, [tableName, allTablesConfig]);
+
+  // Keep ref in sync
+  fieldsConfigRef.current = fieldsConfig;
+
+  // Helper to toggle field exclusion - use ref to avoid dependency on fieldsConfig
+  const toggleFieldExclude = useCallback(
+    (fieldName: string, exclude: boolean) => {
+      if (configType !== "fmodata" || !tableName) return;
+
+      const currentTables = Array.isArray(allTablesConfig)
+        ? allTablesConfig
+        : [];
+      const tableIndex = currentTables.findIndex(
+        (t) => t?.tableName === tableName,
+      );
+
+      if (tableIndex < 0) {
+        // Table doesn't exist in config yet
+        if (exclude) {
+          // Add new table with field excluded
+          setValue(
+            `config.${configIndex}.tables` as any,
+            [
+              ...currentTables,
+              { tableName, fields: [{ fieldName, exclude: true }] },
+            ],
+            { shouldDirty: true },
+          );
+        }
+        return;
+      }
+
+      const currentFields = currentTables[tableIndex]?.fields ?? [];
+      const fieldIndex = currentFields.findIndex(
+        (f) => f?.fieldName === fieldName,
+      );
+
+      if (exclude) {
+        // Set exclude to true
+        if (fieldIndex >= 0) {
+          // Update existing field entry
+          const newFields = [...currentFields];
+          newFields[fieldIndex] = { ...newFields[fieldIndex]!, exclude: true };
+          const newTables = [...currentTables];
+          newTables[tableIndex] = {
+            ...newTables[tableIndex]!,
+            fields: newFields,
+          };
+          setValue(`config.${configIndex}.tables` as any, newTables, {
+            shouldDirty: true,
+          });
+        } else {
+          // Add new field entry
+          const newTables = [...currentTables];
+          newTables[tableIndex] = {
+            ...newTables[tableIndex]!,
+            fields: [...currentFields, { fieldName, exclude: true }],
+          };
+          setValue(`config.${configIndex}.tables` as any, newTables, {
+            shouldDirty: true,
+          });
+        }
+      } else {
+        // Remove exclude (or remove entire entry if no other config)
+        if (fieldIndex >= 0) {
+          const fieldConfig = currentFields[fieldIndex]!;
+          const { exclude: _, ...rest } = fieldConfig;
+
+          if (Object.keys(rest).length === 1 && rest.fieldName) {
+            // Only fieldName left, remove entire field entry
+            const newFields = currentFields.filter((_, i) => i !== fieldIndex);
+            const newTables = [...currentTables];
+
+            if (
+              newFields.length === 0 &&
+              Object.keys(newTables[tableIndex]!).length === 2
+            ) {
+              // Only tableName and fields left, remove entire table entry
+              const filteredTables = currentTables.filter(
+                (_, i) => i !== tableIndex,
+              );
+              setValue(
+                `config.${configIndex}.tables` as any,
+                filteredTables.length > 0 ? filteredTables : undefined,
+                { shouldDirty: true },
+              );
+            } else {
+              // Keep table but update fields
+              newTables[tableIndex] = {
+                ...newTables[tableIndex]!,
+                fields: newFields.length > 0 ? newFields : undefined,
+              };
+              setValue(`config.${configIndex}.tables` as any, newTables, {
+                shouldDirty: true,
+              });
+            }
+          } else {
+            // Keep other properties
+            const newFields = [...currentFields];
+            newFields[fieldIndex] = rest as any;
+            const newTables = [...currentTables];
+            newTables[tableIndex] = {
+              ...newTables[tableIndex]!,
+              fields: newFields,
+            };
+            setValue(`config.${configIndex}.tables` as any, newTables, {
+              shouldDirty: true,
+            });
+          }
+        }
+      }
+    },
+    [configType, configIndex, tableName, allTablesConfig, setValue],
+  );
+
+  // Helper to set field type override - use ref to avoid dependency on fieldsConfig
+  const setFieldTypeOverride = useCallback(
+    (fieldName: string, typeOverride: string | undefined) => {
+      if (configType !== "fmodata" || !tableName) return;
+
+      const currentTables = Array.isArray(allTablesConfig)
+        ? allTablesConfig
+        : [];
+      const tableIndex = currentTables.findIndex(
+        (t) => t?.tableName === tableName,
+      );
+
+      if (tableIndex < 0) {
+        // Table doesn't exist in config yet
+        if (typeOverride) {
+          // Add new table with field type override
+          setValue(
+            `config.${configIndex}.tables` as any,
+            [
+              ...currentTables,
+              { tableName, fields: [{ fieldName, typeOverride }] },
+            ],
+            { shouldDirty: true },
+          );
+        }
+        return;
+      }
+
+      const currentFields = currentTables[tableIndex]?.fields ?? [];
+      const fieldIndex = currentFields.findIndex(
+        (f) => f?.fieldName === fieldName,
+      );
+
+      if (typeOverride) {
+        // Set typeOverride
+        if (fieldIndex >= 0) {
+          // Update existing field entry
+          const newFields = [...currentFields];
+          newFields[fieldIndex] = {
+            ...newFields[fieldIndex]!,
+            typeOverride,
+          } as any;
+          const newTables = [...currentTables];
+          newTables[tableIndex] = {
+            ...newTables[tableIndex]!,
+            fields: newFields,
+          };
+          setValue(`config.${configIndex}.tables` as any, newTables, {
+            shouldDirty: true,
+          });
+        } else {
+          // Add new field entry
+          const newTables = [...currentTables];
+          newTables[tableIndex] = {
+            ...newTables[tableIndex]!,
+            fields: [...currentFields, { fieldName, typeOverride } as any],
+          };
+          setValue(`config.${configIndex}.tables` as any, newTables, {
+            shouldDirty: true,
+          });
+        }
+      } else {
+        // Remove typeOverride (or remove entire entry if no other config)
+        if (fieldIndex >= 0) {
+          const fieldConfig = currentFields[fieldIndex]!;
+          const { typeOverride: _, ...rest } = fieldConfig;
+
+          if (Object.keys(rest).length === 1 && rest.fieldName) {
+            // Only fieldName left, remove entire field entry
+            const newFields = currentFields.filter((_, i) => i !== fieldIndex);
+            const newTables = [...currentTables];
+
+            if (
+              newFields.length === 0 &&
+              Object.keys(newTables[tableIndex]!).length === 2
+            ) {
+              // Only tableName and fields left, remove entire table entry
+              const filteredTables = currentTables.filter(
+                (_, i) => i !== tableIndex,
+              );
+              setValue(
+                `config.${configIndex}.tables` as any,
+                filteredTables.length > 0 ? filteredTables : undefined,
+                { shouldDirty: true },
+              );
+            } else {
+              // Keep table but update fields
+              newTables[tableIndex] = {
+                ...newTables[tableIndex]!,
+                fields: newFields.length > 0 ? newFields : undefined,
+              };
+              setValue(`config.${configIndex}.tables` as any, newTables, {
+                shouldDirty: true,
+              });
+            }
+          } else {
+            // Keep other properties
+            const newFields = [...currentFields];
+            newFields[fieldIndex] = rest as any;
+            const newTables = [...currentTables];
+            newTables[tableIndex] = {
+              ...newTables[tableIndex]!,
+              fields: newFields,
+            };
+            setValue(`config.${configIndex}.tables` as any, newTables, {
+              shouldDirty: true,
+            });
+          }
+        }
+      }
+    },
+    [configType, configIndex, tableName, allTablesConfig, setValue],
+  );
 
   // Get fields for the selected table
   const fieldsData = useMemo<FieldRow[]>(() => {
@@ -106,6 +409,7 @@ export function MetadataFieldsDialog({
     if (!entityType?.Properties) return [];
 
     const properties = entityType.Properties;
+    const keyFields = entityType.$Key || [];
     const fields: FieldRow[] = [];
 
     // Handle both Map and object formats
@@ -126,13 +430,22 @@ export function MetadataFieldsDialog({
           metadata["@Org.OData.Core.V1.Permissions"]?.includes("Read") ||
           false;
 
+        const fieldConfig = Array.isArray(fieldsConfig)
+          ? fieldsConfig.find((f) => f?.fieldName === fieldName)
+          : undefined;
+        const isExcluded = fieldConfig?.exclude === true;
+        const typeOverride = fieldConfig?.typeOverride;
+        const isPrimaryKey = keyFields.includes(fieldName);
+
         fields.push({
           fieldName,
           fieldType: mapODataTypeToReadableLabel(metadata.$Type || ""),
           nullable: metadata.$Nullable,
-          calculation: metadata["@Calculation"],
           global: metadata["@Global"],
           readOnly: isReadOnly,
+          isExcluded,
+          typeOverride,
+          primaryKey: isPrimaryKey,
         });
       });
     } else if (typeof properties === "object") {
@@ -152,32 +465,239 @@ export function MetadataFieldsDialog({
           metadata["@Org.OData.Core.V1.Permissions"]?.includes("Read") ||
           false;
 
+        const fieldConfig = Array.isArray(fieldsConfig)
+          ? fieldsConfig.find((f) => f?.fieldName === fieldName)
+          : undefined;
+        const isExcluded = fieldConfig?.exclude === true;
+        const typeOverride = fieldConfig?.typeOverride;
+        const isPrimaryKey = keyFields.includes(fieldName);
+
         fields.push({
           fieldName,
           fieldType: mapODataTypeToReadableLabel(metadata.$Type || ""),
           nullable: metadata.$Nullable,
-          calculation: metadata["@Calculation"],
           global: metadata["@Global"],
           readOnly: isReadOnly,
+          isExcluded,
+          typeOverride,
+          primaryKey: isPrimaryKey,
         });
       });
     }
 
     return fields;
-  }, [tableName, parsedMetadata]);
+  }, [tableName, parsedMetadata, fieldsConfig]);
+
+  // Check if all fields are included or excluded
+  const allFieldsIncluded = useMemo(() => {
+    return fieldsData.length > 0 && fieldsData.every((row) => !row.isExcluded);
+  }, [fieldsData]);
+
+  const allFieldsExcluded = useMemo(() => {
+    return fieldsData.length > 0 && fieldsData.every((row) => row.isExcluded);
+  }, [fieldsData]);
+
+  // Helper to include all fields
+  const includeAllFields = useCallback(() => {
+    if (configType !== "fmodata" || !tableName || !fieldsData.length) return;
+
+    const currentTables = Array.isArray(allTablesConfig) ? allTablesConfig : [];
+    const tableIndex = currentTables.findIndex(
+      (t) => t?.tableName === tableName,
+    );
+
+    if (tableIndex < 0) {
+      // Table doesn't exist in config, nothing to do
+      return;
+    }
+
+    const currentFields = currentTables[tableIndex]?.fields ?? [];
+    const allFieldNames = fieldsData.map((f) => f.fieldName);
+
+    // Remove exclude flags from all fields
+    const newFields = currentFields
+      .map((fieldConfig) => {
+        const fieldName = fieldConfig?.fieldName;
+        if (fieldName && allFieldNames.includes(fieldName)) {
+          const { exclude: _, ...rest } = fieldConfig;
+          // If only fieldName is left, don't include it
+          if (Object.keys(rest).length === 1 && rest.fieldName) {
+            return null;
+          }
+          return Object.keys(rest).length > 1 ? rest : null;
+        }
+        return fieldConfig;
+      })
+      .filter((f) => f !== null) as any[];
+
+    const newTables = [...currentTables];
+    if (newFields.length === 0) {
+      // No fields left, remove fields array or entire table entry if only tableName and fields
+      if (Object.keys(newTables[tableIndex]!).length === 2) {
+        const filteredTables = currentTables.filter((_, i) => i !== tableIndex);
+        setValue(
+          `config.${configIndex}.tables` as any,
+          filteredTables.length > 0 ? filteredTables : undefined,
+          { shouldDirty: true },
+        );
+      } else {
+        newTables[tableIndex] = {
+          ...newTables[tableIndex]!,
+          fields: undefined,
+        };
+        setValue(`config.${configIndex}.tables` as any, newTables, {
+          shouldDirty: true,
+        });
+      }
+    } else {
+      newTables[tableIndex] = {
+        ...newTables[tableIndex]!,
+        fields: newFields,
+      };
+      setValue(`config.${configIndex}.tables` as any, newTables, {
+        shouldDirty: true,
+      });
+    }
+  }, [
+    configType,
+    configIndex,
+    tableName,
+    allTablesConfig,
+    setValue,
+    fieldsData,
+  ]);
+
+  // Helper to exclude all fields
+  const excludeAllFields = useCallback(() => {
+    if (configType !== "fmodata" || !tableName || !fieldsData.length) return;
+
+    const currentTables = Array.isArray(allTablesConfig) ? allTablesConfig : [];
+    const tableIndex = currentTables.findIndex(
+      (t) => t?.tableName === tableName,
+    );
+
+    // Create a map of existing field configs
+    const fieldConfigMap = new Map(
+      tableIndex >= 0
+        ? (currentTables[tableIndex]?.fields ?? []).map((f) => [
+            f?.fieldName,
+            f,
+          ])
+        : [],
+    );
+
+    // Update or add exclude flag for all fields
+    const allFieldNames = fieldsData.map((f) => f.fieldName);
+    const newFields = allFieldNames.map((fieldName) => {
+      const existing = fieldConfigMap.get(fieldName);
+      if (existing) {
+        return { ...existing, exclude: true };
+      }
+      return { fieldName, exclude: true };
+    });
+
+    if (tableIndex < 0) {
+      // Table doesn't exist, add it with all fields excluded
+      setValue(
+        `config.${configIndex}.tables` as any,
+        [...currentTables, { tableName, fields: newFields }],
+        { shouldDirty: true },
+      );
+    } else {
+      // Update existing table
+      const newTables = [...currentTables];
+      newTables[tableIndex] = {
+        ...newTables[tableIndex]!,
+        fields: newFields,
+      };
+      setValue(`config.${configIndex}.tables` as any, newTables, {
+        shouldDirty: true,
+      });
+    }
+  }, [
+    configType,
+    configIndex,
+    tableName,
+    allTablesConfig,
+    setValue,
+    fieldsData,
+  ]);
 
   // Define columns for fields table
   const fieldsColumns = useMemo<ColumnDef<FieldRow>[]>(
     () => [
+      {
+        accessorKey: "isExcluded",
+        header: ({ column }) => (
+          <DataGridColumnHeader
+            column={column}
+            title="Include"
+            customActions={
+              <>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    includeAllFields();
+                  }}
+                  disabled={allFieldsIncluded}
+                >
+                  <span>Include All</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    excludeAllFields();
+                  }}
+                  disabled={allFieldsExcluded}
+                >
+                  <span>Exclude All</span>
+                </DropdownMenuItem>
+              </>
+            }
+          />
+        ),
+        enableSorting: true,
+        size: 60,
+        minSize: 60,
+        maxSize: 60,
+        cell: (info) => {
+          const row = info.row.original;
+          const isExcluded = row.isExcluded;
+          return (
+            <div className="flex items-center justify-center w-fit">
+              <Switch
+                checked={!isExcluded}
+                onCheckedChange={(checked) => {
+                  toggleFieldExclude(row.fieldName, !checked);
+                }}
+              />
+            </div>
+          );
+        },
+      },
       {
         accessorKey: "fieldName",
         header: ({ column }) => (
           <DataGridColumnHeader column={column} title="Field Name" />
         ),
         enableSorting: true,
-        cell: (info) => (
-          <span className="font-medium">{info.getValue() as string}</span>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              {row.primaryKey && (
+                <Key className="size-4 text-muted-foreground" />
+              )}
+              <span
+                className={`font-medium ${
+                  row.isExcluded ? "text-muted-foreground line-through" : ""
+                }`}
+              >
+                {info.getValue() as string}
+              </span>
+            </div>
+          );
+        },
       },
       {
         accessorKey: "fieldType",
@@ -192,19 +712,44 @@ export function MetadataFieldsDialog({
         ),
       },
       {
+        id: "typeOverride",
+        header: ({ column }) => (
+          <DataGridColumnHeader column={column} title="Type Override" />
+        ),
+        enableSorting: false,
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <Select
+              value={row.typeOverride || "__default__"}
+              onValueChange={(value) => {
+                setFieldTypeOverride(
+                  row.fieldName,
+                  value === "__default__" ? undefined : value,
+                );
+              }}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__default__">None</SelectItem>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="number">Number</SelectItem>
+                <SelectItem value="boolean">Boolean</SelectItem>
+                <SelectItem value="fmBooleanNumber">FM Boolean</SelectItem>
+                <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="timestamp">Timestamp</SelectItem>
+                <SelectItem value="container">Container</SelectItem>
+              </SelectContent>
+            </Select>
+          );
+        },
+      },
+      {
         accessorKey: "nullable",
         header: ({ column }) => (
           <DataGridColumnHeader column={column} title="Nullable" />
-        ),
-        enableSorting: true,
-        cell: (info) => (
-          <BooleanCell value={info.getValue() as boolean | undefined} />
-        ),
-      },
-      {
-        accessorKey: "calculation",
-        header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Calculation" />
         ),
         enableSorting: true,
         cell: (info) => (
@@ -230,16 +775,23 @@ export function MetadataFieldsDialog({
         cell: (info) => <BooleanCell value={info.getValue() as boolean} />,
       },
     ],
-    [],
+    [
+      toggleFieldExclude,
+      setFieldTypeOverride,
+      includeAllFields,
+      excludeAllFields,
+      allFieldsIncluded,
+      allFieldsExcluded,
+    ],
   );
 
-  // Create fields table instance
+  // Create fields table instance - use memoized model functions for stable references
   const fieldsTable = useReactTable({
     data: fieldsData,
     columns: fieldsColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    getCoreRowModel: coreRowModel,
+    getSortedRowModel: sortedRowModel,
+    getFilteredRowModel: filteredRowModel,
     globalFilterFn: "includesString",
     state: {
       globalFilter,

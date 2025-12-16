@@ -130,6 +130,10 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
       description:
         "Allows the tool to automatically download the metadata from the server and save it to the metadataPath. Will be re-downloaded on each run. Otherwise, you must manually provide/update the XML file.",
     }),
+    clearOldFiles: z.boolean().default(false).optional().meta({
+      description:
+        "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
+    }),
   }),
 ]);
 
@@ -146,6 +150,11 @@ export const typegenConfig = z.object({
 });
 
 export type TypegenConfig = z.infer<typeof typegenConfig>;
+
+export type FmodataConfig = Extract<
+  z.infer<typeof typegenConfigSingle>,
+  { type: "fmodata" }
+>;
 
 export type TSchema = {
   name: string;

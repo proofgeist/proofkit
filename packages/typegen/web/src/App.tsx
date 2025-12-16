@@ -49,7 +49,7 @@ function App() {
   } = useConfig();
 
   // Track active accordion item to preserve state
-  const [activeAccordionItem, setActiveAccordionItem] = useState<string>("0");
+  const [activeAccordionItem, setActiveAccordionItem] = useState<number>(0);
 
   // Use React Hook Form to manage the configs array
   type FormData = { config: SingleConfig[] };
@@ -199,8 +199,8 @@ function App() {
         <Form {...form}>
           <form onSubmit={handleSaveAll}>
             <Accordion
-              value={activeAccordionItem}
-              onValueChange={setActiveAccordionItem}
+              value={activeAccordionItem.toString()}
+              onValueChange={(value) => setActiveAccordionItem(Number(value))}
               type="single"
               variant="outline"
               collapsible
@@ -238,7 +238,7 @@ function App() {
                   <DropdownMenuContent className="w-80">
                     <DropdownMenuItem
                       className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                      onClick={() =>
+                      onClick={() => {
                         append({
                           type: "fmdapi",
                           envNames: {
@@ -247,8 +247,11 @@ function App() {
                             auth: undefined,
                           },
                           layouts: [],
-                        })
-                      }
+                        });
+                        setTimeout(() => {
+                          setActiveAccordionItem(fields.length);
+                        }, 1);
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-base">Data API</p>
@@ -262,7 +265,7 @@ function App() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                      onClick={() =>
+                      onClick={() => {
                         append({
                           type: "fmodata",
                           envNames: {
@@ -270,8 +273,13 @@ function App() {
                             db: undefined,
                             auth: undefined,
                           },
-                        })
-                      }
+                          downloadMetadata: false,
+                          metadataPath: "schema",
+                        });
+                        setTimeout(() => {
+                          setActiveAccordionItem(fields.length);
+                        }, 1);
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-base">OData</p>

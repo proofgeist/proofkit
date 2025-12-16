@@ -103,7 +103,10 @@ export function LayoutItemEditor({
             }
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Value Lists</FormLabel>
+                <FormLabel>
+                  Value Lists{" "}
+                  <InfoTooltip label="If set to 'strict', the value lists will be validated to ensure that the values are correct. If set to 'allowEmpty', the value lists will be validated to ensure that the values are correct, but empty value lists will be allowed. If set to 'ignore', the value lists will not be validated and typed as `string`." />
+                </FormLabel>
                 <FormControl>
                   <Select
                     value={field.value ?? "__default__"}
@@ -139,6 +142,7 @@ export function LayoutItemEditor({
                     label="Strict Numbers"
                     checked={field.value || false}
                     onCheckedChange={field.onChange}
+                    infoTooltip="If true, number fields will be typed as `number | null`. It's false by default because sometimes very large number will be returned as scientific notation via the Data API and therefore the type will be `number | string`."
                   />
                 </FormControl>
                 <FormMessage />
@@ -155,7 +159,7 @@ export function LayoutItemEditor({
               const isDefault = field.value === undefined;
               return (
                 <FormItem>
-                  <FormLabel>Generate</FormLabel>
+                  <FormLabel>Generate Client</FormLabel>
                   <FormControl>
                     <Select
                       value={

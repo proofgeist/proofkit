@@ -9,6 +9,7 @@ import { InfoTooltip } from "../InfoTooltip";
 interface SwitchFieldProps {
   id?: string;
   topLabel?: string;
+  topLabelTooltip?: string;
   label: string;
   description?: string;
   checked: boolean;
@@ -22,6 +23,7 @@ interface SwitchFieldProps {
 export function SwitchField({
   id,
   topLabel,
+  topLabelTooltip,
   label,
   description,
   checked,
@@ -41,11 +43,12 @@ export function SwitchField({
         <Label
           htmlFor={switchId}
           className={cn(
-            "font-medium text-foreground opacity-0 pointer-events-none",
-            topLabel ? "opacity-100" : "opacity-0",
+            "font-medium text-foreground flex items-center gap-1",
+            topLabel ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         >
           {topLabel}
+          {topLabelTooltip && <InfoTooltip label={topLabelTooltip} />}
         </Label>
       </div>
       <div className="flex items-center gap-2">

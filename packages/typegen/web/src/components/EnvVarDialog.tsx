@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   Server,
 } from "lucide-react";
 
@@ -74,15 +75,15 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
 
   const { data: authValue, isLoading: authLoading } = useEnvValue(authEnvName);
 
-  // Test connection hook - disable automatic testing when dialog is open
-  // It will only run when the retry button is clicked
+  // Test connection hook - enable when dialog is closed, disable when open
+  // When dialog is open, it will only run when the retry button is clicked
   const {
     status: testStatus,
     data: testData,
     error: testError,
     errorDetails,
     run: runTest,
-  } = useTestConnection(index, { enabled: false });
+  } = useTestConnection(index, { enabled: !dialogOpen });
 
   // Check if any values resolve to undefined/null/empty (only check after loading completes)
   const hasUndefinedValues =
@@ -134,6 +135,9 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
           <Button type="button" variant="outline" className="relative">
             <Server className="size-4" />
             Connection Settings
+            {testStatus === "error" && (
+              <AlertTriangle className="size-4 ml-2 text-yellow-500" />
+            )}
           </Button>
         </DialogTrigger>
         {(hasUndefinedValues || hasCustomValues) && (

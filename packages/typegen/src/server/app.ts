@@ -309,6 +309,16 @@ export function createApiApp(context: ApiContext) {
         return c.json({ value });
       },
     )
+    .get(
+      "/file-exists",
+      zValidator("query", z.object({ path: z.string() })),
+      async (c) => {
+        const input = c.req.valid("query");
+        const path = input.path;
+        const exists = await fs.pathExists(path);
+        return c.json({ exists });
+      },
+    )
     // POST /api/test-connection
     .post(
       "/test-connection",

@@ -25,6 +25,7 @@ import { formatAndSaveSourceFiles } from "./formatting";
 import { type PackageJson } from "type-fest";
 import semver from "semver";
 import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
+import { generateODataTablesSingle } from "./fmodata/typegen";
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
@@ -46,13 +47,13 @@ export const generateTypedClients = async (
     ? parsedConfig.data.config
     : [parsedConfig.data.config];
 
-  for (const option of configArray) {
-    if (option.type === "fmdapi") {
-      await generateTypedClientsSingle(option, options);
+  for (const singleConfig of configArray) {
+    if (singleConfig.type === "fmdapi") {
+      await generateTypedClientsSingle(singleConfig, options);
+    } else if (singleConfig.type === "fmodata") {
+      await generateODataTablesSingle(singleConfig);
     } else {
-      console.log(
-        chalk.yellow("WARNING: Unsupported config type: " + option.type),
-      );
+      console.log(chalk.red("ERROR: Invalid config type"));
     }
   }
 };

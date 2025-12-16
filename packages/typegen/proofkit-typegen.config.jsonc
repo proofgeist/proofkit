@@ -2,25 +2,21 @@
   "config": [
     {
       "type": "fmdapi",
-      "configName": "",
-      "layouts": [
-        {
-          "layoutName": "customer",
-          "schemaName": "customer333",
-          "valueLists": "allowEmpty"
-        }
-      ],
+      "layouts": [],
       "path": "schema",
       "clearOldFiles": false,
       "validator": "zod/v4",
       "clientSuffix": "Layout",
-      "generateClient": true,
-      "webviewerScriptName": ""
+      "generateClient": true
     },
     {
-      "type": "fmodata",
-      "configName": "asdfdasdfd",
-      "path": "schema"
+      "type": "fmdapi",
+      "layouts": [],
+      "path": "schema",
+      "clearOldFiles": false,
+      "validator": "zod/v4",
+      "clientSuffix": "Layout",
+      "generateClient": true
     }
   ]
 }

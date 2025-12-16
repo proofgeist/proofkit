@@ -2,12 +2,13 @@
 
 import { useId } from "react";
 import { Label } from "@/components/ui/label";
-import { Switch, SwitchWrapper } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { InfoTooltip } from "../InfoTooltip";
 
 interface SwitchFieldProps {
   id?: string;
+  topLabel?: string;
   label: string;
   description?: string;
   checked: boolean;
@@ -20,6 +21,7 @@ interface SwitchFieldProps {
 
 export function SwitchField({
   id,
+  topLabel,
   label,
   description,
   checked,
@@ -34,37 +36,34 @@ export function SwitchField({
   const descriptionId = `${switchId}-description`;
 
   return (
-    <div
-      className={cn(
-        "relative flex w-full gap-2 rounded-lg border border-input p-4",
-        description ? "items-start" : "items-center",
-        checked && "border-primary",
-        "transition-colors",
-        className,
-      )}
-    >
-      <SwitchWrapper>
+    <div className={cn("flex flex-col gap-2.5", className)}>
+      <div className="flex items-center gap-2 min-h-[20px]">
+        <Label
+          htmlFor={switchId}
+          className={cn(
+            "font-medium text-foreground opacity-0 pointer-events-none",
+            topLabel ? "opacity-100" : "opacity-0",
+          )}
+        >
+          {topLabel}
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
         <Switch
           id={switchId}
           size={size}
           checked={checked}
           onCheckedChange={onCheckedChange}
           disabled={disabled}
-          className="order-1"
           aria-describedby={description ? descriptionId : undefined}
         />
-      </SwitchWrapper>
-      <div
-        className={cn("grow", description ? "grid gap-2" : "flex items-center")}
-      >
-        <Label htmlFor={switchId}>
-          {label} {infoTooltip && <InfoTooltip label={infoTooltip} />}
+        <Label
+          htmlFor={switchId}
+          className="font-normal text-sm text-foreground cursor-pointer flex items-center gap-1.5"
+        >
+          {label}
+          {infoTooltip && <InfoTooltip label={infoTooltip} />}
         </Label>
-        {description && (
-          <p id={descriptionId} className="text-xs text-muted-foreground">
-            {description}
-          </p>
-        )}
       </div>
     </div>
   );

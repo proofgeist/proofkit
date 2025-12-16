@@ -123,6 +123,13 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
     configName: z.string().optional(),
     envNames,
     path,
+    metadataPath: z
+      .string()
+      .meta({ description: "Path to save the downloaded metadata XML file" }),
+    downloadMetadata: z.boolean().default(false).meta({
+      description:
+        "Allows the tool to automatically download the metadata from the server and save it to the metadataPath. Will be re-downloaded on each run. Otherwise, you must manually provide/update the XML file.",
+    }),
   }),
 ]);
 

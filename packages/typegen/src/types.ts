@@ -125,6 +125,9 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
     path,
     metadataPath: z
       .string()
+      .refine((val) => val.toLowerCase().endsWith(".xml"), {
+        message: "Metadata path must point to a file ending with .xml",
+      })
       .meta({ description: "Path to save the downloaded metadata XML file" }),
     downloadMetadata: z.boolean().default(false).meta({
       description:

@@ -274,7 +274,7 @@ function App() {
                             auth: undefined,
                           },
                           downloadMetadata: false,
-                          metadataPath: "schema",
+                          metadataPath: "schema/metadata.xml",
                         });
                         setTimeout(() => {
                           setActiveAccordionItem(fields.length);

@@ -15,6 +15,7 @@ import {
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { generateTypedClients } from "../typegen";
 import { FMServerConnection } from "@proofkit/fmodata";
+import { downloadMetadata, parseMetadata } from "../fmodata";
 
 export interface ApiContext {
   cwd: string;
@@ -317,6 +318,58 @@ export function createApiApp(context: ApiContext) {
         const path = input.path;
         const exists = await fs.pathExists(path);
         return c.json({ exists });
+      },
+    )
+    .post(
+      "/download-metadata",
+      zValidator("json", z.object({ config: typegenConfigSingle })),
+      async (c) => {
+        const input = c.req.valid("json");
+        const config = input.config;
+        if (config.type !== "fmodata") {
+          return c.json({ error: "Invalid config type" }, 400);
+        }
+        const { metadataPath } = config;
+        await downloadMetadata(config, metadataPath);
+        return c.json({ success: true });
+      },
+    )
+    .get(
+      "/parse-metadata",
+      zValidator("query", z.object({ config: z.string() })),
+      async (c) => {
+        const input = c.req.valid("query");
+        // Parse the JSON-encoded config string
+        let config: z.infer<typeof typegenConfigSingle>;
+        try {
+          config = typegenConfigSingle.parse(JSON.parse(input.config));
+        } catch (err) {
+          return c.json({ error: "Invalid config format" }, 400);
+        }
+        if (config.type !== "fmodata") {
+          return c.json({ error: "Invalid config type" }, 400);
+        }
+        const { metadataPath } = config;
+        const metadata = await fs.readFile(metadataPath, "utf-8");
+        const parsedMetadata = await parseMetadata(metadata);
+        // Convert Maps to objects for JSON serialization
+        // Also convert nested Maps (like Properties) to objects
+        const serializedMetadata = {
+          entityTypes: Object.fromEntries(
+            Array.from(parsedMetadata.entityTypes.entries()).map(
+              ([key, value]) => [
+                key,
+                {
+                  ...value,
+                  Properties: Object.fromEntries(value.Properties),
+                },
+              ],
+            ),
+          ),
+          entitySets: Object.fromEntries(parsedMetadata.entitySets),
+          namespace: parsedMetadata.namespace,
+        };
+        return c.json({ parsedMetadata: serializedMetadata });
       },
     )
     // POST /api/test-connection

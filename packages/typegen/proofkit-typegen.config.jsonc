@@ -10,13 +10,12 @@
       "generateClient": true
     },
     {
-      "type": "fmdapi",
-      "layouts": [],
+      "type": "fmodata",
+      "configName": "OData Test",
       "path": "schema",
-      "clearOldFiles": false,
-      "validator": "zod/v4",
-      "clientSuffix": "Layout",
-      "generateClient": true
+      "metadataPath": "schema/metadata.xml",
+      "downloadMetadata": true,
+      "clearOldFiles": false
     }
   ]
 }

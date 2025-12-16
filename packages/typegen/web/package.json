@@ -9,6 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@fetchkit/ffetch": "^4.2.0",
     "@headless-tree/core": "^1.6.0",
     "@headless-tree/react": "^1.6.0",
@@ -21,6 +25,7 @@
     "@remixicon/react": "^4.7.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.76.1",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

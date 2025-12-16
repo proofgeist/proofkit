@@ -209,7 +209,11 @@ function App() {
               {fields.map((field, index) => {
                 const config = configs[index];
                 return (
-                  <AccordionItem key={field.id} value={index.toString()}>
+                  <AccordionItem
+                    key={field.id}
+                    value={index.toString()}
+                    className="bg-card"
+                  >
                     <AccordionTrigger>
                       <ConfigSummary config={config} />
                     </AccordionTrigger>

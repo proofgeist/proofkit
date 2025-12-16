@@ -42,10 +42,12 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
     control,
     formState: { errors },
     setValue,
+    watch,
   } = useFormContext<{ config: SingleConfig[] }>();
 
   const baseId = useId();
   const generateClientSwitchId = `${baseId}-generate-client`;
+  const configType = watch(`config.${index}.type` as const);
 
   const configErrors = errors.config?.[index];
   const webviewerScriptName = useWatch({
@@ -139,19 +141,21 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                 )}
               />
 
-              <FormField
-                control={control}
-                name={`config.${index}.clientSuffix` as const}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client Suffix</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Layout" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {configType === "fmdapi" && (
+                <FormField
+                  control={control}
+                  name={`config.${index}.clientSuffix` as const}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client Suffix</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Layout" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={control}
@@ -190,47 +194,49 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
             {/* Toggles in one row with fields expanding below */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Generate Client */}
-              <div className="space-y-4">
-                <FormField
-                  control={control}
-                  name={`config.${index}.generateClient` as const}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Generate</FormLabel>
-                      <FormControl>
-                        <div className="flex w-full items-center">
-                          <SwitchWrapper
-                            permanent={true}
-                            className="w-full inline-grid"
-                          >
-                            <Switch
-                              id={generateClientSwitchId}
-                              size="xl"
-                              className="w-full rounded-md h-10"
-                              thumbClassName="rounded-md"
-                              checked={field.value || false}
-                              onCheckedChange={field.onChange}
-                            />
-                            <SwitchIndicator
-                              state="off"
-                              className="w-1/2 text-accent-foreground peer-data-[state=checked]:text-primary"
+              {configType === "fmdapi" && (
+                <div className="space-y-4">
+                  <FormField
+                    control={control}
+                    name={`config.${index}.generateClient` as const}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Generate</FormLabel>
+                        <FormControl>
+                          <div className="flex w-full items-center">
+                            <SwitchWrapper
+                              permanent={true}
+                              className="w-full inline-grid"
                             >
-                              Full Client
-                            </SwitchIndicator>
-                            <SwitchIndicator
-                              state="on"
-                              className="w-1/2 text-accent-foreground peer-data-[state=unchecked]:text-primary"
-                            >
-                              Types Only
-                            </SwitchIndicator>
-                          </SwitchWrapper>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                              <Switch
+                                id={generateClientSwitchId}
+                                size="xl"
+                                className="w-full rounded-md h-10"
+                                thumbClassName="rounded-md"
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                              />
+                              <SwitchIndicator
+                                state="off"
+                                className="w-1/2 text-accent-foreground peer-data-[state=checked]:text-primary"
+                              >
+                                Full Client
+                              </SwitchIndicator>
+                              <SwitchIndicator
+                                state="on"
+                                className="w-1/2 text-accent-foreground peer-data-[state=unchecked]:text-primary"
+                              >
+                                Types Only
+                              </SwitchIndicator>
+                            </SwitchWrapper>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               {/* Clear Old Files */}
               <div className="space-y-4">
@@ -253,36 +259,37 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                 />
               </div>
 
-              {/* Using a Webviewer */}
-              <div className="space-y-4">
-                <SwitchField
-                  label="Using a Webviewer?"
-                  checked={usingWebviewer}
-                  onCheckedChange={handleWebviewerToggle}
-                />
-
-                {usingWebviewer && (
-                  <FormField
-                    control={control}
-                    name={`config.${index}.webviewerScriptName` as const}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Webviewer Script Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Optional" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              {configType === "fmdapi" && (
+                <div className="space-y-4">
+                  <SwitchField
+                    label="Using a Webviewer?"
+                    checked={usingWebviewer}
+                    onCheckedChange={handleWebviewerToggle}
                   />
-                )}
-              </div>
+
+                  {usingWebviewer && (
+                    <FormField
+                      control={control}
+                      name={`config.${index}.webviewerScriptName` as const}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Webviewer Script Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Optional" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Layouts */}
-        <LayoutEditor configIndex={index} />
+        {configType === "fmdapi" && <LayoutEditor configIndex={index} />}
+        {configType === "fmodata" && <div>Odata tables</div>}
       </div>
 
       {/* Remove Config Confirmation Dialog */}

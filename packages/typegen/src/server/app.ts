@@ -411,9 +411,73 @@ export function createApiApp(context: ApiContext) {
 
             const { db, connection, server, dbName, authType } = result;
 
-            // Test connection by calling listDatabaseNames() and listTableNames()
+            if (authType === "username") {
+              // Test connection by calling listDatabaseNames() and listTableNames() separately
+              // First test: listDatabaseNames() - tests server connection
+              try {
+                await connection.listDatabaseNames();
+              } catch (err) {
+                // Handle connection errors from listDatabaseNames()
+                let errorMessage =
+                  "Failed to connect to FileMaker OData API (listDatabaseNames failed)";
+                let statusCode = 500;
+                let kind: "connection_error" | "unknown" = "unknown";
+                let suspectedField: "server" | "db" | "auth" | undefined;
+
+                if (err instanceof Error) {
+                  errorMessage = `listDatabaseNames() failed: ${err.message}`;
+                  kind = "connection_error";
+
+                  // Infer suspected field from error message
+                  const lowerMessage = errorMessage.toLowerCase();
+                  if (
+                    lowerMessage.includes("database") ||
+                    lowerMessage.includes("not found") ||
+                    lowerMessage.includes("404")
+                  ) {
+                    suspectedField = "db";
+                  } else if (
+                    lowerMessage.includes("auth") ||
+                    lowerMessage.includes("unauthorized") ||
+                    lowerMessage.includes("401") ||
+                    lowerMessage.includes("403")
+                  ) {
+                    suspectedField = "auth";
+                  } else if (
+                    lowerMessage.includes("network") ||
+                    lowerMessage.includes("connection") ||
+                    lowerMessage.includes("timeout") ||
+                    lowerMessage.includes("dns")
+                  ) {
+                    suspectedField = "server";
+                  }
+
+                  // Network/URL errors typically indicate server issues
+                  if (err instanceof TypeError) {
+                    suspectedField = "server";
+                    statusCode = 400;
+                  } else {
+                    statusCode = 400;
+                  }
+                }
+
+                return c.json(
+                  {
+                    ok: false,
+                    error: errorMessage,
+                    statusCode,
+                    kind,
+                    suspectedField,
+                    message: errorMessage,
+                    failedMethod: "listDatabaseNames",
+                  },
+                  statusCode as ContentfulStatusCode,
+                );
+              }
+            }
+
+            // Second test: listTableNames() - tests database connection
             try {
-              await connection.listDatabaseNames();
               await db.listTableNames();
 
               return c.json({
@@ -423,14 +487,15 @@ export function createApiApp(context: ApiContext) {
                 authType,
               });
             } catch (err) {
-              // Handle connection errors
-              let errorMessage = "Failed to connect to FileMaker OData API";
+              // Handle connection errors from listTableNames()
+              let errorMessage =
+                "Failed to connect to FileMaker OData API (listTableNames failed)";
               let statusCode = 500;
               let kind: "connection_error" | "unknown" = "unknown";
               let suspectedField: "server" | "db" | "auth" | undefined;
 
               if (err instanceof Error) {
-                errorMessage = err.message;
+                errorMessage = `listTableNames() failed: ${err.message}`;
                 kind = "connection_error";
 
                 // Infer suspected field from error message
@@ -474,6 +539,7 @@ export function createApiApp(context: ApiContext) {
                   kind,
                   suspectedField,
                   message: errorMessage,
+                  failedMethod: "listTableNames",
                 },
                 statusCode as ContentfulStatusCode,
               );

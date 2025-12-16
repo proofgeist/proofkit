@@ -285,6 +285,11 @@ export class FMServerConnection implements ExecutionContext {
    * @returns Promise resolving to an array of database names
    */
   async listDatabaseNames(): Promise<string[]> {
+    if ("apiKey" in this.auth) {
+      this.logger.error(
+        "listDatabaseNames not supported with API key authentication. OttoFMS requires that the API only be used with the database for which it was created",
+      );
+    }
     const result = await this._makeRequest<{
       value?: Array<{ name: string }>;
     }>("/");

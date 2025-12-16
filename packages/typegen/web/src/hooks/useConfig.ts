@@ -54,5 +54,3 @@ export function useConfig() {
     isRetrying: (isLoadingConfig || isFetching) && isFetching,
   };
 }
-
-

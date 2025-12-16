@@ -23,6 +23,28 @@ export function LayoutEditor({ configIndex }: LayoutEditorProps) {
 
   return (
     <div className="space-y-4">
+      {showWarning && (
+        <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-2 text-sm text-yellow-700 dark:text-yellow-400">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <div>
+                <div className="font-medium">Connection test failed</div>
+                {errorDetails?.message && (
+                  <div className="text-xs mt-1 opacity-90">
+                    {errorDetails.message}
+                  </div>
+                )}
+                <div className="text-xs mt-1 opacity-75">
+                  Fix the connection issue in the "Server Connection Settings"
+                  dialog before adding layouts.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h3 className="text-lg font-semibold">Layouts</h3>
 
       {fields.length === 0 && (
@@ -40,45 +62,21 @@ export function LayoutEditor({ configIndex }: LayoutEditorProps) {
         />
       ))}
 
-      <div className="space-y-2">
-        {showWarning && (
-          <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-2 text-sm text-yellow-700 dark:text-yellow-400">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <div>
-                  <div className="font-medium">Connection test failed</div>
-                  {errorDetails?.message && (
-                    <div className="text-xs mt-1 opacity-90">
-                      {errorDetails.message}
-                    </div>
-                  )}
-                  <div className="text-xs mt-1 opacity-75">
-                    Fix the connection issue in the "Configure Environment
-                    Variables" dialog before adding layouts.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-end">
-          <Button
-            type="button"
-            onClick={() =>
-              append({
-                layoutName: "",
-                schemaName: "",
-                valueLists: undefined,
-                generateClient: undefined,
-                strictNumbers: undefined,
-              })
-            }
-          >
-            <Plus /> Add Layout
-          </Button>
-        </div>
+      <div className="flex items-center justify-end">
+        <Button
+          type="button"
+          onClick={() =>
+            append({
+              layoutName: "",
+              schemaName: "",
+              valueLists: undefined,
+              generateClient: undefined,
+              strictNumbers: undefined,
+            })
+          }
+        >
+          <Plus /> Add Layout
+        </Button>
       </div>
     </div>
   );

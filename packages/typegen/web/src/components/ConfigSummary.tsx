@@ -1,3 +1,4 @@
+import { Folder } from "lucide-react";
 import { type SingleConfig } from "../lib/config-utils";
 import { Badge } from "./ui/badge";
 
@@ -20,10 +21,15 @@ export function ConfigSummary({ config }: { config: SingleConfig }) {
       {config.configName ? (
         <>
           <h2>{config.configName}</h2>
-          <p className="text-sm text-muted-foreground">{config.path}</p>
+          <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
+            <Folder className="size-3" />
+            {config.path}
+          </p>
         </>
       ) : (
-        <h2>{config.path}</h2>
+        <h2 className="inline-flex items-center gap-1">
+          <Folder className="size-4" /> {config.path}
+        </h2>
       )}
     </div>
   );

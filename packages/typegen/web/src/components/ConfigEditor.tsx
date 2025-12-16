@@ -21,12 +21,23 @@ import { EnvVarDialog } from "./EnvVarDialog";
 import { SingleConfig } from "../lib/config-utils";
 import { InfoTooltip } from "./InfoTooltip";
 import { LayoutEditor } from "./LayoutEditor";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Trash2 } from "lucide-react";
 
 interface ConfigEditorProps {
   index: number;
+  onRemove: () => void;
 }
 
-export function ConfigEditor({ index }: ConfigEditorProps) {
+export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
   const {
     control,
     formState: { errors },
@@ -42,6 +53,7 @@ export function ConfigEditor({ index }: ConfigEditorProps) {
     name: `config.${index}.webviewerScriptName` as const,
   });
   const [usingWebviewer, setUsingWebviewer] = useState(!!webviewerScriptName);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   useEffect(() => {
     setUsingWebviewer(!!webviewerScriptName);
@@ -67,17 +79,48 @@ export function ConfigEditor({ index }: ConfigEditorProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between pr-1 pt-3 overflow-visible">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Config Settings</h3>
-              <p className="text-sm text-muted-foreground">
-                Settings apply to all layouts in this config.
-              </p>
+              <h3 className="text-lg font-semibold">General Settings</h3>
             </div>
 
-            <EnvVarDialog index={index} />
+            <div className="flex items-center gap-2">
+              <EnvVarDialog index={index} />
+              <Button
+                type="button"
+                variant="destructive"
+                appearance="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowRemoveDialog(true);
+                }}
+                className="gap-2"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
           </div>
           <div className="space-y-4">
             {/* Path, Client Suffix, and Validator in one row */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <FormField
+                control={control}
+                name={`config.${index}.configName`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Config Name{" "}
+                      <InfoTooltip label="For display purposes only." />
+                    </FormLabel>
+
+                    <FormControl>
+                      <Input placeholder="schema" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={control}
                 name={`config.${index}.path`}
@@ -241,6 +284,38 @@ export function ConfigEditor({ index }: ConfigEditorProps) {
         {/* Layouts */}
         <LayoutEditor configIndex={index} />
       </div>
+
+      {/* Remove Config Confirmation Dialog */}
+      <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Config</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this config? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowRemoveDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                onRemove();
+                setShowRemoveDialog(false);
+              }}
+            >
+              Remove Config
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

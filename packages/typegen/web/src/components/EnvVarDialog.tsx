@@ -20,7 +20,13 @@ import { EnvVarField } from "./EnvVarField";
 import { useEnvVarIndicator } from "./useEnvVarIndicator";
 import { useEnvValue } from "../lib/envValues";
 import { useTestConnection, setDialogOpen } from "../hooks/useTestConnection";
-import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Server,
+} from "lucide-react";
 
 interface EnvVarDialogProps {
   index: number;
@@ -126,7 +132,8 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
       <div className="relative overflow-visible mr-2">
         <DialogTrigger asChild>
           <Button type="button" variant="outline" className="relative">
-            Server Connection Settings
+            <Server className="size-4" />
+            Connection Settings
           </Button>
         </DialogTrigger>
         {(hasUndefinedValues || hasCustomValues) && (

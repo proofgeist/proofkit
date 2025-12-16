@@ -9,9 +9,10 @@ import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
 import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
 import { defaultEnvNames } from "../constants";
 import type { ApiContext } from "./app";
+import { Database, FMServerConnection } from "@proofkit/fmodata";
 
 export interface CreateClientResult {
-  client: ReturnType<typeof DataApi>;
+  client: ReturnType<typeof DataApi<any, any, any, OttoAdapter>>;
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>;
   server: string;
   db: string;
@@ -28,21 +29,24 @@ export interface CreateClientError {
   message?: string;
 }
 
-type FmdapiConfig = Extract<
-  z.infer<typeof typegenConfigSingle>,
-  { type: "fmdapi" }
->;
+type SingleConfig = z.infer<typeof typegenConfigSingle>;
 
-/**
- * Creates a DataApi client from an in-memory config object
- * @param config The fmdapi config object
- * @returns The client, server, and db, or an error object
- */
-export function createClientFromConfig(
-  config: FmdapiConfig,
-): Omit<CreateClientResult, "config"> | CreateClientError {
-  const { envNames } = config;
+type FmdapiConfig = Extract<SingleConfig, { type: "fmdapi" }>;
 
+type FmodataConfig = Extract<SingleConfig, { type: "fmodata" }>;
+
+type EnvVarsResult =
+  | CreateClientError
+  | {
+      server: string;
+      db: string;
+      authType: "apiKey" | "username";
+      auth: { apiKey: OttoAPIKey } | { username: string; password: string };
+    };
+
+function getEnvVarsFromConfig(
+  envNames: SingleConfig["envNames"],
+): EnvVarsResult {
   // Helper to get env name, treating empty strings as undefined
   const getEnvName = (customName: string | undefined, defaultName: string) =>
     customName && customName.trim() !== "" ? customName : defaultName;
@@ -100,17 +104,17 @@ export function createClientFromConfig(
     return {
       error: "Missing required environment variables",
       statusCode: 400,
-      kind: "missing_env",
+      kind: "missing_env" as const,
       details: {
         missing: missingDetails,
       },
-      suspectedField: !server
+      suspectedField: (!server
         ? "server"
         : !db
           ? "db"
           : !apiKey && !username
             ? "auth"
-            : undefined,
+            : undefined) as "server" | "db" | "auth" | undefined,
       message: !server
         ? "Server URL environment variable is missing"
         : !db
@@ -124,28 +128,79 @@ export function createClientFromConfig(
     return {
       error: "Password is required when using username authentication",
       statusCode: 400,
-      kind: "missing_env",
+      kind: "missing_env" as const,
       details: {
         missing: {
           password: true,
         },
       },
-      suspectedField: "auth",
+      suspectedField: "auth" as const,
       message: "Password environment variable is missing",
     };
   }
 
-  // Determine which auth method will be used (prefer API key if available)
-  const authType: "apiKey" | "username" = apiKey ? "apiKey" : "username";
-
-  // Create auth object
-  const auth: { apiKey: OttoAPIKey } | { username: string; password: string } =
-    apiKey
+  return {
+    server,
+    db,
+    authType: (apiKey ? "apiKey" : "username") as "apiKey" | "username",
+    auth: apiKey
       ? { apiKey: apiKey as OttoAPIKey }
-      : { username: username ?? "", password: password ?? "" };
+      : { username: username ?? "", password: password ?? "" },
+  };
+}
+
+export interface OdataClientResult {
+  db: Database;
+  connection: FMServerConnection;
+  server: string;
+  dbName: string;
+  authType: "apiKey" | "username";
+}
+
+export interface OdataClientError {
+  error: string;
+  statusCode: number;
+  kind?: "missing_env" | "adapter_error" | "connection_error" | "unknown";
+  suspectedField?: "server" | "db" | "auth";
+}
+
+export function createOdataClientFromConfig(
+  config: FmodataConfig,
+): OdataClientResult | OdataClientError {
+  const result = getEnvVarsFromConfig(config.envNames);
+  if ("error" in result) {
+    return result;
+  }
+  const { server, db: dbName, authType, auth } = result;
+
+  const connection = new FMServerConnection({
+    serverUrl: server,
+    auth,
+  });
+
+  const db = connection.database(dbName);
+
+  return { db, connection, server, dbName, authType };
+}
+
+/**
+ * Creates a DataApi client from an in-memory config object
+ * @param config The fmdapi config object
+ * @returns The client, server, and db, or an error object
+ */
+export function createClientFromConfig(
+  config: FmdapiConfig,
+): Omit<CreateClientResult, "config"> | CreateClientError {
+  const result = getEnvVarsFromConfig(config.envNames);
+  if ("error" in result) {
+    return result;
+  }
+  const { server, db, authType, auth } = result;
+
+  // Determine which auth method will be used (prefer API key if available)
 
   // Create DataApi client with error handling for adapter construction
-  let client: ReturnType<typeof DataApi>;
+  let client: ReturnType<typeof DataApi<any, any, any, OttoAdapter>>;
   try {
     client =
       "apiKey" in auth

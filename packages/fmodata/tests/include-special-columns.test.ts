@@ -393,8 +393,8 @@ describe("includeSpecialColumns feature", () => {
       includeSpecialColumns: true,
     });
 
-    // When select is called, special columns should not be included
-    // (per OData spec, special columns are only included when no $select is used)
+    // FileMaker OData requires ROWID/ROWMODID to be explicitly listed in $select
+    // to be returned (they are only included when explicitly requested or when header is set and no $select is applied)
     let preferHeader: string | null = null;
     const { data } = await db
       .from(contactsTO)
@@ -431,6 +431,34 @@ describe("includeSpecialColumns feature", () => {
     // runtime check
     expect(firstRecord).not.toHaveProperty("ROWID");
     expect(firstRecord).not.toHaveProperty("ROWMODID");
+  });
+
+  it("should not append ROWID/ROWMODID to explicit $select unless requested via systemColumns", () => {
+    const db = connection.database("TestDB", {
+      includeSpecialColumns: true,
+    });
+
+    // Explicit select() should remain exact (no implicit system columns)
+    const queryString = db
+      .from(contactsTO)
+      .list()
+      .select({ name: contactsTO.name })
+      .getQueryString();
+
+    expect(queryString).toContain("$select=");
+    expect(queryString).toContain("name");
+    expect(queryString).not.toContain("ROWID");
+    expect(queryString).not.toContain("ROWMODID");
+
+    // But system columns should still be selectable when explicitly requested
+    const queryStringWithSystemCols = db
+      .from(contactsTO)
+      .list()
+      .select({ name: contactsTO.name }, { ROWID: true, ROWMODID: true })
+      .getQueryString();
+
+    expect(queryStringWithSystemCols).toContain("ROWID");
+    expect(queryStringWithSystemCols).toContain("ROWMODID");
   });
 
   it("should work with single() method", async () => {

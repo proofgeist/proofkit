@@ -24,19 +24,13 @@ export function buildSelectExpandQueryString(config: {
 
   // Build $select
   if (config.selectedFields && config.selectedFields.length > 0) {
-    // Add special columns if includeSpecialColumns is true and they're not already present
-    let finalSelectedFields = [...config.selectedFields];
-    if (config.includeSpecialColumns) {
-      if (!finalSelectedFields.includes("ROWID")) {
-        finalSelectedFields.push("ROWID");
-      }
-      if (!finalSelectedFields.includes("ROWMODID")) {
-        finalSelectedFields.push("ROWMODID");
-      }
-    }
-    
+    // Important: do NOT implicitly add system columns (ROWID/ROWMODID) here.
+    // - `includeSpecialColumns` controls the Prefer header + response parsing, but should not
+    //   mutate/expand an explicit `$select` (e.g. when the user calls `.select({ ... })`).
+    // - If system columns are desired with `.select()`, they must be explicitly included via
+    //   the `systemColumns` argument, which will already have added them to `selectedFields`.
     const selectString = formatSelectFields(
-      finalSelectedFields,
+      config.selectedFields,
       config.table,
       config.useEntityIds,
     );

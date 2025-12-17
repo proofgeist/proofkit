@@ -189,8 +189,18 @@ export async function validateRecord<T extends Record<string, any>>(
         }
       } else {
         // For fields not in schema (like when explicitly selecting ROWID/ROWMODID)
-        // include them from the original response
-        validatedRecord[fieldName] = rest[fieldName];
+        // Check if it's a special column that was destructured earlier
+        if (fieldName === "ROWID" || fieldName === "ROWMODID") {
+          // Use the destructured value since it was removed from rest
+          if (fieldName === "ROWID" && ROWID !== undefined) {
+            validatedRecord[fieldName] = ROWID;
+          } else if (fieldName === "ROWMODID" && ROWMODID !== undefined) {
+            validatedRecord[fieldName] = ROWMODID;
+          }
+        } else {
+          // For other fields not in schema, include them from the original response
+          validatedRecord[fieldName] = rest[fieldName];
+        }
       }
     }
 

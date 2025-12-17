@@ -258,6 +258,7 @@ export async function validateRecord<T extends Record<string, any>>(
                 expandConfig.targetSchema,
                 expandConfig.selectedFields as string[] | undefined,
                 expandConfig.nestedExpands,
+                includeSpecialColumns,
               );
               if (!itemValidation.valid) {
                 return {
@@ -282,6 +283,7 @@ export async function validateRecord<T extends Record<string, any>>(
               expandConfig.targetSchema,
               expandConfig.selectedFields as string[] | undefined,
               expandConfig.nestedExpands,
+              includeSpecialColumns,
             );
             if (!itemValidation.valid) {
               return {
@@ -408,6 +410,7 @@ export async function validateRecord<T extends Record<string, any>>(
               expandConfig.targetSchema,
               expandConfig.selectedFields as string[] | undefined,
               expandConfig.nestedExpands,
+              includeSpecialColumns,
             );
             if (!itemValidation.valid) {
               return {
@@ -432,6 +435,7 @@ export async function validateRecord<T extends Record<string, any>>(
             expandConfig.targetSchema,
             expandConfig.selectedFields as string[] | undefined,
             expandConfig.nestedExpands,
+            includeSpecialColumns,
           );
           if (!itemValidation.valid) {
             return {

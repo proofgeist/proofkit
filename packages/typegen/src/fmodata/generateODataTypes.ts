@@ -274,9 +274,13 @@ function generateTableOccurrence(
   }
 
   // Apply variableName override if provided, otherwise generate from entitySetName
-  const varName = tableOverride?.variableName
+  let varName = tableOverride?.variableName
     ? tableOverride.variableName.replace(/[^a-zA-Z0-9_]/g, "_")
     : entitySetName.replace(/[^a-zA-Z0-9_]/g, "_");
+  // Prefix with underscore if name starts with a digit (invalid JavaScript identifier)
+  if (/^\d/.test(varName)) {
+    varName = `_${varName}`;
+  }
 
   // Build options object
   const optionsParts: string[] = [];
@@ -349,7 +353,9 @@ function generateImports(
  * Sanitizes a name to be a safe filename
  */
 function sanitizeFileName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_]/g, "_");
+  const sanitized = name.replace(/[^a-zA-Z0-9_]/g, "_");
+  // Prefix with underscore if name starts with a digit (invalid JavaScript identifier)
+  return /^\d/.test(sanitized) ? `_${sanitized}` : sanitized;
 }
 
 /**

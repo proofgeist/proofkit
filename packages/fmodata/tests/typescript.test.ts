@@ -18,7 +18,7 @@
  * helping ensure the API remains ergonomic and type-safe as the library evolves.
  */
 
-import { describe, expect, it, expectTypeOf, beforeEach } from "vitest";
+import { describe, expect, it, expectTypeOf } from "vitest";
 import { z } from "zod/v4";
 import {
   fmTableOccurrence,
@@ -28,6 +28,7 @@ import {
   FMTable,
   getTableColumns,
   eq,
+  type InferTableSchema,
 } from "@proofkit/fmodata";
 import { createMockFetch } from "./utils/mock-fetch";
 import { createMockClient, contacts, users } from "./utils/test-setup";
@@ -552,6 +553,22 @@ describe("fmodata", () => {
         db.from("users").list().orderBy(["name", "id"]);
       };
       void _typeChecks;
+    });
+  });
+
+  describe("InferSchemaType", () => {
+    it("Primary key fields should not be nullable in the inferred schema", () => {
+      const specialUsers = fmTableOccurrence("specialUsers", {
+        id: textField().primaryKey(),
+        name: textField(),
+      });
+      type SpecialUserSchema = InferTableSchema<typeof specialUsers>;
+      type IdField = SpecialUserSchema["id"];
+
+      const controlTest: string | null = null;
+
+      // @ts-expect-error - id should not be nullable
+      const idData: IdField = null;
     });
   });
 });

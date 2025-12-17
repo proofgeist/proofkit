@@ -36,11 +36,17 @@ export class FieldBuilder<
 
   /**
    * Mark this field as the primary key for the table.
-   * Primary keys are automatically read-only.
+   * Primary keys are automatically read-only and non-nullable.
    */
-  primaryKey(): FieldBuilder<TOutput, TInput, TDbType, true> {
+  primaryKey(): FieldBuilder<
+    NonNullable<TOutput>,
+    NonNullable<TInput>,
+    NonNullable<TDbType>,
+    true
+  > {
     const builder = this._clone() as any;
     builder._primaryKey = true;
+    builder._notNull = true; // Primary keys are automatically non-nullable
     builder._readOnly = true; // Primary keys are automatically read-only
     return builder;
   }

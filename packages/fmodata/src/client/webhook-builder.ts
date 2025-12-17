@@ -183,7 +183,7 @@ export class WebhookManager {
     const result = await this.context._makeRequest(
       `/${this.databaseName}/Webhook.Delete(${webhookId})`,
       {
-        method: "DELETE",
+        method: "POST",
         ...options,
       },
     );

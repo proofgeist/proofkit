@@ -35,6 +35,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { config } from "dotenv";
 import { writeFileSync } from "fs";
+import * as prettier from "prettier";
 import createClient from "@fetchkit/ffetch";
 import { MOCK_SERVER_URL } from "../tests/utils/mock-server-url";
 
@@ -406,6 +407,122 @@ const queriesToCapture: {
       return { url, response };
     },
   },
+  // Webhook API queries
+  {
+    name: "webhook-list",
+    description: "List all webhooks",
+    execute: async (client) => {
+      const path = "/Webhook.GetAll";
+      const response = await client(path);
+      const url = response.url;
+      return { url, response };
+    },
+  },
+  {
+    name: "webhook-add",
+    description: "Add a new webhook",
+    execute: async (client) => {
+      const path = "/Webhook.Add";
+      const response = await client(path, {
+        method: "POST",
+        body: {
+          webhook: "https://example.com/webhook",
+          tableName: "contacts",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "",
+          filter: "",
+        },
+      });
+      const url = response.url;
+
+      // Clone the response before extracting the data
+      const cloned = response.clone();
+      const newWebhookId = (await cloned.json()).webHookResult.webHookID;
+      await client(`/Webhook.Delete(${newWebhookId})`);
+
+      return { url, response };
+    },
+  },
+  {
+    name: "webhook-add-with-options",
+    description: "Add a new webhook",
+    execute: async (client) => {
+      const path = "/Webhook.Add";
+      const response = await client(path, {
+        method: "POST",
+        body: {
+          webhook: "https://example.com/webhook",
+          tableName: "contacts",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "name, age",
+          filter: "name eq 'John'",
+        },
+      });
+      const url = response.url;
+
+      // Clone the response before extracting the data
+      const cloned = response.clone();
+      const newWebhookId = (await cloned.json()).webHookResult.webHookID;
+      await client(`/Webhook.Delete(${newWebhookId})`);
+
+      return { url, response };
+    },
+  },
+  {
+    name: "webhook-get",
+    description: "Get a webhook by ID",
+    execute: async (client) => {
+      const listResponse = await client("/Webhook.GetAll");
+      const listData = await listResponse.json();
+      const webhookId = listData.WebHook?.[0]?.webHookID;
+      if (!webhookId) {
+        throw new Error("No webhook ID found");
+      }
+
+      // First, try to get webhook ID 1, or use a known ID if available
+      const path = `/Webhook.Get(${webhookId})`;
+      const response = await client(path);
+      const url = response.url;
+      return { url, response };
+    },
+  },
+  {
+    name: "webhook-get-not-found",
+    description: "Error response for non-existent webhook",
+    expectError: true,
+    execute: async (client) => {
+      const path = "/Webhook.Get(99999)";
+      const response = await client(path);
+      const url = response.url;
+      return { url, response };
+    },
+  },
+  {
+    name: "webhook-delete",
+    description: "Delete a webhook by ID",
+    execute: async (client) => {
+      const listResponse = await client("/Webhook.GetAll");
+      const listData = await listResponse.json();
+      const webhookId = listData.WebHook?.[0]?.webHookID;
+      if (!webhookId) {
+        throw new Error("No webhook ID found");
+      }
+
+      // Use webhook ID 1, or a known ID if available
+      const path = `/Webhook.Delete(${webhookId})`;
+      const response = await client(path, {
+        method: "POST",
+      });
+      const url = response.url;
+      return { url, response };
+    },
+  },
 ];
 
 /**
@@ -489,7 +606,7 @@ function generateResponsesFile(
  * 2. Run: pnpm capture
  * 3. The captured response will be added to this file automatically
  *
- * You can manually edit responses here if you need to modify test data.
+ * You MUST NOT manually edit this file. Any changes will be overwritten by the capture script.
  */
 
 export type MockResponse = {
@@ -669,7 +786,13 @@ async function main() {
     "../tests/fixtures/responses.ts",
   );
   const fileContent = generateResponsesFile(capturedResponses);
-  writeFileSync(fixturesPath, fileContent, "utf-8");
+
+  // Format the file content with prettier
+  const formattedContent = await prettier.format(fileContent, {
+    filepath: fixturesPath,
+  });
+
+  writeFileSync(fixturesPath, formattedContent, "utf-8");
 
   console.log(`\nResponses written to: ${fixturesPath}`);
   console.log("\nYou can now use these mocks in your tests!");

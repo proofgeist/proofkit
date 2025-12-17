@@ -4,10 +4,12 @@ import { EntitySet } from "./entity-set";
 import { BatchBuilder } from "./batch-builder";
 import { SchemaManager } from "./schema-manager";
 import { FMTable } from "../orm/table";
+import { WebhookManager } from "./webhook-builder";
 
 export class Database {
   private _useEntityIds: boolean = false;
   public readonly schema: SchemaManager;
+  public readonly webhook: WebhookManager;
 
   constructor(
     private readonly databaseName: string,
@@ -23,6 +25,7 @@ export class Database {
   ) {
     // Initialize schema manager
     this.schema = new SchemaManager(this.databaseName, this.context);
+    this.webhook = new WebhookManager(this.databaseName, this.context);
     this._useEntityIds = config?.useEntityIds ?? false;
   }
 

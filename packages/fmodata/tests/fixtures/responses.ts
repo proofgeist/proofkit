@@ -18,7 +18,7 @@
  * 2. Run: pnpm capture
  * 3. The captured response will be added to this file automatically
  *
- * You can manually edit responses here if you need to modify test data.
+ * You MUST NOT manually edit this file. Any changes will be overwritten by the capture script.
  */
 
 export type MockResponse = {
@@ -293,7 +293,7 @@ export const mockResponses = {
     headers: {
       "content-type": "application/json;charset=utf-8",
       location:
-        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts(ROWID=11073)",
+        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts(ROWID=11167)",
     },
     response: null,
   },
@@ -305,19 +305,19 @@ export const mockResponses = {
     headers: {
       "content-type": "application/json;charset=utf-8",
       location:
-        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts('F88124B8-53D1-482D-9EF9-08BA79702DA5')",
+        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
     },
     response: {
       "@context":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
       "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('F88124B8-53D1-482D-9EF9-08BA79702DA5')",
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
       "@editLink":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('F88124B8-53D1-482D-9EF9-08BA79702DA5')",
-      PrimaryKey: "F88124B8-53D1-482D-9EF9-08BA79702DA5",
-      CreationTimestamp: "2025-12-15T11:32:53Z",
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
+      PrimaryKey: "A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D",
+      CreationTimestamp: "2025-12-17T09:15:16Z",
       CreatedBy: "admin",
-      ModificationTimestamp: "2025-12-15T11:32:53Z",
+      ModificationTimestamp: "2025-12-17T09:15:16Z",
       ModifiedBy: "admin",
       name: "Capture test",
       hobby: null,
@@ -664,6 +664,174 @@ export const mockResponses = {
           ],
         },
       ],
+    },
+  },
+
+  "webhook-list": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.GetAll",
+    method: "GET",
+    status: 200,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      "@context":
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook Processor",
+      Status: "ACTIVE",
+      WebHook: [
+        {
+          webHookID: 1,
+          tableName: "contacts",
+          url: "https://example.com/webhook",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "",
+          filter: "",
+          pendingOperations: [],
+        },
+        {
+          webHookID: 2,
+          tableName: "contacts",
+          url: "https://example.com/webhook",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "",
+          filter: "",
+          pendingOperations: [],
+        },
+        {
+          webHookID: 3,
+          tableName: "contacts",
+          url: "https://example.com/webhook",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "",
+          filter: "",
+          pendingOperations: [],
+        },
+        {
+          webHookID: 6,
+          tableName: "contacts",
+          url: "https://example.com/webhook",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "name, age",
+          filter: "name eq 'John'",
+          pendingOperations: [],
+        },
+        {
+          webHookID: 4,
+          tableName: "contacts",
+          url: "https://example.com/webhook",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "",
+          filter: "",
+          pendingOperations: [],
+        },
+        {
+          webHookID: 7,
+          tableName: "contacts",
+          url: "https://example.com/webhook",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "name, age",
+          filter: "name eq 'John'",
+          pendingOperations: [],
+        },
+      ],
+    },
+  },
+
+  "webhook-add": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Add",
+    method: "GET",
+    status: 200,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      webHookResult: {
+        webHookID: 5,
+      },
+    },
+  },
+
+  "webhook-add-with-options": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Add",
+    method: "GET",
+    status: 200,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      webHookResult: {
+        webHookID: 8,
+      },
+    },
+  },
+
+  "webhook-get": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Get(1)",
+    method: "GET",
+    status: 200,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      "@context":
+        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook",
+      webHookID: 1,
+      tableName: "contacts",
+      url: "https://example.com/webhook",
+      headers: {
+        "X-Custom-Header": "test-value",
+      },
+      notifySchemaChanges: false,
+      select: "",
+      filter: "",
+      pendingOperations: [],
+    },
+  },
+
+  "webhook-get-not-found": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Get(99999)",
+    method: "GET",
+    status: 404,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      error: {
+        code: "-1061",
+        message: "Specified WebHook not found",
+      },
+    },
+  },
+
+  "webhook-delete": {
+    url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Delete(1)",
+    method: "GET",
+    status: 200,
+    headers: {
+      "content-type": "application/json;charset=utf-8",
+    },
+    response: {
+      webHookResult: {
+        webHookID: 1,
+      },
     },
   },
 } satisfies MockResponses;

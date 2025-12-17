@@ -54,3 +54,4 @@ export async function parseErrorResponse(
   // Fall back to generic HTTPError
   return new HTTPError(url, response.status, response.statusText, errorBody);
 }
+

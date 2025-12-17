@@ -20,6 +20,7 @@ export interface ProcessQueryResponseConfig<T> {
   expandConfigs: ExpandConfig[];
   skipValidation?: boolean;
   useEntityIds?: boolean;
+  includeSpecialColumns?: boolean;
   // Mapping from field names to output keys (for renamed fields in select)
   fieldMapping?: Record<string, string>;
   logger: InternalLogger;
@@ -214,6 +215,9 @@ export async function processQueryResponse<T>(
   );
 
   // Validate with original field names
+  // Special columns are excluded when using single() method (per OData spec behavior)
+  const shouldIncludeSpecialColumns =
+    singleMode === false ? config.includeSpecialColumns : false;
   const validationResult =
     singleMode !== false
       ? await validateSingleResponse(
@@ -222,12 +226,14 @@ export async function processQueryResponse<T>(
           selectedFields as string[] | undefined,
           expandValidationConfigs,
           singleMode,
+          shouldIncludeSpecialColumns,
         )
       : await validateListResponse(
           data,
           schema,
           selectedFields as string[] | undefined,
           expandValidationConfigs,
+          shouldIncludeSpecialColumns,
         );
 
   if (!validationResult.valid) {

@@ -808,7 +808,7 @@ const result = await db.webhook.add({
   tableName: contactsTable,
   headers: {
     "X-Custom-Header": "value",
-    "Authorization": "Bearer token",
+    Authorization: "Bearer token",
   },
   notifySchemaChanges: true, // Notify when schema changes
 });
@@ -1441,6 +1441,37 @@ const users = fmTableOccurrence(
   },
 );
 ```
+
+### Special Columns (ROWID and ROWMODID)
+
+FileMaker provides special columns `ROWID` and `ROWMODID` that uniquely identify records and track modifications. These can be included in query responses when enabled.
+
+Enable special columns at the database level:
+
+```typescript
+const db = connection.database("MyDatabase", {
+  includeSpecialColumns: true,
+});
+
+const result = await db.from(users).list().execute();
+// result.data[0] will have ROWID and ROWMODID properties
+```
+
+Override at the request level:
+
+```typescript
+// Enable for this request only
+const result = await db.from(users).list().execute({
+  includeSpecialColumns: true,
+});
+
+// Disable for this request
+const result = await db.from(users).list().execute({
+  includeSpecialColumns: false,
+});
+```
+
+**Important:** Special columns are only included when no `$select` query is applied (per OData specification). When using `.select()`, special columns are excluded even if `includeSpecialColumns` is enabled.
 
 ### Error Handling
 

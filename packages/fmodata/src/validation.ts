@@ -99,6 +99,7 @@ export async function validateRecord<T extends Record<string, any>>(
   schema: Record<string, StandardSchemaV1> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
+  includeSpecialColumns?: boolean,
 ): Promise<
   | { valid: true; data: T & ODataRecordMetadata }
   | { valid: false; error: ValidationError }
@@ -112,15 +113,33 @@ export async function validateRecord<T extends Record<string, any>>(
   if (editLink) metadata["@editLink"] = editLink;
 
   // If no schema, just return the data with metadata
+  // Exclude special columns if includeSpecialColumns is false
   if (!schema) {
+    const { ROWID, ROWMODID, ...restWithoutSystemFields } = rest;
+    const specialColumns: { ROWID?: number; ROWMODID?: number } = {};
+    if (includeSpecialColumns) {
+      if (ROWID !== undefined) specialColumns.ROWID = ROWID;
+      if (ROWMODID !== undefined) specialColumns.ROWMODID = ROWMODID;
+    }
     return {
       valid: true,
-      data: { ...rest, ...metadata } as T & ODataRecordMetadata,
+      data: {
+        ...restWithoutSystemFields,
+        ...specialColumns,
+        ...metadata,
+      } as T & ODataRecordMetadata,
     };
   }
 
-  // Filter out FileMaker system fields that shouldn't be in responses by default
+  // Extract FileMaker special columns - preserve them if includeSpecialColumns is enabled
+  // Note: Special columns are excluded when using single() method (per OData spec behavior)
   const { ROWID, ROWMODID, ...restWithoutSystemFields } = rest;
+  const specialColumns: { ROWID?: number; ROWMODID?: number } = {};
+  // Only include special columns if explicitly enabled (they're excluded for single() by design)
+  if (includeSpecialColumns) {
+    if (ROWID !== undefined) specialColumns.ROWID = ROWID;
+    if (ROWMODID !== undefined) specialColumns.ROWMODID = ROWMODID;
+  }
 
   // If selected fields are specified, validate only those fields
   if (selectedFields && selectedFields.length > 0) {
@@ -273,14 +292,15 @@ export async function validateRecord<T extends Record<string, any>>(
       }
     }
 
-    // Merge validated data with metadata
+    // Merge validated data with metadata and special columns
     return {
       valid: true,
-      data: { ...validatedRecord, ...metadata } as T & ODataRecordMetadata,
+      data: { ...validatedRecord, ...specialColumns, ...metadata } as T &
+        ODataRecordMetadata,
     };
   }
 
-  // Validate all fields in schema, but exclude ROWID/ROWMODID by default
+  // Validate all fields in schema, but exclude ROWID/ROWMODID by default (unless includeSpecialColumns is enabled)
   const validatedRecord: Record<string, any> = { ...restWithoutSystemFields };
 
   for (const [fieldName, fieldSchema] of Object.entries(schema)) {
@@ -424,7 +444,8 @@ export async function validateRecord<T extends Record<string, any>>(
 
   return {
     valid: true,
-    data: { ...validatedRecord, ...metadata } as T & ODataRecordMetadata,
+    data: { ...validatedRecord, ...specialColumns, ...metadata } as T &
+      ODataRecordMetadata,
   };
 }
 
@@ -436,6 +457,7 @@ export async function validateListResponse<T extends Record<string, any>>(
   schema: Record<string, StandardSchemaV1> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
+  includeSpecialColumns?: boolean,
 ): Promise<
   | { valid: true; data: (T & ODataRecordMetadata)[] }
   | { valid: false; error: ResponseStructureError | ValidationError }
@@ -471,6 +493,7 @@ export async function validateListResponse<T extends Record<string, any>>(
       schema,
       selectedFields,
       expandConfigs,
+      includeSpecialColumns,
     );
 
     if (!validation.valid) {
@@ -498,6 +521,7 @@ export async function validateSingleResponse<T extends Record<string, any>>(
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   mode: "exact" | "maybe" = "maybe",
+  includeSpecialColumns?: boolean,
 ): Promise<
   | { valid: true; data: (T & ODataRecordMetadata) | null }
   | { valid: false; error: RecordCountMismatchError | ValidationError }
@@ -539,6 +563,7 @@ export async function validateSingleResponse<T extends Record<string, any>>(
     schema,
     selectedFields,
     expandConfigs,
+    includeSpecialColumns,
   );
 
   if (!validation.valid) {

@@ -6,15 +6,13 @@ import type {
   Result,
   ExecuteOptions,
   ConditionallyWithODataAnnotations,
-  ExtractSchemaFromOccurrence,
+  ConditionallyWithSpecialColumns,
+  NormalizeIncludeSpecialColumns,
   ExecuteMethodOptions,
 } from "../../types";
 import { RecordCountMismatchError } from "../../errors";
 import { type FFetchOptions } from "@fetchkit/ffetch";
-import {
-  transformFieldNamesArray,
-  transformOrderByField,
-} from "../../transform";
+import { transformOrderByField } from "../../transform";
 import { safeJsonParse } from "../sanitize-json";
 import { parseErrorResponse } from "../error-parser";
 import { isColumn, type Column } from "../../orm/column";
@@ -28,7 +26,6 @@ import {
   type InferSchemaOutputFromFMTable,
   type ValidExpandTarget,
   type ExtractTableName,
-  type ValidateNoContainerFields,
   getTableName,
 } from "../../orm/table";
 import {
@@ -37,14 +34,17 @@ import {
   type ExpandedRelations,
   resolveTableId,
   mergeExecuteOptions,
-  formatSelectFields,
   processQueryResponse,
   processSelectWithRenames,
   buildSelectExpandQueryString,
   createODataRequest,
 } from "../builders/index";
 import { QueryUrlBuilder, type NavigationConfig } from "./url-builder";
-import type { TypeSafeOrderBy, QueryReturnType } from "./types";
+import type {
+  TypeSafeOrderBy,
+  QueryReturnType,
+  SystemColumnsOption,
+} from "./types";
 import { createLogger, InternalLogger } from "../../logger";
 
 // Re-export QueryReturnType for backward compatibility
@@ -70,6 +70,8 @@ export class QueryBuilder<
   SingleMode extends "exact" | "maybe" | false = false,
   IsCount extends boolean = false,
   Expands extends ExpandedRelations = {},
+  DatabaseIncludeSpecialColumns extends boolean = false,
+  SystemCols extends SystemColumnsOption | undefined = undefined,
 > implements
     ExecutableBuilder<
       QueryReturnType<
@@ -77,7 +79,8 @@ export class QueryBuilder<
         Selected,
         SingleMode,
         IsCount,
-        Expands
+        Expands,
+        SystemCols
       >
     >
 {
@@ -92,10 +95,13 @@ export class QueryBuilder<
   private context: ExecutionContext;
   private navigation?: NavigationConfig;
   private databaseUseEntityIds: boolean;
+  private databaseIncludeSpecialColumns: boolean;
   private expandBuilder: ExpandBuilder;
   private urlBuilder: QueryUrlBuilder;
   // Mapping from field names to output keys (for renamed fields in select)
   private fieldMapping?: Record<string, string>;
+  // System columns requested via select() second argument
+  private systemColumns?: SystemColumnsOption;
   private logger: InternalLogger;
 
   constructor(config: {
@@ -103,12 +109,15 @@ export class QueryBuilder<
     databaseName: string;
     context: ExecutionContext;
     databaseUseEntityIds?: boolean;
+    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.occurrence = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.logger = config.context?._getLogger?.() ?? createLogger();
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
+    this.databaseIncludeSpecialColumns =
+      config.databaseIncludeSpecialColumns ?? false;
     this.expandBuilder = new ExpandBuilder(
       this.databaseUseEntityIds,
       this.logger,
@@ -121,12 +130,21 @@ export class QueryBuilder<
   }
 
   /**
-   * Helper to merge database-level useEntityIds with per-request options
+   * Helper to merge database-level useEntityIds and includeSpecialColumns with per-request options
    */
   private mergeExecuteOptions(
     options?: RequestInit & FFetchOptions & ExecuteOptions,
-  ): RequestInit & FFetchOptions & { useEntityIds?: boolean } {
-    return mergeExecuteOptions(options, this.databaseUseEntityIds);
+  ): RequestInit &
+    FFetchOptions & {
+      useEntityIds?: boolean;
+      includeSpecialColumns?: boolean;
+    } {
+    const merged = mergeExecuteOptions(options, this.databaseUseEntityIds);
+    return {
+      ...merged,
+      includeSpecialColumns:
+        options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
+    };
   }
 
   /**
@@ -159,24 +177,37 @@ export class QueryBuilder<
       | Record<string, Column<any, any, ExtractTableName<Occ>>> = Selected,
     NewSingle extends "exact" | "maybe" | false = SingleMode,
     NewCount extends boolean = IsCount,
+    NewSystemCols extends SystemColumnsOption | undefined = SystemCols,
   >(changes: {
     selectedFields?: NewSelected;
     singleMode?: NewSingle;
     isCountMode?: NewCount;
     queryOptions?: Partial<QueryOptions<InferSchemaOutputFromFMTable<Occ>>>;
     fieldMapping?: Record<string, string>;
-  }): QueryBuilder<Occ, NewSelected, NewSingle, NewCount, Expands> {
+    systemColumns?: NewSystemCols;
+  }): QueryBuilder<
+    Occ,
+    NewSelected,
+    NewSingle,
+    NewCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    NewSystemCols
+  > {
     const newBuilder = new QueryBuilder<
       Occ,
       NewSelected,
       NewSingle,
       NewCount,
-      Expands
+      Expands,
+      DatabaseIncludeSpecialColumns,
+      NewSystemCols
     >({
       occurrence: this.occurrence,
       databaseName: this.databaseName,
       context: this.context,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
     newBuilder.queryOptions = {
       ...this.queryOptions,
@@ -186,6 +217,10 @@ export class QueryBuilder<
     newBuilder.singleMode = (changes.singleMode ?? this.singleMode) as any;
     newBuilder.isCountMode = (changes.isCountMode ?? this.isCountMode) as any;
     newBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
+    newBuilder.systemColumns =
+      changes.systemColumns !== undefined
+        ? changes.systemColumns
+        : this.systemColumns;
     // Copy navigation metadata
     newBuilder.navigation = this.navigation;
     newBuilder.urlBuilder = new QueryUrlBuilder(
@@ -207,7 +242,15 @@ export class QueryBuilder<
    *   userEmail: users.email  // renamed!
    * })
    *
+   * @example
+   * // Include system columns (ROWID, ROWMODID) when using select()
+   * db.from(users).list().select(
+   *   { name: users.name },
+   *   { ROWID: true, ROWMODID: true }
+   * )
+   *
    * @param fields - Object mapping output keys to column references (container fields excluded)
+   * @param systemColumns - Optional object to request system columns (ROWID, ROWMODID)
    * @returns QueryBuilder with updated selected fields
    */
   select<
@@ -215,7 +258,19 @@ export class QueryBuilder<
       string,
       Column<any, any, ExtractTableName<Occ>, false>
     >,
-  >(fields: TSelect): QueryBuilder<Occ, TSelect, SingleMode, IsCount, Expands> {
+    TSystemCols extends SystemColumnsOption = {},
+  >(
+    fields: TSelect,
+    systemColumns?: TSystemCols,
+  ): QueryBuilder<
+    Occ,
+    TSelect,
+    SingleMode,
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    TSystemCols
+  > {
     const tableName = getTableName(this.occurrence);
     const { selectedFields, fieldMapping } = processSelectWithRenames(
       fields,
@@ -223,13 +278,23 @@ export class QueryBuilder<
       this.logger,
     );
 
+    // Add system columns to selectedFields if requested
+    const finalSelectedFields = [...selectedFields];
+    if (systemColumns?.ROWID) {
+      finalSelectedFields.push("ROWID");
+    }
+    if (systemColumns?.ROWMODID) {
+      finalSelectedFields.push("ROWMODID");
+    }
+
     return this.cloneWithChanges({
       selectedFields: fields as any,
       queryOptions: {
-        select: selectedFields,
+        select: finalSelectedFields,
       },
       fieldMapping:
         Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
+      systemColumns: systemColumns as any,
     });
   }
 
@@ -245,7 +310,15 @@ export class QueryBuilder<
    */
   where(
     expression: FilterExpression | string,
-  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands> {
+  ): QueryBuilder<
+    Occ,
+    Selected,
+    SingleMode,
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     // Handle raw string filters (escape hatch)
     if (typeof expression === "string") {
       this.queryOptions.filter = expression;
@@ -295,7 +368,15 @@ export class QueryBuilder<
             | OrderByExpression<ExtractTableName<Occ>>
           >,
         ]
-  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands> {
+  ): QueryBuilder<
+    Occ,
+    Selected,
+    SingleMode,
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     const tableName = getTableName(this.occurrence);
 
     // Handle variadic arguments (multiple fields)
@@ -440,14 +521,30 @@ export class QueryBuilder<
 
   top(
     count: number,
-  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands> {
+  ): QueryBuilder<
+    Occ,
+    Selected,
+    SingleMode,
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     this.queryOptions.top = count;
     return this;
   }
 
   skip(
     count: number,
-  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands> {
+  ): QueryBuilder<
+    Occ,
+    Selected,
+    SingleMode,
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     this.queryOptions.skip = count;
     return this;
   }
@@ -483,7 +580,9 @@ export class QueryBuilder<
         selected: TSelected;
         nested: TNestedExpands;
       };
-    }
+    },
+    DatabaseIncludeSpecialColumns,
+    SystemCols
   > {
     // Use ExpandBuilder.processExpand to handle the expand logic
     type TargetBuilder = QueryBuilder<
@@ -491,7 +590,8 @@ export class QueryBuilder<
       keyof InferSchemaOutputFromFMTable<TargetTable>,
       false,
       false,
-      {}
+      {},
+      DatabaseIncludeSpecialColumns
     >;
     const expandConfig = this.expandBuilder.processExpand<
       TargetTable,
@@ -501,11 +601,20 @@ export class QueryBuilder<
       this.occurrence,
       callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
-        new QueryBuilder<TargetTable>({
+        new QueryBuilder<
+          TargetTable,
+          any,
+          any,
+          any,
+          any,
+          DatabaseIncludeSpecialColumns,
+          undefined
+        >({
           occurrence: targetTable,
           databaseName: this.databaseName,
           context: this.context,
           databaseUseEntityIds: this.databaseUseEntityIds,
+          databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
         }),
     );
 
@@ -513,15 +622,39 @@ export class QueryBuilder<
     return this as any;
   }
 
-  single(): QueryBuilder<Occ, Selected, "exact", IsCount, Expands> {
+  single(): QueryBuilder<
+    Occ,
+    Selected,
+    "exact",
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     return this.cloneWithChanges({ singleMode: "exact" as const });
   }
 
-  maybeSingle(): QueryBuilder<Occ, Selected, "maybe", IsCount, Expands> {
+  maybeSingle(): QueryBuilder<
+    Occ,
+    Selected,
+    "maybe",
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     return this.cloneWithChanges({ singleMode: "maybe" as const });
   }
 
-  count(): QueryBuilder<Occ, Selected, SingleMode, true, Expands> {
+  count(): QueryBuilder<
+    Occ,
+    Selected,
+    SingleMode,
+    true,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    SystemCols
+  > {
     return this.cloneWithChanges({
       isCountMode: true as const,
       queryOptions: { count: true },
@@ -531,7 +664,7 @@ export class QueryBuilder<
   /**
    * Builds the OData query string from current query options and expand configs.
    */
-  private buildQueryString(): string {
+  private buildQueryString(includeSpecialColumns?: boolean): string {
     // Build query without expand and select (we'll add them manually if using entity IDs)
     const queryOptionsWithoutExpandAndSelect = { ...this.queryOptions };
     const originalSelect = queryOptionsWithoutExpandAndSelect.select;
@@ -547,12 +680,17 @@ export class QueryBuilder<
         : [String(originalSelect)]
       : undefined;
 
+    // Use merged includeSpecialColumns if provided, otherwise use database-level default
+    const finalIncludeSpecialColumns =
+      includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
+
     const selectExpandString = buildSelectExpandQueryString({
       selectedFields: selectArray,
       expandConfigs: this.expandConfigs,
       table: this.occurrence,
       useEntityIds: this.databaseUseEntityIds,
       logger: this.logger,
+      includeSpecialColumns: finalIncludeSpecialColumns,
     });
 
     // Append select/expand to existing query string
@@ -573,19 +711,35 @@ export class QueryBuilder<
   ): Promise<
     Result<
       ConditionallyWithODataAnnotations<
-        QueryReturnType<
-          InferSchemaOutputFromFMTable<Occ>,
-          Selected,
-          SingleMode,
-          IsCount,
-          Expands
+        ConditionallyWithSpecialColumns<
+          QueryReturnType<
+            InferSchemaOutputFromFMTable<Occ>,
+            Selected,
+            SingleMode,
+            IsCount,
+            Expands,
+            SystemCols
+          >,
+          // Use the merged value: if explicitly provided in options, use that; otherwise use database default
+          NormalizeIncludeSpecialColumns<
+            EO["includeSpecialColumns"],
+            DatabaseIncludeSpecialColumns
+          >,
+          // Check if select was applied: if Selected is Record (object select) or a subset of keys, select was applied
+          Selected extends Record<string, Column<any, any, any>>
+            ? true
+            : Selected extends keyof InferSchemaOutputFromFMTable<Occ>
+              ? false
+              : true
         >,
         EO["includeODataAnnotations"] extends true ? true : false
       >
     >
   > {
     const mergedOptions = this.mergeExecuteOptions(options);
-    const queryString = this.buildQueryString();
+    const queryString = this.buildQueryString(
+      mergedOptions.includeSpecialColumns,
+    );
 
     // Handle $count endpoint
     if (this.isCountMode) {
@@ -618,6 +772,9 @@ export class QueryBuilder<
       return { data: undefined, error: result.error };
     }
 
+    // Check if select was applied (runtime check)
+    const hasSelect = this.queryOptions.select !== undefined;
+
     return processQueryResponse(result.data, {
       occurrence: this.occurrence,
       singleMode: this.singleMode,
@@ -625,6 +782,7 @@ export class QueryBuilder<
       expandConfigs: this.expandConfigs,
       skipValidation: options?.skipValidation,
       useEntityIds: mergedOptions.useEntityIds,
+      includeSpecialColumns: mergedOptions.includeSpecialColumns,
       fieldMapping: this.fieldMapping,
       logger: this.logger,
     });
@@ -667,7 +825,8 @@ export class QueryBuilder<
         Selected,
         SingleMode,
         IsCount,
-        Expands
+        Expands,
+        SystemCols
       >
     >
   > {
@@ -728,6 +887,9 @@ export class QueryBuilder<
     }
 
     const mergedOptions = this.mergeExecuteOptions(options);
+    // Check if select was applied (runtime check)
+    const hasSelect = this.queryOptions.select !== undefined;
+
     return processQueryResponse(rawData, {
       occurrence: this.occurrence,
       singleMode: this.singleMode,

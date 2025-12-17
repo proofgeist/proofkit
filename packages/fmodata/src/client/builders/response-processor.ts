@@ -17,6 +17,7 @@ export interface ProcessResponseConfig {
   expandValidationConfigs?: ExpandValidationConfig[];
   skipValidation?: boolean;
   useEntityIds?: boolean;
+  includeSpecialColumns?: boolean;
   // Mapping from field names to output keys (for renamed fields in select)
   fieldMapping?: Record<string, string>;
 }
@@ -37,6 +38,7 @@ export async function processODataResponse<T>(
     expandValidationConfigs,
     skipValidation,
     useEntityIds,
+    includeSpecialColumns,
     fieldMapping,
   } = config;
 
@@ -67,6 +69,9 @@ export async function processODataResponse<T>(
   }
 
   // Validation path
+  // Note: Special columns are excluded when using QueryBuilder.single() method,
+  // but included for RecordBuilder.get() method (both use singleMode: "exact")
+  // The exclusion is handled in QueryBuilder's processQueryResponse, not here
   if (singleMode !== false) {
     const validation = await validateSingleResponse<any>(
       response,
@@ -74,6 +79,7 @@ export async function processODataResponse<T>(
       selectedFields as any,
       expandValidationConfigs,
       singleMode,
+      includeSpecialColumns,
     );
 
     if (!validation.valid) {
@@ -96,6 +102,7 @@ export async function processODataResponse<T>(
     schema,
     selectedFields as any,
     expandValidationConfigs,
+    includeSpecialColumns,
   );
 
   if (!validation.valid) {
@@ -223,6 +230,7 @@ export async function processQueryResponse<T>(
     expandConfigs: ExpandConfig[];
     skipValidation?: boolean;
     useEntityIds?: boolean;
+    includeSpecialColumns?: boolean;
     // Mapping from field names to output keys (for renamed fields in select)
     fieldMapping?: Record<string, string>;
     logger: InternalLogger;
@@ -235,6 +243,7 @@ export async function processQueryResponse<T>(
     expandConfigs,
     skipValidation,
     useEntityIds,
+    includeSpecialColumns,
     fieldMapping,
     logger,
   } = config;
@@ -258,6 +267,7 @@ export async function processQueryResponse<T>(
     expandValidationConfigs,
     skipValidation,
     useEntityIds,
+    includeSpecialColumns,
   });
 
   // Rename fields if field mapping is provided (for renamed fields in select)

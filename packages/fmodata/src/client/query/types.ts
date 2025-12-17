@@ -70,30 +70,59 @@ export type ResolveExpandedRelations<Exps extends ExpandedRelations> = {
   [K in keyof Exps]: ResolveExpandType<Exps[K]>[];
 };
 
+/**
+ * System columns option for select() method.
+ * Allows explicitly requesting ROWID and/or ROWMODID when using select().
+ */
+export type SystemColumnsOption = {
+  ROWID?: boolean;
+  ROWMODID?: boolean;
+};
+
+/**
+ * Extract system columns type from SystemColumnsOption.
+ * Returns an object type with ROWID and/or ROWMODID properties when set to true.
+ */
+export type SystemColumnsFromOption<
+  T extends SystemColumnsOption | undefined,
+> = (T extends { ROWID: true } ? { ROWID: number } : {}) &
+  (T extends { ROWMODID: true } ? { ROWMODID: number } : {});
+
 export type QueryReturnType<
   T extends Record<string, any>,
   Selected extends keyof T | Record<string, Column<any, any, any, any>>,
   SingleMode extends "exact" | "maybe" | false,
   IsCount extends boolean,
   Expands extends ExpandedRelations,
+  SystemCols extends SystemColumnsOption | undefined = undefined,
 > = IsCount extends true
   ? number
   : // Use tuple wrapping [Selected] extends [...] to prevent distribution over unions
     [Selected] extends [Record<string, Column<any, any, any, any>>]
     ? SingleMode extends "exact"
-      ? MapSelectToReturnType<Selected, T> & ResolveExpandedRelations<Expands>
+      ? MapSelectToReturnType<Selected, T> &
+          ResolveExpandedRelations<Expands> &
+          SystemColumnsFromOption<SystemCols>
       : SingleMode extends "maybe"
         ?
             | (MapSelectToReturnType<Selected, T> &
-                ResolveExpandedRelations<Expands>)
+                ResolveExpandedRelations<Expands> &
+                SystemColumnsFromOption<SystemCols>)
             | null
         : (MapSelectToReturnType<Selected, T> &
-            ResolveExpandedRelations<Expands>)[]
+            ResolveExpandedRelations<Expands> &
+            SystemColumnsFromOption<SystemCols>)[]
     : // Use tuple wrapping to prevent distribution over union of keys
       [Selected] extends [keyof T]
       ? SingleMode extends "exact"
-        ? Pick<T, Selected> & ResolveExpandedRelations<Expands>
+        ? Pick<T, Selected> &
+            ResolveExpandedRelations<Expands> &
+            SystemColumnsFromOption<SystemCols>
         : SingleMode extends "maybe"
-          ? (Pick<T, Selected> & ResolveExpandedRelations<Expands>) | null
-          : (Pick<T, Selected> & ResolveExpandedRelations<Expands>)[]
+          ? (Pick<T, Selected> &
+              ResolveExpandedRelations<Expands> &
+              SystemColumnsFromOption<SystemCols>) | null
+          : (Pick<T, Selected> &
+              ResolveExpandedRelations<Expands> &
+              SystemColumnsFromOption<SystemCols>)[]
       : never;

@@ -17,14 +17,26 @@ export function buildSelectExpandQueryString(config: {
   table?: FMTable<any, any>;
   useEntityIds: boolean;
   logger: InternalLogger;
+  includeSpecialColumns?: boolean;
 }): string {
   const parts: string[] = [];
   const expandBuilder = new ExpandBuilder(config.useEntityIds, config.logger);
 
   // Build $select
   if (config.selectedFields && config.selectedFields.length > 0) {
+    // Add special columns if includeSpecialColumns is true and they're not already present
+    let finalSelectedFields = [...config.selectedFields];
+    if (config.includeSpecialColumns) {
+      if (!finalSelectedFields.includes("ROWID")) {
+        finalSelectedFields.push("ROWID");
+      }
+      if (!finalSelectedFields.includes("ROWMODID")) {
+        finalSelectedFields.push("ROWMODID");
+      }
+    }
+    
     const selectString = formatSelectFields(
-      config.selectedFields,
+      finalSelectedFields,
       config.table,
       config.useEntityIds,
     );

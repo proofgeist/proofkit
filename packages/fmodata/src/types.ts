@@ -32,10 +32,16 @@ export interface ExecutableBuilder<T> {
 export interface ExecutionContext {
   _makeRequest<T>(
     url: string,
-    options?: RequestInit & FFetchOptions & { useEntityIds?: boolean },
+    options?: RequestInit &
+      FFetchOptions & {
+        useEntityIds?: boolean;
+        includeSpecialColumns?: boolean;
+      },
   ): Promise<Result<T>>;
   _setUseEntityIds?(useEntityIds: boolean): void;
   _getUseEntityIds?(): boolean;
+  _setIncludeSpecialColumns?(includeSpecialColumns: boolean): void;
+  _getIncludeSpecialColumns?(): boolean;
   _getBaseUrl?(): string;
   _getLogger?(): InternalLogger;
 }
@@ -46,7 +52,7 @@ export type InferSchemaType<Schema extends Record<string, StandardSchemaV1>> = {
     : never;
 };
 
-export type WithSystemFields<T> =
+export type WithSpecialColumns<T> =
   T extends Record<string, any>
     ? T & {
         ROWID: number;
@@ -54,14 +60,11 @@ export type WithSystemFields<T> =
       }
     : never;
 
-// Helper type to exclude system fields from a union of keys
+// Helper type to exclude special columns from a union of keys
 export type ExcludeSystemFields<T extends keyof any> = Exclude<
   T,
   "ROWID" | "ROWMODID"
 >;
-
-// Helper type to omit system fields from an object type
-export type OmitSystemFields<T> = Omit<T, "ROWID" | "ROWMODID">;
 
 // OData record metadata fields (present on each record)
 export type ODataRecordMetadata = {
@@ -158,6 +161,11 @@ export type ExecuteOptions = {
    * Overrides the default behavior of the database to use entity IDs (rather than field names) in THIS REQUEST ONLY
    */
   useEntityIds?: boolean;
+  /**
+   * Overrides the default behavior of the database to include special columns (ROWID and ROWMODID) in THIS REQUEST ONLY.
+   * Note: Special columns are only included when there is no $select query.
+   */
+  includeSpecialColumns?: boolean;
 };
 
 /**
@@ -211,6 +219,54 @@ export type ConditionallyWithODataAnnotations<
       "@id": string;
       "@editLink": string;
     }
+  : T;
+
+/**
+ * Normalizes includeSpecialColumns with a database-level default.
+ * Uses distributive conditional types to handle unions correctly.
+ * @template IncludeSpecialColumns - The includeSpecialColumns value from execute options
+ * @template DatabaseDefault - The database-level includeSpecialColumns setting (defaults to false)
+ */
+export type NormalizeIncludeSpecialColumns<
+  IncludeSpecialColumns extends boolean | undefined,
+  DatabaseDefault extends boolean = false,
+> = [IncludeSpecialColumns] extends [true]
+  ? true
+  : [IncludeSpecialColumns] extends [false]
+    ? false
+    : DatabaseDefault; // When undefined, use database-level default
+
+/**
+ * Conditionally adds ROWID and ROWMODID special columns to a type.
+ * Special columns are only included when:
+ * - includeSpecialColumns is true AND
+ * - hasSelect is false (no $select query was applied) AND
+ * - T is an object type (not a primitive like string or number)
+ *
+ * Handles both single objects and arrays of objects.
+ */
+export type ConditionallyWithSpecialColumns<
+  T,
+  IncludeSpecialColumns extends boolean,
+  HasSelect extends boolean,
+> = IncludeSpecialColumns extends true
+  ? HasSelect extends false
+    ? // Handle array types
+      T extends readonly (infer U)[]
+      ? U extends Record<string, any>
+        ? (U & {
+            ROWID: number;
+            ROWMODID: number;
+          })[]
+        : T
+      : // Handle single object types
+        T extends Record<string, any>
+        ? T & {
+            ROWID: number;
+            ROWMODID: number;
+          }
+        : T // Don't add special columns to primitives (e.g., single field queries)
+    : T
   : T;
 
 // Helper type to extract schema from a FMTable

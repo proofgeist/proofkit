@@ -6,8 +6,9 @@ import { SchemaManager } from "./schema-manager";
 import { FMTable } from "../orm/table";
 import { WebhookManager } from "./webhook-builder";
 
-export class Database {
+export class Database<IncludeSpecialColumns extends boolean = false> {
   private _useEntityIds: boolean = false;
+  private _includeSpecialColumns: IncludeSpecialColumns;
   public readonly schema: SchemaManager;
   public readonly webhook: WebhookManager;
 
@@ -21,15 +22,24 @@ export class Database {
        * If set to false but some occurrences do not use entity IDs, an error will be thrown
        */
       useEntityIds?: boolean;
+      /**
+       * Whether to include special columns (ROWID and ROWMODID) in responses.
+       * Note: Special columns are only included when there is no $select query.
+       */
+      includeSpecialColumns?: IncludeSpecialColumns;
     },
   ) {
     // Initialize schema manager
     this.schema = new SchemaManager(this.databaseName, this.context);
     this.webhook = new WebhookManager(this.databaseName, this.context);
     this._useEntityIds = config?.useEntityIds ?? false;
+    this._includeSpecialColumns = (config?.includeSpecialColumns ??
+      false) as IncludeSpecialColumns;
   }
 
-  from<T extends FMTable<any, any>>(table: T): EntitySet<T> {
+  from<T extends FMTable<any, any>>(
+    table: T,
+  ): EntitySet<T, IncludeSpecialColumns> {
     // Only override database-level useEntityIds if table explicitly sets it
     // (not if it's undefined, which would override the database setting)
     if (
@@ -40,7 +50,7 @@ export class Database {
         this._useEntityIds = tableUseEntityIds;
       }
     }
-    return new EntitySet<T>({
+    return new EntitySet<T, IncludeSpecialColumns>({
       occurrence: table as T,
       databaseName: this.databaseName,
       context: this.context,

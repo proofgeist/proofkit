@@ -1,2 +1,2 @@
-export { client as testLayoutClient } from "./testLayout";
-export { client as weirdPortalsClient } from "./weirdPortals";
+export { client as testLayoutLayout } from "./testLayout";
+export { client as weirdPortalsLayout } from "./weirdPortals";

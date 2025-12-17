@@ -12,9 +12,10 @@ describe("Registry utils (dynamic scanning)", () => {
     // Should find the mode-toggle template
     expect(index.length).toBeGreaterThan(0);
     expect(index[0]).toHaveProperty("name");
-    expect(index[0]).toHaveProperty("type");
     expect(index[0]).toHaveProperty("category");
-    // RegistryIndexItem only has name, type, and category - not files
+    expect(index[0]).toHaveProperty("title");
+    expect(index[0]).toHaveProperty("description");
+    // RegistryIndexItem has name, category, title, description - not type or files
   });
 
   it("reads a known template (mode-toggle)", async () => {

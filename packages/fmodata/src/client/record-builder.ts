@@ -781,10 +781,7 @@ export class RecordBuilder<
     }
 
     // Use shared response processor
-    const mergedOptions = mergeExecuteOptions(
-      options,
-      this.databaseUseEntityIds,
-    );
+    const mergedOptions = this.mergeExecuteOptions(options);
     const expandBuilder = new ExpandBuilder(
       mergedOptions.useEntityIds ?? false,
       this.logger,
@@ -801,6 +798,7 @@ export class RecordBuilder<
       expandValidationConfigs,
       skipValidation: options?.skipValidation,
       useEntityIds: mergedOptions.useEntityIds,
+      includeSpecialColumns: mergedOptions.includeSpecialColumns,
       fieldMapping: this.fieldMapping,
     });
   }

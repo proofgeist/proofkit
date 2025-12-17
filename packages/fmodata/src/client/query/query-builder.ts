@@ -897,6 +897,7 @@ export class QueryBuilder<
       expandConfigs: this.expandConfigs,
       skipValidation: options?.skipValidation,
       useEntityIds: mergedOptions.useEntityIds,
+      includeSpecialColumns: mergedOptions.includeSpecialColumns,
       fieldMapping: this.fieldMapping,
       logger: this.logger,
     });

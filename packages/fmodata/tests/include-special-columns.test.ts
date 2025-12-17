@@ -433,6 +433,34 @@ describe("includeSpecialColumns feature", () => {
     expect(firstRecord).not.toHaveProperty("ROWMODID");
   });
 
+  it("should not append ROWID/ROWMODID to explicit $select unless requested via systemColumns", () => {
+    const db = connection.database("TestDB", {
+      includeSpecialColumns: true,
+    });
+
+    // Explicit select() should remain exact (no implicit system columns)
+    const queryString = db
+      .from(contactsTO)
+      .list()
+      .select({ name: contactsTO.name })
+      .getQueryString();
+
+    expect(queryString).toContain("$select=");
+    expect(queryString).toContain("name");
+    expect(queryString).not.toContain("ROWID");
+    expect(queryString).not.toContain("ROWMODID");
+
+    // But system columns should still be selectable when explicitly requested
+    const queryStringWithSystemCols = db
+      .from(contactsTO)
+      .list()
+      .select({ name: contactsTO.name }, { ROWID: true, ROWMODID: true })
+      .getQueryString();
+
+    expect(queryStringWithSystemCols).toContain("ROWID");
+    expect(queryStringWithSystemCols).toContain("ROWMODID");
+  });
+
   it("should work with single() method", async () => {
     const db = connection.database("TestDB", {
       includeSpecialColumns: true,

@@ -2,7 +2,6 @@ import type {
   ExecutionContext,
   ExecutableBuilder,
   Result,
-  WithSpecialColumns,
   ExecuteOptions,
   ExecuteMethodOptions,
 } from "../types";

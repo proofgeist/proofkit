@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useWatch, useFormContext } from "react-hook-form";
 import { client } from "../lib/api";
 import type { SingleConfig } from "../lib/config-utils";
-import { useFileExists } from "./useFileExists";
 
 // Type for the parsed metadata response
 export interface ParsedMetadataResponse {
@@ -22,7 +21,11 @@ export interface ParsedMetadataResponse {
   };
 }
 
-export function useParseMetadata(configIndex: number) {
+export function useTableMetadata(
+  configIndex: number,
+  tableName: string | null,
+  enabled: boolean = true,
+) {
   const { control } = useFormContext<{ config: SingleConfig[] }>();
 
   // Watch the config at the given index
@@ -31,57 +34,35 @@ export function useParseMetadata(configIndex: number) {
     name: `config.${configIndex}` as const,
   });
 
-  // Get the metadata path
-  const metadataPath =
-    config?.type === "fmodata" ? config.metadataPath : undefined;
-
-  // Check if the file exists using the existing hook
-  const { data: fileExistsData } = useFileExists(metadataPath);
-
-  // Only query if config is fmodata type and file exists
+  // Only query if enabled, config is fmodata type, and tableName is provided
   const shouldQuery =
+    enabled &&
     config?.type === "fmodata" &&
-    fileExistsData?.exists === true &&
-    metadataPath &&
-    metadataPath.trim() !== "";
-
-  // Create a stable key for the config to use in queryKey
-  // Use metadataPath as the key since that's what determines if we need to re-parse
-  const configKey =
-    config && config.type === "fmodata"
-      ? JSON.stringify({
-          type: config.type,
-          metadataPath: config.metadataPath,
-        })
-      : "";
+    tableName !== null &&
+    tableName.trim() !== "";
 
   const { data, error, isLoading, isError } = useQuery<ParsedMetadataResponse>({
-    queryKey: ["parseMetadata", configIndex, configKey],
+    queryKey: ["tableMetadata", configIndex, tableName],
     queryFn: async () => {
-      if (!config || config.type !== "fmodata") {
-        throw new Error("Config not found or invalid type");
+      if (!config || config.type !== "fmodata" || !tableName) {
+        throw new Error("Config not found, invalid type, or table name missing");
       }
 
-      // For complex objects in query params, we need to JSON stringify
-      // The server will need to parse this, or we could change to POST
-      // For now, let's try passing it as a JSON string in the query
-      const res = await client.api["parse-metadata"].$get({
-        query: {
-          config: JSON.stringify(config),
-        },
+      const res = await client.api["table-metadata"].$post({
+        json: { config, tableName },
       });
 
       if (!res.ok) {
         const errorData = (await res.json().catch(() => ({}))) as {
           error?: string;
         };
-        throw new Error(errorData.error || "Failed to parse metadata");
+        throw new Error(errorData.error || "Failed to fetch table metadata");
       }
 
       const result = await res.json();
       return result as ParsedMetadataResponse;
     },
-    enabled: !!shouldQuery,
+    enabled: shouldQuery,
     staleTime: 5 * 60 * 1000, // 5 minutes - don't refetch often
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -93,6 +74,6 @@ export function useParseMetadata(configIndex: number) {
     error,
     isLoading,
     isError,
-    fileExists: fileExistsData?.exists,
   };
 }
+

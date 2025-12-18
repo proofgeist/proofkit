@@ -6,6 +6,19 @@ import { SchemaManager } from "./schema-manager";
 import { FMTable } from "../orm/table";
 import { WebhookManager } from "./webhook-builder";
 
+type MetadataArgs = {
+  format?: "xml" | "json";
+  /**
+   * If provided, only the metadata for the specified table will be returned.
+   * Requires FileMaker Server 22.0.4 or later.
+   */
+  tableName?: string;
+  /**
+   * If true, a reduced payload size will be returned by omitting certain annotations.
+   */
+  reduceAnnotations?: boolean;
+};
+
 export class Database<IncludeSpecialColumns extends boolean = false> {
   private _useEntityIds: boolean = false;
   private _includeSpecialColumns: IncludeSpecialColumns;
@@ -62,19 +75,35 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
    * Retrieves the OData metadata for this database.
    * @param args Optional configuration object
    * @param args.format The format to retrieve metadata in. Defaults to "json".
+   * @param args.tableName If provided, only the metadata for the specified table will be returned. Requires FileMaker Server 22.0.4 or later.
+   * @param args.reduceAnnotations If true, a reduced payload size will be returned by omitting certain annotations.
    * @returns The metadata in the specified format
    */
-  async getMetadata(args: { format: "xml" }): Promise<string>;
-  async getMetadata(args?: { format?: "json" }): Promise<Metadata>;
-  async getMetadata(args?: {
-    format?: "xml" | "json";
-  }): Promise<string | Metadata> {
+  async getMetadata(args: { format: "xml" } & MetadataArgs): Promise<string>;
+  async getMetadata(
+    args?: { format?: "json" } & MetadataArgs,
+  ): Promise<Metadata>;
+  async getMetadata(args?: MetadataArgs): Promise<string | Metadata> {
+    // Build the URL - if tableName is provided, append %23{tableName} to the path
+    let url = `/${this.databaseName}/$metadata`;
+    if (args?.tableName) {
+      url = `/${this.databaseName}/$metadata%23${args.tableName}`;
+    }
+
+    // Build headers
+    const headers: Record<string, string> = {
+      Accept: args?.format === "xml" ? "application/xml" : "application/json",
+    };
+
+    // Add Prefer header if reduceAnnotations is true
+    if (args?.reduceAnnotations) {
+      headers["Prefer"] = 'include-annotations="-*"';
+    }
+
     const result = await this.context._makeRequest<
       Record<string, Metadata> | string
-    >(`/${this.databaseName}/$metadata`, {
-      headers: {
-        Accept: args?.format === "xml" ? "application/xml" : "application/json",
-      },
+    >(url, {
+      headers,
     });
     if (result.error) {
       throw result.error;

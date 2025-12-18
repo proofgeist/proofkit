@@ -1,4 +1,4 @@
-export { downloadMetadata } from "./downloadMetadata";
+export { downloadTableMetadata } from "./downloadMetadata";
 export {
   parseMetadata,
   parseMetadataFromFile,

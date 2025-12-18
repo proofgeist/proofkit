@@ -1,23 +1,64 @@
 import { FmodataConfig } from "../types";
-import { downloadMetadata as downloadMetadataFn } from "./downloadMetadata";
-import fs from "fs-extra";
-import { parseMetadata } from "./parseMetadata";
+import { downloadTableMetadata } from "./downloadMetadata";
+import { parseMetadata, type ParsedMetadata } from "./parseMetadata";
 import { generateODataTypes } from "./generateODataTypes";
 
 export async function generateODataTablesSingle(config: FmodataConfig) {
-  const { downloadMetadata, metadataPath } = config;
+  const { tables } = config;
 
-  if (downloadMetadata) {
-    await downloadMetadataFn(config, metadataPath);
+  if (!tables || tables.length === 0) {
+    throw new Error("No tables specified in config");
   }
 
-  const metadataExists = await fs.pathExists(metadataPath);
-  if (!metadataExists) {
-    throw new Error(`Metadata file not found at ${metadataPath}`);
+  // Download and parse metadata for each table
+  const allEntityTypes = new Map<
+    string,
+    ParsedMetadata["entityTypes"] extends Map<infer K, infer V> ? V : never
+  >();
+  const allEntitySets = new Map<
+    string,
+    ParsedMetadata["entitySets"] extends Map<infer K, infer V> ? V : never
+  >();
+  let namespace = "";
+
+  for (const tableConfig of tables) {
+    const tableName = tableConfig.tableName;
+
+    // Download metadata for this table
+    const tableMetadataXml = await downloadTableMetadata(config, tableName);
+
+    // Parse the metadata
+    const parsedMetadata = await parseMetadata(tableMetadataXml);
+
+    // Merge entity types
+    for (const [
+      entityTypeName,
+      entityType,
+    ] of parsedMetadata.entityTypes.entries()) {
+      allEntityTypes.set(entityTypeName, entityType);
+    }
+
+    // Merge entity sets
+    for (const [
+      entitySetName,
+      entitySet,
+    ] of parsedMetadata.entitySets.entries()) {
+      allEntitySets.set(entitySetName, entitySet);
+    }
+
+    // Use namespace from first table (should be the same for all)
+    if (!namespace) {
+      namespace = parsedMetadata.namespace;
+    }
   }
 
-  const metadata = await fs.readFile(metadataPath, "utf-8");
-  const parsedMetadata = await parseMetadata(metadata);
+  // Combine all parsed metadata
+  const mergedMetadata: ParsedMetadata = {
+    entityTypes: allEntityTypes,
+    entitySets: allEntitySets,
+    namespace,
+  };
 
-  await generateODataTypes(parsedMetadata, config);
+  // Generate types from merged metadata
+  await generateODataTypes(mergedMetadata, config);
 }

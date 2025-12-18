@@ -273,8 +273,7 @@ function App() {
                             db: undefined,
                             auth: undefined,
                           },
-                          downloadMetadata: false,
-                          metadataPath: "schema/metadata.xml",
+                          tables: [],
                         });
                         setTimeout(() => {
                           setActiveAccordionItem(fields.length);

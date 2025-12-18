@@ -249,7 +249,7 @@ function generateTableOccurrence(
 
     let line = `    ${JSON.stringify(fieldName)}: ${fieldBuilder}`;
 
-    // Chain methods: primaryKey, readOnly, notNull, entityId
+    // Chain methods: primaryKey, readOnly, notNull, entityId, comment
     if (isKeyField) {
       line += ".primaryKey()";
     }
@@ -263,6 +263,9 @@ function generateTableOccurrence(
     }
     if (metadata["@FieldID"]) {
       line += `.entityId(${JSON.stringify(metadata["@FieldID"])})`;
+    }
+    if (metadata["@FMComment"]) {
+      line += `.comment(${JSON.stringify(metadata["@FMComment"])})`;
     }
 
     // Add comma if not the last field
@@ -286,6 +289,9 @@ function generateTableOccurrence(
   const optionsParts: string[] = [];
   if (fmtId) {
     optionsParts.push(`entityId: ${JSON.stringify(fmtId)}`);
+  }
+  if (entityType["@FMComment"]) {
+    optionsParts.push(`comment: ${JSON.stringify(entityType["@FMComment"])}`);
   }
   // Always include navigationPaths, even if empty
   const navPaths = navigationTargets.map((n) => JSON.stringify(n)).join(", ");
@@ -379,6 +385,16 @@ export async function generateODataTypes(
     entityTypeToSetMap.set(entitySet.EntityType, entitySetName);
   }
 
+  // Build a set of allowed table names from config
+  const allowedTableNames = new Set<string>();
+  if (tables) {
+    for (const tableOverride of tables) {
+      if (tableOverride?.tableName) {
+        allowedTableNames.add(tableOverride.tableName);
+      }
+    }
+  }
+
   // Build a table overrides map from the array for easier lookup
   const tableOverridesMap = new Map<
     string,
@@ -396,13 +412,13 @@ export async function generateODataTypes(
   const generatedTOs: GeneratedTO[] = [];
 
   for (const [entitySetName, entitySet] of entitySets.entries()) {
-    // Get table override config if it exists
-    const tableOverride = tableOverridesMap.get(entitySetName);
-
-    // Skip excluded tables
-    if (tableOverride?.exclude === true) {
+    // Only generate types for tables specified in config
+    if (allowedTableNames.size > 0 && !allowedTableNames.has(entitySetName)) {
       continue;
     }
+
+    // Get table override config if it exists
+    const tableOverride = tableOverridesMap.get(entitySetName);
 
     const entityType = entityTypes.get(entitySet.EntityType);
     if (entityType) {

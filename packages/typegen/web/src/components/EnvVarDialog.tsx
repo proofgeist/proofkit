@@ -33,6 +33,20 @@ interface EnvVarDialogProps {
   index: number;
 }
 
+// Helper to safely extract error message from various error formats
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return "";
+}
+
 export function EnvVarDialog({ index }: EnvVarDialogProps) {
   const { control, setValue, getValues } = useFormContext<{
     config: any[];
@@ -346,7 +360,7 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
                       <div className="pl-6 space-y-1 text-xs">
                         <div className="font-medium">
                           {errorDetails.message ||
-                            errorDetails.error ||
+                            getErrorMessage(errorDetails.error as unknown) ||
                             "Unknown error"}
                         </div>
                         {errorDetails.details?.missing && (
@@ -414,7 +428,17 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
                       </div>
                     )}
                     {testError && !errorDetails && (
-                      <div className="pl-6 text-xs">{testError.message}</div>
+                      <div className="pl-6 text-xs">
+                        {testError instanceof Error
+                          ? testError.message
+                          : typeof testError === "object" &&
+                              testError !== null &&
+                              "message" in testError
+                            ? String(
+                                (testError as { message: unknown }).message,
+                              )
+                            : "Unknown error"}
+                      </div>
                     )}
                   </div>
                 )}

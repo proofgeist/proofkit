@@ -88,60 +88,51 @@ const path = z
   .meta({ description: "The folder path to output the generated files" });
 
 // Field-level override configuration
-const fieldOverride = z
-  .object({
-    // Field name to apply override to
-    fieldName: z.string().meta({
-      description: "The field name this override applies to",
+const fieldOverride = z.object({
+  // Field name to apply override to
+  fieldName: z.string().meta({
+    description: "The field name this override applies to",
+  }),
+  // Exclude this field from generation
+  exclude: z.boolean().optional().meta({
+    description: "If true, this field will be excluded from generation",
+  }),
+  // Override the inferred type from metadata
+  typeOverride: z
+    .enum([
+      "text", // textField()
+      "number", // numberField()
+      "boolean", // numberField().outputValidator(z.coerce.boolean())
+      "fmBooleanNumber", // Same as boolean, explicit FileMaker 0/1 pattern
+      "date", // dateField()
+      "timestamp", // timestampField()
+      "container", // containerField()
+    ])
+    .optional()
+    .meta({
+      description:
+        "Override the inferred field type from metadata. Options: text, number, boolean, fmBooleanNumber, date, timestamp, container",
     }),
-    // Exclude this field from generation
-    exclude: z.boolean().optional().meta({
-      description: "If true, this field will be excluded from generation",
-    }),
-    // Override the inferred type from metadata
-    typeOverride: z
-      .enum([
-        "text", // textField()
-        "number", // numberField()
-        "boolean", // numberField().outputValidator(z.coerce.boolean())
-        "fmBooleanNumber", // Same as boolean, explicit FileMaker 0/1 pattern
-        "date", // dateField()
-        "timestamp", // timestampField()
-        "container", // containerField()
-      ])
-      .optional()
-      .meta({
-        description:
-          "Override the inferred field type from metadata. Options: text, number, boolean, fmBooleanNumber, date, timestamp, container",
-      }),
-  })
-  .optional();
+});
 
-// Table-level override configuration
-const tableOverride = z
-  .object({
-    // Table name to apply override to
-    tableName: z.string().meta({
-      description:
-        "The entity set name (table occurrence name) this override applies to",
-    }),
-    // Exclude entire table from generation
-    exclude: z.boolean().optional().meta({
-      description:
-        "If true, this entire table will be excluded from generation",
-    }),
-    // Override the generated TypeScript variable name
-    // (original entity set name is still used for the path)
-    variableName: z.string().optional().meta({
-      description:
-        "Override the generated TypeScript variable name. The original entity set name is still used for the OData path.",
-    }),
-    // Field-specific overrides as an array
-    fields: z.array(fieldOverride).optional().meta({
-      description: "Field-specific overrides as an array",
-    }),
-  })
-  .optional();
+// Table-level configuration (opt-in model)
+const tableConfig = z.object({
+  // Table name to generate
+  tableName: z.string().meta({
+    description:
+      "The entity set name (table occurrence name) to generate. This table will be included in metadata download and type generation.",
+  }),
+  // Override the generated TypeScript variable name
+  // (original entity set name is still used for the path)
+  variableName: z.string().optional().meta({
+    description:
+      "Override the generated TypeScript variable name. The original entity set name is still used for the OData path.",
+  }),
+  // Field-specific overrides as an array
+  fields: z.array(fieldOverride).optional().meta({
+    description: "Field-specific overrides as an array",
+  }),
+});
 
 const typegenConfigSingleBase = z.discriminatedUnion("type", [
   z.object({
@@ -179,23 +170,13 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
     configName: z.string().optional(),
     envNames,
     path,
-    metadataPath: z
-      .string()
-      .refine((val) => val.toLowerCase().endsWith(".xml"), {
-        message: "Metadata path must point to a file ending with .xml",
-      })
-      .meta({ description: "Path to save the downloaded metadata XML file" }),
-    downloadMetadata: z.boolean().default(false).meta({
-      description:
-        "Allows the tool to automatically download the metadata from the server and save it to the metadataPath. Will be re-downloaded on each run. Otherwise, you must manually provide/update the XML file.",
-    }),
     clearOldFiles: z.boolean().default(false).optional().meta({
       description:
         "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
     }),
-    tables: z.array(tableOverride).optional().meta({
+    tables: z.array(tableConfig).default([]).meta({
       description:
-        "Table-specific overrides as an array. Allows excluding tables/fields, renaming variables, and overriding field types.",
+        "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
     }),
   }),
 ]);

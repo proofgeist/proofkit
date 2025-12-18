@@ -1,45 +1,52 @@
 {
   "config": [
     {
-      "type": "fmdapi",
-      "layouts": [],
-      "path": "schema",
-      "clearOldFiles": false,
-      "validator": "zod/v4",
-      "clientSuffix": "Layout",
-      "generateClient": true
-    },
-    {
       "type": "fmodata",
-      "configName": "OData Test",
-      "path": "schema",
-      "metadataPath": "schema/metadata.xml",
-      "downloadMetadata": true,
-      "clearOldFiles": false,
+      "path": "odata-schema",
+      "clearOldFiles": true,
       "tables": [
         {
-          "tableName": "customer",
+          "tableName": "contacts",
           "fields": [
             {
-              "fieldName": "ModificationTimestamp",
+              "fieldName": "id_user",
               "exclude": true
             },
             {
-              "fieldName": "ModifiedBy",
+              "fieldName": "my_calc",
               "exclude": true
             }
           ]
         },
         {
-          "tableName": "contacts",
-          "fields": [
-            {
-              "fieldName": "hobby",
-              "exclude": true
-            }
-          ]
+          "tableName": "customer"
+        },
+        {
+          "tableName": "users"
+        },
+        {
+          "tableName": "related"
+        },
+        {
+          "tableName": "user_customer"
         }
       ]
+    },
+    {
+      "type": "fmdapi",
+      "layouts": [
+        {
+          "layoutName": "customer",
+          "schemaName": "customer",
+          "valueLists": "allowEmpty",
+          "strictNumbers": true
+        }
+      ],
+      "path": "schema",
+      "clearOldFiles": false,
+      "validator": "zod/v4",
+      "clientSuffix": "Layout",
+      "generateClient": true
     }
   ]
 }

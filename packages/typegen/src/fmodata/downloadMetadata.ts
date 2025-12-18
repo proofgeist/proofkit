@@ -1,6 +1,4 @@
 import { FMServerConnection } from "@proofkit/fmodata";
-import { writeFile, mkdir } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
 import type { z } from "zod/v4";
 import type { typegenConfigSingle } from "../types";
 import { getEnvValues, validateEnvValues } from "../getEnvValues";
@@ -11,16 +9,16 @@ type FmodataConfig = Extract<
 >;
 
 /**
- * Downloads OData metadata from a FileMaker server and saves it to a file.
+ * Downloads OData metadata for a single table from a FileMaker server.
  *
  * @param config - The fmodata config object containing connection details
- * @param metadataPath - The path where the metadata file should be saved
- * @returns Promise that resolves when the metadata has been downloaded and saved
+ * @param tableName - The name of the table to download metadata for
+ * @returns Promise that resolves with the XML metadata string
  */
-export async function downloadMetadata(
+export async function downloadTableMetadata(
   config: FmodataConfig,
-  metadataPath: string,
-): Promise<void> {
+  tableName: string,
+): Promise<string> {
   const envValues = getEnvValues(config.envNames);
   const validationResult = validateEnvValues(envValues, config.envNames);
 
@@ -42,14 +40,11 @@ export async function downloadMetadata(
 
   const database = connection.database(db);
 
-  // Download metadata in XML format
-  const fullMetadata = await database.getMetadata({ format: "xml" });
+  // Download metadata for the specific table in XML format
+  const tableMetadata = await database.getMetadata({
+    tableName,
+    format: "xml",
+  });
 
-  // Resolve output path (ensure directory exists)
-  const resolvedPath = resolve(metadataPath);
-  const outputDir = dirname(resolvedPath);
-  await mkdir(outputDir, { recursive: true });
-  await writeFile(resolvedPath, fullMetadata, "utf-8");
-
-  return;
+  return tableMetadata;
 }

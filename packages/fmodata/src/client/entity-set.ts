@@ -19,6 +19,7 @@ import {
   getDefaultSelect,
   getTableName,
   getTableColumns,
+  getTableSchema,
 } from "../orm/table";
 import type { FieldBuilder } from "../orm/field-builders";
 import { createLogger, InternalLogger } from "../logger";
@@ -121,20 +122,8 @@ export class EntitySet<
     if (this.occurrence) {
       // FMTable - access via helper functions
       const defaultSelectValue = getDefaultSelect(this.occurrence);
-      const tableSchema = (this.occurrence as any)[FMTableClass.Symbol.Schema];
-      let schema: Record<string, StandardSchemaV1> | undefined;
-
-      if (tableSchema) {
-        // Extract schema from StandardSchemaV1
-        const zodSchema = tableSchema["~standard"]?.schema;
-        if (
-          zodSchema &&
-          typeof zodSchema === "object" &&
-          "shape" in zodSchema
-        ) {
-          schema = zodSchema.shape as Record<string, StandardSchemaV1>;
-        }
-      }
+      // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
+      const schema = getTableSchema(this.occurrence);
 
       if (defaultSelectValue === "schema") {
         // Use getTableColumns to get all columns and select them
@@ -226,20 +215,8 @@ export class EntitySet<
     if (this.occurrence) {
       // FMTable - access via helper functions
       const defaultSelectValue = getDefaultSelect(this.occurrence);
-      const tableSchema = (this.occurrence as any)[FMTableClass.Symbol.Schema];
-      let schema: Record<string, StandardSchemaV1> | undefined;
-
-      if (tableSchema) {
-        // Extract schema from StandardSchemaV1
-        const zodSchema = tableSchema["~standard"]?.schema;
-        if (
-          zodSchema &&
-          typeof zodSchema === "object" &&
-          "shape" in zodSchema
-        ) {
-          schema = zodSchema.shape as Record<string, StandardSchemaV1>;
-        }
-      }
+      // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
+      const schema = getTableSchema(this.occurrence);
 
       if (defaultSelectValue === "schema") {
         // Use getTableColumns to get all columns and select them

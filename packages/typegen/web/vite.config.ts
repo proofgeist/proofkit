@@ -8,7 +8,7 @@ const resolveTypegenSubpaths = () => {
   const contractPath = path.resolve(__dirname, "../src/server/contract.ts");
   return {
     name: "resolve-typegen-subpaths",
-    enforce: "pre",
+    enforce: "pre" as const,
     resolveId(id) {
       if (
         id === "@proofkit/typegen/api" ||
@@ -27,6 +27,11 @@ const resolveTypegenSubpaths = () => {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), resolveTypegenSubpaths()],
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(
+      process.env.NODE_ENV || "development",
+    ),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

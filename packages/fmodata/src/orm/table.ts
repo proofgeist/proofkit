@@ -2,7 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { FieldBuilder, type ContainerDbType } from "./field-builders";
 import type { FieldBuilder as FieldBuilderType } from "./field-builders";
 import { Column, createColumn } from "./column";
-import { z } from "zod/v4";
+// import { z } from "zod/v4";
 
 /**
  * Extract the output type from a FieldBuilder.
@@ -89,6 +89,7 @@ const FMTableNavigationPaths = Symbol.for("fmodata:FMTableNavigationPaths");
 const FMTableDefaultSelect = Symbol.for("fmodata:FMTableDefaultSelect");
 const FMTableBaseTableConfig = Symbol.for("fmodata:FMTableBaseTableConfig");
 const FMTableUseEntityIds = Symbol.for("fmodata:FMTableUseEntityIds");
+const FMTableComment = Symbol.for("fmodata:FMTableComment");
 
 /**
  * Base table class with Symbol-based internal properties.
@@ -113,6 +114,7 @@ export class FMTable<
     NavigationPaths: FMTableNavigationPaths,
     DefaultSelect: FMTableDefaultSelect,
     BaseTableConfig: FMTableBaseTableConfig,
+    Comment: FMTableComment,
   };
 
   /** @internal */
@@ -125,7 +127,10 @@ export class FMTable<
   [FMTableUseEntityIds]?: boolean;
 
   /** @internal */
-  [FMTableSchema]: StandardSchemaV1<any, InferSchemaFromFields<TFields>>;
+  [FMTableComment]?: string;
+
+  /** @internal */
+  [FMTableSchema]: Partial<Record<keyof TFields, StandardSchemaV1>>;
 
   /** @internal */
   [FMTableFields]: TFields;
@@ -141,8 +146,8 @@ export class FMTable<
 
   /** @internal */
   [FMTableBaseTableConfig]: {
-    schema: Record<keyof TFields, StandardSchemaV1>;
-    inputSchema?: Record<keyof TFields, StandardSchemaV1>;
+    schema: Partial<Record<keyof TFields, StandardSchemaV1>>;
+    inputSchema?: Partial<Record<keyof TFields, StandardSchemaV1>>;
     idField?: keyof TFields;
     required: readonly (keyof TFields)[];
     readOnly: readonly (keyof TFields)[];
@@ -154,13 +159,14 @@ export class FMTable<
     name: TName;
     entityId?: `FMTID:${string}`;
     useEntityIds?: boolean;
-    schema: StandardSchemaV1<any, InferSchemaFromFields<TFields>>;
+    comment?: string;
+    schema: Partial<Record<keyof TFields, StandardSchemaV1>>;
     fields: TFields;
     navigationPaths: TNavigationPaths;
     defaultSelect: "all" | "schema" | Record<string, Column<any, any, TName>>;
     baseTableConfig: {
-      schema: Record<keyof TFields, StandardSchemaV1>;
-      inputSchema?: Record<keyof TFields, StandardSchemaV1>;
+      schema: Partial<Record<keyof TFields, StandardSchemaV1>>;
+      inputSchema?: Partial<Record<keyof TFields, StandardSchemaV1>>;
       idField?: keyof TFields;
       required: readonly (keyof TFields)[];
       readOnly: readonly (keyof TFields)[];
@@ -171,6 +177,7 @@ export class FMTable<
     this[FMTableName] = config.name;
     this[FMTableEntityId] = config.entityId;
     this[FMTableUseEntityIds] = config.useEntityIds;
+    this[FMTableComment] = config.comment;
     this[FMTableSchema] = config.schema;
     this[FMTableFields] = config.fields;
     this[FMTableNavigationPaths] = config.navigationPaths;
@@ -267,6 +274,9 @@ export interface FMTableOccurrenceOptions<
   /** The entity ID (FMTID) for this table occurrence */
   entityId?: `FMTID:${string}`;
 
+  /** The comment for this table */
+  comment?: string;
+
   /**
    * Default select behavior:
    * - "all": Select all fields (including related tables)
@@ -358,39 +368,14 @@ export function fmTableOccurrence<
   }
 
   // Build Zod schema from field builders (output/read validators)
-  const zodSchema: Record<string, StandardSchemaV1> = {};
+  const outputSchema: Partial<Record<keyof TFields, StandardSchemaV1>> = {};
   // Build input schema from field builders (input/write validators)
   const inputSchema: Record<string, StandardSchemaV1> = {};
 
   for (const { fieldName, config } of fieldConfigs) {
-    // Use outputValidator if provided, otherwise create a basic validator
+    // Use outputValidator if provided
     if (config.outputValidator) {
-      zodSchema[fieldName] = config.outputValidator;
-    } else {
-      // Create a default validator based on field type and nullability
-      let validator: any;
-      switch (config.fieldType) {
-        case "text":
-        case "date":
-        case "time":
-        case "timestamp":
-        case "container":
-        case "calculated":
-          validator = z.string();
-          break;
-        case "number":
-          validator = z.number();
-          break;
-        default:
-          validator = z.unknown();
-      }
-
-      // Add nullability if not marked as notNull
-      if (!config.notNull) {
-        validator = validator.nullable();
-      }
-
-      zodSchema[fieldName] = validator;
+      outputSchema[fieldName as keyof TFields] = config.outputValidator;
     }
 
     // Store inputValidator if provided (for write operations)
@@ -399,18 +384,13 @@ export function fmTableOccurrence<
     }
   }
 
-  // Create a schema validator for the entire table
-  const tableSchema = z.object(zodSchema) as unknown as StandardSchemaV1<
-    any,
-    InferSchemaFromFields<TFields>
-  >;
-
   // Build BaseTable-compatible config
   const baseTableConfig = {
-    schema: zodSchema as Record<keyof TFields, StandardSchemaV1>,
-    inputSchema: (Object.keys(inputSchema).length > 0
-      ? inputSchema
-      : undefined) as Record<keyof TFields, StandardSchemaV1> | undefined,
+    schema: outputSchema as Partial<Record<keyof TFields, StandardSchemaV1>>,
+    inputSchema:
+      Object.keys(inputSchema).length > 0
+        ? (inputSchema as Partial<Record<keyof TFields, StandardSchemaV1>>)
+        : undefined,
     idField: idField as keyof TFields | undefined,
     required: required as readonly (keyof TFields)[],
     readOnly: readOnly as readonly (keyof TFields)[],
@@ -449,7 +429,8 @@ export function fmTableOccurrence<
     name,
     entityId: options?.entityId,
     useEntityIds: options?.useEntityIds,
-    schema: tableSchema,
+    comment: options?.comment,
+    schema: outputSchema,
     fields,
     navigationPaths,
     defaultSelect: resolvedDefaultSelect,
@@ -621,11 +602,11 @@ export function getTableEntityId<T extends FMTable<any, any>>(
 /**
  * Get the schema validator from an FMTable instance.
  * @param table - FMTable instance
- * @returns The StandardSchemaV1 validator
+ * @returns The StandardSchemaV1 validator record (partial - only fields with validators)
  */
 export function getTableSchema<T extends FMTable<any, any>>(
   table: T,
-): StandardSchemaV1 {
+): Partial<Record<keyof T[typeof FMTableFields], StandardSchemaV1>> {
   return table[FMTableSchema];
 }
 
@@ -730,6 +711,17 @@ export function getFieldName<T extends FMTable<any, any>>(
  */
 export function getTableId<T extends FMTable<any, any>>(table: T): string {
   return table[FMTableEntityId] ?? table[FMTableName];
+}
+
+/**
+ * Get the comment from an FMTable instance.
+ * @param table - FMTable instance
+ * @returns The comment string or undefined if not set
+ */
+export function getTableComment<T extends FMTable<any, any>>(
+  table: T,
+): string | undefined {
+  return table[FMTableComment];
 }
 
 /**

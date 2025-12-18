@@ -19,7 +19,7 @@ import {
  */
 export async function validateAndTransformInput<T extends Record<string, any>>(
   data: Partial<T>,
-  inputSchema?: Record<string, StandardSchemaV1>,
+  inputSchema?: Partial<Record<string, StandardSchemaV1>>,
 ): Promise<Partial<T>> {
   // If no input schema, return data as-is
   if (!inputSchema) {
@@ -30,6 +30,9 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
 
   // Process each field that has an input validator
   for (const [fieldName, fieldSchema] of Object.entries(inputSchema)) {
+    // Skip if no schema for this field
+    if (!fieldSchema) continue;
+    
     // Only process fields that are present in the input data
     if (fieldName in data) {
       const inputValue = data[fieldName];
@@ -83,7 +86,7 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
 // Type for expand validation configuration
 export type ExpandValidationConfig = {
   relation: string;
-  targetSchema?: Record<string, StandardSchemaV1>;
+  targetSchema?: Partial<Record<string, StandardSchemaV1>>;
   targetTable?: FMTable<any, any>;
   table?: FMTable<any, any>; // For transformation
   selectedFields?: string[];
@@ -96,7 +99,7 @@ export type ExpandValidationConfig = {
  */
 export async function validateRecord<T extends Record<string, any>>(
   record: any,
-  schema: Record<string, StandardSchemaV1> | undefined,
+  schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   includeSpecialColumns?: boolean,
@@ -316,6 +319,9 @@ export async function validateRecord<T extends Record<string, any>>(
   const validatedRecord: Record<string, any> = { ...restWithoutSystemFields };
 
   for (const [fieldName, fieldSchema] of Object.entries(schema)) {
+    // Skip if no schema for this field
+    if (!fieldSchema) continue;
+    
     const input = rest[fieldName];
     try {
       let result = fieldSchema["~standard"].validate(input);
@@ -468,7 +474,7 @@ export async function validateRecord<T extends Record<string, any>>(
  */
 export async function validateListResponse<T extends Record<string, any>>(
   response: any,
-  schema: Record<string, StandardSchemaV1> | undefined,
+  schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   includeSpecialColumns?: boolean,
@@ -531,7 +537,7 @@ export async function validateListResponse<T extends Record<string, any>>(
  */
 export async function validateSingleResponse<T extends Record<string, any>>(
   response: any,
-  schema: Record<string, StandardSchemaV1> | undefined,
+  schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   mode: "exact" | "maybe" = "maybe",

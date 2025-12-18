@@ -14,7 +14,7 @@ import {
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { generateTypedClients } from "../typegen";
 import { FMServerConnection } from "@proofkit/fmodata";
-import { downloadMetadata, parseMetadata } from "../fmodata";
+import { downloadTableMetadata, parseMetadata } from "../fmodata";
 
 export interface ApiContext {
   cwd: string;
@@ -313,21 +313,60 @@ export function createApiApp(context: ApiContext) {
       },
     )
     .post(
-      "/download-metadata",
-      zValidator("json", z.object({ config: typegenConfigSingle })),
+      "/table-metadata",
+      zValidator(
+        "json",
+        z.object({
+          config: typegenConfigSingle,
+          tableName: z.string(),
+        }),
+      ),
       async (c) => {
         const input = c.req.valid("json");
         const config = input.config;
+        const { tableName } = input;
         if (config.type !== "fmodata") {
           return c.json({ error: "Invalid config type" }, 400);
         }
-        const { metadataPath } = config;
-        await downloadMetadata(config, metadataPath);
-        return c.json({ success: true });
+        try {
+          // Download metadata for the specified table
+          const tableMetadataXml = await downloadTableMetadata(
+            config,
+            tableName,
+          );
+          // Parse the metadata
+          const parsedMetadata = await parseMetadata(tableMetadataXml);
+          // Convert Maps to objects for JSON serialization
+          // Also convert nested Maps (like Properties) to objects
+          const serializedMetadata = {
+            entityTypes: Object.fromEntries(
+              Array.from(parsedMetadata.entityTypes.entries()).map(
+                ([key, value]) => [
+                  key,
+                  {
+                    ...value,
+                    Properties: Object.fromEntries(value.Properties),
+                  },
+                ],
+              ),
+            ),
+            entitySets: Object.fromEntries(parsedMetadata.entitySets),
+            namespace: parsedMetadata.namespace,
+          };
+          return c.json({ parsedMetadata: serializedMetadata });
+        } catch (err) {
+          return c.json(
+            {
+              error:
+                err instanceof Error ? err.message : "Failed to fetch metadata",
+            },
+            500,
+          );
+        }
       },
     )
     .get(
-      "/parse-metadata",
+      "/list-tables",
       zValidator("query", z.object({ config: z.string() })),
       async (c) => {
         const input = c.req.valid("query");
@@ -341,27 +380,30 @@ export function createApiApp(context: ApiContext) {
         if (config.type !== "fmodata") {
           return c.json({ error: "Invalid config type" }, 400);
         }
-        const { metadataPath } = config;
-        const metadata = await fs.readFile(metadataPath, "utf-8");
-        const parsedMetadata = await parseMetadata(metadata);
-        // Convert Maps to objects for JSON serialization
-        // Also convert nested Maps (like Properties) to objects
-        const serializedMetadata = {
-          entityTypes: Object.fromEntries(
-            Array.from(parsedMetadata.entityTypes.entries()).map(
-              ([key, value]) => [
-                key,
-                {
-                  ...value,
-                  Properties: Object.fromEntries(value.Properties),
-                },
-              ],
-            ),
-          ),
-          entitySets: Object.fromEntries(parsedMetadata.entitySets),
-          namespace: parsedMetadata.namespace,
-        };
-        return c.json({ parsedMetadata: serializedMetadata });
+        try {
+          const result = createOdataClientFromConfig(config);
+          if ("error" in result) {
+            return c.json(
+              {
+                error: result.error,
+                kind: result.kind,
+                suspectedField: result.suspectedField,
+              },
+              result.statusCode as ContentfulStatusCode,
+            );
+          }
+          const { db } = result;
+          const tableNames = await db.listTableNames();
+          return c.json({ tables: tableNames });
+        } catch (err) {
+          return c.json(
+            {
+              error:
+                err instanceof Error ? err.message : "Failed to list tables",
+            },
+            500,
+          );
+        }
       },
     )
     // POST /api/test-connection

@@ -29,6 +29,7 @@ export class FieldBuilder<
   private _outputValidator?: StandardSchemaV1<any, TOutput>;
   private _inputValidator?: StandardSchemaV1<TInput, any>;
   private _fieldType: string;
+  private _comment?: string;
 
   constructor(fieldType: string) {
     this._fieldType = fieldType;
@@ -121,6 +122,19 @@ export class FieldBuilder<
   }
 
   /**
+   * Add a comment to this field for metadata purposes.
+   * This helps future developers understand the purpose of the field.
+   *
+   * @example
+   * textField().comment("Account name of the user who last modified each record")
+   */
+  comment(comment: string): FieldBuilder<TOutput, TInput, TDbType, TReadOnly> {
+    const builder = this._clone();
+    builder._comment = comment;
+    return builder;
+  }
+
+  /**
    * Get the metadata configuration for this field.
    * @internal Used by fmTableOccurrence to extract field configuration
    */
@@ -133,6 +147,7 @@ export class FieldBuilder<
       entityId: this._entityId,
       outputValidator: this._outputValidator,
       inputValidator: this._inputValidator,
+      comment: this._comment,
     };
   }
 
@@ -150,6 +165,7 @@ export class FieldBuilder<
     builder._entityId = this._entityId;
     builder._outputValidator = this._outputValidator;
     builder._inputValidator = this._inputValidator;
+    builder._comment = this._comment;
     return builder;
   }
 }

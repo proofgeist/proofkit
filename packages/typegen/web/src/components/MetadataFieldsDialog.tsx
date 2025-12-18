@@ -13,6 +13,7 @@ import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
 import { Input, InputWrapper } from "./ui/input";
 import { Switch } from "./ui/switch";
+import { Skeleton } from "./ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
   DialogTitle,
   DialogBody,
 } from "./ui/dialog";
-import type { ParsedMetadataResponse } from "../hooks/useParseMetadata";
+import { useTableMetadata } from "../hooks/useTableMetadata";
 import type { SingleConfig } from "../lib/config-utils";
 
 // Memoize model functions outside component to ensure stable references
@@ -97,43 +98,26 @@ interface MetadataFieldsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tableName: string | null;
-  parsedMetadata: ParsedMetadataResponse["parsedMetadata"] | undefined;
   configIndex: number;
 }
 
-// Wrapper component to conditionally mount the content
 export function MetadataFieldsDialog({
   open,
   onOpenChange,
   tableName,
-  parsedMetadata,
   configIndex,
 }: MetadataFieldsDialogProps) {
-  // Only render the full content when dialog is open
-  // This prevents expensive hook computations when closed
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <MetadataFieldsDialogContent
-      open={open}
-      onOpenChange={onOpenChange}
-      tableName={tableName}
-      parsedMetadata={parsedMetadata}
-      configIndex={configIndex}
-    />
+  // Fetch metadata - query is paused when dialog is not open
+  const {
+    data: parsedMetadata,
+    isLoading,
+    isError,
+    error,
+  } = useTableMetadata(
+    configIndex,
+    tableName,
+    open, // enabled flag
   );
-}
-
-// Inner component that handles all the expensive hooks and rendering
-function MetadataFieldsDialogContent({
-  open,
-  onOpenChange,
-  tableName,
-  parsedMetadata,
-  configIndex,
-}: MetadataFieldsDialogProps) {
   const { control, setValue } = useFormContext<{ config: SingleConfig[] }>();
 
   const [globalFilter, setGlobalFilter] = useState("");
@@ -674,6 +658,9 @@ function MetadataFieldsDialogContent({
             </div>
           );
         },
+        meta: {
+          skeleton: <Skeleton className="w-11 h-6" />,
+        },
       },
       {
         accessorKey: "fieldName",
@@ -698,6 +685,9 @@ function MetadataFieldsDialogContent({
             </div>
           );
         },
+        meta: {
+          skeleton: <Skeleton className="w-32 h-5" />,
+        },
       },
       {
         accessorKey: "fieldType",
@@ -710,6 +700,9 @@ function MetadataFieldsDialogContent({
             {info.getValue() as string}
           </span>
         ),
+        meta: {
+          skeleton: <Skeleton className="w-20 h-5" />,
+        },
       },
       {
         id: "typeOverride",
@@ -745,6 +738,9 @@ function MetadataFieldsDialogContent({
             </Select>
           );
         },
+        meta: {
+          skeleton: <Skeleton className="w-[140px] h-9" />,
+        },
       },
       {
         accessorKey: "nullable",
@@ -755,6 +751,9 @@ function MetadataFieldsDialogContent({
         cell: (info) => (
           <BooleanCell value={info.getValue() as boolean | undefined} />
         ),
+        meta: {
+          skeleton: <Skeleton className="w-6 h-6" />,
+        },
       },
       {
         accessorKey: "global",
@@ -765,6 +764,9 @@ function MetadataFieldsDialogContent({
         cell: (info) => (
           <BooleanCell value={info.getValue() as boolean | undefined} />
         ),
+        meta: {
+          skeleton: <Skeleton className="w-6 h-6" />,
+        },
       },
       {
         accessorKey: "readOnly",
@@ -773,6 +775,9 @@ function MetadataFieldsDialogContent({
         ),
         enableSorting: true,
         cell: (info) => <BooleanCell value={info.getValue() as boolean} />,
+        meta: {
+          skeleton: <Skeleton className="w-6 h-6" />,
+        },
       },
     ],
     [
@@ -820,17 +825,32 @@ function MetadataFieldsDialogContent({
             </InputWrapper>
           </div>
           <div className="flex-1 min-h-0">
-            <DataGrid
-              table={fieldsTable}
-              recordCount={fieldsTable.getFilteredRowModel().rows.length}
-              isLoading={false}
-              emptyMessage="No fields found."
-              tableLayout={{ width: "auto" }}
-            >
-              <DataGridContainer>
-                <DataGridTable />
-              </DataGridContainer>
-            </DataGrid>
+            {isError ? (
+              <div className="flex items-center justify-center h-full p-8">
+                <div className="text-center space-y-2">
+                  <div className="text-destructive font-medium">
+                    Failed to load fields
+                  </div>
+                  {error instanceof Error && (
+                    <div className="text-sm text-muted-foreground">
+                      {error.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <DataGrid
+                table={fieldsTable}
+                recordCount={fieldsTable.getFilteredRowModel().rows.length}
+                isLoading={isLoading}
+                emptyMessage="No fields found."
+                tableLayout={{ width: "auto" }}
+              >
+                <DataGridContainer>
+                  <DataGridTable />
+                </DataGridContainer>
+              </DataGrid>
+            )}
           </div>
         </DialogBody>
       </DialogContent>

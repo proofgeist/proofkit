@@ -1,30 +1,26 @@
-import { useMemo, useState, useCallback, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useParseMetadata } from "../hooks/useParseMetadata";
-import { Loader2, AlertTriangle, Search } from "lucide-react";
+import { Button } from "./ui/button";
+import { SingleConfig } from "../lib/config-utils";
+import { AlertTriangle, Loader2, Search, RefreshCw } from "lucide-react";
+import { useListTables } from "../hooks/useListTables";
+import { Switch } from "./ui/switch";
+import { Input, InputWrapper } from "./ui/input";
+import { useMemo, useState, useCallback, useRef } from "react";
+import { MetadataFieldsDialog } from "./MetadataFieldsDialog";
+import { useTableMetadata } from "../hooks/useTableMetadata";
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   type ColumnDef,
 } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "./ui/data-grid";
 import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
-import { Input, InputWrapper } from "./ui/input";
-import { Switch } from "./ui/switch";
-import { DropdownMenuItem } from "./ui/dropdown-menu";
-import { MetadataFieldsDialog } from "./MetadataFieldsDialog";
-import type { SingleConfig } from "../lib/config-utils";
-
-// Memoize model functions outside component to ensure stable references
-const coreRowModel = getCoreRowModel();
-const sortedRowModel = getSortedRowModel();
-const filteredRowModel = getFilteredRowModel();
-
-// Stable empty array to prevent infinite re-renders
-const EMPTY_TABLES_CONFIG: any[] = [];
+import { DataGridPagination } from "./ui/data-grid-pagination";
+import { Skeleton } from "./ui/skeleton";
 
 interface MetadataTablesEditorProps {
   configIndex: number;
@@ -32,48 +28,138 @@ interface MetadataTablesEditorProps {
 
 interface TableRow {
   tableName: string;
-  totalFieldCount: number;
-  includedFieldCount: number;
-  entityType: string;
-  isExcluded: boolean;
+  isIncluded: boolean;
+  fieldCount?: number;
+  includedFieldCount?: number;
+}
+
+// Memoize model functions outside component to ensure stable references
+const coreRowModel = getCoreRowModel();
+const sortedRowModel = getSortedRowModel();
+const filteredRowModel = getFilteredRowModel();
+const paginationRowModel = getPaginationRowModel();
+
+// Helper component to fetch and display field count for a table
+function FieldCountCell({
+  tableName,
+  isIncluded,
+  configIndex,
+}: {
+  tableName: string;
+  isIncluded: boolean;
+  configIndex: number;
+}) {
+  const { control } = useFormContext<{ config: SingleConfig[] }>();
+  const { data: parsedMetadata, isLoading } = useTableMetadata(
+    configIndex,
+    tableName,
+    isIncluded, // Only fetch when table is included
+  );
+
+  // Watch the tables config directly to ensure reactivity
+  const allTablesConfig = useWatch({
+    control,
+    name: `config.${configIndex}.tables` as const,
+  });
+
+  const tableConfig = Array.isArray(allTablesConfig)
+    ? allTablesConfig.find((t) => t?.tableName === tableName)
+    : undefined;
+  const fieldsConfig = tableConfig?.fields ?? [];
+
+  const fieldCount = useMemo(() => {
+    if (!parsedMetadata?.entitySets || !parsedMetadata?.entityTypes) {
+      return undefined;
+    }
+
+    const entitySet = Object.values(parsedMetadata.entitySets).find(
+      (es) => es.Name === tableName,
+    );
+    if (!entitySet) return undefined;
+
+    const entityType = parsedMetadata.entityTypes[entitySet.EntityType];
+    if (!entityType?.Properties) return undefined;
+
+    const properties = entityType.Properties;
+    // Handle both Map and object formats
+    if (properties instanceof Map) {
+      return properties.size;
+    } else if (typeof properties === "object") {
+      return Object.keys(properties).length;
+    }
+    return undefined;
+  }, [parsedMetadata, tableName]);
+
+  const includedFieldCount = useMemo(() => {
+    if (fieldCount === undefined) return undefined;
+
+    // Count excluded fields
+    const excludedFields = fieldsConfig.filter(
+      (f) => f?.exclude === true,
+    ).length;
+
+    // Total fields minus excluded fields
+    return fieldCount - excludedFields;
+  }, [fieldCount, fieldsConfig]);
+
+  if (isLoading) {
+    return <Skeleton className="w-12 h-5" />;
+  }
+
+  if (fieldCount === undefined) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+
+  // Show "included / total" if some fields are excluded, otherwise just total
+  if (includedFieldCount !== undefined && includedFieldCount < fieldCount) {
+    return (
+      <span className="text-sm">
+        {includedFieldCount} / {fieldCount}
+      </span>
+    );
+  }
+
+  return <span className="text-sm">{fieldCount}</span>;
 }
 
 export function MetadataTablesEditor({
   configIndex,
 }: MetadataTablesEditorProps) {
-  const {
-    data: parsedMetadata,
-    isLoading,
-    isError,
-    error,
-    fileExists,
-  } = useParseMetadata(configIndex);
-
   const { control, setValue } = useFormContext<{ config: SingleConfig[] }>();
   const config = useWatch({
     control,
     name: `config.${configIndex}` as const,
   });
 
+  const {
+    tables,
+    isLoading: isLoadingTables,
+    isError: isErrorTables,
+    error: errorTables,
+    refetch: refetchTables,
+  } = useListTables(configIndex);
+
   const [selectedTableName, setSelectedTableName] = useState<string | null>(
     null,
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
 
-  // Get tables config, ensuring it exists - use stable reference to prevent infinite re-renders
-  const tablesConfig =
-    config?.type === "fmodata"
-      ? (config.tables ?? EMPTY_TABLES_CONFIG)
-      : EMPTY_TABLES_CONFIG;
+  // Get tables config - memoize to prevent unnecessary recalculations
+  const tablesConfig = useMemo(() => {
+    if (config?.type === "fmodata" && "tables" in config) {
+      return config.tables ?? [];
+    }
+    return [];
+  }, [config]);
 
   // Use a ref to store the latest config to avoid unstable callback dependencies
   const configRef = useRef(config);
   configRef.current = config;
 
-  // Helper to toggle table exclusion - use ref to avoid dependency on config
-  const toggleTableExclude = useCallback(
-    (tableName: string, exclude: boolean) => {
+  // Helper to toggle table inclusion
+  const toggleTableInclude = useCallback(
+    (tableName: string, include: boolean) => {
       const currentConfig = configRef.current;
       if (currentConfig?.type !== "fmodata") return;
 
@@ -82,31 +168,24 @@ export function MetadataTablesEditor({
         (t) => t?.tableName === tableName,
       );
 
-      if (exclude) {
-        // Set exclude to true
-        if (tableIndex >= 0) {
-          // Update existing entry
-          const newTables = [...currentTables];
-          newTables[tableIndex] = { ...newTables[tableIndex]!, exclude: true };
-          setValue(`config.${configIndex}.tables` as any, newTables, {
-            shouldDirty: true,
-          });
-        } else {
-          // Add new entry
+      if (include) {
+        // Add table if not already present
+        if (tableIndex < 0) {
           setValue(
             `config.${configIndex}.tables` as any,
-            [...currentTables, { tableName, exclude: true }],
+            [...currentTables, { tableName }],
             { shouldDirty: true },
           );
         }
       } else {
-        // Remove exclude (or remove entire entry if no other config)
+        // Remove table if present
         if (tableIndex >= 0) {
           const tableConfig = currentTables[tableIndex]!;
-          const { exclude: _, ...rest } = tableConfig;
-
-          if (Object.keys(rest).length === 1 && rest.tableName) {
-            // Only tableName left, remove entire entry
+          // If table has other config (like fields), we might want to keep it
+          // But for now, if it's just tableName, remove it
+          const { tableName: _, ...rest } = tableConfig;
+          if (Object.keys(rest).length === 0) {
+            // No other config, remove entirely
             const newTables = currentTables.filter((_, i) => i !== tableIndex);
             setValue(
               `config.${configIndex}.tables` as any,
@@ -114,12 +193,13 @@ export function MetadataTablesEditor({
               { shouldDirty: true },
             );
           } else {
-            // Keep other properties
-            const newTables = [...currentTables];
-            newTables[tableIndex] = rest as any;
-            setValue(`config.${configIndex}.tables` as any, newTables, {
-              shouldDirty: true,
-            });
+            // Has other config, but we're removing it anyway per user request
+            const newTables = currentTables.filter((_, i) => i !== tableIndex);
+            setValue(
+              `config.${configIndex}.tables` as any,
+              newTables.length > 0 ? newTables : undefined,
+              { shouldDirty: true },
+            );
           }
         }
       }
@@ -127,178 +207,40 @@ export function MetadataTablesEditor({
     [configIndex, setValue],
   );
 
-  // Helper to include all tables
-  const includeAllTables = useCallback(() => {
-    const currentConfig = configRef.current;
-    if (currentConfig?.type !== "fmodata" || !parsedMetadata?.entitySets)
-      return;
+  // Convert tables to table rows (filtering will be handled by DataGrid)
+  const tableRows = useMemo<TableRow[]>(() => {
+    if (!tables) return [];
+    return tables.map((tableName) => ({
+      tableName,
+      isIncluded: tablesConfig.some((t) => t?.tableName === tableName),
+    }));
+  }, [tables, tablesConfig]);
 
-    const currentTables = currentConfig.tables ?? [];
-    const allTableNames = Object.values(parsedMetadata.entitySets).map(
-      (es) => es.Name,
-    );
-
-    // Remove exclude flags from all tables
-    const newTables = currentTables
-      .map((tableConfig) => {
-        const tableName = tableConfig?.tableName;
-        if (tableName && allTableNames.includes(tableName)) {
-          const { exclude: _, ...rest } = tableConfig;
-          // If only tableName is left, don't include it
-          if (Object.keys(rest).length === 1 && rest.tableName) {
-            return null;
-          }
-          return Object.keys(rest).length > 1 ? rest : null;
-        }
-        return tableConfig;
-      })
-      .filter((t) => t !== null) as any[];
-
-    setValue(
-      `config.${configIndex}.tables` as any,
-      newTables.length > 0 ? newTables : undefined,
-      { shouldDirty: true },
-    );
-  }, [configIndex, setValue, parsedMetadata]);
-
-  // Helper to exclude all tables
-  const excludeAllTables = useCallback(() => {
-    const currentConfig = configRef.current;
-    if (currentConfig?.type !== "fmodata" || !parsedMetadata?.entitySets)
-      return;
-
-    const currentTables = currentConfig.tables ?? [];
-    const allTableNames = Object.values(parsedMetadata.entitySets).map(
-      (es) => es.Name,
-    );
-
-    // Create a map of existing table configs
-    const tableConfigMap = new Map(currentTables.map((t) => [t?.tableName, t]));
-
-    // Update or add exclude flag for all tables
-    const newTables = allTableNames.map((tableName) => {
-      const existing = tableConfigMap.get(tableName);
-      if (existing) {
-        return { ...existing, exclude: true };
-      }
-      return { tableName, exclude: true };
-    });
-
-    setValue(`config.${configIndex}.tables` as any, newTables, {
-      shouldDirty: true,
-    });
-  }, [configIndex, setValue, parsedMetadata]);
-
-  // Prepare table data with field counts and include status
-  const tableData = useMemo<TableRow[]>(() => {
-    if (!parsedMetadata?.entitySets || !parsedMetadata?.entityTypes) {
-      return [];
-    }
-
-    return Object.values(parsedMetadata.entitySets).map((entitySet) => {
-      // Find the corresponding entity type to get field count
-      const entityType = parsedMetadata.entityTypes[entitySet.EntityType];
-
-      // Handle both Map and object formats for Properties
-      let totalFieldCount = 0;
-      let fieldNames: string[] = [];
-      if (entityType?.Properties) {
-        if (entityType.Properties instanceof Map) {
-          totalFieldCount = entityType.Properties.size;
-          fieldNames = Array.from(entityType.Properties.keys());
-        } else if (typeof entityType.Properties === "object") {
-          fieldNames = Object.keys(entityType.Properties);
-          totalFieldCount = fieldNames.length;
-        }
-      }
-
-      const tableConfig = Array.isArray(tablesConfig)
-        ? tablesConfig.find((t) => t?.tableName === entitySet.Name)
-        : undefined;
-      const isExcluded = tableConfig?.exclude === true;
-
-      // Count excluded fields
-      const excludedFieldsSet = new Set<string>();
-      if (tableConfig?.fields && Array.isArray(tableConfig.fields)) {
-        for (const fieldConfig of tableConfig.fields) {
-          if (fieldConfig?.exclude === true && fieldConfig.fieldName) {
-            excludedFieldsSet.add(fieldConfig.fieldName);
-          }
-        }
-      }
-
-      const includedFieldCount = totalFieldCount - excludedFieldsSet.size;
-
-      return {
-        tableName: entitySet.Name,
-        totalFieldCount,
-        includedFieldCount,
-        entityType: entitySet.EntityType,
-        isExcluded,
-      };
-    });
-  }, [parsedMetadata, tablesConfig]);
-
-  // Check if all tables are included or excluded
-  const allTablesIncluded = useMemo(() => {
-    return tableData.length > 0 && tableData.every((row) => !row.isExcluded);
-  }, [tableData]);
-
-  const allTablesExcluded = useMemo(() => {
-    return tableData.length > 0 && tableData.every((row) => row.isExcluded);
-  }, [tableData]);
-
-  // Define columns
-  const columns = useMemo<ColumnDef<TableRow>[]>(
+  // Define columns for tables table
+  const tablesColumns = useMemo<ColumnDef<TableRow>[]>(
     () => [
       {
-        accessorKey: "isExcluded",
+        accessorKey: "isIncluded",
         header: ({ column }) => (
-          <DataGridColumnHeader
-            column={column}
-            title="Include"
-            customActions={
-              <>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    includeAllTables();
-                  }}
-                  disabled={allTablesIncluded}
-                >
-                  <span>Include All</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    excludeAllTables();
-                  }}
-                  disabled={allTablesExcluded}
-                >
-                  <span>Exclude All</span>
-                </DropdownMenuItem>
-              </>
-            }
-          />
+          <DataGridColumnHeader column={column} title="Include" />
         ),
         enableSorting: true,
-        size: 60,
-        minSize: 60,
-        maxSize: 60,
+        size: 100,
         cell: (info) => {
           const row = info.row.original;
-          const isExcluded = row.isExcluded;
           return (
-            <div className="flex items-center justify-center w-fit">
+            <div className="flex items-center justify-center">
               <Switch
-                checked={!isExcluded}
+                checked={row.isIncluded}
                 onCheckedChange={(checked) => {
-                  toggleTableExclude(row.tableName, !checked);
+                  toggleTableInclude(row.tableName, checked);
                 }}
-                onClick={(e) => e.stopPropagation()}
               />
             </div>
           );
+        },
+        meta: {
+          skeleton: <Skeleton className="w-11 h-6" />,
         },
       },
       {
@@ -312,88 +254,107 @@ export function MetadataTablesEditor({
           return (
             <span
               className={`font-medium ${
-                row.isExcluded ? "text-muted-foreground line-through" : ""
+                !row.isIncluded ? "text-muted-foreground" : ""
               }`}
             >
               {info.getValue() as string}
             </span>
           );
         },
+        meta: {
+          skeleton: <Skeleton className="w-48 h-5" />,
+        },
       },
       {
-        accessorFn: (row) => row.includedFieldCount,
         id: "fieldCount",
         header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Field Count" />
+          <DataGridColumnHeader column={column} title="Fields" />
         ),
-        enableSorting: true,
+        enableSorting: false,
+        size: 100,
         cell: (info) => {
           const row = info.row.original;
-          const hasExclusions = row.includedFieldCount !== row.totalFieldCount;
+          if (!row.isIncluded) {
+            return null;
+          }
           return (
-            <span className="text-muted-foreground">
-              {hasExclusions
-                ? `${row.includedFieldCount} / ${row.totalFieldCount}`
-                : row.totalFieldCount}
-            </span>
+            <FieldCountCell
+              tableName={row.tableName}
+              isIncluded={row.isIncluded}
+              configIndex={configIndex}
+            />
           );
+        },
+        meta: {
+          skeleton: <Skeleton className="w-12 h-5" />,
+        },
+      },
+      {
+        id: "actions",
+        header: () => null,
+        enableSorting: false,
+        size: 150,
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!row.isIncluded}
+                onClick={() => {
+                  setSelectedTableName(row.tableName);
+                  setIsDialogOpen(true);
+                }}
+                className={!row.isIncluded ? "invisible" : ""}
+              >
+                Configure Fields
+              </Button>
+            </div>
+          );
+        },
+        meta: {
+          skeleton: <Skeleton className="w-32 h-9" />,
         },
       },
     ],
-    [
-      toggleTableExclude,
-      includeAllTables,
-      excludeAllTables,
-      allTablesIncluded,
-      allTablesExcluded,
-    ],
+    [toggleTableInclude],
   );
 
-  // Create table instance - use memoized model functions for stable references
-  const table = useReactTable({
-    data: tableData,
-    columns,
+  // Create tables table instance
+  const tablesTable = useReactTable({
+    data: tableRows,
+    columns: tablesColumns,
     getCoreRowModel: coreRowModel,
     getSortedRowModel: sortedRowModel,
     getFilteredRowModel: filteredRowModel,
+    getPaginationRowModel: paginationRowModel,
     globalFilterFn: "includesString",
     state: {
-      globalFilter,
+      globalFilter: searchFilter,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onGlobalFilterChange: setSearchFilter,
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
   });
 
-  // Handle row click to open dialog with fields
-  const handleRowClick = (row: TableRow) => {
-    setSelectedTableName(row.tableName);
-    setIsDialogOpen(true);
-  };
-
-  if (fileExists === false) {
-    return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">OData Tables</h3>
-        <p className="text-sm text-muted-foreground">
-          Metadata file does not exist. Download the metadata file first to see
-          available tables.
-        </p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
+  if (isLoadingTables) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">OData Tables</h3>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Parsing metadata...</span>
+          <span>Loading tables...</span>
         </div>
       </div>
     );
   }
 
-  if (isError) {
+  if (isErrorTables) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">OData Tables</h3>
@@ -401,9 +362,11 @@ export function MetadataTablesEditor({
           <div className="flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <div className="font-medium">Failed to parse metadata</div>
-              {error instanceof Error && (
-                <div className="text-xs mt-1 opacity-90">{error.message}</div>
+              <div className="font-medium">Failed to load tables</div>
+              {errorTables instanceof Error && (
+                <div className="text-xs mt-1 opacity-90">
+                  {errorTables.message}
+                </div>
               )}
             </div>
           </div>
@@ -412,14 +375,12 @@ export function MetadataTablesEditor({
     );
   }
 
-  if (!parsedMetadata || tableData.length === 0) {
+  if (!tables || tables.length === 0) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">OData Tables</h3>
         <p className="text-sm text-muted-foreground">
-          {!parsedMetadata
-            ? "No metadata available."
-            : "No tables found in metadata."}
+          No tables found in database.
         </p>
       </div>
     );
@@ -428,25 +389,46 @@ export function MetadataTablesEditor({
   return (
     <>
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">OData Tables</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">OData Tables</h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => refetchTables()}
+            disabled={isLoadingTables}
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isLoadingTables ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
+
         <div className="space-y-2">
           <InputWrapper>
             <Search className="size-4" />
             <Input
               placeholder="Search tables..."
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
             />
           </InputWrapper>
+
           <DataGrid
-            table={table}
-            recordCount={table.getFilteredRowModel().rows.length}
-            isLoading={isLoading}
-            emptyMessage="No tables found in metadata."
-            onRowClick={handleRowClick}
+            table={tablesTable}
+            recordCount={tablesTable.getFilteredRowModel().rows.length}
+            isLoading={isLoadingTables}
+            emptyMessage="No tables found."
+            tableLayout={{ width: "auto" }}
           >
-            <DataGridContainer>
-              <DataGridTable />
+            <DataGridContainer className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <DataGridTable />
+              </div>
+              <div className="border-t border-border px-5 min-h-14 flex items-center">
+                <DataGridPagination className="py-0" />
+              </div>
             </DataGridContainer>
           </DataGrid>
         </div>
@@ -456,7 +438,6 @@ export function MetadataTablesEditor({
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         tableName={selectedTableName}
-        parsedMetadata={parsedMetadata}
         configIndex={configIndex}
       />
     </>

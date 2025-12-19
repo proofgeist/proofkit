@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Search, Check, Key } from "lucide-react";
 import {
@@ -6,11 +6,13 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   type ColumnDef,
 } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "./ui/data-grid";
 import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
+import { DataGridPagination } from "./ui/data-grid-pagination";
 import { Input, InputWrapper } from "./ui/input";
 import { Switch } from "./ui/switch";
 import { Skeleton } from "./ui/skeleton";
@@ -31,11 +33,20 @@ import {
 } from "./ui/dialog";
 import { useTableMetadata } from "../hooks/useTableMetadata";
 import type { SingleConfig } from "../lib/config-utils";
+import { InfoTooltip } from "./InfoTooltip";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "./ui/form";
 
 // Memoize model functions outside component to ensure stable references
 const coreRowModel = getCoreRowModel();
 const sortedRowModel = getSortedRowModel();
 const filteredRowModel = getFilteredRowModel();
+const paginationRowModel = getPaginationRowModel();
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_FIELDS_CONFIG: any[] = [];
@@ -137,14 +148,63 @@ export function MetadataFieldsDialog({
   // Use a ref to store the latest fieldsConfig to avoid unstable dependencies
   const fieldsConfigRef = useRef<any[]>(EMPTY_FIELDS_CONFIG);
 
+  // Extract the specific table's config - use stable reference to prevent infinite re-renders
+  const tableConfig = useMemo(() => {
+    if (!tableName || !allTablesConfig || !Array.isArray(allTablesConfig)) {
+      return undefined;
+    }
+    return allTablesConfig.find((t) => t?.tableName === tableName);
+  }, [tableName, allTablesConfig]);
+
+  // Compute the table index for use in form paths
+  const tableIndex = useMemo(() => {
+    if (!tableName || !allTablesConfig || !Array.isArray(allTablesConfig)) {
+      return -1;
+    }
+    return allTablesConfig.findIndex((t) => t?.tableName === tableName);
+  }, [tableName, allTablesConfig]);
+
+  // Ensure table exists in config when dialog opens (if table is included)
+  // This ensures we have a stable index for useController
+  useEffect(() => {
+    if (!open || !tableName || configType !== "fmodata") return;
+    if (tableIndex < 0) {
+      // Table doesn't exist yet, but we need it to exist for the form fields
+      // Only create it if we're actually configuring it (it should be included)
+      const currentTables = Array.isArray(allTablesConfig)
+        ? allTablesConfig
+        : [];
+      setValue(
+        `config.${configIndex}.tables` as any,
+        [...currentTables, { tableName }],
+        { shouldDirty: false }, // Don't mark as dirty since this is just initialization
+      );
+    }
+  }, [
+    open,
+    tableName,
+    tableIndex,
+    configType,
+    configIndex,
+    allTablesConfig,
+    setValue,
+  ]);
+
+  // Get the current table index - this will update after useEffect ensures table exists
+  const currentTableIndex = useMemo(() => {
+    if (!tableName || !allTablesConfig || !Array.isArray(allTablesConfig)) {
+      return -1;
+    }
+    return allTablesConfig.findIndex((t) => t?.tableName === tableName);
+  }, [tableName, allTablesConfig]);
+
   // Extract only the specific table's fields config - use stable reference to prevent infinite re-renders
   const fieldsConfig = useMemo(() => {
-    if (!tableName || !allTablesConfig || !Array.isArray(allTablesConfig)) {
+    if (!tableConfig) {
       return EMPTY_FIELDS_CONFIG;
     }
-    const tableConfig = allTablesConfig.find((t) => t?.tableName === tableName);
-    return (tableConfig?.fields ?? EMPTY_FIELDS_CONFIG) as any[];
-  }, [tableName, allTablesConfig]);
+    return (tableConfig.fields ?? EMPTY_FIELDS_CONFIG) as any[];
+  }, [tableConfig]);
 
   // Keep ref in sync
   fieldsConfigRef.current = fieldsConfig;
@@ -259,6 +319,14 @@ export function MetadataFieldsDialog({
     },
     [configType, configIndex, tableName, allTablesConfig, setValue],
   );
+
+  // Get the field name for variableName - table should exist due to ensuredTableIndex above
+  const variableNameFieldName =
+    `config.${configIndex}.tables.${currentTableIndex >= 0 ? currentTableIndex : 0}.variableName` as any;
+
+  // Get the field name for reduceMetadata - table should exist due to ensuredTableIndex above
+  const reduceMetadataFieldName =
+    `config.${configIndex}.tables.${currentTableIndex >= 0 ? currentTableIndex : 0}.reduceMetadata` as any;
 
   // Helper to set field type override - use ref to avoid dependency on fieldsConfig
   const setFieldTypeOverride = useCallback(
@@ -797,12 +865,23 @@ export function MetadataFieldsDialog({
     getCoreRowModel: coreRowModel,
     getSortedRowModel: sortedRowModel,
     getFilteredRowModel: filteredRowModel,
+    getPaginationRowModel: paginationRowModel,
     globalFilterFn: "includesString",
     state: {
       globalFilter,
     },
     onGlobalFilterChange: setGlobalFilter,
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
   });
+
+  // Calculate the number of included (non-excluded) fields
+  const selectedFieldsCount = useMemo(() => {
+    return fieldsData.filter((row) => !row.isExcluded).length;
+  }, [fieldsData]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -811,7 +890,10 @@ export function MetadataFieldsDialog({
         className="max-w-6xl max-h-[90vh] w-full flex flex-col !top-[5vh] !translate-y-0"
       >
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Fields for {tableName || "Table"}</DialogTitle>
+          <DialogTitle>
+            Including {selectedFieldsCount} of {fieldsData.length} fields for{" "}
+            {tableName || "Table"}
+          </DialogTitle>
         </DialogHeader>
         <DialogBody className="overflow-x-auto overflow-y-auto flex-1 min-h-0 flex flex-col">
           <div className="space-y-2 flex-shrink-0 mb-2">
@@ -848,9 +930,102 @@ export function MetadataFieldsDialog({
               >
                 <DataGridContainer>
                   <DataGridTable />
+                  <div className="border-t border-border px-5 min-h-14 flex items-center">
+                    <DataGridPagination className="py-0" />
+                  </div>
                 </DataGridContainer>
               </DataGrid>
             )}
+          </div>
+          <div className="flex-shrink-0 pt-4 border-t border-border">
+            <div className="flex items-end gap-4">
+              <FormField
+                control={control}
+                name={variableNameFieldName}
+                disabled={
+                  currentTableIndex < 0 || configType !== "fmodata" || !open
+                }
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel className="flex items-center gap-1">
+                      Variable Name Override
+                      <InfoTooltip label="The variable name to use for the generated schema for this table" />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Leave empty to use default"
+                        {...field}
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          const value = e.target.value.trim();
+                          field.onChange(value || undefined);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={reduceMetadataFieldName}
+                disabled={
+                  currentTableIndex < 0 || configType !== "fmodata" || !open
+                }
+                render={({ field }) => {
+                  const isDefault = field.value === undefined;
+                  return (
+                    <FormItem className="flex-1">
+                      <FormLabel>
+                        Reduce Metadata Annotations{" "}
+                        <InfoTooltip label="Request reduced OData annotations to reduce payload size. This will prevent comments, entity ids, and other properties from being generated." />
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          value={
+                            field.value === undefined
+                              ? "__default__"
+                              : field.value === true
+                                ? "true"
+                                : "false"
+                          }
+                          onValueChange={(val) => {
+                            if (val === "__default__") {
+                              field.onChange(undefined);
+                            } else {
+                              field.onChange(val === "true");
+                            }
+                          }}
+                        >
+                          <SelectTrigger
+                            className={
+                              isDefault
+                                ? "[&>span]:italic [&>span]:text-muted-foreground"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select reduce metadata option" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value="__default__"
+                              className="italic text-muted-foreground"
+                            >
+                              Use Top-Level Setting
+                            </SelectItem>
+                            <SelectItem value="true">
+                              Reduce Metadata
+                            </SelectItem>
+                            <SelectItem value="false">Full Metadata</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </div>
           </div>
         </DialogBody>
       </DialogContent>

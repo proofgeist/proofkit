@@ -294,6 +294,21 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
               </div>
             )}
 
+            {configType === "fmodata" && (
+              <FormField
+                control={control}
+                name={`config.${index}.reduceMetadata` as const}
+                render={({ field }) => (
+                  <SwitchField
+                    label="Reduce Metadata Annotations"
+                    infoTooltip="Request reduced OData annotations to reduce payload size. This will prevent comments, entity ids, and other properties from being generated."
+                    checked={field.value || false}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            )}
+
             {/* Final row: Using a Webviewer switch with script name inline */}
             {configType === "fmdapi" && (
               <div className="flex items-start gap-4">

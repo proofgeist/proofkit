@@ -132,9 +132,9 @@ const tableConfig = z.object({
   fields: z.array(fieldOverride).optional().meta({
     description: "Field-specific overrides as an array",
   }),
-  reduceMetadata: z.boolean().default(false).optional().meta({
+  reduceMetadata: z.boolean().optional().meta({
     description:
-      "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+      "If undefined, the top-level setting will be used. If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
   }),
 });
 
@@ -174,6 +174,10 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
     configName: z.string().optional(),
     envNames,
     path,
+    reduceMetadata: z.boolean().optional().meta({
+      description:
+        "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+    }),
     clearOldFiles: z.boolean().default(false).optional().meta({
       description:
         "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",

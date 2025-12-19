@@ -34,6 +34,7 @@
         "default": "./dist/esm/server/app.js"
       }
     },
+    "./src/types.ts": "./src/types.ts",
     "./package.json": "./package.json"
   },
   "keywords": [

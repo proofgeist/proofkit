@@ -8,8 +8,10 @@
     "index",
     "faq",
     "customization",
+    "ui",
     "---Reference---",
     "config",
+    "config-odata",
     "options"
   ]
 }

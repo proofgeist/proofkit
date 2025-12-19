@@ -19,9 +19,9 @@
     "dotenv": "^16.5.0",
     "fm-odata-client": "^3.0.1",
     "fs-extra": "^11.3.0",
-    "next": "^15.5.8",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "next": "16.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -29,13 +29,19 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.17.1",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
     "dotenv-cli": "^8.0.0",
     "eslint": "^9.23.0",
-    "eslint-config-next": "^15.3.3",
+    "eslint-config-next": "16.1.0",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.9.3",
     "vitest": "^4.0.7"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.2.7",
+      "@types/react-dom": "19.2.3"
+    }
   }
 }

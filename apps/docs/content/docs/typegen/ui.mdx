@@ -1,0 +1,25 @@
+---
+title: Typegen UI
+---
+
+The typegen tool has a built-in web interface for editing your JSON config file and running the typegen scripts. It's helpful for making sure your environment variables are setup correctly and can help autocomplete layout/field/table names into the config file.
+
+To launch the UI, run the following command and a browser window will open at `http://localhost:3141`:
+
+```bash
+npx @proofkit/typegen@latest ui
+```
+
+
+## CLI options
+
+The UI can be configured with the following CLI options:
+
+### `--port <number>`
+Set the port for the UI server.
+
+### `--config <filename>`
+Set a custom filename/path for where the config file is located or will be created. The file name must end with either `jsonc` or `json`.
+
+### `--no-open`
+Don't automatically open the browser.

@@ -1037,7 +1037,8 @@ export async function generateODataTypes(
     // Parse import statements to extract module and named imports
     function parseImport(importText: string): {
       module: string;
-      namedImports: string[];
+      namedImports: string[]; // Base names only (for comparison)
+      fullNamedImports: string[]; // Full specifiers including aliases (e.g., "x as y")
       fullText: string;
     } | null {
       const trimmed = importText.trim();
@@ -1053,7 +1054,8 @@ export async function generateODataTypes(
       const module = moduleMatch[1];
 
       // Extract named imports
-      const namedImports: string[] = [];
+      const namedImports: string[] = []; // Base names for comparison
+      const fullNamedImports: string[] = []; // Full specifiers with aliases preserved
       const namedMatch = trimmed.match(/\{([^}]+)\}/);
       if (namedMatch && namedMatch[1]) {
         const importsList = namedMatch[1];
@@ -1061,7 +1063,10 @@ export async function generateODataTypes(
         importsList.split(",").forEach((imp) => {
           const cleaned = imp.trim();
           if (cleaned) {
-            // Handle aliased imports (e.g., "x as y")
+            // Preserve the full import specifier (including alias)
+            fullNamedImports.push(cleaned);
+
+            // Extract base name for comparison (e.g., "x as y" -> "x")
             const aliasMatch = cleaned.match(/^(\w+)(?:\s+as\s+\w+)?$/);
             if (aliasMatch && aliasMatch[1]) {
               namedImports.push(aliasMatch[1]);
@@ -1072,7 +1077,7 @@ export async function generateODataTypes(
         });
       }
 
-      return { module, namedImports, fullText: trimmed };
+      return { module, namedImports, fullNamedImports, fullText: trimmed };
     }
 
     // If file exists, preserve existing imports and merge with required ones
@@ -1082,7 +1087,8 @@ export async function generateODataTypes(
       const existingImportsByModule = new Map<
         string,
         {
-          namedImports: Set<string>;
+          namedImports: Set<string>; // Base names for comparison
+          fullNamedImports: Map<string, string>; // Map base name -> full specifier (preserves aliases)
           fullText: string;
         }
       >();
@@ -1096,9 +1102,22 @@ export async function generateODataTypes(
             parsed.namedImports.forEach((imp) =>
               existing.namedImports.add(imp),
             );
+            // Preserve full import specifiers (with aliases)
+            parsed.fullNamedImports.forEach((fullSpec) => {
+              const baseName =
+                fullSpec.match(/^(\w+)(?:\s+as\s+\w+)?$/)?.[1] || fullSpec;
+              existing.fullNamedImports.set(baseName, fullSpec);
+            });
           } else {
+            const fullNamedImportsMap = new Map<string, string>();
+            parsed.fullNamedImports.forEach((fullSpec) => {
+              const baseName =
+                fullSpec.match(/^(\w+)(?:\s+as\s+\w+)?$/)?.[1] || fullSpec;
+              fullNamedImportsMap.set(baseName, fullSpec);
+            });
             existingImportsByModule.set(parsed.module, {
               namedImports: new Set(parsed.namedImports),
+              fullNamedImports: fullNamedImportsMap,
               fullText: parsed.fullText,
             });
           }
@@ -1154,29 +1173,81 @@ export async function generateODataTypes(
               (imp) => !allExistingImports.includes(imp),
             );
             if (missingImports.length > 0) {
-              // Update the existing import to include missing named imports
-              const allImports = [
-                ...allExistingImports,
-                ...missingImports,
-              ].sort();
+              // Build import list: use preserved full specifiers (with aliases) for existing,
+              // and base names for new required imports
+              const importSpecs: string[] = [];
+
+              // Add existing imports using their preserved full specifiers (with aliases)
+              if (existing) {
+                allExistingImports.forEach((baseName) => {
+                  const fullSpec = existing.fullNamedImports.get(baseName);
+                  if (fullSpec) {
+                    importSpecs.push(fullSpec);
+                  } else {
+                    importSpecs.push(baseName);
+                  }
+                });
+              } else {
+                // Fallback to parsed full named imports
+                parsed.fullNamedImports.forEach((fullSpec) => {
+                  importSpecs.push(fullSpec);
+                });
+              }
+
+              // Add missing required imports (without aliases)
+              importSpecs.push(...missingImports);
+
+              // Sort imports (but preserve aliases)
+              importSpecs.sort();
+
               finalImportLines.push(
-                `import { ${allImports.join(", ")} } from "${parsed.module}";`,
+                `import { ${importSpecs.join(", ")} } from "${parsed.module}";`,
               );
             } else {
-              // Keep existing import format but use merged imports
-              const importsList = allExistingImports.sort().join(", ");
+              // Keep existing import format with preserved aliases
+              const importSpecs: string[] = [];
+              if (existing) {
+                allExistingImports.forEach((baseName) => {
+                  const fullSpec = existing.fullNamedImports.get(baseName);
+                  if (fullSpec) {
+                    importSpecs.push(fullSpec);
+                  } else {
+                    importSpecs.push(baseName);
+                  }
+                });
+              } else {
+                parsed.fullNamedImports.forEach((fullSpec) => {
+                  importSpecs.push(fullSpec);
+                });
+              }
+              importSpecs.sort();
               finalImportLines.push(
-                `import { ${importsList} } from "${parsed.module}";`,
+                `import { ${importSpecs.join(", ")} } from "${parsed.module}";`,
               );
             }
             handledModules.add(parsed.module);
             requiredImportsByModule.delete(parsed.module);
           } else {
             // Keep existing import (not in required imports - user added it)
-            // Use merged imports to avoid duplicates
-            const importsList = allExistingImports.sort().join(", ");
+            // Preserve aliases from existing imports
+            const importSpecs: string[] = [];
+            if (existing) {
+              allExistingImports.forEach((baseName) => {
+                const fullSpec = existing.fullNamedImports.get(baseName);
+                if (fullSpec) {
+                  importSpecs.push(fullSpec);
+                } else {
+                  importSpecs.push(baseName);
+                }
+              });
+            } else {
+              parsed.fullNamedImports.forEach((fullSpec) => {
+                importSpecs.push(fullSpec);
+              });
+            }
+            importSpecs.sort();
             finalImportLines.push(
-              `import { ${importsList} } from "${parsed.module}";`,
+              `import { ${importSpecs.join(", ")} } from "${parsed.module}";`,
             );
           }
         } else {

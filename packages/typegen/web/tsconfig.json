@@ -20,7 +20,7 @@
       "@/*": ["./src/*"],
       "@proofkit/typegen": ["../src/index.ts"],
       "@proofkit/typegen/*": ["../src/*"],
-      "@proofkit/typegen/api": ["../src/server/contract.ts"]
+      "@proofkit/typegen/webui-server": ["../src/server/app.ts"]
     }
   },
   "include": ["src", "../src"],

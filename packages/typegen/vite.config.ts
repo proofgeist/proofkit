@@ -12,7 +12,7 @@ export default mergeConfig(
       "./src/index.ts",
       "./src/cli.ts",
       "./src/types.ts",
-      "./src/server/contract.ts",
+      "./src/server/app.ts",
     ],
     srcDir: "./src",
     cjs: false,

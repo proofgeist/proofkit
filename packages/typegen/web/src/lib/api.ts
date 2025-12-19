@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import type { ApiApp } from "@proofkit/typegen/api";
+import type { ApiApp } from "@proofkit/typegen/webui-server";
 import type { SingleConfig } from "./config-utils";
 
 // Create typed client using the server app type

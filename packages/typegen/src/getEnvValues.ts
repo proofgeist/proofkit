@@ -33,25 +33,34 @@ export type EnvValidationResult =
  * @returns Object containing all environment variable values
  */
 export function getEnvValues(envNames?: EnvNames): EnvValues {
-  const server = process.env[envNames?.server ?? defaultEnvNames.server];
-  const db = process.env[envNames?.db ?? defaultEnvNames.db];
+  // Helper to get env name, treating empty strings as undefined
+  const getEnvName = (customName: string | undefined, defaultName: string) =>
+    customName && customName.trim() !== "" ? customName : defaultName;
 
-  // For apiKey, check custom env name first, then fall back to default
-  // This matches the pattern in typegen.ts
-  const apiKey =
-    (envNames?.auth && "apiKey" in envNames.auth
-      ? process.env[envNames.auth.apiKey ?? defaultEnvNames.apiKey]
-      : undefined) ?? process.env[defaultEnvNames.apiKey];
+  // Resolve environment variables
+  const server =
+    process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
+  const db = process.env[getEnvName(envNames?.db, defaultEnvNames.db)];
 
-  const username =
-    (envNames?.auth && "username" in envNames.auth
-      ? process.env[envNames.auth.username ?? defaultEnvNames.username]
-      : undefined) ?? process.env[defaultEnvNames.username];
+  // Always attempt to read all auth methods from environment variables,
+  // regardless of which type is specified in envNames.auth
+  // This matches the pattern in getEnvVarsFromConfig
+  const apiKeyEnvName =
+    envNames?.auth && "apiKey" in envNames.auth
+      ? getEnvName(envNames.auth.apiKey, defaultEnvNames.apiKey)
+      : defaultEnvNames.apiKey;
+  const usernameEnvName =
+    envNames?.auth && "username" in envNames.auth
+      ? getEnvName(envNames.auth.username, defaultEnvNames.username)
+      : defaultEnvNames.username;
+  const passwordEnvName =
+    envNames?.auth && "password" in envNames.auth
+      ? getEnvName(envNames.auth.password, defaultEnvNames.password)
+      : defaultEnvNames.password;
 
-  const password =
-    (envNames?.auth && "password" in envNames.auth
-      ? process.env[envNames.auth.password ?? defaultEnvNames.password]
-      : undefined) ?? process.env[defaultEnvNames.password];
+  const apiKey = process.env[apiKeyEnvName];
+  const username = process.env[usernameEnvName];
+  const password = process.env[passwordEnvName];
 
   return {
     server,
@@ -64,7 +73,7 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
 
 /**
  * Validates environment values and returns a result with either success data or error message.
- * Uses chalk for console output (for fmdapi compatibility).
+ * Follows the same validation pattern as getEnvVarsFromConfig for consistency.
  *
  * @param envValues - The environment values to validate
  * @param envNames - Optional custom environment variable names (for error messages)
@@ -76,29 +85,61 @@ export function validateEnvValues(
 ): EnvValidationResult {
   const { server, db, apiKey, username, password } = envValues;
 
+  // Helper to get env name, treating empty strings as undefined
+  const getEnvName = (customName: string | undefined, defaultName: string) =>
+    customName && customName.trim() !== "" ? customName : defaultName;
+
+  // Validate required env vars (server, db, and at least one auth method)
   if (!server || !db || (!apiKey && !username)) {
-    const missingVars: string[] = [];
-    if (!server) {
-      missingVars.push(envNames?.server ?? defaultEnvNames.server);
-    }
-    if (!db) {
-      missingVars.push(envNames?.db ?? defaultEnvNames.db);
+    // Build missing details
+    const missingDetails: {
+      server?: boolean;
+      db?: boolean;
+      auth?: boolean;
+      password?: boolean;
+    } = {
+      server: !server,
+      db: !db,
+      auth: !apiKey && !username,
+    };
+
+    // Only report password as missing if server and db are both present,
+    // and username is set but password is missing. This ensures we don't
+    // incorrectly report password as missing when the actual error is about
+    // missing server or database.
+    if (server && db && username && !password) {
+      missingDetails.password = true;
     }
 
-    if (!apiKey) {
+    // Build error message with env var names
+    const missingVars: string[] = [];
+    if (!server) {
+      missingVars.push(getEnvName(envNames?.server, defaultEnvNames.server));
+    }
+    if (!db) {
+      missingVars.push(getEnvName(envNames?.db, defaultEnvNames.db));
+    }
+
+    if (!apiKey && !username) {
       // Determine the names to display in the error message
-      const apiKeyName =
-        envNames?.auth && "apiKey" in envNames.auth && envNames.auth.apiKey
+      const apiKeyName = getEnvName(
+        envNames?.auth && "apiKey" in envNames.auth
           ? envNames.auth.apiKey
-          : defaultEnvNames.apiKey;
-      const usernameName =
-        envNames?.auth && "username" in envNames.auth && envNames.auth.username
+          : undefined,
+        defaultEnvNames.apiKey,
+      );
+      const usernameName = getEnvName(
+        envNames?.auth && "username" in envNames.auth
           ? envNames.auth.username
-          : defaultEnvNames.username;
-      const passwordName =
-        envNames?.auth && "password" in envNames.auth && envNames.auth.password
+          : undefined,
+        defaultEnvNames.username,
+      );
+      const passwordName = getEnvName(
+        envNames?.auth && "password" in envNames.auth
           ? envNames.auth.password
-          : defaultEnvNames.password;
+          : undefined,
+        defaultEnvNames.password,
+      );
 
       missingVars.push(
         `${apiKeyName} (or ${usernameName} and ${passwordName})`,
@@ -108,6 +149,21 @@ export function validateEnvValues(
     return {
       success: false,
       errorMessage: `Missing required environment variables: ${missingVars.join(", ")}`,
+    };
+  }
+
+  // Validate password if username is provided
+  if (username && !password) {
+    const passwordName = getEnvName(
+      envNames?.auth && "password" in envNames.auth
+        ? envNames.auth.password
+        : undefined,
+      defaultEnvNames.password,
+    );
+
+    return {
+      success: false,
+      errorMessage: `Password is required when using username authentication. Missing: ${passwordName}`,
     };
   }
 

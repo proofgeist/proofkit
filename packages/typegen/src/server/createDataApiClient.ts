@@ -51,8 +51,6 @@ function getEnvVarsFromConfig(
   const getEnvName = (customName: string | undefined, defaultName: string) =>
     customName && customName.trim() !== "" ? customName : defaultName;
 
-  console.log("env names", envNames);
-
   // Resolve environment variables
   const server =
     process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
@@ -173,7 +171,6 @@ export function createOdataClientFromConfig(
   config: FmodataConfig,
 ): OdataClientResult | OdataClientError {
   const result = getEnvVarsFromConfig(config.envNames);
-  console.log("env vars result", result);
   if ("error" in result) {
     return result;
   }

@@ -54,6 +54,43 @@ function mapTypeOverrideToFieldBuilder(
 }
 
 /**
+ * Applies import aliases to a field builder expression
+ * e.g., "textField()" with alias "textField" -> "tf" becomes "tf()"
+ */
+function applyAliasToFieldBuilder(
+  fieldBuilder: string,
+  importAliases: Map<string, string> | undefined,
+): string {
+  if (!importAliases || importAliases.size === 0) {
+    return fieldBuilder;
+  }
+
+  // Map of field builder function names to their import names
+  const fieldBuilderMap = new Map([
+    ["textField", "textField"],
+    ["numberField", "numberField"],
+    ["dateField", "dateField"],
+    ["timestampField", "timestampField"],
+    ["containerField", "containerField"],
+  ]);
+
+  // Try to find and replace each field builder with its alias
+  let result = fieldBuilder;
+  for (const [baseName, importName] of fieldBuilderMap) {
+    const alias = importAliases.get(baseName);
+    if (alias) {
+      // Replace "baseName(" with "alias("
+      result = result.replace(
+        new RegExp(`\\b${baseName}\\(`, "g"),
+        `${alias}(`,
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
  * Maps OData types to field builder functions from @proofkit/fmodata
  */
 function mapODataTypeToFieldBuilder(
@@ -121,6 +158,7 @@ function generateTableOccurrence(
   tableOverride?: NonNullable<FmodataConfig["tables"]>[number],
   existingFields?: ParsedTableOccurrence,
   alwaysOverrideFieldNames?: boolean,
+  importAliases?: Map<string, string>, // Map base name -> alias (e.g., "textField" -> "tf")
 ): GeneratedTO {
   const fmtId = entityType["@TableID"];
   const keyFields = entityType.$Key || [];
@@ -250,7 +288,7 @@ function generateTableOccurrence(
     }
 
     // Apply typeOverride if provided, otherwise use inferred type
-    const fieldBuilder = mapODataTypeToFieldBuilder(
+    let fieldBuilder = mapODataTypeToFieldBuilder(
       metadata.$Type,
       fieldOverride?.typeOverride as
         | "text"
@@ -262,6 +300,9 @@ function generateTableOccurrence(
         | "container"
         | undefined,
     );
+
+    // Apply import aliases if present
+    fieldBuilder = applyAliasToFieldBuilder(fieldBuilder, importAliases);
 
     // Track which field builders are used
     if (fieldBuilder.includes("textField()")) {
@@ -433,6 +474,7 @@ interface ParsedTableOccurrence {
   fields: Map<string, ParsedField>; // keyed by field name
   fieldsByEntityId: Map<string, ParsedField>; // keyed by entity ID
   existingImports: string[]; // All existing import statements as strings
+  importAliases: Map<string, string>; // Map base name -> alias (e.g., "textField" -> "tf")
 }
 
 /**
@@ -725,13 +767,25 @@ function parseExistingTableFile(
     }
   }
 
-  // Extract existing imports
+  // Extract existing imports and build alias map
   const existingImports: string[] = [];
+  const importAliases = new Map<string, string>(); // base name -> alias
   const importDeclarations = sourceFile.getImportDeclarations();
   for (const importDecl of importDeclarations) {
     const importText = importDecl.getFullText();
     if (importText.trim()) {
       existingImports.push(importText.trim());
+    }
+
+    // Extract aliases from named imports
+    const namedImports = importDecl.getNamedImports();
+    for (const namedImport of namedImports) {
+      const name = namedImport.getName(); // The original name
+      const aliasNode = namedImport.getAliasNode();
+      if (aliasNode) {
+        const alias = aliasNode.getText(); // The alias
+        importAliases.set(name, alias);
+      }
     }
   }
 
@@ -785,6 +839,7 @@ function parseExistingTableFile(
     fields,
     fieldsByEntityId,
     existingImports,
+    importAliases,
   };
 }
 
@@ -937,6 +992,7 @@ export async function generateODataTypes(
         tableOverride,
         undefined,
         tableAlwaysOverrideFieldNames,
+        undefined,
       );
       generatedTOs.push({
         ...generated,
@@ -995,6 +1051,7 @@ export async function generateODataTypes(
           generated.tableOverride,
           existingFields,
           tableAlwaysOverrideFieldNames,
+          existingFields.importAliases,
         )
       : generated;
 
@@ -1194,8 +1251,15 @@ export async function generateODataTypes(
                 });
               }
 
-              // Add missing required imports (without aliases)
-              importSpecs.push(...missingImports);
+              // Add missing required imports (apply aliases if they exist)
+              for (const missingImport of missingImports) {
+                const alias = existingFields.importAliases.get(missingImport);
+                if (alias) {
+                  importSpecs.push(`${missingImport} as ${alias}`);
+                } else {
+                  importSpecs.push(missingImport);
+                }
+              }
 
               // Sort imports (but preserve aliases)
               importSpecs.sort();
@@ -1259,7 +1323,17 @@ export async function generateODataTypes(
       // Add any required imports that don't exist yet
       for (const [module, namedImports] of requiredImportsByModule.entries()) {
         if (module && !handledModules.has(module)) {
-          const importsList = Array.from(namedImports).sort().join(", ");
+          // Apply aliases to new imports if they exist
+          const importSpecs: string[] = [];
+          for (const importName of Array.from(namedImports).sort()) {
+            const alias = existingFields.importAliases.get(importName);
+            if (alias) {
+              importSpecs.push(`${importName} as ${alias}`);
+            } else {
+              importSpecs.push(importName);
+            }
+          }
+          const importsList = importSpecs.join(", ");
           if (importsList) {
             finalImportLines.push(
               `import { ${importsList} } from "${module}";`,

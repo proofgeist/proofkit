@@ -1,5 +1,83 @@
 {
-  "name": "fmodata",
-  "version": "0.0.0",
-  "private": true
+  "name": "@proofkit/fmodata",
+  "version": "0.1.0-alpha.19",
+  "description": "FileMaker OData API client",
+  "repository": "git@github.com:proofgeist/proofkit.git",
+  "author": "Eric <37158449+eluce2@users.noreply.github.com>",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc && vite build && publint --strict",
+    "build:watch": "tsc && vite build --watch",
+    "check-format": "prettier --check .",
+    "format": "prettier --write .",
+    "dev": "tsc --watch",
+    "test": "vitest run --typecheck",
+    "tsc": "tsc --noEmit",
+    "test:typecheck": "vitest run --typecheck",
+    "test:watch": "vitest --typecheck",
+    "test:build": "pnpm build && TEST_BUILD=true vitest run --typecheck",
+    "test:watch:build": "TEST_BUILD=true vitest --typecheck",
+    "test:e2e": "op inject -i op.env -o .env.local -f && vitest run tests/e2e.test.ts",
+    "capture": "op inject -i op.env -o .env.local -f && tsx scripts/capture-responses.ts",
+    "knip": "knip",
+    "pub:alpha": "bun run scripts/publish-alpha.ts",
+    "global:link": "pnpm link --global"
+  },
+  "dependencies": {
+    "@fetchkit/ffetch": "^4.2.0",
+    "dotenv": "^16.5.0",
+    "es-toolkit": "^1.38.0",
+    "neverthrow": "^8.2.0",
+    "odata-query": "^8.0.4"
+  },
+  "peerDependencies": {
+    "zod": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@standard-schema/spec": "^1.0.0",
+    "@tanstack/vite-config": "^0.2.0",
+    "@types/node": "^22.17.1",
+    "fast-xml-parser": "^5.3.2",
+    "prettier": "^3.5.3",
+    "publint": "^0.3.12",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.7",
+    "zod": "4.1.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "keywords": [
+    "filemaker",
+    "fms",
+    "fm",
+    "odata",
+    "proofgeist",
+    "proofkit"
+  ]
 }

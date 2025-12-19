@@ -3,7 +3,7 @@ import { useWatch, useFormContext } from "react-hook-form";
 import { client } from "../lib/api";
 import type { SingleConfig } from "../lib/config-utils";
 
-export function useListTables(configIndex: number) {
+export function useListTables(configIndex: number, enabled?: boolean) {
   const { control } = useFormContext<{ config: SingleConfig[] }>();
 
   // Watch the config at the given index
@@ -12,8 +12,8 @@ export function useListTables(configIndex: number) {
     name: `config.${configIndex}` as const,
   });
 
-  // Only query if config is fmodata type
-  const shouldQuery = config?.type === "fmodata";
+  // Only query if config is fmodata type and enabled is true (or undefined for backward compatibility)
+  const shouldQuery = config?.type === "fmodata" && (enabled ?? true);
 
   const { data, error, isLoading, isError, refetch } = useQuery<{
     tables: string[];

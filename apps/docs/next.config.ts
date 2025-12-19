@@ -9,7 +9,15 @@ const withMDX = createMDX();
 const config: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["typescript", "twoslash", "shiki"],
-  transpilePackages: ["@proofkit/fmdapi", "@proofkit/registry"],
+  transpilePackages: ["@proofkit/fmdapi", "@proofkit/registry", "@proofkit/typegen"],
+  webpack: (config, { isServer }) => {
+    // Resolve @proofkit/typegen/config to source files for development
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@proofkit/typegen/config": require.resolve("@proofkit/typegen/src/types.ts"),
+    };
+    return config;
+  },
   async redirects() {
     return [
       {

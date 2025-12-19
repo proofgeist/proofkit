@@ -1,0 +1,294 @@
+---
+title: Configuration (OData)
+---
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+The typegen tool supports OData-based type generation using the `fmodata` config type. This is configured using the `proofkit-typegen-config.jsonc` file at the root of your project.
+
+<Callout type="warn">
+The `@proofkit/fmodata` package is still in beta. Some of these options may change.
+</Callout>
+
+The config key can also be an array of configs, which is useful if you need to connect to multiple databases, or with different settings for different sets of tables.
+
+```jsonc title="proofkit-typegen-config.jsonc" tab="Single OData config"
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": {
+    "type": "fmodata",
+    // ... your OData config here
+  },
+}
+```
+
+```jsonc title="proofkit-typegen-config.jsonc" tab="Multiple configs"
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": [
+    {
+      "type": "fmodata",
+      // ... your OData config here
+    },
+    {
+      "type": "fmdapi",
+      // ... your Data API config here
+    },
+  ],
+}
+```
+
+## Config options
+
+<TypeTable
+  type={{
+    type: {
+      type: `"fmodata"`,
+      required: true,
+      description: "The config type. Must be set to 'fmodata' for OData-based type generation.",
+    },
+    configName: {
+      type: "string",
+      required: false,
+      description: "An optional name for this configuration. Useful when using multiple configs.",
+    },
+    envNames: {
+      type: "object",
+      required: false,
+      description:
+        "Set this key if you need to use different environment variable names for your OData connection.",
+    },
+    path: {
+      type: "string",
+      default: `"schema"`,
+      description:
+        "The path to the directory where the generated files will be saved.",
+    },
+    reduceMetadata: {
+      type: "boolean",
+      required: false,
+      description:
+        "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+    },
+    clearOldFiles: {
+      type: "boolean",
+      default: "false",
+      description:
+        "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
+    },
+    alwaysOverrideFieldNames: {
+      type: "boolean",
+      default: "true",
+      description:
+        "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
+    },
+    tables: {
+      type: "array",
+      required: true,
+      description:
+        "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
+    },
+  }}
+/>
+
+### `type` (required)
+Must be set to `"fmodata"` to use OData-based type generation.
+
+### `configName` (optional)
+An optional name for this configuration. Useful when using multiple configs to identify which config is being used.
+
+### `path` (default: `"schema"`)
+The path to the directory where the generated files will be saved.
+
+### `reduceMetadata` (optional)
+If set to `true`, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.
+
+<Callout type="info">
+  This can also be set per-table in the `tables` array to override the top-level setting for specific tables.
+</Callout>
+
+### `clearOldFiles` (default: `false`)
+If set to `false`, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.
+
+<Callout type="info">
+  This is different from the Data API config, which defaults to `true`. For OData configs, we preserve existing files by default to allow for customizations.
+</Callout>
+
+### `alwaysOverrideFieldNames` (default: `true`)
+If set to `true` (default), field names will always be updated to match metadata, even when matching by entity ID. If set to `false`, existing field names are preserved when matching by entity ID.
+
+<Callout type="info">
+  This can also be set per-table in the `tables` array to override the top-level setting for specific tables.
+</Callout>
+
+### `envNames` (optional)
+If set, will use the specified environment variable names for your OData connection.
+
+<Callout type="warn">
+  Only use the **names** of your environment variables, not the values for security reasons.
+</Callout>
+
+The `envNames` object supports:
+- `server`: The environment variable name for the OData server URL
+- `db`: The environment variable name for the database name
+- `auth`: An object with either:
+  - `apiKey`: The environment variable name for the API key, or
+  - `username` and `password`: The environment variable names for username and password
+
+## Table options
+
+The `tables` array in the config is where you define the tables (entity sets) that you want to generate types for. You must define at least one table in the config.
+
+<TypeTable
+  type={{
+    tableName: {
+      type: "string",
+      required: true,
+      description:
+        "The entity set name (table occurrence name) to generate. This table will be included in metadata download and type generation.",
+    },
+    variableName: {
+      type: "string",
+      required: false,
+      description:
+        "Override the generated TypeScript variable name. The original entity set name is still used for the OData path.",
+    },
+    fields: {
+      type: "array",
+      required: false,
+      description: "Field-specific overrides as an array",
+    },
+    reduceMetadata: {
+      type: "boolean",
+      required: false,
+      description:
+        "If undefined, the top-level setting will be used. If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+    },
+    alwaysOverrideFieldNames: {
+      type: "boolean",
+      required: false,
+      description:
+        "If undefined, the top-level setting will be used. If true, field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
+    },
+  }}
+/>
+
+### `tableName` (required)
+The entity set name (table occurrence name) to generate. This table will be included in metadata download and type generation. Must match exactly the name of an entity set in your OData service.
+
+### `variableName` (optional)
+Override the generated TypeScript variable name. The original entity set name is still used for the OData path, but you can use a different name in your TypeScript code.
+
+For example, if your entity set is named `"Customers_Table"` but you want to use `Customers` in your code:
+
+```jsonc
+{
+  "tableName": "Customers_Table",
+  "variableName": "Customers"
+}
+```
+
+### `reduceMetadata` (optional)
+If undefined, the top-level setting will be used. If set to `true` or `false`, it will override the top-level `reduceMetadata` setting for this specific table.
+
+### `alwaysOverrideFieldNames` (optional)
+If undefined, the top-level setting will be used. If set to `true` or `false`, it will override the top-level `alwaysOverrideFieldNames` setting for this specific table.
+
+## Field options
+
+Within each table's `fields` array, you can specify field-level overrides.
+
+<TypeTable
+  type={{
+    fieldName: {
+      type: "string",
+      required: true,
+      description: "The field name this override applies to",
+    },
+    exclude: {
+      type: "boolean",
+      required: false,
+      description: "If true, this field will be excluded from generation",
+    },
+    typeOverride: {
+      type: `"text" | "number" | "boolean" | "fmBooleanNumber" | "date" | "timestamp" | "container"`,
+      required: false,
+      description:
+        "Override the inferred field type from metadata. Options: text, number, boolean, fmBooleanNumber, date, timestamp, container",
+    },
+  }}
+/>
+
+### `fieldName` (required)
+The field name this override applies to. Must match exactly the name of a field in the table's metadata.
+
+### `exclude` (optional)
+If set to `true`, this field will be excluded from generation entirely. Useful for fields you don't need in your TypeScript types.
+
+### `typeOverride` (optional)
+Override the inferred field type from metadata. The available options are:
+
+- `"text"`: Treats the field as a text field
+- `"number"`: Treats the field as a number field
+- `"boolean"`: Treats the field as a boolean (validated with `z.coerce.boolean()`)
+- `"fmBooleanNumber"`: Same as boolean, explicit FileMaker 0/1 pattern
+- `"date"`: Treats the field as a date field
+- `"timestamp"`: Treats the field as a timestamp field
+- `"container"`: Treats the field as a container field
+
+<Callout type="info">
+  The typegen tool will attempt to infer the correct field type from the OData metadata. Use `typeOverride` only when you need to override the inferred type.
+</Callout>
+
+## Example configuration
+
+Here's a complete example of an OData configuration:
+
+```jsonc title="proofkit-typegen-config.jsonc"
+{
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
+  "config": {
+    "type": "fmodata",
+    "configName": "Production OData",
+    "path": "schema/odata",
+    "reduceMetadata": true,
+    "clearOldFiles": false,
+    "alwaysOverrideFieldNames": true,
+    "envNames": {
+      "server": "ODATA_SERVER_URL",
+      "db": "ODATA_DATABASE_NAME",
+      "auth": {
+        "apiKey": "ODATA_API_KEY"
+      }
+    },
+    "tables": [
+      {
+        "tableName": "Customers",
+        "variableName": "Customers",
+        "fields": [
+          {
+            "fieldName": "InternalID",
+            "exclude": true
+          },
+          {
+            "fieldName": "Status",
+            "typeOverride": "boolean"
+          }
+        ]
+      },
+      {
+        "tableName": "Orders",
+        "reduceMetadata": false,
+        "fields": [
+          {
+            "fieldName": "OrderDate",
+            "typeOverride": "date"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+

@@ -26,7 +26,6 @@ npx @proofkit/typegen generate
 
 This is also the default command, so "generate" is optional. If this command is run without any config file detected, you will be prompted to create the config file (the `init` command).
 
-See [Global Options](#global-options) for `--config` usage.
 
 ### `--env-path <path>`
 
@@ -36,9 +35,13 @@ Set a custom path for where your environment variables are stored.
 
 Recreate the overrides file(s), even if they already exist.
 
-### `--skip-env-check`
 
-Ignore loading environment variables from a file. Use this option if you are injecting environment variables directly as the command runs.
+## `ui` command
+```bash
+npx @proofkit/typegen ui
+```
+Launch the typegen web interface for easy configuration.
+
 
 ## `init` command
 

@@ -166,24 +166,20 @@ const generateTypedClientsSingle = async (
       webviewerScriptName:
         config?.type === "fmdapi" ? config.webviewerScriptName : undefined,
       envNames: {
-        auth:
-          "apiKey" in auth
-            ? {
-                apiKey:
-                  envNames?.auth && "apiKey" in envNames.auth
-                    ? (envNames.auth.apiKey ?? defaultEnvNames.apiKey)
-                    : defaultEnvNames.apiKey,
-              }
-            : {
-                username:
-                  envNames?.auth && "username" in envNames.auth
-                    ? (envNames.auth.username ?? defaultEnvNames.username)
-                    : defaultEnvNames.username,
-                password:
-                  envNames?.auth && "password" in envNames.auth
-                    ? (envNames.auth.password ?? defaultEnvNames.password)
-                    : defaultEnvNames.password,
-              },
+        auth: {
+          apiKey:
+            envNames?.auth && "apiKey" in envNames.auth
+              ? (envNames.auth.apiKey ?? defaultEnvNames.apiKey)
+              : defaultEnvNames.apiKey,
+          username:
+            envNames?.auth && "username" in envNames.auth
+              ? (envNames.auth.username ?? defaultEnvNames.username)
+              : defaultEnvNames.username,
+          password:
+            envNames?.auth && "password" in envNames.auth
+              ? (envNames.auth.password ?? defaultEnvNames.password)
+              : defaultEnvNames.password,
+        },
         db: envNames?.db ?? defaultEnvNames.db,
         server: envNames?.server ?? defaultEnvNames.server,
       },

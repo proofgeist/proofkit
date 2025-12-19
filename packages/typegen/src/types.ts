@@ -34,40 +34,28 @@ const envNames = z
       .string()
       .optional()
       .transform((val) => (val === "" ? undefined : val)),
-    auth: z.union([
-      z
-        .object({
-          apiKey: z
-            .string()
-            .optional()
-            .transform((val) => (val === "" ? undefined : val)),
-        })
-        .optional()
-        .transform((val) => {
-          if (val && Object.values(val).every((v) => v === undefined)) {
-            return undefined;
-          }
-          return val ?? undefined;
-        }),
-      z
-        .object({
-          username: z
-            .string()
-            .optional()
-            .transform((val) => (val === "" ? undefined : val)),
-          password: z
-            .string()
-            .optional()
-            .transform((val) => (val === "" ? undefined : val)),
-        })
-        .optional()
-        .transform((val) => {
-          if (val && Object.values(val).every((v) => v === undefined)) {
-            return undefined;
-          }
-          return val ?? undefined;
-        }),
-    ]),
+    auth: z
+      .object({
+        apiKey: z
+          .string()
+          .optional()
+          .transform((val) => (val === "" ? undefined : val)),
+        username: z
+          .string()
+          .optional()
+          .transform((val) => (val === "" ? undefined : val)),
+        password: z
+          .string()
+          .optional()
+          .transform((val) => (val === "" ? undefined : val)),
+      })
+      .optional()
+      .transform((val) => {
+        if (!val || Object.values(val).every((v) => v === undefined)) {
+          return undefined;
+        }
+        return val;
+      }),
   })
   .optional()
   .transform((val) => {

@@ -2,56 +2,61 @@
   "config": [
     {
       "type": "fmodata",
+      "envNames": {
+        "auth": {
+          "apiKey": "unused"
+        }
+      },
       "path": "schema",
       "clearOldFiles": false,
       "alwaysOverrideFieldNames": true,
       "tables": [
         {
           "tableName": "isolated_contacts",
-          "reduceMetadata": false,
+          "reduceMetadata": false
         },
         {
           "tableName": "fmdapi_test",
           "fields": [
             {
               "fieldName": "CreationTimestamp",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "CreatedBy",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "ModificationTimestamp",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "ModifiedBy",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "anything",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "fieldWithValues",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "myContainer",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "repeatingContainer",
-              "exclude": true,
+              "exclude": true
             },
             {
               "fieldName": "booleanField",
-              "exclude": true,
-            },
-          ],
-        },
-      ],
-    },
-  ],
+              "exclude": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

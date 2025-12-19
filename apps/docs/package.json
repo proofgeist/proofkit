@@ -3,7 +3,7 @@
   "version": "0.0.2",
   "private": true,
   "scripts": {
-    "build": "node scripts/bundle-registry-templates.js && next build",
+    "build": "pnpm --filter @proofkit/typegen build && node scripts/bundle-registry-templates.js && next build",
     "dev": "next dev -p 3005 --turbo",
     "start": "next start -p 3005",
     "postinstall": "fumadocs-mdx",

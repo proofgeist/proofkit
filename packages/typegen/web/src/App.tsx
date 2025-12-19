@@ -22,6 +22,7 @@ import { Form } from "./components/ui/form";
 import { useConfig } from "./hooks/useConfig";
 import { Badge } from "./components/ui/badge";
 import { ConfigEditor } from "./components/ConfigEditor";
+import { EmptyState } from "./components/EmptyState";
 
 // Normalize config to always be an array
 function normalizeConfig(
@@ -71,6 +72,96 @@ function App() {
 
   // Get configs from form values for data access
   const configs = form.watch("config");
+
+  // Extract exists and path from configDataResponse
+  const configExists = configDataResponse?.exists ?? false;
+  const configPath = configDataResponse?.path;
+  const fullPath = configDataResponse?.fullPath;
+
+  // Determine empty state conditions
+  const isFileMissing = !configExists;
+  const isEmptyConfig = configExists && configs.length === 0;
+  const showEmptyState = isFileMissing || isEmptyConfig;
+
+  // Handlers for adding connections when file is missing (creates file with connection)
+  const handleCreateFileWithFmdapi = async () => {
+    try {
+      const newConfig: SingleConfig = {
+        type: "fmdapi",
+        envNames: {
+          server: undefined,
+          db: undefined,
+          auth: undefined,
+        },
+        layouts: [],
+      };
+      await saveMutation.mutateAsync([newConfig]);
+      // Refetch to get the updated state
+      await refetch();
+      // After refetch, the form will be updated with the new config
+      // Set active accordion to the first item (index 0)
+      setTimeout(() => {
+        setActiveAccordionItem(0);
+      }, 100);
+    } catch (err) {
+      console.error("Failed to create config file with Data API:", err);
+    }
+  };
+
+  const handleCreateFileWithFmodata = async () => {
+    try {
+      const newConfig: SingleConfig = {
+        type: "fmodata",
+        envNames: {
+          server: undefined,
+          db: undefined,
+          auth: undefined,
+        },
+        tables: [],
+      };
+      await saveMutation.mutateAsync([newConfig]);
+      // Refetch to get the updated state
+      await refetch();
+      // After refetch, the form will be updated with the new config
+      // Set active accordion to the first item (index 0)
+      setTimeout(() => {
+        setActiveAccordionItem(0);
+      }, 100);
+    } catch (err) {
+      console.error("Failed to create config file with OData:", err);
+    }
+  };
+
+  // Handlers for adding connections when file exists
+  const handleAddFmdapi = () => {
+    append({
+      type: "fmdapi",
+      envNames: {
+        server: undefined,
+        db: undefined,
+        auth: undefined,
+      },
+      layouts: [],
+    });
+    setTimeout(() => {
+      setActiveAccordionItem(fields.length);
+    }, 1);
+  };
+
+  const handleAddFmodata = () => {
+    append({
+      type: "fmodata",
+      envNames: {
+        server: undefined,
+        db: undefined,
+        auth: undefined,
+      },
+      tables: [],
+    });
+    setTimeout(() => {
+      setActiveAccordionItem(fields.length);
+    }, 1);
+  };
 
   // Run typegen mutation
   const runTypegenMutation = useMutation({
@@ -159,146 +250,151 @@ function App() {
               </h1>
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={handleRunTypegen}
-                disabled={
-                  runTypegenMutation.isPending || saveMutation.isPending
-                }
-              >
-                {runTypegenMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <PlayIcon className="w-4 h-4" />
-                )}
-                {runTypegenMutation.isPending ? "Running..." : "Run Typegen"}
-              </Button>
-              <Button
-                onClick={handleSaveAll}
-                disabled={
-                  saveMutation.isPending ||
-                  runTypegenMutation.isPending ||
-                  !form.formState.isDirty
-                }
-                variant={form.formState.isDirty ? "primary" : "outline"}
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : null}
-                {saveMutation.isPending
-                  ? "Saving..."
-                  : form.formState.isDirty
-                    ? "Save"
-                    : "Saved"}
-              </Button>
-            </div>
+            {!isFileMissing && (
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleRunTypegen}
+                  disabled={
+                    runTypegenMutation.isPending || saveMutation.isPending
+                  }
+                >
+                  {runTypegenMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <PlayIcon className="w-4 h-4" />
+                  )}
+                  {runTypegenMutation.isPending ? "Running..." : "Run Typegen"}
+                </Button>
+                <Button
+                  onClick={handleSaveAll}
+                  disabled={
+                    saveMutation.isPending ||
+                    runTypegenMutation.isPending ||
+                    !form.formState.isDirty
+                  }
+                  variant={form.formState.isDirty ? "primary" : "outline"}
+                >
+                  {saveMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : null}
+                  {saveMutation.isPending
+                    ? "Saving..."
+                    : form.formState.isDirty
+                      ? "Save"
+                      : "Saved"}
+                </Button>
+              </div>
+            )}
           </div>
         </header>
 
         <Form {...form}>
           <form onSubmit={handleSaveAll}>
-            <Accordion
-              value={activeAccordionItem.toString()}
-              onValueChange={(value) => setActiveAccordionItem(Number(value))}
-              type="single"
-              variant="outline"
-              collapsible
-              className="w-full lg:w-[75%] mx-auto"
-            >
-              {fields.map((field, index) => {
-                const config = configs[index];
-                return (
-                  <AccordionItem
-                    key={field.id}
-                    value={index.toString()}
-                    className="bg-card"
-                  >
-                    <AccordionTrigger>
-                      <ConfigSummary config={config} />
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ConfigEditor
-                        index={index}
-                        onRemove={() => remove(index)}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-
-              <div className="w-full flex justify-center mt-6">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="lg" variant="inverse">
-                      <Plus className="w-4 h-4" />
-                      Add Connection
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-80">
-                    <DropdownMenuItem
-                      className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                      onClick={() => {
-                        append({
-                          type: "fmdapi",
-                          envNames: {
-                            server: undefined,
-                            db: undefined,
-                            auth: undefined,
-                          },
-                          layouts: [],
-                        });
-                        setTimeout(() => {
-                          setActiveAccordionItem(fields.length);
-                        }, 1);
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-base">Data API</p>
-                        <Badge shape="circle" appearance="light" variant="info">
-                          Legacy
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Reads/writes data using layout-specific context
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                      onClick={() => {
-                        append({
-                          type: "fmodata",
-                          envNames: {
-                            server: undefined,
-                            db: undefined,
-                            auth: undefined,
-                          },
-                          tables: [],
-                        });
-                        setTimeout(() => {
-                          setActiveAccordionItem(fields.length);
-                        }, 1);
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-base">OData</p>
-                        <Badge
-                          shape="circle"
-                          appearance="light"
-                          variant="success"
-                        >
-                          New
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Reads/writes data directly to the database tables, using
-                        the relationship graph as context
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            {!isLoading && showEmptyState ? (
+              <div className="w-full lg:w-[75%] mx-auto">
+                <EmptyState
+                  variant={isFileMissing ? "file-missing" : "empty-config"}
+                  configPath={
+                    isFileMissing ? fullPath || configPath : configPath
+                  }
+                  onAddFmdapi={
+                    isFileMissing
+                      ? handleCreateFileWithFmdapi
+                      : isEmptyConfig
+                        ? handleAddFmdapi
+                        : undefined
+                  }
+                  onAddFmodata={
+                    isFileMissing
+                      ? handleCreateFileWithFmodata
+                      : isEmptyConfig
+                        ? handleAddFmodata
+                        : undefined
+                  }
+                />
               </div>
-            </Accordion>
+            ) : (
+              <Accordion
+                value={activeAccordionItem.toString()}
+                onValueChange={(value) => setActiveAccordionItem(Number(value))}
+                type="single"
+                variant="outline"
+                collapsible
+                className="w-full lg:w-[75%] mx-auto"
+              >
+                {fields.map((field, index) => {
+                  const config = configs[index];
+                  return (
+                    <AccordionItem
+                      key={field.id}
+                      value={index.toString()}
+                      className="bg-card"
+                    >
+                      <AccordionTrigger>
+                        <ConfigSummary config={config} />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ConfigEditor
+                          index={index}
+                          onRemove={() => remove(index)}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+
+                <div className="w-full flex justify-center mt-6">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="lg" variant="inverse">
+                        <Plus className="w-4 h-4" />
+                        Add Connection
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80">
+                      <DropdownMenuItem
+                        className="flex flex-col items-start gap-1 p-4 cursor-pointer"
+                        onClick={handleAddFmdapi}
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-base">Data API</p>
+                          <Badge
+                            shape="circle"
+                            appearance="light"
+                            variant="info"
+                          >
+                            Legacy
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Reads/writes data using layout-specific context
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="flex flex-col items-start gap-1 p-4 cursor-pointer"
+                        onClick={handleAddFmodata}
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-base">OData</p>
+                          <Badge
+                            shape="circle"
+                            appearance="light"
+                            variant="success"
+                          >
+                            New
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Reads/writes data directly to the database tables,
+                          using the relationship graph as context
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </Accordion>
+            )}
           </form>
         </Form>
       </div>

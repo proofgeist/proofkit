@@ -58,8 +58,8 @@ export function createApiApp(context: ApiContext) {
 
     // GET /api/config
     .get("/config", async (c) => {
-      const { configPath } = context;
-      const fullPath = path.resolve(context.cwd, configPath);
+      const { configPath, cwd } = context;
+      const fullPath = path.resolve(cwd, configPath);
 
       const exists = fs.existsSync(fullPath);
 
@@ -67,6 +67,7 @@ export function createApiApp(context: ApiContext) {
         return c.json({
           exists: false,
           path: configPath,
+          fullPath: fullPath,
           config: null,
         });
       }
@@ -79,6 +80,7 @@ export function createApiApp(context: ApiContext) {
         return c.json({
           exists: true,
           path: configPath,
+          fullPath: fullPath,
           config: parsed.config,
         });
       } catch (err) {
@@ -328,12 +330,16 @@ export function createApiApp(context: ApiContext) {
         if (config.type !== "fmodata") {
           return c.json({ error: "Invalid config type" }, 400);
         }
+        const tableConfig = config.tables.find(
+          (t) => t.tableName === tableName,
+        );
         try {
           // Download metadata for the specified table
-          const tableMetadataXml = await downloadTableMetadata(
-            config,
+          const tableMetadataXml = await downloadTableMetadata({
+            config: config,
             tableName,
-          );
+            reduceAnnotations: tableConfig?.reduceMetadata ?? false,
+          });
           // Parse the metadata
           const parsedMetadata = await parseMetadata(tableMetadataXml);
           // Convert Maps to objects for JSON serialization

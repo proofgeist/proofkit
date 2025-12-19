@@ -1,13 +1,4 @@
-import {
-  describe,
-  expect,
-  it,
-  afterAll,
-  beforeAll,
-  vi,
-  beforeEach,
-  afterEach,
-} from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import { generateTypedClients } from "../src/typegen";
 import { typegenConfigSingle } from "../src/types";
 import { OttoAPIKey } from "../../fmdapi/src";
@@ -16,7 +7,6 @@ import fs from "fs/promises";
 import path from "path";
 import { execSync } from "child_process";
 
-import dotenv from "dotenv";
 // // Load the correct .env.local relative to this test file's directory
 // dotenv.config({ path: path.resolve(__dirname, ".env.local") });
 
@@ -140,7 +130,11 @@ describe("typegen", () => {
   });
 
   it("basic typegen with zod", async () => {
-    const config: z.infer<typeof typegenConfigSingle> = {
+    const config: Extract<
+      z.infer<typeof typegenConfigSingle>,
+      { type: "fmdapi" }
+    > = {
+      type: "fmdapi",
       layouts: [
         {
           layoutName: "layout",
@@ -163,7 +157,11 @@ describe("typegen", () => {
   it("basic typegen without zod", async () => {
     // Define baseGenPath within the scope or ensure it's accessible
     // Assuming baseGenPath is accessible from the describe block's scope
-    const config: z.infer<typeof typegenConfigSingle> = {
+    const config: Extract<
+      z.infer<typeof typegenConfigSingle>,
+      { type: "fmdapi" }
+    > = {
+      type: "fmdapi",
       layouts: [
         // add your layouts and name schemas here
         {
@@ -189,7 +187,11 @@ describe("typegen", () => {
   }, 30000);
 
   it("basic typegen with strict numbers", async () => {
-    const config: z.infer<typeof typegenConfigSingle> = {
+    const config: Extract<
+      z.infer<typeof typegenConfigSingle>,
+      { type: "fmdapi" }
+    > = {
+      type: "fmdapi",
       layouts: [
         {
           layoutName: "layout",
@@ -223,7 +225,11 @@ describe("typegen", () => {
   }, 30000);
 
   it("zod validator", async () => {
-    const config: z.infer<typeof typegenConfigSingle> = {
+    const config: Extract<
+      z.infer<typeof typegenConfigSingle>,
+      { type: "fmdapi" }
+    > = {
+      type: "fmdapi",
       layouts: [
         {
           layoutName: "layout",

@@ -132,6 +132,10 @@ const tableConfig = z.object({
   fields: z.array(fieldOverride).optional().meta({
     description: "Field-specific overrides as an array",
   }),
+  reduceMetadata: z.boolean().default(false).optional().meta({
+    description:
+      "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+  }),
 });
 
 const typegenConfigSingleBase = z.discriminatedUnion("type", [

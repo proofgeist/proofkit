@@ -328,6 +328,10 @@ export function MetadataFieldsDialog({
   const reduceMetadataFieldName =
     `config.${configIndex}.tables.${currentTableIndex >= 0 ? currentTableIndex : 0}.reduceMetadata` as any;
 
+  // Get the field name for alwaysOverrideFieldNames - table should exist due to ensuredTableIndex above
+  const alwaysOverrideFieldNamesFieldName =
+    `config.${configIndex}.tables.${currentTableIndex >= 0 ? currentTableIndex : 0}.alwaysOverrideFieldNames` as any;
+
   // Helper to set field type override - use ref to avoid dependency on fieldsConfig
   const setFieldTypeOverride = useCallback(
     (fieldName: string, typeOverride: string | undefined) => {
@@ -938,7 +942,7 @@ export function MetadataFieldsDialog({
             )}
           </div>
           <div className="flex-shrink-0 pt-4 border-t border-border">
-            <div className="flex items-end gap-4">
+            <div className="flex  gap-4">
               <FormField
                 control={control}
                 name={variableNameFieldName}
@@ -965,6 +969,67 @@ export function MetadataFieldsDialog({
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+              <FormField
+                control={control}
+                name={alwaysOverrideFieldNamesFieldName}
+                disabled={
+                  currentTableIndex < 0 || configType !== "fmodata" || !open
+                }
+                render={({ field }) => {
+                  const isDefault = field.value === undefined;
+                  return (
+                    <FormItem className="flex-1">
+                      <FormLabel>
+                        Always Update Field Names{" "}
+                        <InfoTooltip label="If true, the field names in your generated schema may be updated to match FileMaker; may cause TypeScript errors in your code. If you only use entity IDs in your OData requests, you can safely leave this off." />
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          value={
+                            field.value === undefined
+                              ? "__default__"
+                              : field.value === true
+                                ? "true"
+                                : "false"
+                          }
+                          onValueChange={(val) => {
+                            if (val === "__default__") {
+                              field.onChange(undefined);
+                            } else {
+                              field.onChange(val === "true");
+                            }
+                          }}
+                        >
+                          <SelectTrigger
+                            className={
+                              isDefault
+                                ? "[&>span]:italic [&>span]:text-muted-foreground"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select always update field names option" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value="__default__"
+                              className="italic text-muted-foreground"
+                            >
+                              Use Top-Level Setting
+                            </SelectItem>
+                            <SelectItem value="true">
+                              Always Update Field Names
+                            </SelectItem>
+                            <SelectItem value="false">
+                              Don't Always Update Field Names
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={control}

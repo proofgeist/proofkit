@@ -136,6 +136,10 @@ const tableConfig = z.object({
     description:
       "If undefined, the top-level setting will be used. If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
   }),
+  alwaysOverrideFieldNames: z.boolean().optional().meta({
+    description:
+      "If undefined, the top-level setting will be used. If true, field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
+  }),
 });
 
 const typegenConfigSingleBase = z.discriminatedUnion("type", [
@@ -181,6 +185,10 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
     clearOldFiles: z.boolean().default(false).optional().meta({
       description:
         "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
+    }),
+    alwaysOverrideFieldNames: z.boolean().default(true).optional().meta({
+      description:
+        "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
     }),
     tables: z.array(tableConfig).default([]).meta({
       description:

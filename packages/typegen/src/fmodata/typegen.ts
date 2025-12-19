@@ -4,7 +4,7 @@ import { parseMetadata, type ParsedMetadata } from "./parseMetadata";
 import { generateODataTypes } from "./generateODataTypes";
 
 export async function generateODataTablesSingle(config: FmodataConfig) {
-  const { tables } = config;
+  const { tables, reduceMetadata = false } = config;
 
   if (!tables || tables.length === 0) {
     throw new Error("No tables specified in config");
@@ -28,7 +28,7 @@ export async function generateODataTablesSingle(config: FmodataConfig) {
     const tableMetadataXml = await downloadTableMetadata({
       config,
       tableName,
-      reduceAnnotations: tableConfig.reduceMetadata,
+      reduceAnnotations: tableConfig.reduceMetadata ?? reduceMetadata,
     });
 
     // Parse the metadata

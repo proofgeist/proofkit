@@ -330,7 +330,7 @@ export function MetadataTablesEditor({
                 }}
                 className={!row.isIncluded ? "invisible" : ""}
               >
-                Configure Fields
+                Configure
               </Button>
             </div>
           );

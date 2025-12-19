@@ -68,7 +68,6 @@ function createFmodataConfig(): SingleConfig {
 function App() {
   // Health check to detect if server is down
   const { isHealthy } = useHealthCheck({
-    interval: 50000, // Check every 5 seconds
     enabled: true,
   });
 

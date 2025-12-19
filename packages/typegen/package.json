@@ -28,13 +28,7 @@
         "default": "./dist/esm/types.js"
       }
     },
-    "./api": {
-      "import": {
-        "types": "./dist/esm/server/contract.d.ts",
-        "default": "./dist/esm/server/contract.js"
-      }
-    },
-    "./api-app": {
+    "./webui-server": {
       "import": {
         "types": "./dist/esm/server/app.d.ts",
         "default": "./dist/esm/server/app.js"

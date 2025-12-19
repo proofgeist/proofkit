@@ -2,23 +2,24 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Plugin to resolve @proofkit/typegen subpath exports
 const resolveTypegenSubpaths = () => {
-  const contractPath = path.resolve(__dirname, "../src/server/contract.ts");
+  const appPath = path.resolve(__dirname, "../src/server/app.ts");
   return {
     name: "resolve-typegen-subpaths",
     enforce: "pre" as const,
     resolveId(id) {
-      if (
-        id === "@proofkit/typegen/api" ||
-        id === "@proofkit/typegen/api-app"
-      ) {
-        return contractPath;
+      if (id === "@proofkit/typegen/webui-server") {
+        return appPath;
       }
       // Also handle if Vite is trying to resolve it as a file path
-      if (id.endsWith("/api") && id.includes("@proofkit/typegen")) {
-        return contractPath;
+      if (id.endsWith("/webui-server") && id.includes("@proofkit/typegen")) {
+        return appPath;
       }
       return null;
     },

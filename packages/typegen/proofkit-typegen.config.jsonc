@@ -1,0 +1,10 @@
+{
+  "config": [
+    {
+      "type": "fmodata",
+      "path": "schema",
+      "clearOldFiles": false,
+      "tables": []
+    }
+  ]
+}

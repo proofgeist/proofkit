@@ -20,9 +20,11 @@ import { ConfigSummary } from "./components/ConfigSummary";
 import { type SingleConfig } from "./lib/config-utils";
 import { Form } from "./components/ui/form";
 import { useConfig } from "./hooks/useConfig";
+import { useHealthCheck } from "./hooks/useHealthCheck";
 import { Badge } from "./components/ui/badge";
 import { ConfigEditor } from "./components/ConfigEditor";
 import { EmptyState } from "./components/EmptyState";
+import { ConnectionWarning } from "./components/ConnectionWarning";
 
 // Normalize config to always be an array
 function normalizeConfig(
@@ -64,6 +66,12 @@ function createFmodataConfig(): SingleConfig {
 }
 
 function App() {
+  // Health check to detect if server is down
+  const { isHealthy } = useHealthCheck({
+    interval: 50000, // Check every 5 seconds
+    enabled: true,
+  });
+
   // Load and save config using custom hook
   const {
     configDataResponse,
@@ -175,6 +183,12 @@ function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8 relative">
+        {/* Connection Warning Overlay - Shows when server is unreachable */}
+        {/* Only show if we've lost connection (not during initial load or retries) */}
+        {!isHealthy && !isLoading && !isRetrying && (
+          <ConnectionWarning onRefresh={() => refetch()} />
+        )}
+
         {/* Loading Overlay - Preserves form state underneath */}
         {isLoading && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">

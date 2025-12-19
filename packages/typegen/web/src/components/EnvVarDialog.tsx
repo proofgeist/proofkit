@@ -1,25 +1,22 @@
 import { useEffect, useState } from "react";
-import { useWatch, useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
 import { defaultEnvNames } from "../../../src/constants";
 import { EnvVarField } from "./EnvVarField";
 import { useEnvVarIndicator } from "./useEnvVarIndicator";
 import { useEnvValue } from "../lib/envValues";
 import { useTestConnection, setDialogOpen } from "../hooks/useTestConnection";
+import { Alert, AlertContent, AlertDescription, AlertIcon } from "./ui/alert";
+import { Card, CardContent, CardTitle } from "./ui/card";
+import { Separator } from "./ui/separator";
 import {
   Loader2,
   CheckCircle2,
@@ -27,6 +24,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Server,
+  Info,
 } from "lucide-react";
 
 interface EnvVarDialogProps {
@@ -51,9 +49,6 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
   const { control, setValue, getValues } = useFormContext<{
     config: any[];
   }>();
-  const [authTypeSelector, setAuthTypeSelector] = useState<
-    "none" | "apiKey" | "username"
-  >("apiKey");
   const [dialogOpen, setDialogOpenState] = useState(false);
 
   // Track dialog open state to pause background tests
@@ -64,30 +59,68 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
     };
   }, [index, dialogOpen]);
 
-  // Watch the envNames.auth value for this config
+  // Get indicator data
+  const { hasCustomValues, serverValue, serverLoading, dbValue, dbLoading } =
+    useEnvVarIndicator(index);
+
+  // Watch the auth env names from the form
   const envNamesAuth = useWatch({
     control,
     name: `config.${index}.envNames.auth` as const,
   });
 
-  // Get indicator data
-  const {
-    hasCustomValues,
-    serverValue,
-    serverLoading,
-    dbValue,
-    dbLoading,
-    authEnvName: baseAuthEnvName,
-  } = useEnvVarIndicator(index);
+  // Determine the actual env names to use (from form or defaults)
+  const apiKeyEnvName =
+    envNamesAuth &&
+    typeof envNamesAuth === "object" &&
+    "apiKey" in envNamesAuth &&
+    envNamesAuth.apiKey &&
+    envNamesAuth.apiKey.trim() !== ""
+      ? envNamesAuth.apiKey
+      : defaultEnvNames.apiKey;
+  const usernameEnvName =
+    envNamesAuth &&
+    typeof envNamesAuth === "object" &&
+    "username" in envNamesAuth &&
+    envNamesAuth.username &&
+    envNamesAuth.username.trim() !== ""
+      ? envNamesAuth.username
+      : defaultEnvNames.username;
+  const passwordEnvName =
+    envNamesAuth &&
+    typeof envNamesAuth === "object" &&
+    "password" in envNamesAuth &&
+    envNamesAuth.password &&
+    envNamesAuth.password.trim() !== ""
+      ? envNamesAuth.password
+      : defaultEnvNames.password;
 
-  // Determine auth env name based on auth type selector
-  const authEnvName =
-    baseAuthEnvName ||
-    (authTypeSelector === "apiKey"
-      ? defaultEnvNames.apiKey
-      : defaultEnvNames.username);
+  // Resolve all three auth env values
+  const { data: apiKeyValue, isLoading: apiKeyLoading } =
+    useEnvValue(apiKeyEnvName);
+  const { data: usernameValue, isLoading: usernameLoading } =
+    useEnvValue(usernameEnvName);
+  const { data: passwordValue, isLoading: passwordLoading } =
+    useEnvValue(passwordEnvName);
 
-  const { data: authValue, isLoading: authLoading } = useEnvValue(authEnvName);
+  // Determine which authentication method will be used
+  // Default to API key if it resolves to a value, otherwise use username/password if both resolve
+  const activeAuthMethod =
+    !apiKeyLoading &&
+    apiKeyValue !== undefined &&
+    apiKeyValue !== null &&
+    apiKeyValue !== ""
+      ? "apiKey"
+      : !usernameLoading &&
+          !passwordLoading &&
+          usernameValue !== undefined &&
+          usernameValue !== null &&
+          usernameValue !== "" &&
+          passwordValue !== undefined &&
+          passwordValue !== null &&
+          passwordValue !== ""
+        ? "username"
+        : null;
 
   // Test connection hook - enable when dialog is closed, disable when open
   // When dialog is open, it will only run when the retry button is clicked
@@ -107,40 +140,37 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
         serverValue === "")) ||
     (!dbLoading &&
       (dbValue === undefined || dbValue === null || dbValue === "")) ||
-    (!authLoading &&
-      (authValue === undefined || authValue === null || authValue === ""));
+    (!apiKeyLoading &&
+      (apiKeyValue === undefined ||
+        apiKeyValue === null ||
+        apiKeyValue === "")) ||
+    (!usernameLoading &&
+      (usernameValue === undefined ||
+        usernameValue === null ||
+        usernameValue === "")) ||
+    (!passwordLoading &&
+      (passwordValue === undefined ||
+        passwordValue === null ||
+        passwordValue === ""));
 
-  // Initialize auth type selector based on current form value
+  // Initialize auth fields if not already set
   useEffect(() => {
-    let authSelector: "none" | "apiKey" | "username" = "apiKey";
-
-    if (envNamesAuth) {
-      if (typeof envNamesAuth === "object") {
-        // Check for username first (since it has two fields, it's more specific)
-        if ("username" in envNamesAuth || "password" in envNamesAuth) {
-          authSelector = "username";
-        } else if ("apiKey" in envNamesAuth) {
-          authSelector = "apiKey";
-        }
-        // If it's an empty object {}, don't change the selector or reset values
-        // This preserves the current state when the server returns {}
-      }
-    } else {
-      // Only initialize if auth is truly undefined/null
-      // Check current form value to avoid overwriting
-      const currentAuth = getValues(`config.${index}.envNames.auth` as any);
-      if (!currentAuth) {
-        setValue(`config.${index}.envNames.auth` as const, {
-          apiKey: "",
-        });
-      }
+    const currentAuth = getValues(`config.${index}.envNames.auth` as any);
+    if (!currentAuth) {
+      setValue(`config.${index}.envNames.auth` as const, {
+        apiKey: "",
+        username: "",
+        password: "",
+      });
+    } else if (typeof currentAuth === "object") {
+      // Ensure all fields exist
+      setValue(`config.${index}.envNames.auth` as const, {
+        apiKey: currentAuth.apiKey || "",
+        username: currentAuth.username || "",
+        password: currentAuth.password || "",
+      });
     }
-
-    // Only update selector if it's different to avoid unnecessary re-renders
-    if (authSelector !== authTypeSelector) {
-      setAuthTypeSelector(authSelector);
-    }
-  }, [envNamesAuth, setValue, getValues, index, authTypeSelector]);
+  }, [setValue, getValues, index]);
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpenState}>
@@ -169,7 +199,12 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Custom Environment Variable Names</DialogTitle>
+          <DialogDescription>
+            Enter the <span className="font-medium text-foreground">names</span>{" "}
+            of the environment variables below, not the values
+          </DialogDescription>
         </DialogHeader>
+
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <EnvVarField
@@ -186,104 +221,69 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
               defaultValue={defaultEnvNames.db}
             />
 
-            <div className="col-span-full flex flex-col gap-4 md:flex-row md:flex-nowrap md:items-start">
-              <div className="space-y-2 md:w-[180px] md:flex-shrink-0">
-                <label
-                  htmlFor={`config.${index}.authType`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Auth Type
-                </label>
-                <Select
-                  value={authTypeSelector}
-                  onValueChange={(value: "none" | "apiKey" | "username") => {
-                    setAuthTypeSelector(value);
-                    // Preserve existing values when switching auth types
-                    const currentAuth = envNamesAuth;
-                    if (value === "apiKey") {
-                      setValue(`config.${index}.envNames.auth` as const, {
-                        apiKey:
-                          (currentAuth &&
-                            typeof currentAuth === "object" &&
-                            "apiKey" in currentAuth &&
-                            currentAuth.apiKey) ||
-                          "",
-                      });
-                    } else if (value === "username") {
-                      setValue(`config.${index}.envNames.auth` as const, {
-                        username:
-                          (currentAuth &&
-                            typeof currentAuth === "object" &&
-                            "username" in currentAuth &&
-                            currentAuth.username) ||
-                          "",
-                        password:
-                          (currentAuth &&
-                            typeof currentAuth === "object" &&
-                            "password" in currentAuth &&
-                            currentAuth.password) ||
-                          "",
-                      });
-                    } else {
-                      setValue(
-                        `config.${index}.envNames.auth` as const,
-                        undefined,
-                      );
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select auth type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="apiKey">OttoFMS API Key</SelectItem>
-                    <SelectItem value="username">Username/Password</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="col-span-full">
+              <Card className="bg-transparent">
+                <CardContent className="space-y-4 bg-transparent">
+                  <CardTitle>Authentication</CardTitle>
+                  {/* API Key on its own line */}
+                  <EnvVarField
+                    fieldName={`config.${index}.envNames.auth.apiKey` as const}
+                    label="API Key"
+                    placeholder={defaultEnvNames.apiKey}
+                    defaultValue={defaultEnvNames.apiKey}
+                    dimField={activeAuthMethod !== "apiKey"}
+                  />
 
-              <div className="flex flex-col gap-4 md:flex-row md:flex-nowrap md:flex-1">
-                {authTypeSelector === "apiKey" && (
-                  <div className="flex-1">
+                  {/* OR Divider */}
+                  <div className="flex items-center gap-3">
+                    <Separator className="flex-1" />
+                    <span className="text-sm text-muted-foreground font-medium">
+                      OR
+                    </span>
+                    <Separator className="flex-1" />
+                  </div>
+
+                  {/* Username and Password on the same line */}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <EnvVarField
                       fieldName={
-                        `config.${index}.envNames.auth.apiKey` as const
+                        `config.${index}.envNames.auth.username` as const
                       }
-                      label="API Key"
-                      placeholder={defaultEnvNames.apiKey}
-                      defaultValue={defaultEnvNames.apiKey}
+                      label="Username"
+                      placeholder={defaultEnvNames.username}
+                      defaultValue={defaultEnvNames.username}
+                      dimField={activeAuthMethod !== "username"}
+                    />
+
+                    <EnvVarField
+                      fieldName={
+                        `config.${index}.envNames.auth.password` as const
+                      }
+                      label="Password"
+                      placeholder={defaultEnvNames.password}
+                      defaultValue={defaultEnvNames.password}
+                      dimField={activeAuthMethod !== "username"}
                     />
                   </div>
-                )}
-
-                {authTypeSelector === "username" && (
-                  <>
-                    <div className="flex-1">
-                      <EnvVarField
-                        fieldName={
-                          `config.${index}.envNames.auth.username` as const
-                        }
-                        label="Username"
-                        placeholder={defaultEnvNames.username}
-                        defaultValue={defaultEnvNames.username}
-                      />
-                    </div>
-
-                    <div className="flex-1">
-                      <EnvVarField
-                        fieldName={
-                          `config.${index}.envNames.auth.password` as const
-                        }
-                        label="Password"
-                        placeholder={defaultEnvNames.password}
-                        defaultValue={defaultEnvNames.password}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
+
+          <Alert variant="mono" appearance="light" size="sm">
+            <AlertIcon>
+              <Info className="size-4" />
+            </AlertIcon>
+            <AlertContent>
+              <AlertDescription>
+                You will need to rerun the{" "}
+                <code className="font-mono bg-muted px-1 py-0.5 rounded-md">
+                  @proofkit/typegen ui
+                </code>{" "}
+                command if you change any environment variables.
+              </AlertDescription>
+            </AlertContent>
+          </Alert>
 
           {/* Test Connection Section */}
           <div className="border-t pt-4 space-y-3">

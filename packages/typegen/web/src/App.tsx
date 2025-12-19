@@ -62,6 +62,7 @@ function createFmodataConfig(): SingleConfig {
     },
     tables: [],
     alwaysOverrideFieldNames: true,
+    includeAllFieldsByDefault: true,
   };
 }
 

@@ -320,6 +320,18 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                     />
                   )}
                 />
+                <FormField
+                  control={control}
+                  name={`config.${index}.includeAllFieldsByDefault` as const}
+                  render={({ field }) => (
+                    <SwitchField
+                      label="Include All Fields By Default"
+                      infoTooltip="If true, all fields from metadata will be included unless explicitly excluded. If false, only fields defined in the fields array will be included."
+                      checked={field.value ?? true}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
               </div>
             )}
 

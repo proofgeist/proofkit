@@ -133,6 +133,23 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
   } = useTestConnection(index, { enabled: !dialogOpen });
 
   // Check if any values resolve to undefined/null/empty (only check after loading completes)
+  // For auth, check that at least one complete auth method is configured (either API key OR username+password)
+  const hasApiKeyAuth =
+    !apiKeyLoading &&
+    apiKeyValue !== undefined &&
+    apiKeyValue !== null &&
+    apiKeyValue !== "";
+  const hasUsernamePasswordAuth =
+    !usernameLoading &&
+    !passwordLoading &&
+    usernameValue !== undefined &&
+    usernameValue !== null &&
+    usernameValue !== "" &&
+    passwordValue !== undefined &&
+    passwordValue !== null &&
+    passwordValue !== "";
+  const hasAuth = hasApiKeyAuth || hasUsernamePasswordAuth;
+
   const hasUndefinedValues =
     (!serverLoading &&
       (serverValue === undefined ||
@@ -140,18 +157,7 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
         serverValue === "")) ||
     (!dbLoading &&
       (dbValue === undefined || dbValue === null || dbValue === "")) ||
-    (!apiKeyLoading &&
-      (apiKeyValue === undefined ||
-        apiKeyValue === null ||
-        apiKeyValue === "")) ||
-    (!usernameLoading &&
-      (usernameValue === undefined ||
-        usernameValue === null ||
-        usernameValue === "")) ||
-    (!passwordLoading &&
-      (passwordValue === undefined ||
-        passwordValue === null ||
-        passwordValue === ""));
+    (!apiKeyLoading && !usernameLoading && !passwordLoading && !hasAuth);
 
   // Initialize auth fields if not already set
   useEffect(() => {

@@ -757,7 +757,7 @@ export const mockResponses = {
 
   "webhook-add": {
     url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Add",
-    method: "GET",
+    method: "POST",
     status: 200,
     headers: {
       "content-type": "application/json;charset=utf-8",
@@ -771,7 +771,7 @@ export const mockResponses = {
 
   "webhook-add-with-options": {
     url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Add",
-    method: "GET",
+    method: "POST",
     status: 200,
     headers: {
       "content-type": "application/json;charset=utf-8",
@@ -823,7 +823,7 @@ export const mockResponses = {
 
   "webhook-delete": {
     url: "https://api.example.com/otto/fmi/odata/v4/fmdapi_test.fmp12/Webhook.Delete(1)",
-    method: "GET",
+    method: "POST",
     status: 200,
     headers: {
       "content-type": "application/json;charset=utf-8",

@@ -190,7 +190,7 @@ const queriesToCapture: {
   expectError?: boolean;
   execute: (
     client: ReturnType<typeof createAuthenticatedClient>,
-  ) => Promise<{ url: string; response: Response }>;
+  ) => Promise<{ url: string; method: string; response: Response }>;
 }[] = [
   {
     name: "list-basic",
@@ -200,7 +200,7 @@ const queriesToCapture: {
       const response = await client(path);
       // Get the full URL from the response
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -210,7 +210,7 @@ const queriesToCapture: {
       const path = "/contacts?$select=name,PrimaryKey&$top=10";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -220,7 +220,7 @@ const queriesToCapture: {
       const path = "/contacts?$orderby=name&$top=5";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -230,7 +230,7 @@ const queriesToCapture: {
       const path = "/contacts?$top=2&$skip=2";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
 
@@ -249,7 +249,7 @@ const queriesToCapture: {
         },
       });
       const url = response.url;
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
 
@@ -267,7 +267,7 @@ const queriesToCapture: {
       });
 
       const url = response.url;
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
   {
@@ -305,7 +305,7 @@ const queriesToCapture: {
       const path = `/contacts('${recordId}')`;
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   // Error cases - intentionally invalid queries to capture error responses
@@ -317,7 +317,7 @@ const queriesToCapture: {
       const path = "/contacts?$select=InvalidFieldName";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -328,7 +328,7 @@ const queriesToCapture: {
       const path = "/contacts?$orderby=InvalidFieldName";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -340,7 +340,7 @@ const queriesToCapture: {
       const path = "/contacts('00000000-0000-0000-0000-000000000000')";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -351,7 +351,7 @@ const queriesToCapture: {
       const path = "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')/name";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -362,7 +362,7 @@ const queriesToCapture: {
       const path = "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')/users";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -372,7 +372,7 @@ const queriesToCapture: {
       const path = "/contacts?$expand=users($select=not_real_field)";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -383,7 +383,7 @@ const queriesToCapture: {
         "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')?$expand=users";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -394,7 +394,7 @@ const queriesToCapture: {
         "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')?$expand=users($expand=user_customer($select=name))";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -404,7 +404,7 @@ const queriesToCapture: {
       const path = `/contacts?$top=2&$expand=users($expand=user_customer($select=name))`;
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   // Webhook API queries
@@ -415,7 +415,7 @@ const queriesToCapture: {
       const path = "/Webhook.GetAll";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -443,7 +443,7 @@ const queriesToCapture: {
       const newWebhookId = (await cloned.json()).webHookResult.webHookID;
       await client(`/Webhook.Delete(${newWebhookId})`);
 
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
   {
@@ -471,7 +471,7 @@ const queriesToCapture: {
       const newWebhookId = (await cloned.json()).webHookResult.webHookID;
       await client(`/Webhook.Delete(${newWebhookId})`);
 
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
   {
@@ -489,7 +489,7 @@ const queriesToCapture: {
       const path = `/Webhook.Get(${webhookId})`;
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -500,7 +500,7 @@ const queriesToCapture: {
       const path = "/Webhook.Get(99999)";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -520,7 +520,7 @@ const queriesToCapture: {
         method: "POST",
       });
       const url = response.url;
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
 ];
@@ -656,7 +656,7 @@ async function main() {
       console.log(`Capturing: ${queryDef.name} - ${queryDef.description}`);
 
       // Execute the query directly with ffetch
-      const { url, response } = await queryDef.execute(client);
+      const { url, method, response } = await queryDef.execute(client);
 
       // Capture the response data (even for error status codes)
       const status = response.status;
@@ -684,7 +684,7 @@ async function main() {
       // Store captured response (including error responses)
       capturedResponses[queryDef.name] = {
         url: sanitizedUrl,
-        method: "GET",
+        method,
         status,
         headers:
           contentType || location
@@ -742,6 +742,8 @@ async function main() {
               serverUrl,
             );
 
+            // For error cases, we don't have the method from execute, so default to GET
+            // This should rarely happen as most errors still return a response
             capturedResponses[queryDef.name] = {
               url: sanitizedUrl,
               method: "GET",

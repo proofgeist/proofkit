@@ -177,7 +177,7 @@ export class WebhookManager {
    * ```
    */
   async remove(
-    webhookId: string | number,
+    webhookId: number,
     options?: ExecuteMethodOptions,
   ): Promise<void> {
     const result = await this.context._makeRequest(
@@ -204,7 +204,7 @@ export class WebhookManager {
    * ```
    */
   async get(
-    webhookId: string | number,
+    webhookId: number,
     options?: ExecuteMethodOptions,
   ): Promise<WebhookInfo> {
     const result = await this.context._makeRequest<WebhookInfo>(
@@ -258,7 +258,7 @@ export class WebhookManager {
    * ```
    */
   async invoke(
-    webhookId: string | number,
+    webhookId: number,
     options?: { rowIDs?: number[] },
     executeOptions?: ExecuteMethodOptions,
   ): Promise<unknown> {

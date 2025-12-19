@@ -40,7 +40,9 @@ function buildExpandValidationConfigs(
     // Extract schema from target table/occurrence
     // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
     const targetSchema = targetTable
-      ? (getTableSchema(targetTable) as Record<string, StandardSchemaV1> | undefined)
+      ? (getTableSchema(targetTable) as
+          | Record<string, StandardSchemaV1>
+          | undefined)
       : undefined;
 
     // Extract selected fields from options
@@ -185,9 +187,7 @@ export async function processQueryResponse<T>(
   // Validation path
   // Get schema from occurrence if available
   // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
-  const schema = occurrence
-    ? getTableSchema(occurrence)
-    : undefined;
+  const schema = occurrence ? getTableSchema(occurrence) : undefined;
 
   const selectedFields = config.queryOptions.select
     ? ((Array.isArray(config.queryOptions.select)
@@ -200,8 +200,11 @@ export async function processQueryResponse<T>(
 
   // Validate with original field names
   // Special columns are excluded when using single() method (per OData spec behavior)
+  // Note: While FileMaker may return special columns in single mode if requested via header,
+  // we exclude them here to maintain OData spec compliance. The types will also not include
+  // special columns for single mode to match this runtime behavior.
   const shouldIncludeSpecialColumns =
-    singleMode === false ? config.includeSpecialColumns : false;
+    singleMode === false ? (config.includeSpecialColumns ?? false) : false;
   const validationResult =
     singleMode !== false
       ? await validateSingleResponse(

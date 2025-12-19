@@ -3,9 +3,10 @@ import { Button } from "./ui/button";
 import { SingleConfig } from "../lib/config-utils";
 import { AlertTriangle, Loader2, Search, RefreshCw } from "lucide-react";
 import { useListTables } from "../hooks/useListTables";
+import { useTestConnection } from "../hooks/useTestConnection";
 import { Switch } from "./ui/switch";
 import { Input, InputWrapper } from "./ui/input";
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { MetadataFieldsDialog } from "./MetadataFieldsDialog";
 import { useTableMetadata } from "../hooks/useTableMetadata";
 import {
@@ -131,20 +132,6 @@ export function MetadataTablesEditor({
     name: `config.${configIndex}` as const,
   });
 
-  const {
-    tables,
-    isLoading: isLoadingTables,
-    isError: isErrorTables,
-    error: errorTables,
-    refetch: refetchTables,
-  } = useListTables(configIndex);
-
-  const [selectedTableName, setSelectedTableName] = useState<string | null>(
-    null,
-  );
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [searchFilter, setSearchFilter] = useState("");
-
   // Get tables config - memoize to prevent unnecessary recalculations
   const tablesConfig = useMemo(() => {
     if (config?.type === "fmodata" && "tables" in config) {
@@ -152,6 +139,40 @@ export function MetadataTablesEditor({
     }
     return [];
   }, [config]);
+
+  // Local state to control whether to enable the query
+  // Initialize based on whether there are tables in the config
+  const [shouldLoadTables, setShouldLoadTables] = useState(() => {
+    if (config?.type === "fmodata" && "tables" in config) {
+      return (config.tables ?? []).length > 0;
+    }
+    return false;
+  });
+
+  // Update shouldLoadTables when tablesConfig changes (e.g., user adds tables manually)
+  useEffect(() => {
+    if (tablesConfig.length > 0 && !shouldLoadTables) {
+      setShouldLoadTables(true);
+    }
+  }, [tablesConfig.length, shouldLoadTables]);
+
+  // Check connection test status
+  const { status: testStatus, errorDetails } = useTestConnection(configIndex);
+  const hasConnectionError = testStatus === "error";
+
+  const {
+    tables,
+    isLoading: isLoadingTables,
+    isError: isErrorTables,
+    error: errorTables,
+    refetch: refetchTables,
+  } = useListTables(configIndex, shouldLoadTables);
+
+  const [selectedTableName, setSelectedTableName] = useState<string | null>(
+    null,
+  );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
 
   // Use a ref to store the latest config to avoid unstable callback dependencies
   const configRef = useRef(config);
@@ -342,7 +363,8 @@ export function MetadataTablesEditor({
     },
   });
 
-  if (isLoadingTables) {
+  // Show loading state only when actively loading
+  if (isLoadingTables && shouldLoadTables) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">OData Tables</h3>
@@ -354,7 +376,8 @@ export function MetadataTablesEditor({
     );
   }
 
-  if (isErrorTables) {
+  // Show error state only if we attempted to load
+  if (isErrorTables && shouldLoadTables) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">OData Tables</h3>
@@ -375,6 +398,69 @@ export function MetadataTablesEditor({
     );
   }
 
+  // Show button to load tables if not yet loaded
+  if (!shouldLoadTables) {
+    // Show connection warning if there are connection errors
+    if (hasConnectionError) {
+      return (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">OData Tables</h3>
+          <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-2 text-sm text-yellow-700 dark:text-yellow-400">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div>
+                  <div className="font-medium">Connection test failed</div>
+                  {errorDetails?.message && (
+                    <div className="text-xs mt-1 opacity-90">
+                      {errorDetails.message}
+                    </div>
+                  )}
+                  <div className="text-xs mt-1 opacity-75">
+                    Fix the connection issue in the "Server Connection Settings"
+                    dialog before loading tables.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show button to load tables if connection is good
+    return (
+      <div className="space-y-4 w-full mx-auto">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">OData Tables</h3>
+        </div>
+        <div className="rounded-md border border-border bg-muted/50 p-4 w-full mx-auto text-center ">
+          <p className="text-sm text-muted-foreground mb-4">
+            Your connection looks good! Click the button below to pick the
+            tables you want to generate types for.
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              setShouldLoadTables(true);
+            }}
+            disabled={isLoadingTables}
+          >
+            {isLoadingTables ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>Continue to Pick Tables</>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state only after loading
   if (!tables || tables.length === 0) {
     return (
       <div className="space-y-4">

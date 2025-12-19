@@ -6,13 +6,12 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   type ColumnDef,
 } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "./ui/data-grid";
 import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
-import { DataGridPagination } from "./ui/data-grid-pagination";
+import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { Input, InputWrapper } from "./ui/input";
 import { Switch } from "./ui/switch";
 import { Skeleton } from "./ui/skeleton";
@@ -46,7 +45,6 @@ import {
 const coreRowModel = getCoreRowModel();
 const sortedRowModel = getSortedRowModel();
 const filteredRowModel = getFilteredRowModel();
-const paginationRowModel = getPaginationRowModel();
 
 // Stable empty array to prevent infinite re-renders
 const EMPTY_FIELDS_CONFIG: any[] = [];
@@ -869,17 +867,11 @@ export function MetadataFieldsDialog({
     getCoreRowModel: coreRowModel,
     getSortedRowModel: sortedRowModel,
     getFilteredRowModel: filteredRowModel,
-    getPaginationRowModel: paginationRowModel,
     globalFilterFn: "includesString",
     state: {
       globalFilter,
     },
     onGlobalFilterChange: setGlobalFilter,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
   // Calculate the number of included (non-excluded) fields
@@ -930,13 +922,13 @@ export function MetadataFieldsDialog({
                 recordCount={fieldsTable.getFilteredRowModel().rows.length}
                 isLoading={isLoading}
                 emptyMessage="No fields found."
-                tableLayout={{ width: "auto" }}
+                tableLayout={{ width: "auto", headerSticky: true }}
               >
                 <DataGridContainer>
-                  <DataGridTable />
-                  <div className="border-t border-border px-5 min-h-14 flex items-center">
-                    <DataGridPagination className="py-0" />
-                  </div>
+                  <ScrollArea className="max-h-[650px]">
+                    <DataGridTable />
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
                 </DataGridContainer>
               </DataGrid>
             )}

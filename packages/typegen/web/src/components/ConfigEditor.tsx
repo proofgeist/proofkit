@@ -295,18 +295,32 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
             )}
 
             {configType === "fmodata" && (
-              <FormField
-                control={control}
-                name={`config.${index}.reduceMetadata` as const}
-                render={({ field }) => (
-                  <SwitchField
-                    label="Reduce Metadata Annotations"
-                    infoTooltip="Request reduced OData annotations to reduce payload size. This will prevent comments, entity ids, and other properties from being generated."
-                    checked={field.value || false}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
+              <div className="flex items-start gap-4">
+                <FormField
+                  control={control}
+                  name={`config.${index}.reduceMetadata` as const}
+                  render={({ field }) => (
+                    <SwitchField
+                      label="Reduce Metadata Annotations"
+                      infoTooltip="Request reduced OData annotations to reduce payload size. This will prevent comments, entity ids, and other properties from being generated."
+                      checked={field.value || false}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name={`config.${index}.alwaysOverrideFieldNames` as const}
+                  render={({ field }) => (
+                    <SwitchField
+                      label="Always Update Field Names"
+                      infoTooltip="If true, the field names in your generated schema may be updated to match FileMaker. This may cause TypeScript errors in your code. If you only use entity IDs in your OData requests, you can safely leave this off."
+                      checked={field.value || false}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
             )}
 
             {/* Final row: Using a Webviewer switch with script name inline */}

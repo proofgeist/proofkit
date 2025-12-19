@@ -37,6 +37,32 @@ function normalizeConfig(
   return [];
 }
 
+// Create config objects for each type
+function createFmdapiConfig(): SingleConfig {
+  return {
+    type: "fmdapi",
+    envNames: {
+      server: undefined,
+      db: undefined,
+      auth: undefined,
+    },
+    layouts: [],
+  };
+}
+
+function createFmodataConfig(): SingleConfig {
+  return {
+    type: "fmodata",
+    envNames: {
+      server: undefined,
+      db: undefined,
+      auth: undefined,
+    },
+    tables: [],
+    alwaysOverrideFieldNames: true,
+  };
+}
+
 function App() {
   // Load and save config using custom hook
   const {
@@ -83,84 +109,30 @@ function App() {
   const isEmptyConfig = configExists && configs.length === 0;
   const showEmptyState = isFileMissing || isEmptyConfig;
 
-  // Handlers for adding connections when file is missing (creates file with connection)
-  const handleCreateFileWithFmdapi = async () => {
-    try {
-      const newConfig: SingleConfig = {
-        type: "fmdapi",
-        envNames: {
-          server: undefined,
-          db: undefined,
-          auth: undefined,
-        },
-        layouts: [],
-      };
-      await saveMutation.mutateAsync([newConfig]);
-      // Refetch to get the updated state
-      await refetch();
-      // After refetch, the form will be updated with the new config
-      // Set active accordion to the first item (index 0)
+  // Unified handler for creating configs (works for both file creation and adding)
+  const handleAddConfig = async (type: "fmdapi" | "fmodata") => {
+    const newConfig =
+      type === "fmdapi" ? createFmdapiConfig() : createFmodataConfig();
+
+    // If file doesn't exist, create it with the new config
+    if (isFileMissing) {
+      try {
+        await saveMutation.mutateAsync([newConfig]);
+        await refetch();
+        setTimeout(() => {
+          setActiveAccordionItem(0);
+        }, 100);
+      } catch (err) {
+        const apiType = type === "fmdapi" ? "Data API" : "OData";
+        console.error(`Failed to create config file with ${apiType}:`, err);
+      }
+    } else {
+      // File exists, just append to form
+      append(newConfig);
       setTimeout(() => {
-        setActiveAccordionItem(0);
-      }, 100);
-    } catch (err) {
-      console.error("Failed to create config file with Data API:", err);
+        setActiveAccordionItem(fields.length);
+      }, 1);
     }
-  };
-
-  const handleCreateFileWithFmodata = async () => {
-    try {
-      const newConfig: SingleConfig = {
-        type: "fmodata",
-        envNames: {
-          server: undefined,
-          db: undefined,
-          auth: undefined,
-        },
-        tables: [],
-      };
-      await saveMutation.mutateAsync([newConfig]);
-      // Refetch to get the updated state
-      await refetch();
-      // After refetch, the form will be updated with the new config
-      // Set active accordion to the first item (index 0)
-      setTimeout(() => {
-        setActiveAccordionItem(0);
-      }, 100);
-    } catch (err) {
-      console.error("Failed to create config file with OData:", err);
-    }
-  };
-
-  // Handlers for adding connections when file exists
-  const handleAddFmdapi = () => {
-    append({
-      type: "fmdapi",
-      envNames: {
-        server: undefined,
-        db: undefined,
-        auth: undefined,
-      },
-      layouts: [],
-    });
-    setTimeout(() => {
-      setActiveAccordionItem(fields.length);
-    }, 1);
-  };
-
-  const handleAddFmodata = () => {
-    append({
-      type: "fmodata",
-      envNames: {
-        server: undefined,
-        db: undefined,
-        auth: undefined,
-      },
-      tables: [],
-    });
-    setTimeout(() => {
-      setActiveAccordionItem(fields.length);
-    }, 1);
   };
 
   // Run typegen mutation
@@ -299,18 +271,14 @@ function App() {
                     isFileMissing ? fullPath || configPath : configPath
                   }
                   onAddFmdapi={
-                    isFileMissing
-                      ? handleCreateFileWithFmdapi
-                      : isEmptyConfig
-                        ? handleAddFmdapi
-                        : undefined
+                    isFileMissing || isEmptyConfig
+                      ? () => handleAddConfig("fmdapi")
+                      : undefined
                   }
                   onAddFmodata={
-                    isFileMissing
-                      ? handleCreateFileWithFmodata
-                      : isEmptyConfig
-                        ? handleAddFmodata
-                        : undefined
+                    isFileMissing || isEmptyConfig
+                      ? () => handleAddConfig("fmodata")
+                      : undefined
                   }
                 />
               </div>
@@ -355,7 +323,7 @@ function App() {
                     <DropdownMenuContent className="w-80">
                       <DropdownMenuItem
                         className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                        onClick={handleAddFmdapi}
+                        onClick={() => handleAddConfig("fmdapi")}
                       >
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-base">Data API</p>
@@ -373,7 +341,7 @@ function App() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                        onClick={handleAddFmodata}
+                        onClick={() => handleAddConfig("fmodata")}
                       >
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-base">OData</p>

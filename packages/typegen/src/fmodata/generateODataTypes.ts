@@ -442,62 +442,191 @@ function extractUserCustomizations(
   chainText: string,
   baseChainEnd: number,
 ): string {
-  // Find where the base chain ends (after entityId, comment, etc.)
-  // User customizations are everything after the standard methods
-  // Standard methods: primaryKey(), readOnly(), notNull(), entityId(), comment()
-  // User methods: inputValidator(), outputValidator(), and any other custom methods
+  // We want to preserve user-added chained calls even if they were placed:
+  // - before a standard method (e.g. textField().inputValidator(...).entityId(...))
+  // - on fields that have no standard methods at all (possible when reduceMetadata is true)
+  //
+  // `baseChainEnd` should point to the end of the generator-owned "base builder chain"
+  // (e.g. `textField()` or `numberField().outputValidator(z.coerce.boolean())`).
+  // Everything after that may contain standard methods *and* user customizations.
+  // We extract only the non-standard chained calls and return them as a string
+  // that can be appended to the regenerated chain.
 
-  // For now, we'll extract everything after the last standard method
-  // This is a simple approach - we could make it more sophisticated
-  const standardMethods = [
-    ".primaryKey()",
-    ".readOnly()",
-    ".notNull()",
-    ".entityId(",
-    ".comment(",
-  ];
+  const standardMethodNames = new Set([
+    "primaryKey",
+    "readOnly",
+    "notNull",
+    "entityId",
+    "comment",
+  ]);
 
-  let lastStandardMethodIndex = -1;
-  for (const method of standardMethods) {
-    const index = chainText.lastIndexOf(method);
-    if (index > lastStandardMethodIndex) {
-      lastStandardMethodIndex = index;
-    }
-  }
-
-  if (lastStandardMethodIndex === -1) {
+  const start = Math.max(0, Math.min(baseChainEnd, chainText.length));
+  const tail = chainText.slice(start);
+  if (!tail.includes(".")) {
     return "";
   }
 
-  // Find the end of the last standard method call
-  let endIndex = lastStandardMethodIndex;
-  let parenCount = 0;
-  let inString = false;
-  let stringChar = "";
-
-  for (let i = lastStandardMethodIndex; i < chainText.length; i++) {
-    const char = chainText[i];
-
-    if (!inString && (char === '"' || char === "'")) {
-      inString = true;
-      stringChar = char;
-    } else if (inString && char === stringChar) {
-      inString = false;
-    } else if (!inString) {
-      if (char === "(") {
-        parenCount++;
-      } else if (char === ")") {
-        parenCount--;
-        if (parenCount === 0) {
-          endIndex = i + 1;
-          break;
-        }
-      }
-    }
+  function isIdentChar(c: string): boolean {
+    return /[A-Za-z0-9_$]/.test(c);
   }
 
-  // Extract everything after the last standard method
-  return chainText.substring(endIndex);
+  function skipWhitespace(s: string, idx: number): number {
+    while (idx < s.length && /\s/.test(s[idx] ?? "")) idx++;
+    return idx;
+  }
+
+  // Best-effort scanning helpers: handle nested parentheses and quoted strings.
+  function scanString(s: string, idx: number, quote: string): number {
+    // idx points at opening quote
+    idx++;
+    while (idx < s.length) {
+      const ch = s[idx];
+      if (ch === "\\") {
+        idx += 2;
+        continue;
+      }
+      if (ch === quote) {
+        return idx + 1;
+      }
+      idx++;
+    }
+    return idx;
+  }
+
+  function scanTemplateLiteral(s: string, idx: number): number {
+    // idx points at opening backtick
+    idx++;
+    while (idx < s.length) {
+      const ch = s[idx];
+      if (ch === "\\") {
+        idx += 2;
+        continue;
+      }
+      if (ch === "`") {
+        return idx + 1;
+      }
+      if (ch === "$" && s[idx + 1] === "{") {
+        idx += 2; // skip ${
+        let braceDepth = 1;
+        while (idx < s.length && braceDepth > 0) {
+          const c = s[idx];
+          if (c === "'" || c === '"') {
+            idx = scanString(s, idx, c);
+            continue;
+          }
+          if (c === "`") {
+            idx = scanTemplateLiteral(s, idx);
+            continue;
+          }
+          if (c === "{") braceDepth++;
+          else if (c === "}") braceDepth--;
+          idx++;
+        }
+        continue;
+      }
+      idx++;
+    }
+    return idx;
+  }
+
+  function scanAngleBrackets(s: string, idx: number): number {
+    // idx points at '<'
+    let depth = 0;
+    while (idx < s.length) {
+      const ch = s[idx];
+      if (ch === "'" || ch === '"') {
+        idx = scanString(s, idx, ch);
+        continue;
+      }
+      if (ch === "`") {
+        idx = scanTemplateLiteral(s, idx);
+        continue;
+      }
+      if (ch === "<") depth++;
+      if (ch === ">") {
+        depth--;
+        idx++;
+        if (depth === 0) return idx;
+        continue;
+      }
+      idx++;
+    }
+    return idx;
+  }
+
+  function scanParens(s: string, idx: number): number {
+    // idx points at '('
+    let depth = 0;
+    while (idx < s.length) {
+      const ch = s[idx];
+      if (ch === "'" || ch === '"') {
+        idx = scanString(s, idx, ch);
+        continue;
+      }
+      if (ch === "`") {
+        idx = scanTemplateLiteral(s, idx);
+        continue;
+      }
+      if (ch === "(") depth++;
+      if (ch === ")") {
+        depth--;
+        idx++;
+        if (depth === 0) return idx;
+        continue;
+      }
+      idx++;
+    }
+    return idx;
+  }
+
+  const keptSegments: string[] = [];
+  let i = 0;
+  while (i < tail.length) {
+    const dot = tail.indexOf(".", i);
+    if (dot === -1) break;
+
+    let j = dot + 1;
+    if (j >= tail.length) break;
+    if (!isIdentChar(tail[j] ?? "")) {
+      i = j;
+      continue;
+    }
+
+    const nameStart = j;
+    while (j < tail.length && isIdentChar(tail[j] ?? "")) j++;
+    const methodName = tail.slice(nameStart, j);
+
+    j = skipWhitespace(tail, j);
+
+    // Optional generic type args: .foo<...>(...)
+    if (tail[j] === "<") {
+      j = scanAngleBrackets(tail, j);
+      j = skipWhitespace(tail, j);
+    }
+
+    // Method call args: (...)
+    if (tail[j] === "(") {
+      const end = scanParens(tail, j);
+      const segment = tail.slice(dot, end);
+      if (!standardMethodNames.has(methodName)) {
+        keptSegments.push(segment);
+      }
+      i = end;
+      continue;
+    }
+
+    // Property access or malformed chain segment: keep it if it's not standard.
+    // Capture up to the next '.' or end.
+    const nextDot = tail.indexOf(".", j);
+    const end = nextDot === -1 ? tail.length : nextDot;
+    const segment = tail.slice(dot, end);
+    if (!standardMethodNames.has(methodName)) {
+      keptSegments.push(segment);
+    }
+    i = end;
+  }
+
+  return keptSegments.join("");
 }
 
 /**
@@ -689,12 +818,45 @@ function preserveUserCustomizations(
   existingField: ParsedField | undefined,
   newChain: string,
 ): string {
-  if (!existingField || !existingField.userCustomizations) {
+  if (!existingField) {
     return newChain;
   }
 
-  // Append user customizations to the new chain
-  return newChain + existingField.userCustomizations;
+  const standardMethods = [
+    ".primaryKey()",
+    ".readOnly()",
+    ".notNull()",
+    ".entityId(",
+    ".comment(",
+  ];
+
+  // Determine where the generator-owned base builder chain ends in the new chain
+  // (before any standard methods added by the generator).
+  let baseChainEnd = newChain.length;
+  for (const method of standardMethods) {
+    const idx = newChain.indexOf(method);
+    if (idx !== -1 && idx < baseChainEnd) {
+      baseChainEnd = idx;
+    }
+  }
+
+  const baseBuilderPrefix = newChain.slice(0, baseChainEnd);
+  const existingChainText = existingField.fullChainText;
+  const existingBaseEnd = existingChainText.startsWith(baseBuilderPrefix)
+    ? baseBuilderPrefix.length
+    : 0;
+
+  const userCustomizations = extractUserCustomizations(
+    existingChainText,
+    existingBaseEnd,
+  );
+
+  if (!userCustomizations) {
+    return newChain;
+  }
+
+  // Append extracted user customizations to the regenerated chain
+  return newChain + userCustomizations;
 }
 
 /**

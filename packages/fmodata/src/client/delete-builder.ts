@@ -2,7 +2,7 @@ import type {
   ExecutionContext,
   ExecutableBuilder,
   Result,
-  WithSystemFields,
+  WithSpecialColumns,
   ExecuteOptions,
   ExecuteMethodOptions,
 } from "../types";
@@ -26,17 +26,21 @@ export class DeleteBuilder<Occ extends FMTable<any, any>> {
   private context: ExecutionContext;
   private table: Occ;
   private databaseUseEntityIds: boolean;
+  private databaseIncludeSpecialColumns: boolean;
 
   constructor(config: {
     occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
     databaseUseEntityIds?: boolean;
+    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
+    this.databaseIncludeSpecialColumns =
+      config.databaseIncludeSpecialColumns ?? false;
   }
 
   /**

@@ -42,7 +42,7 @@
     "@types/uuid": "^10.0.0",
     "knip": "^5.56.0",
     "publint": "^0.3.12",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "vite": "^6.3.4"
   },
   "publishConfig": {

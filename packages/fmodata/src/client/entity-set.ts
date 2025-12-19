@@ -19,6 +19,7 @@ import {
   getDefaultSelect,
   getTableName,
   getTableColumns,
+  getTableSchema,
 } from "../orm/table";
 import type { FieldBuilder } from "../orm/field-builders";
 import { createLogger, InternalLogger } from "../logger";
@@ -41,16 +42,20 @@ type ExtractColumnsFromOcc<T> =
       : never
     : never;
 
-export class EntitySet<Occ extends FMTable<any, any>> {
+export class EntitySet<
+  Occ extends FMTable<any, any>,
+  DatabaseIncludeSpecialColumns extends boolean = false,
+> {
   private occurrence: Occ;
   private databaseName: string;
   private context: ExecutionContext;
-  private database: Database; // Database instance for accessing occurrences
+  private database: Database<DatabaseIncludeSpecialColumns>; // Database instance for accessing occurrences
   private isNavigateFromEntitySet?: boolean;
   private navigateRelation?: string;
   private navigateSourceTableName?: string;
   private navigateBasePath?: string; // Full base path for chained navigations
   private databaseUseEntityIds: boolean;
+  private databaseIncludeSpecialColumns: DatabaseIncludeSpecialColumns;
   private logger: InternalLogger;
 
   constructor(config: {
@@ -66,17 +71,23 @@ export class EntitySet<Occ extends FMTable<any, any>> {
     // Get useEntityIds from database if available, otherwise default to false
     this.databaseUseEntityIds =
       (config.database as any)?._useEntityIds ?? false;
+    // Get includeSpecialColumns from database if available, otherwise default to false
+    this.databaseIncludeSpecialColumns =
+      (config.database as any)?._includeSpecialColumns ?? false;
     this.logger = config.context?._getLogger?.() ?? createLogger();
   }
 
   // Type-only method to help TypeScript infer the schema from table
-  static create<Occ extends FMTable<any, any>>(config: {
+  static create<
+    Occ extends FMTable<any, any>,
+    DatabaseIncludeSpecialColumns extends boolean = false,
+  >(config: {
     occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
-    database: Database;
-  }): EntitySet<Occ> {
-    return new EntitySet<Occ>({
+    database: Database<DatabaseIncludeSpecialColumns>;
+  }): EntitySet<Occ, DatabaseIncludeSpecialColumns> {
+    return new EntitySet<Occ, DatabaseIncludeSpecialColumns>({
       occurrence: config.occurrence,
       databaseName: config.databaseName,
       context: config.context,
@@ -89,33 +100,30 @@ export class EntitySet<Occ extends FMTable<any, any>> {
     keyof InferSchemaOutputFromFMTable<Occ>,
     false,
     false,
-    {}
+    {},
+    DatabaseIncludeSpecialColumns
   > {
-    const builder = new QueryBuilder<Occ>({
+    const builder = new QueryBuilder<
+      Occ,
+      keyof InferSchemaOutputFromFMTable<Occ>,
+      false,
+      false,
+      {},
+      DatabaseIncludeSpecialColumns
+    >({
       occurrence: this.occurrence as Occ,
       databaseName: this.databaseName,
       context: this.context,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
     // Apply defaultSelect if occurrence exists and select hasn't been called
     if (this.occurrence) {
       // FMTable - access via helper functions
       const defaultSelectValue = getDefaultSelect(this.occurrence);
-      const tableSchema = (this.occurrence as any)[FMTableClass.Symbol.Schema];
-      let schema: Record<string, StandardSchemaV1> | undefined;
-
-      if (tableSchema) {
-        // Extract schema from StandardSchemaV1
-        const zodSchema = tableSchema["~standard"]?.schema;
-        if (
-          zodSchema &&
-          typeof zodSchema === "object" &&
-          "shape" in zodSchema
-        ) {
-          schema = zodSchema.shape as Record<string, StandardSchemaV1>;
-        }
-      }
+      // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
+      const schema = getTableSchema(this.occurrence);
 
       if (defaultSelectValue === "schema") {
         // Use getTableColumns to get all columns and select them
@@ -124,12 +132,22 @@ export class EntitySet<Occ extends FMTable<any, any>> {
         const allColumns = getTableColumns(
           this.occurrence,
         ) as ExtractColumnsFromOcc<Occ>;
-        return builder.select(allColumns).top(1000) as QueryBuilder<
+
+        // Include special columns if enabled at database level
+        const systemColumns = this.databaseIncludeSpecialColumns
+          ? { ROWID: true, ROWMODID: true }
+          : undefined;
+
+        return builder
+          .select(allColumns, systemColumns)
+          .top(1000) as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
           false,
           false,
-          {}
+          {},
+          DatabaseIncludeSpecialColumns,
+          typeof systemColumns
         >;
       } else if (typeof defaultSelectValue === "object") {
         // defaultSelectValue is a select object (Record<string, Column>)
@@ -141,7 +159,8 @@ export class EntitySet<Occ extends FMTable<any, any>> {
           keyof InferSchemaOutputFromFMTable<Occ>,
           false,
           false,
-          {}
+          {},
+          DatabaseIncludeSpecialColumns
         >;
       }
       // If defaultSelect is "all", no changes needed (current behavior)
@@ -173,34 +192,31 @@ export class EntitySet<Occ extends FMTable<any, any>> {
     false,
     undefined,
     keyof InferSchemaOutputFromFMTable<Occ>,
-    {}
+    {},
+    DatabaseIncludeSpecialColumns
   > {
-    const builder = new RecordBuilder<Occ>({
+    const builder = new RecordBuilder<
+      Occ,
+      false,
+      undefined,
+      keyof InferSchemaOutputFromFMTable<Occ>,
+      {},
+      DatabaseIncludeSpecialColumns
+    >({
       occurrence: this.occurrence,
       databaseName: this.databaseName,
       context: this.context,
       recordId: id,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
     // Apply defaultSelect if occurrence exists
     if (this.occurrence) {
       // FMTable - access via helper functions
       const defaultSelectValue = getDefaultSelect(this.occurrence);
-      const tableSchema = (this.occurrence as any)[FMTableClass.Symbol.Schema];
-      let schema: Record<string, StandardSchemaV1> | undefined;
-
-      if (tableSchema) {
-        // Extract schema from StandardSchemaV1
-        const zodSchema = tableSchema["~standard"]?.schema;
-        if (
-          zodSchema &&
-          typeof zodSchema === "object" &&
-          "shape" in zodSchema
-        ) {
-          schema = zodSchema.shape as Record<string, StandardSchemaV1>;
-        }
-      }
+      // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
+      const schema = getTableSchema(this.occurrence);
 
       if (defaultSelectValue === "schema") {
         // Use getTableColumns to get all columns and select them
@@ -209,7 +225,13 @@ export class EntitySet<Occ extends FMTable<any, any>> {
         const allColumns = getTableColumns(
           this.occurrence as any,
         ) as ExtractColumnsFromOcc<Occ>;
-        const selectedBuilder = builder.select(allColumns);
+
+        // Include special columns if enabled at database level
+        const systemColumns = this.databaseIncludeSpecialColumns
+          ? { ROWID: true, ROWMODID: true }
+          : undefined;
+
+        const selectedBuilder = builder.select(allColumns, systemColumns);
         // Propagate navigation context if present
         if (
           this.isNavigateFromEntitySet &&
@@ -293,6 +315,7 @@ export class EntitySet<Occ extends FMTable<any, any>> {
       data: data as any, // Input type is validated/transformed at runtime
       returnPreference: returnPreference as any,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
   }
 
@@ -323,6 +346,7 @@ export class EntitySet<Occ extends FMTable<any, any>> {
       data: data as any, // Input type is validated/transformed at runtime
       returnPreference: returnPreference as any,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
   }
 
@@ -332,13 +356,17 @@ export class EntitySet<Occ extends FMTable<any, any>> {
       databaseName: this.databaseName,
       context: this.context,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     }) as any;
   }
 
   // Implementation
   navigate<TargetTable extends FMTable<any, any>>(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
-  ): EntitySet<TargetTable extends FMTable<any, any> ? TargetTable : never> {
+  ): EntitySet<
+    TargetTable extends FMTable<any, any> ? TargetTable : never,
+    DatabaseIncludeSpecialColumns
+  > {
     // Check if it's an FMTable object or a string
     let relationName: string;
 
@@ -361,7 +389,7 @@ export class EntitySet<Occ extends FMTable<any, any>> {
     }
 
     // Create EntitySet with target table
-    const entitySet = new EntitySet<any>({
+    const entitySet = new EntitySet<any, DatabaseIncludeSpecialColumns>({
       occurrence: targetTable,
       databaseName: this.databaseName,
       context: this.context,

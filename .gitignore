@@ -72,3 +72,4 @@ server/dist
 public/dist
 .turbo
 packages/fmdapi/test/typegen/*
+packages/typegen/schema/metadata.xml

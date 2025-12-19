@@ -67,6 +67,12 @@ export type {
   TimestampField,
   ContainerField,
 } from "./client/schema-manager";
+export type {
+  Webhook,
+  WebhookInfo,
+  WebhookListResponse,
+  WebhookAddResponse,
+} from "./client/webhook-builder";
 
 // Utility types for type annotations
 export type {

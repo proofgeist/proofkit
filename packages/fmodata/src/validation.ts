@@ -19,7 +19,7 @@ import {
  */
 export async function validateAndTransformInput<T extends Record<string, any>>(
   data: Partial<T>,
-  inputSchema?: Record<string, StandardSchemaV1>,
+  inputSchema?: Partial<Record<string, StandardSchemaV1>>,
 ): Promise<Partial<T>> {
   // If no input schema, return data as-is
   if (!inputSchema) {
@@ -30,6 +30,9 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
 
   // Process each field that has an input validator
   for (const [fieldName, fieldSchema] of Object.entries(inputSchema)) {
+    // Skip if no schema for this field
+    if (!fieldSchema) continue;
+    
     // Only process fields that are present in the input data
     if (fieldName in data) {
       const inputValue = data[fieldName];
@@ -83,7 +86,7 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
 // Type for expand validation configuration
 export type ExpandValidationConfig = {
   relation: string;
-  targetSchema?: Record<string, StandardSchemaV1>;
+  targetSchema?: Partial<Record<string, StandardSchemaV1>>;
   targetTable?: FMTable<any, any>;
   table?: FMTable<any, any>; // For transformation
   selectedFields?: string[];
@@ -96,9 +99,10 @@ export type ExpandValidationConfig = {
  */
 export async function validateRecord<T extends Record<string, any>>(
   record: any,
-  schema: Record<string, StandardSchemaV1> | undefined,
+  schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
+  includeSpecialColumns?: boolean,
 ): Promise<
   | { valid: true; data: T & ODataRecordMetadata }
   | { valid: false; error: ValidationError }
@@ -112,15 +116,33 @@ export async function validateRecord<T extends Record<string, any>>(
   if (editLink) metadata["@editLink"] = editLink;
 
   // If no schema, just return the data with metadata
+  // Exclude special columns if includeSpecialColumns is false
   if (!schema) {
+    const { ROWID, ROWMODID, ...restWithoutSystemFields } = rest;
+    const specialColumns: { ROWID?: number; ROWMODID?: number } = {};
+    if (includeSpecialColumns) {
+      if (ROWID !== undefined) specialColumns.ROWID = ROWID;
+      if (ROWMODID !== undefined) specialColumns.ROWMODID = ROWMODID;
+    }
     return {
       valid: true,
-      data: { ...rest, ...metadata } as T & ODataRecordMetadata,
+      data: {
+        ...restWithoutSystemFields,
+        ...specialColumns,
+        ...metadata,
+      } as T & ODataRecordMetadata,
     };
   }
 
-  // Filter out FileMaker system fields that shouldn't be in responses by default
+  // Extract FileMaker special columns - preserve them if includeSpecialColumns is enabled
+  // Note: Special columns are excluded when using single() method (per OData spec behavior)
   const { ROWID, ROWMODID, ...restWithoutSystemFields } = rest;
+  const specialColumns: { ROWID?: number; ROWMODID?: number } = {};
+  // Only include special columns if explicitly enabled (they're excluded for single() by design)
+  if (includeSpecialColumns) {
+    if (ROWID !== undefined) specialColumns.ROWID = ROWID;
+    if (ROWMODID !== undefined) specialColumns.ROWMODID = ROWMODID;
+  }
 
   // If selected fields are specified, validate only those fields
   if (selectedFields && selectedFields.length > 0) {
@@ -170,8 +192,18 @@ export async function validateRecord<T extends Record<string, any>>(
         }
       } else {
         // For fields not in schema (like when explicitly selecting ROWID/ROWMODID)
-        // include them from the original response
-        validatedRecord[fieldName] = rest[fieldName];
+        // Check if it's a special column that was destructured earlier
+        if (fieldName === "ROWID" || fieldName === "ROWMODID") {
+          // Use the destructured value since it was removed from rest
+          if (fieldName === "ROWID" && ROWID !== undefined) {
+            validatedRecord[fieldName] = ROWID;
+          } else if (fieldName === "ROWMODID" && ROWMODID !== undefined) {
+            validatedRecord[fieldName] = ROWMODID;
+          }
+        } else {
+          // For other fields not in schema, include them from the original response
+          validatedRecord[fieldName] = rest[fieldName];
+        }
       }
     }
 
@@ -229,6 +261,7 @@ export async function validateRecord<T extends Record<string, any>>(
                 expandConfig.targetSchema,
                 expandConfig.selectedFields as string[] | undefined,
                 expandConfig.nestedExpands,
+                includeSpecialColumns,
               );
               if (!itemValidation.valid) {
                 return {
@@ -253,6 +286,7 @@ export async function validateRecord<T extends Record<string, any>>(
               expandConfig.targetSchema,
               expandConfig.selectedFields as string[] | undefined,
               expandConfig.nestedExpands,
+              includeSpecialColumns,
             );
             if (!itemValidation.valid) {
               return {
@@ -273,17 +307,21 @@ export async function validateRecord<T extends Record<string, any>>(
       }
     }
 
-    // Merge validated data with metadata
+    // Merge validated data with metadata and special columns
     return {
       valid: true,
-      data: { ...validatedRecord, ...metadata } as T & ODataRecordMetadata,
+      data: { ...validatedRecord, ...specialColumns, ...metadata } as T &
+        ODataRecordMetadata,
     };
   }
 
-  // Validate all fields in schema, but exclude ROWID/ROWMODID by default
+  // Validate all fields in schema, but exclude ROWID/ROWMODID by default (unless includeSpecialColumns is enabled)
   const validatedRecord: Record<string, any> = { ...restWithoutSystemFields };
 
   for (const [fieldName, fieldSchema] of Object.entries(schema)) {
+    // Skip if no schema for this field
+    if (!fieldSchema) continue;
+    
     const input = rest[fieldName];
     try {
       let result = fieldSchema["~standard"].validate(input);
@@ -378,6 +416,7 @@ export async function validateRecord<T extends Record<string, any>>(
               expandConfig.targetSchema,
               expandConfig.selectedFields as string[] | undefined,
               expandConfig.nestedExpands,
+              includeSpecialColumns,
             );
             if (!itemValidation.valid) {
               return {
@@ -402,6 +441,7 @@ export async function validateRecord<T extends Record<string, any>>(
             expandConfig.targetSchema,
             expandConfig.selectedFields as string[] | undefined,
             expandConfig.nestedExpands,
+            includeSpecialColumns,
           );
           if (!itemValidation.valid) {
             return {
@@ -424,7 +464,8 @@ export async function validateRecord<T extends Record<string, any>>(
 
   return {
     valid: true,
-    data: { ...validatedRecord, ...metadata } as T & ODataRecordMetadata,
+    data: { ...validatedRecord, ...specialColumns, ...metadata } as T &
+      ODataRecordMetadata,
   };
 }
 
@@ -433,9 +474,10 @@ export async function validateRecord<T extends Record<string, any>>(
  */
 export async function validateListResponse<T extends Record<string, any>>(
   response: any,
-  schema: Record<string, StandardSchemaV1> | undefined,
+  schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
+  includeSpecialColumns?: boolean,
 ): Promise<
   | { valid: true; data: (T & ODataRecordMetadata)[] }
   | { valid: false; error: ResponseStructureError | ValidationError }
@@ -471,6 +513,7 @@ export async function validateListResponse<T extends Record<string, any>>(
       schema,
       selectedFields,
       expandConfigs,
+      includeSpecialColumns,
     );
 
     if (!validation.valid) {
@@ -494,10 +537,11 @@ export async function validateListResponse<T extends Record<string, any>>(
  */
 export async function validateSingleResponse<T extends Record<string, any>>(
   response: any,
-  schema: Record<string, StandardSchemaV1> | undefined,
+  schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   mode: "exact" | "maybe" = "maybe",
+  includeSpecialColumns?: boolean,
 ): Promise<
   | { valid: true; data: (T & ODataRecordMetadata) | null }
   | { valid: false; error: RecordCountMismatchError | ValidationError }
@@ -539,6 +583,7 @@ export async function validateSingleResponse<T extends Record<string, any>>(
     schema,
     selectedFields,
     expandConfigs,
+    includeSpecialColumns,
   );
 
   if (!validation.valid) {

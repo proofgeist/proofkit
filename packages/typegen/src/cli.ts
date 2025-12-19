@@ -9,6 +9,7 @@ import { config } from "dotenv";
 import { fileURLToPath } from "url";
 import { typegenConfig } from "./types";
 import { generateTypedClients } from "./typegen";
+import { startServer } from "./server";
 
 const defaultConfigPaths = [
   "proofkit-typegen.config.jsonc",
@@ -145,7 +146,7 @@ program
   )
   .option(
     "--skip-env-check",
-    "Ignore loading environment variables from a file.",
+    "(deprecated) Ignore loading environment variables from a file.",
     false,
   )
   .action(async (options) => {
@@ -157,9 +158,12 @@ program
       path.resolve(configPath ?? defaultConfigPaths[0] ?? ""),
     );
 
-    if (!options.skipEnvCheck) {
-      parseEnvs(options.envPath);
+    if (options.skipEnvCheck) {
+      console.log(
+        chalk.yellow("⚠️ You no longer need to use --skip-env-check"),
+      );
     }
+    parseEnvs(options.envPath);
 
     // default command
     await runCodegen({
@@ -178,6 +182,71 @@ program
     console.log(configLocation);
     init({ configLocation });
   });
+
+program
+  .command("ui")
+  .description("Launch the configuration UI")
+  .option("--port <number>", "Port for the UI server")
+  .option("--config <filename>", "optional config file name")
+  .option("--no-open", "Don't automatically open the browser")
+  .option("--env-path <path>", "optional path to your .env file")
+  .action(async (options) => {
+    const configPath = getConfigPath(options.config);
+    const configLocation = configPath ?? defaultConfigPaths[0] ?? "";
+
+    // Load environment variables before starting the server
+    parseEnvs(options.envPath);
+
+    let port: number | null = null;
+    if (options.port) {
+      port = Number.parseInt(options.port, 10);
+      if (Number.isNaN(port) || port < 1 || port > 65535) {
+        console.error(chalk.red("Invalid port number"));
+        return process.exit(1);
+      }
+    }
+
+    try {
+      const server = await startServer({
+        port,
+        cwd: process.cwd(),
+        configPath: configLocation,
+      });
+
+      const url = `http://localhost:${server.port}`;
+      console.log();
+      console.log(chalk.green(`🚀 Config UI ready at ${url}`));
+      console.log();
+
+      // Auto-open browser
+      if (options.open !== false) {
+        try {
+          const { default: open } = await import("open");
+          await open(url);
+        } catch (err) {
+          // Ignore errors opening browser
+        }
+      }
+
+      // Handle graceful shutdown
+      process.on("SIGINT", () => {
+        console.log();
+        console.log(chalk.yellow("Shutting down server..."));
+        server.close();
+        process.exit(0);
+      });
+
+      process.on("SIGTERM", () => {
+        server.close();
+        process.exit(0);
+      });
+    } catch (err) {
+      console.error(chalk.red("Failed to start server:"));
+      console.error(err);
+      process.exit(1);
+    }
+  });
+
 program.parse();
 
 function parseEnvs(envPath?: string | undefined) {
@@ -192,15 +261,16 @@ function parseEnvs(envPath?: string | undefined) {
     }
   }
 
+  // this should fail silently.
+  // if we can't resolve the right env vars, they will be logged as errors later
   const envRes = config({ path: actualEnvPath });
-  if (envRes.error) {
-    console.log(
-      chalk.red(
-        `Could not resolve your environment variables.\n${envRes.error.message}\n`,
-      ),
-    );
-    throw new Error("Could not resolve your environment variables.");
-  }
+  // if (envRes.error) {
+  //   console.log(
+  //     chalk.red(
+  //       `Could not resolve your environment variables.\n${envRes.error.message}\n`,
+  //     ),
+  //   );
+  // }
 }
 
 function getConfigPath(configPath?: string): string | null {

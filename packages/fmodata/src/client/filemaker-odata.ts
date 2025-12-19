@@ -24,6 +24,7 @@ export class FMServerConnection implements ExecutionContext {
   private serverUrl: string;
   private auth: Auth;
   private useEntityIds: boolean = false;
+  private includeSpecialColumns: boolean = false;
   private logger: InternalLogger;
   constructor(config: {
     serverUrl: string;
@@ -65,6 +66,22 @@ export class FMServerConnection implements ExecutionContext {
 
   /**
    * @internal
+   * Sets whether to include special columns (ROWID and ROWMODID) in requests
+   */
+  _setIncludeSpecialColumns(includeSpecialColumns: boolean): void {
+    this.includeSpecialColumns = includeSpecialColumns;
+  }
+
+  /**
+   * @internal
+   * Gets whether to include special columns (ROWID and ROWMODID) in requests
+   */
+  _getIncludeSpecialColumns(): boolean {
+    return this.includeSpecialColumns;
+  }
+
+  /**
+   * @internal
    * Gets the base URL for OData requests
    */
   _getBaseUrl(): string {
@@ -84,7 +101,11 @@ export class FMServerConnection implements ExecutionContext {
    */
   async _makeRequest<T>(
     url: string,
-    options?: RequestInit & FFetchOptions & { useEntityIds?: boolean },
+    options?: RequestInit &
+      FFetchOptions & {
+        useEntityIds?: boolean;
+        includeSpecialColumns?: boolean;
+      },
   ): Promise<Result<T>> {
     const logger = this._getLogger();
     const baseUrl = `${this.serverUrl}${"apiKey" in this.auth ? `/otto` : ""}/fmi/odata/v4`;
@@ -92,9 +113,20 @@ export class FMServerConnection implements ExecutionContext {
 
     // Use per-request override if provided, otherwise use the database-level setting
     const useEntityIds = options?.useEntityIds ?? this.useEntityIds;
+    const includeSpecialColumns =
+      options?.includeSpecialColumns ?? this.includeSpecialColumns;
 
     // Get includeODataAnnotations from options (it's passed through from execute options)
     const includeODataAnnotations = (options as any)?.includeODataAnnotations;
+
+    // Build Prefer header as comma-separated list when multiple preferences are set
+    const preferValues: string[] = [];
+    if (useEntityIds) {
+      preferValues.push("fmodata.entity-ids");
+    }
+    if (includeSpecialColumns) {
+      preferValues.push("fmodata.include-specialcolumns");
+    }
 
     const headers = {
       Authorization:
@@ -103,7 +135,7 @@ export class FMServerConnection implements ExecutionContext {
           : `Basic ${btoa(`${this.auth.username}:${this.auth.password}`)}`,
       "Content-Type": "application/json",
       Accept: getAcceptHeader(includeODataAnnotations),
-      ...(useEntityIds ? { Prefer: "fmodata.entity-ids" } : {}),
+      ...(preferValues.length > 0 ? { Prefer: preferValues.join(", ") } : {}),
       ...(options?.headers || {}),
     };
 
@@ -271,13 +303,14 @@ export class FMServerConnection implements ExecutionContext {
     }
   }
 
-  database(
+  database<IncludeSpecialColumns extends boolean = false>(
     name: string,
     config?: {
       useEntityIds?: boolean;
+      includeSpecialColumns?: IncludeSpecialColumns;
     },
-  ): Database {
-    return new Database(name, this, config);
+  ): Database<IncludeSpecialColumns> {
+    return new Database<IncludeSpecialColumns>(name, this, config);
   }
 
   /**
@@ -287,7 +320,7 @@ export class FMServerConnection implements ExecutionContext {
   async listDatabaseNames(): Promise<string[]> {
     const result = await this._makeRequest<{
       value?: Array<{ name: string }>;
-    }>("/");
+    }>("/$metadata", { headers: { Accept: "application/json" } });
     if (result.error) {
       throw result.error;
     }

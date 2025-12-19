@@ -4,11 +4,11 @@
 reviews:
   # Enable automated review for pull requests
   auto_review:
-    enabled: true
+    enabled: false
     base_branches:
       - ".*" # Matches all branches using regex
   review_status: false
   poem: false
-
-path_filters:
-  - "!apps/demo/**" # exclude the demo app from reivews
+  high_level_summary: false
+  path_filters:
+    - "!apps/demo/**" # exclude the demo app from reivews

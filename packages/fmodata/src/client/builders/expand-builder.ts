@@ -40,7 +40,7 @@ export class ExpandBuilder {
     return configs.map((config) => {
       const targetTable = config.targetTable;
 
-      let targetSchema: Record<string, StandardSchemaV1> | undefined;
+      let targetSchema: Partial<Record<string, StandardSchemaV1>> | undefined;
       if (targetTable) {
         const baseTableConfig = getBaseTableConfig(targetTable);
         const containerFields = baseTableConfig.containerFields || [];

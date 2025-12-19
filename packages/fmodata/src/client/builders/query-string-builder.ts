@@ -17,12 +17,18 @@ export function buildSelectExpandQueryString(config: {
   table?: FMTable<any, any>;
   useEntityIds: boolean;
   logger: InternalLogger;
+  includeSpecialColumns?: boolean;
 }): string {
   const parts: string[] = [];
   const expandBuilder = new ExpandBuilder(config.useEntityIds, config.logger);
 
   // Build $select
   if (config.selectedFields && config.selectedFields.length > 0) {
+    // Important: do NOT implicitly add system columns (ROWID/ROWMODID) here.
+    // - `includeSpecialColumns` controls the Prefer header + response parsing, but should not
+    //   mutate/expand an explicit `$select` (e.g. when the user calls `.select({ ... })`).
+    // - If system columns are desired with `.select()`, they must be explicitly included via
+    //   the `systemColumns` argument, which will already have added them to `selectedFields`.
     const selectString = formatSelectFields(
       config.selectedFields,
       config.table,

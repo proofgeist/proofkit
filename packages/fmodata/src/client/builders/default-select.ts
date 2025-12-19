@@ -20,9 +20,13 @@ function getContainerFieldNames(table: FMTable<any, any>): string[] {
  * Gets default select fields from a table definition.
  * Returns undefined if defaultSelect is "all".
  * Automatically filters out container fields since they cannot be selected via $select.
+ * 
+ * @param table - The table occurrence
+ * @param includeSpecialColumns - If true, includes ROWID and ROWMODID when defaultSelect is "schema"
  */
 export function getDefaultSelectFields(
   table: FMTable<any, any> | undefined,
+  includeSpecialColumns?: boolean,
 ): string[] | undefined {
   if (!table) return undefined;
 
@@ -33,7 +37,14 @@ export function getDefaultSelectFields(
     const baseTableConfig = getBaseTableConfig(table);
     const allFields = Object.keys(baseTableConfig.schema);
     // Filter out container fields
-    return [...new Set(allFields.filter((f) => !containerFields.includes(f)))];
+    const fields = [...new Set(allFields.filter((f) => !containerFields.includes(f)))];
+    
+    // Add special columns if requested
+    if (includeSpecialColumns) {
+      fields.push("ROWID", "ROWMODID");
+    }
+    
+    return fields;
   }
 
   if (Array.isArray(defaultSelect)) {

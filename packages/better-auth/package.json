@@ -58,7 +58,7 @@
     "odata-query": "^8.0.4",
     "prompts": "^2.4.2",
     "vite": "^6.3.4",
-    "zod": "3.25.64"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
@@ -66,7 +66,7 @@
     "@vitest/ui": "^3.2.4",
     "fm-odata-client": "^3.0.1",
     "publint": "^0.3.12",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   }
 }

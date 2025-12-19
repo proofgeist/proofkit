@@ -5,6 +5,8 @@ import type {
   ODataFieldResponse,
   ExecuteOptions,
   ConditionallyWithODataAnnotations,
+  ConditionallyWithSpecialColumns,
+  NormalizeIncludeSpecialColumns,
   ExecuteMethodOptions,
 } from "../types";
 import type {
@@ -35,6 +37,8 @@ import {
 import {
   type ResolveExpandedRelations,
   type ResolveExpandType,
+  type SystemColumnsOption,
+  type SystemColumnsFromOption,
 } from "./query/types";
 import { createLogger, InternalLogger, Logger } from "../logger";
 
@@ -64,6 +68,7 @@ export type RecordReturnType<
     | keyof Schema
     | Record<string, Column<any, any, ExtractTableName<FMTable<any, any>>>>,
   Expands extends ExpandedRelations,
+  SystemCols extends SystemColumnsOption | undefined = undefined,
 > = IsSingleField extends true
   ? FieldColumn extends Column<infer TOutput, any, any, any>
     ? TOutput
@@ -71,10 +76,13 @@ export type RecordReturnType<
   : // Use tuple wrapping [Selected] extends [...] to prevent distribution over unions
     [Selected] extends [Record<string, Column<any, any, any, any>>]
     ? MapSelectToReturnType<Selected, Schema> &
-        ResolveExpandedRelations<Expands>
+        ResolveExpandedRelations<Expands> &
+        SystemColumnsFromOption<SystemCols>
     : // Use tuple wrapping to prevent distribution over union of keys
       [Selected] extends [keyof Schema]
-      ? Pick<Schema, Selected> & ResolveExpandedRelations<Expands>
+      ? Pick<Schema, Selected> &
+          ResolveExpandedRelations<Expands> &
+          SystemColumnsFromOption<SystemCols>
       : never;
 
 export class RecordBuilder<
@@ -88,6 +96,8 @@ export class RecordBuilder<
         Column<any, any, ExtractTableName<NonNullable<Occ>>>
       > = keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>,
   Expands extends ExpandedRelations = {},
+  DatabaseIncludeSpecialColumns extends boolean = false,
+  SystemCols extends SystemColumnsOption | undefined = undefined,
 > implements
     ExecutableBuilder<
       RecordReturnType<
@@ -95,7 +105,8 @@ export class RecordBuilder<
         IsSingleField,
         FieldColumn,
         Selected,
-        Expands
+        Expands,
+        SystemCols
       >
     >
 {
@@ -111,12 +122,15 @@ export class RecordBuilder<
   private navigateSourceTableName?: string;
 
   private databaseUseEntityIds: boolean;
+  private databaseIncludeSpecialColumns: boolean;
 
   // Properties for select/expand support
   private selectedFields?: string[];
   private expandConfigs: ExpandConfig[] = [];
   // Mapping from field names to output keys (for renamed fields in select)
   private fieldMapping?: Record<string, string>;
+  // System columns requested via select() second argument
+  private systemColumns?: SystemColumnsOption;
 
   private logger: InternalLogger;
 
@@ -126,22 +140,34 @@ export class RecordBuilder<
     context: ExecutionContext;
     recordId: string | number;
     databaseUseEntityIds?: boolean;
+    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.table = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.recordId = config.recordId;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
+    this.databaseIncludeSpecialColumns =
+      config.databaseIncludeSpecialColumns ?? false;
     this.logger = config.context?._getLogger?.() ?? createLogger();
   }
 
   /**
-   * Helper to merge database-level useEntityIds with per-request options
+   * Helper to merge database-level useEntityIds and includeSpecialColumns with per-request options
    */
   private mergeExecuteOptions(
     options?: RequestInit & FFetchOptions & ExecuteOptions,
-  ): RequestInit & FFetchOptions & { useEntityIds?: boolean } {
-    return mergeExecuteOptions(options, this.databaseUseEntityIds);
+  ): RequestInit &
+    FFetchOptions & {
+      useEntityIds?: boolean;
+      includeSpecialColumns?: boolean;
+    } {
+    const merged = mergeExecuteOptions(options, this.databaseUseEntityIds);
+    return {
+      ...merged,
+      includeSpecialColumns:
+        options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
+    };
   }
 
   /**
@@ -171,25 +197,42 @@ export class RecordBuilder<
           string,
           Column<any, any, ExtractTableName<NonNullable<Occ>>>
         > = Selected,
+    NewSystemCols extends SystemColumnsOption | undefined = SystemCols,
   >(changes: {
     selectedFields?: string[];
     fieldMapping?: Record<string, string>;
-  }): RecordBuilder<Occ, false, FieldColumn, NewSelected, Expands> {
+    systemColumns?: NewSystemCols;
+  }): RecordBuilder<
+    Occ,
+    false,
+    FieldColumn,
+    NewSelected,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    NewSystemCols
+  > {
     const newBuilder = new RecordBuilder<
       Occ,
       false,
       FieldColumn,
       NewSelected,
-      Expands
+      Expands,
+      DatabaseIncludeSpecialColumns,
+      NewSystemCols
     >({
       occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       recordId: this.recordId,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
     newBuilder.selectedFields = changes.selectedFields ?? this.selectedFields;
     newBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
+    newBuilder.systemColumns =
+      changes.systemColumns !== undefined
+        ? changes.systemColumns
+        : this.systemColumns;
     newBuilder.expandConfigs = [...this.expandConfigs];
     // Preserve navigation context
     newBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
@@ -208,7 +251,8 @@ export class RecordBuilder<
     true,
     TColumn,
     keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>,
-    {}
+    {},
+    DatabaseIncludeSpecialColumns
   > {
     // Runtime validation: ensure column is from the correct table
     const tableName = getTableName(this.table);
@@ -223,13 +267,15 @@ export class RecordBuilder<
       true,
       TColumn,
       keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>,
-      {}
+      {},
+      DatabaseIncludeSpecialColumns
     >({
       occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       recordId: this.recordId,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
     newBuilder.operation = "getSingleField";
     newBuilder.operationColumn = column;
@@ -254,7 +300,15 @@ export class RecordBuilder<
    *   userEmail: contacts.email  // renamed!
    * })
    *
+   * @example
+   * // Include system columns (ROWID, ROWMODID) when using select()
+   * db.from(contacts).get("uuid").select(
+   *   { name: contacts.name },
+   *   { ROWID: true, ROWMODID: true }
+   * )
+   *
    * @param fields - Object mapping output keys to column references (container fields excluded)
+   * @param systemColumns - Optional object to request system columns (ROWID, ROWMODID)
    * @returns RecordBuilder with updated selected fields
    */
   select<
@@ -262,7 +316,19 @@ export class RecordBuilder<
       string,
       Column<any, any, ExtractTableName<Occ>, false>
     >,
-  >(fields: TSelect): RecordBuilder<Occ, false, FieldColumn, TSelect, Expands> {
+    TSystemCols extends SystemColumnsOption = {},
+  >(
+    fields: TSelect,
+    systemColumns?: TSystemCols,
+  ): RecordBuilder<
+    Occ,
+    false,
+    FieldColumn,
+    TSelect,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    TSystemCols
+  > {
     const tableName = getTableName(this.table);
     const { selectedFields, fieldMapping } = processSelectWithRenames(
       fields,
@@ -270,10 +336,20 @@ export class RecordBuilder<
       this.logger,
     );
 
+    // Add system columns to selectedFields if requested
+    const finalSelectedFields = [...selectedFields];
+    if (systemColumns?.ROWID) {
+      finalSelectedFields.push("ROWID");
+    }
+    if (systemColumns?.ROWMODID) {
+      finalSelectedFields.push("ROWMODID");
+    }
+
     return this.cloneWithChanges({
-      selectedFields,
+      selectedFields: finalSelectedFields,
       fieldMapping:
         Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
+      systemColumns: systemColumns as any,
     }) as any;
   }
 
@@ -323,7 +399,9 @@ export class RecordBuilder<
         selected: TSelected;
         nested: TNestedExpands;
       };
-    }
+    },
+    DatabaseIncludeSpecialColumns,
+    SystemCols
   > {
     // Create new builder with updated types
     const newBuilder = new RecordBuilder<
@@ -331,18 +409,21 @@ export class RecordBuilder<
       false,
       FieldColumn,
       Selected,
-      any
+      any,
+      DatabaseIncludeSpecialColumns
     >({
       occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
       recordId: this.recordId,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
     // Copy existing state
     newBuilder.selectedFields = this.selectedFields;
     newBuilder.fieldMapping = this.fieldMapping;
+    newBuilder.systemColumns = this.systemColumns;
     newBuilder.expandConfigs = [...this.expandConfigs];
     newBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
     newBuilder.navigateRelation = this.navigateRelation;
@@ -369,11 +450,20 @@ export class RecordBuilder<
       this.table ?? undefined,
       callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
-        new QueryBuilder<TargetTable>({
+        new QueryBuilder<
+          TargetTable,
+          any,
+          any,
+          any,
+          any,
+          DatabaseIncludeSpecialColumns,
+          undefined
+        >({
           occurrence: targetTable,
           databaseName: this.databaseName,
           context: this.context,
           databaseUseEntityIds: this.databaseUseEntityIds,
+          databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
         }),
     );
 
@@ -387,7 +477,10 @@ export class RecordBuilder<
     TargetTable,
     keyof InferSchemaOutputFromFMTable<TargetTable>,
     false,
-    false
+    false,
+    {},
+    DatabaseIncludeSpecialColumns,
+    undefined
   > {
     // Extract name and validate
     const relationName = getTableName(targetTable);
@@ -403,11 +496,20 @@ export class RecordBuilder<
     }
 
     // Create QueryBuilder with target table
-    const builder = new QueryBuilder<TargetTable>({
+    const builder = new QueryBuilder<
+      TargetTable,
+      any,
+      any,
+      any,
+      any,
+      DatabaseIncludeSpecialColumns,
+      undefined
+    >({
       occurrence: targetTable,
       databaseName: this.databaseName,
       context: this.context,
       databaseUseEntityIds: this.databaseUseEntityIds,
+      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
     // Store the navigation info - we'll use it in execute
@@ -452,13 +554,18 @@ export class RecordBuilder<
   /**
    * Builds the complete query string including $select and $expand parameters.
    */
-  private buildQueryString(): string {
+  private buildQueryString(includeSpecialColumns?: boolean): string {
+    // Use merged includeSpecialColumns if provided, otherwise use database-level default
+    const finalIncludeSpecialColumns =
+      includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
+
     return buildSelectExpandQueryString({
       selectedFields: this.selectedFields,
       expandConfigs: this.expandConfigs,
       table: this.table,
       useEntityIds: this.databaseUseEntityIds,
       logger: this.logger,
+      includeSpecialColumns: finalIncludeSpecialColumns,
     });
   }
 
@@ -467,12 +574,30 @@ export class RecordBuilder<
   ): Promise<
     Result<
       ConditionallyWithODataAnnotations<
-        RecordReturnType<
-          InferSchemaOutputFromFMTable<NonNullable<Occ>>,
-          IsSingleField,
-          FieldColumn,
-          Selected,
-          Expands
+        ConditionallyWithSpecialColumns<
+          RecordReturnType<
+            InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+            IsSingleField,
+            FieldColumn,
+            Selected,
+            Expands,
+            SystemCols
+          >,
+          // Use the merged value: if explicitly provided in options, use that; otherwise use database default
+          NormalizeIncludeSpecialColumns<
+            EO["includeSpecialColumns"],
+            DatabaseIncludeSpecialColumns
+          >,
+          // Check if select was applied: if Selected is Record (object select) or a subset of keys, select was applied
+          IsSingleField extends true
+            ? false // Single field operations don't include special columns
+            : Selected extends Record<string, Column<any, any, any>>
+              ? true
+              : Selected extends keyof InferSchemaOutputFromFMTable<
+                    NonNullable<Occ>
+                  >
+                ? false
+                : true
         >,
         EO["includeODataAnnotations"] extends true ? true : false
       >
@@ -496,15 +621,17 @@ export class RecordBuilder<
       url = `/${this.databaseName}/${tableId}('${this.recordId}')`;
     }
 
+    const mergedOptions = this.mergeExecuteOptions(options);
+
     if (this.operation === "getSingleField" && this.operationParam) {
       url += `/${this.operationParam}`;
     } else {
       // Add query string for select/expand (only when not getting a single field)
-      const queryString = this.buildQueryString();
+      const queryString = this.buildQueryString(
+        mergedOptions.includeSpecialColumns,
+      );
       url += queryString;
     }
-
-    const mergedOptions = this.mergeExecuteOptions(options);
     const result = await this.context._makeRequest(url, mergedOptions);
 
     if (result.error) {
@@ -538,6 +665,7 @@ export class RecordBuilder<
       expandValidationConfigs,
       skipValidation: options?.skipValidation,
       useEntityIds: mergedOptions.useEntityIds,
+      includeSpecialColumns: mergedOptions.includeSpecialColumns,
       fieldMapping: this.fieldMapping,
     });
   }
@@ -626,7 +754,8 @@ export class RecordBuilder<
         IsSingleField,
         FieldColumn,
         Selected,
-        Expands
+        Expands,
+        SystemCols
       >
     >
   > {
@@ -652,10 +781,7 @@ export class RecordBuilder<
     }
 
     // Use shared response processor
-    const mergedOptions = mergeExecuteOptions(
-      options,
-      this.databaseUseEntityIds,
-    );
+    const mergedOptions = this.mergeExecuteOptions(options);
     const expandBuilder = new ExpandBuilder(
       mergedOptions.useEntityIds ?? false,
       this.logger,
@@ -672,6 +798,7 @@ export class RecordBuilder<
       expandValidationConfigs,
       skipValidation: options?.skipValidation,
       useEntityIds: mergedOptions.useEntityIds,
+      includeSpecialColumns: mergedOptions.includeSpecialColumns,
       fieldMapping: this.fieldMapping,
     });
   }

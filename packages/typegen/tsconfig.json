@@ -6,6 +6,8 @@
     "moduleResolution": "Bundler",
     "outDir": "dist",
     "sourceMap": true,
+    /* Include ES2022 lib for ErrorOptions and Error.cause support */
+    "lib": ["DOM", "DOM.Iterable", "ES2021", "ES2022"],
 
     /* AND if you're building for a library: */
     "declaration": true,

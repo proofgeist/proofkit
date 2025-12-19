@@ -52,6 +52,7 @@ export class InsertBuilder<
   private returnPreference: ReturnPreference;
 
   private databaseUseEntityIds: boolean;
+  private databaseIncludeSpecialColumns: boolean;
 
   constructor(config: {
     occurrence?: Occ;
@@ -60,6 +61,7 @@ export class InsertBuilder<
     data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
     returnPreference?: ReturnPreference;
     databaseUseEntityIds?: boolean;
+    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.table = config.occurrence;
     this.databaseName = config.databaseName;
@@ -68,6 +70,8 @@ export class InsertBuilder<
     this.returnPreference = (config.returnPreference ||
       "representation") as ReturnPreference;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
+    this.databaseIncludeSpecialColumns =
+      config.databaseIncludeSpecialColumns ?? false;
   }
 
   /**

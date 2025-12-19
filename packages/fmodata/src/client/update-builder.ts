@@ -2,7 +2,6 @@ import type {
   ExecutionContext,
   ExecutableBuilder,
   Result,
-  WithSystemFields,
   ExecuteOptions,
   ExecuteMethodOptions,
 } from "../types";
@@ -35,6 +34,7 @@ export class UpdateBuilder<
   private returnPreference: ReturnPreference;
 
   private databaseUseEntityIds: boolean;
+  private databaseIncludeSpecialColumns: boolean;
 
   constructor(config: {
     occurrence: Occ;
@@ -43,6 +43,7 @@ export class UpdateBuilder<
     data: Partial<InferSchemaOutputFromFMTable<Occ>>;
     returnPreference: ReturnPreference;
     databaseUseEntityIds?: boolean;
+    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.table = config.occurrence;
     this.databaseName = config.databaseName;
@@ -50,6 +51,8 @@ export class UpdateBuilder<
     this.data = config.data;
     this.returnPreference = config.returnPreference;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
+    this.databaseIncludeSpecialColumns =
+      config.databaseIncludeSpecialColumns ?? false;
   }
 
   /**

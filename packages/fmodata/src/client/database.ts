@@ -4,10 +4,26 @@ import { EntitySet } from "./entity-set";
 import { BatchBuilder } from "./batch-builder";
 import { SchemaManager } from "./schema-manager";
 import { FMTable } from "../orm/table";
+import { WebhookManager } from "./webhook-builder";
 
-export class Database {
+type MetadataArgs = {
+  format?: "xml" | "json";
+  /**
+   * If provided, only the metadata for the specified table will be returned.
+   * Requires FileMaker Server 22.0.4 or later.
+   */
+  tableName?: string;
+  /**
+   * If true, a reduced payload size will be returned by omitting certain annotations.
+   */
+  reduceAnnotations?: boolean;
+};
+
+export class Database<IncludeSpecialColumns extends boolean = false> {
   private _useEntityIds: boolean = false;
+  private _includeSpecialColumns: IncludeSpecialColumns;
   public readonly schema: SchemaManager;
+  public readonly webhook: WebhookManager;
 
   constructor(
     private readonly databaseName: string,
@@ -19,14 +35,24 @@ export class Database {
        * If set to false but some occurrences do not use entity IDs, an error will be thrown
        */
       useEntityIds?: boolean;
+      /**
+       * Whether to include special columns (ROWID and ROWMODID) in responses.
+       * Note: Special columns are only included when there is no $select query.
+       */
+      includeSpecialColumns?: IncludeSpecialColumns;
     },
   ) {
     // Initialize schema manager
     this.schema = new SchemaManager(this.databaseName, this.context);
+    this.webhook = new WebhookManager(this.databaseName, this.context);
     this._useEntityIds = config?.useEntityIds ?? false;
+    this._includeSpecialColumns = (config?.includeSpecialColumns ??
+      false) as IncludeSpecialColumns;
   }
 
-  from<T extends FMTable<any, any>>(table: T): EntitySet<T> {
+  from<T extends FMTable<any, any>>(
+    table: T,
+  ): EntitySet<T, IncludeSpecialColumns> {
     // Only override database-level useEntityIds if table explicitly sets it
     // (not if it's undefined, which would override the database setting)
     if (
@@ -37,7 +63,7 @@ export class Database {
         this._useEntityIds = tableUseEntityIds;
       }
     }
-    return new EntitySet<T>({
+    return new EntitySet<T, IncludeSpecialColumns>({
       occurrence: table as T,
       databaseName: this.databaseName,
       context: this.context,
@@ -49,19 +75,35 @@ export class Database {
    * Retrieves the OData metadata for this database.
    * @param args Optional configuration object
    * @param args.format The format to retrieve metadata in. Defaults to "json".
+   * @param args.tableName If provided, only the metadata for the specified table will be returned. Requires FileMaker Server 22.0.4 or later.
+   * @param args.reduceAnnotations If true, a reduced payload size will be returned by omitting certain annotations.
    * @returns The metadata in the specified format
    */
-  async getMetadata(args: { format: "xml" }): Promise<string>;
-  async getMetadata(args?: { format?: "json" }): Promise<Metadata>;
-  async getMetadata(args?: {
-    format?: "xml" | "json";
-  }): Promise<string | Metadata> {
+  async getMetadata(args: { format: "xml" } & MetadataArgs): Promise<string>;
+  async getMetadata(
+    args?: { format?: "json" } & MetadataArgs,
+  ): Promise<Metadata>;
+  async getMetadata(args?: MetadataArgs): Promise<string | Metadata> {
+    // Build the URL - if tableName is provided, append %23{tableName} to the path
+    let url = `/${this.databaseName}/$metadata`;
+    if (args?.tableName) {
+      url = `/${this.databaseName}/$metadata%23${args.tableName}`;
+    }
+
+    // Build headers
+    const headers: Record<string, string> = {
+      Accept: args?.format === "xml" ? "application/xml" : "application/json",
+    };
+
+    // Add Prefer header if reduceAnnotations is true
+    if (args?.reduceAnnotations) {
+      headers["Prefer"] = 'include-annotations="-*"';
+    }
+
     const result = await this.context._makeRequest<
       Record<string, Metadata> | string
-    >(`/${this.databaseName}/$metadata`, {
-      headers: {
-        Accept: args?.format === "xml" ? "application/xml" : "application/json",
-      },
+    >(url, {
+      headers,
     });
     if (result.error) {
       throw result.error;

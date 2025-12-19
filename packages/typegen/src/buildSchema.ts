@@ -27,6 +27,7 @@ export function buildSchema(
   const hasPortals = portalSchema.length > 0;
 
   if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
+    // Map zod/v4 to zod since we're using zod v4
     schemaFile.addImportDeclaration({
       moduleSpecifier: type,
       namedImports: ["z"],

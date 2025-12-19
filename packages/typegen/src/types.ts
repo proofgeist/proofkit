@@ -176,7 +176,7 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("fmodata"),
     configName: z.string().optional(),
-    envNames,
+    envNames: z.optional(envNames),
     path,
     reduceMetadata: z.boolean().optional().meta({
       description:

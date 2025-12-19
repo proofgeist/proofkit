@@ -143,6 +143,12 @@ export function MetadataFieldsDialog({
     name: `config.${configIndex}.tables` as const,
   });
 
+  // Get the top-level includeAllFieldsByDefault value for display
+  const topLevelIncludeAllFieldsByDefault = useWatch({
+    control,
+    name: `config.${configIndex}.includeAllFieldsByDefault` as const,
+  });
+
   // Use a ref to store the latest fieldsConfig to avoid unstable dependencies
   const fieldsConfigRef = useRef<any[]>(EMPTY_FIELDS_CONFIG);
 
@@ -219,6 +225,13 @@ export function MetadataFieldsDialog({
         (t) => t?.tableName === tableName,
       );
 
+      // Get effective includeAllFieldsByDefault value
+      const tableConfig = currentTables[tableIndex];
+      const effectiveIncludeAllFieldsByDefault =
+        tableConfig?.includeAllFieldsByDefault ??
+        topLevelIncludeAllFieldsByDefault ??
+        true;
+
       if (tableIndex < 0) {
         // Table doesn't exist in config yet
         if (exclude) {
@@ -228,6 +241,16 @@ export function MetadataFieldsDialog({
             [
               ...currentTables,
               { tableName, fields: [{ fieldName, exclude: true }] },
+            ],
+            { shouldDirty: true },
+          );
+        } else if (!effectiveIncludeAllFieldsByDefault) {
+          // If includeAllFieldsByDefault is false, add field to array to include it
+          setValue(
+            `config.${configIndex}.tables` as any,
+            [
+              ...currentTables,
+              { tableName, fields: [{ fieldName }] },
             ],
             { shouldDirty: true },
           );
@@ -266,41 +289,61 @@ export function MetadataFieldsDialog({
           });
         }
       } else {
-        // Remove exclude (or remove entire entry if no other config)
-        if (fieldIndex >= 0) {
-          const fieldConfig = currentFields[fieldIndex]!;
-          const { exclude: _, ...rest } = fieldConfig;
+        // Include the field
+        if (effectiveIncludeAllFieldsByDefault) {
+          // If includeAllFieldsByDefault is true, remove field from array (or just remove exclude property)
+          if (fieldIndex >= 0) {
+            const fieldConfig = currentFields[fieldIndex]!;
+            const { exclude: _, ...rest } = fieldConfig;
 
-          if (Object.keys(rest).length === 1 && rest.fieldName) {
-            // Only fieldName left, remove entire field entry
-            const newFields = currentFields.filter((_, i) => i !== fieldIndex);
-            const newTables = [...currentTables];
+            if (Object.keys(rest).length === 1 && rest.fieldName) {
+              // Only fieldName left, remove entire field entry
+              const newFields = currentFields.filter((_, i) => i !== fieldIndex);
+              const newTables = [...currentTables];
 
-            if (
-              newFields.length === 0 &&
-              Object.keys(newTables[tableIndex]!).length === 2
-            ) {
-              // Only tableName and fields left, remove entire table entry
-              const filteredTables = currentTables.filter(
-                (_, i) => i !== tableIndex,
-              );
-              setValue(
-                `config.${configIndex}.tables` as any,
-                filteredTables.length > 0 ? filteredTables : undefined,
-                { shouldDirty: true },
-              );
+              if (
+                newFields.length === 0 &&
+                Object.keys(newTables[tableIndex]!).length === 2
+              ) {
+                // Only tableName and fields left, remove entire table entry
+                const filteredTables = currentTables.filter(
+                  (_, i) => i !== tableIndex,
+                );
+                setValue(
+                  `config.${configIndex}.tables` as any,
+                  filteredTables.length > 0 ? filteredTables : undefined,
+                  { shouldDirty: true },
+                );
+              } else {
+                // Keep table but update fields
+                newTables[tableIndex] = {
+                  ...newTables[tableIndex]!,
+                  fields: newFields.length > 0 ? newFields : undefined,
+                };
+                setValue(`config.${configIndex}.tables` as any, newTables, {
+                  shouldDirty: true,
+                });
+              }
             } else {
-              // Keep table but update fields
+              // Keep other properties
+              const newFields = [...currentFields];
+              newFields[fieldIndex] = rest as any;
+              const newTables = [...currentTables];
               newTables[tableIndex] = {
                 ...newTables[tableIndex]!,
-                fields: newFields.length > 0 ? newFields : undefined,
+                fields: newFields,
               };
               setValue(`config.${configIndex}.tables` as any, newTables, {
                 shouldDirty: true,
               });
             }
-          } else {
-            // Keep other properties
+          }
+        } else {
+          // If includeAllFieldsByDefault is false, add field to array to include it
+          if (fieldIndex >= 0) {
+            // Field exists, just remove exclude property
+            const fieldConfig = currentFields[fieldIndex]!;
+            const { exclude: _, ...rest } = fieldConfig;
             const newFields = [...currentFields];
             newFields[fieldIndex] = rest as any;
             const newTables = [...currentTables];
@@ -311,11 +354,28 @@ export function MetadataFieldsDialog({
             setValue(`config.${configIndex}.tables` as any, newTables, {
               shouldDirty: true,
             });
+          } else {
+            // Add field to array
+            const newTables = [...currentTables];
+            newTables[tableIndex] = {
+              ...newTables[tableIndex]!,
+              fields: [...currentFields, { fieldName }],
+            };
+            setValue(`config.${configIndex}.tables` as any, newTables, {
+              shouldDirty: true,
+            });
           }
         }
       }
     },
-    [configType, configIndex, tableName, allTablesConfig, setValue],
+    [
+      configType,
+      configIndex,
+      tableName,
+      allTablesConfig,
+      setValue,
+      topLevelIncludeAllFieldsByDefault,
+    ],
   );
 
   // Get the field name for variableName - table should exist due to ensuredTableIndex above
@@ -329,6 +389,10 @@ export function MetadataFieldsDialog({
   // Get the field name for alwaysOverrideFieldNames - table should exist due to ensuredTableIndex above
   const alwaysOverrideFieldNamesFieldName =
     `config.${configIndex}.tables.${currentTableIndex >= 0 ? currentTableIndex : 0}.alwaysOverrideFieldNames` as any;
+
+  // Get the field name for includeAllFieldsByDefault - table should exist due to ensuredTableIndex above
+  const includeAllFieldsByDefaultFieldName =
+    `config.${configIndex}.tables.${currentTableIndex >= 0 ? currentTableIndex : 0}.includeAllFieldsByDefault` as any;
 
   // Helper to set field type override - use ref to avoid dependency on fieldsConfig
   const setFieldTypeOverride = useCallback(
@@ -444,6 +508,11 @@ export function MetadataFieldsDialog({
     [configType, configIndex, tableName, allTablesConfig, setValue],
   );
 
+  // Get the effective includeAllFieldsByDefault value (table-level override or top-level default)
+  const effectiveIncludeAllFieldsByDefault = useMemo(() => {
+    return tableConfig?.includeAllFieldsByDefault ?? topLevelIncludeAllFieldsByDefault ?? true;
+  }, [tableConfig?.includeAllFieldsByDefault, topLevelIncludeAllFieldsByDefault]);
+
   // Get fields for the selected table
   const fieldsData = useMemo<FieldRow[]>(() => {
     if (
@@ -487,7 +556,22 @@ export function MetadataFieldsDialog({
         const fieldConfig = Array.isArray(fieldsConfig)
           ? fieldsConfig.find((f) => f?.fieldName === fieldName)
           : undefined;
-        const isExcluded = fieldConfig?.exclude === true;
+        
+        // Determine if field is excluded:
+        // - If explicitly excluded (exclude === true), always exclude
+        // - If includeAllFieldsByDefault is false, exclude if field is not in fields array
+        // - Otherwise, include by default
+        let isExcluded: boolean;
+        if (fieldConfig?.exclude === true) {
+          isExcluded = true;
+        } else if (!effectiveIncludeAllFieldsByDefault) {
+          // If includeAllFieldsByDefault is false, only include fields explicitly in the array
+          isExcluded = !fieldConfig;
+        } else {
+          // Default behavior: include all unless explicitly excluded
+          isExcluded = false;
+        }
+        
         const typeOverride = fieldConfig?.typeOverride;
         const isPrimaryKey = keyFields.includes(fieldName);
 
@@ -522,7 +606,22 @@ export function MetadataFieldsDialog({
         const fieldConfig = Array.isArray(fieldsConfig)
           ? fieldsConfig.find((f) => f?.fieldName === fieldName)
           : undefined;
-        const isExcluded = fieldConfig?.exclude === true;
+        
+        // Determine if field is excluded:
+        // - If explicitly excluded (exclude === true), always exclude
+        // - If includeAllFieldsByDefault is false, exclude if field is not in fields array
+        // - Otherwise, include by default
+        let isExcluded: boolean;
+        if (fieldConfig?.exclude === true) {
+          isExcluded = true;
+        } else if (!effectiveIncludeAllFieldsByDefault) {
+          // If includeAllFieldsByDefault is false, only include fields explicitly in the array
+          isExcluded = !fieldConfig;
+        } else {
+          // Default behavior: include all unless explicitly excluded
+          isExcluded = false;
+        }
+        
         const typeOverride = fieldConfig?.typeOverride;
         const isPrimaryKey = keyFields.includes(fieldName);
 
@@ -540,7 +639,7 @@ export function MetadataFieldsDialog({
     }
 
     return fields;
-  }, [tableName, parsedMetadata, fieldsConfig]);
+  }, [tableName, parsedMetadata, fieldsConfig, effectiveIncludeAllFieldsByDefault]);
 
   // Check if all fields are included or excluded
   const allFieldsIncluded = useMemo(() => {
@@ -1074,6 +1173,69 @@ export function MetadataFieldsDialog({
                               Reduce Metadata
                             </SelectItem>
                             <SelectItem value="false">Full Metadata</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+              <FormField
+                control={control}
+                name={includeAllFieldsByDefaultFieldName}
+                disabled={
+                  currentTableIndex < 0 || configType !== "fmodata" || !open
+                }
+                render={({ field }) => {
+                  const isDefault = field.value === undefined;
+                  const effectiveValue = field.value ?? topLevelIncludeAllFieldsByDefault ?? true;
+                  return (
+                    <FormItem className="flex-1">
+                      <FormLabel>
+                        Include All Fields By Default{" "}
+                        <InfoTooltip label="If true, all fields from metadata will be included unless explicitly excluded. If false, only fields defined in the fields array will be included." />
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          value={
+                            field.value === undefined
+                              ? "__default__"
+                              : field.value === true
+                                ? "true"
+                                : "false"
+                          }
+                          onValueChange={(val) => {
+                            if (val === "__default__") {
+                              field.onChange(undefined);
+                            } else {
+                              field.onChange(val === "true");
+                            }
+                          }}
+                        >
+                          <SelectTrigger
+                            className={
+                              isDefault
+                                ? "[&>span]:italic [&>span]:text-muted-foreground"
+                                : ""
+                            }
+                          >
+                            <SelectValue placeholder="Select include all fields option" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value="__default__"
+                              className="italic text-muted-foreground"
+                            >
+                              Use Top-Level Setting
+                              {isDefault && ` (${effectiveValue ? "Include All" : "Only Explicit"})`}
+                            </SelectItem>
+                            <SelectItem value="true">
+                              Include All Fields By Default
+                            </SelectItem>
+                            <SelectItem value="false">
+                              Only Include Explicit Fields
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </FormControl>

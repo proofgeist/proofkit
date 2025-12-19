@@ -159,6 +159,7 @@ function generateTableOccurrence(
   existingFields?: ParsedTableOccurrence,
   alwaysOverrideFieldNames?: boolean,
   importAliases?: Map<string, string>, // Map base name -> alias (e.g., "textField" -> "tf")
+  includeAllFieldsByDefault?: boolean,
 ): GeneratedTO {
   const fmtId = entityType["@TableID"];
   const keyFields = entityType.$Key || [];
@@ -232,6 +233,12 @@ function generateTableOccurrence(
     }
   }
 
+  // Determine includeAllFieldsByDefault: table-level override takes precedence, then top-level, default to true
+  const effectiveIncludeAllFieldsByDefault =
+    tableOverride?.includeAllFieldsByDefault ??
+    includeAllFieldsByDefault ??
+    true;
+
   // Generate field builder definitions
   const fieldLines: string[] = [];
   const fieldEntries = Array.from(fields.entries());
@@ -247,6 +254,11 @@ function generateTableOccurrence(
 
     // Skip excluded fields
     if (fieldOverride?.exclude === true) {
+      continue;
+    }
+
+    // If includeAllFieldsByDefault is false, only include fields explicitly listed
+    if (!effectiveIncludeAllFieldsByDefault && !fieldOverride) {
       continue;
     }
 
@@ -933,6 +945,7 @@ export async function generateODataTypes(
     clearOldFiles = true,
     tables,
     alwaysOverrideFieldNames = true,
+    includeAllFieldsByDefault = true,
   } = config;
   const outputPath = path ?? "schema";
 
@@ -993,6 +1006,7 @@ export async function generateODataTypes(
         undefined,
         tableAlwaysOverrideFieldNames,
         undefined,
+        includeAllFieldsByDefault,
       );
       generatedTOs.push({
         ...generated,
@@ -1052,6 +1066,7 @@ export async function generateODataTypes(
           existingFields,
           tableAlwaysOverrideFieldNames,
           existingFields.importAliases,
+          includeAllFieldsByDefault,
         )
       : generated;
 

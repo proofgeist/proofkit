@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useMemo } from "react";
 import { useFormContext, useWatch, Path, PathValue } from "react-hook-form";
 import { z } from "zod";
-import { Eye, EyeOff } from "lucide-react";
+import { CircleCheck, CircleSlash, Loader } from "lucide-react";
 import { configSchema } from "../lib/schema";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
+import { Input, InputWrapper } from "./ui/input";
 import {
   FormControl,
   FormField,
@@ -13,93 +12,12 @@ import {
   FormMessage,
 } from "./ui/form";
 import { useEnvValue } from "../lib/envValues";
+import { useDebounce } from "@uidotdev/usehooks";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { cn } from "@/lib/utils";
 
 type FormData = z.infer<typeof configSchema>;
 type FormConfig = { config: FormData[] };
-
-// Separate component for value display to prevent Input re-renders
-const EnvValueDisplay = memo(function EnvValueDisplay({
-  fieldName,
-  defaultValue,
-}: {
-  fieldName: Path<FormConfig>;
-  defaultValue: string;
-}) {
-  const { control } = useFormContext<FormConfig>();
-  const [isVisible, setIsVisible] = useState(false);
-  const [debouncedEnvName, setDebouncedEnvName] = useState<string | undefined>(
-    undefined,
-  );
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Watch the env name value - but debounce updates to prevent re-renders
-  const envNameRaw = useWatch({
-    control,
-    name: fieldName,
-    defaultValue: "",
-  }) as string | undefined;
-
-  // Treat empty string as undefined to use default
-  const envName =
-    envNameRaw && envNameRaw.trim() !== "" ? envNameRaw : undefined;
-
-  // Debounce the env name to prevent excessive re-renders and API calls
-  useEffect(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    timerRef.current = setTimeout(() => {
-      setDebouncedEnvName(envName);
-    }, 300); // 300ms debounce
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [envName]);
-
-  // Get the resolved value from the server (using debounced value)
-  const { data: envValue, isLoading } = useEnvValue(
-    debouncedEnvName ?? defaultValue,
-  );
-
-  if (!envName && !defaultValue) return null;
-
-  return (
-    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-      {isLoading ? (
-        <span>Loading...</span>
-      ) : envValue ? (
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            mode="icon"
-            onClick={() => setIsVisible(!isVisible)}
-            className="h-4 w-4 p-0"
-          >
-            {isVisible ? (
-              <EyeOff className="size-3" />
-            ) : (
-              <Eye className="size-3" />
-            )}
-          </Button>
-          <span>
-            Value:{" "}
-            <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-              {isVisible ? envValue : "****"}
-            </code>
-          </span>
-        </>
-      ) : (
-        <span className="text-destructive">Not set</span>
-      )}
-    </div>
-  );
-});
 
 interface EnvVarFieldProps<TFieldName extends Path<FormConfig>> {
   fieldName: TFieldName extends Path<FormConfig>
@@ -110,6 +28,7 @@ interface EnvVarFieldProps<TFieldName extends Path<FormConfig>> {
   label: string;
   placeholder: string;
   defaultValue: string;
+  dimField?: boolean;
 }
 
 export function EnvVarField<TFieldName extends Path<FormConfig>>({
@@ -117,8 +36,36 @@ export function EnvVarField<TFieldName extends Path<FormConfig>>({
   label,
   placeholder,
   defaultValue,
+  dimField = false,
 }: EnvVarFieldProps<TFieldName>) {
   const { control } = useFormContext<FormConfig>();
+  const envName = useWatch({
+    control,
+    name: fieldName,
+    defaultValue: undefined,
+  });
+
+  const debouncedEnvName = useDebounce(envName, 300);
+
+  // Get the resolved value from the server (using debounced value)
+  // Ensure debouncedEnvName is a string or undefined before passing to useEnvValue
+  // Handle nested paths where watch might return objects or other types
+  const envNameForQuery: string | undefined = (() => {
+    if (typeof debouncedEnvName === "string") {
+      return debouncedEnvName.trim() !== "" ? debouncedEnvName : undefined;
+    }
+    return undefined;
+  })();
+  const { data: envValue, isLoading } = useEnvValue(
+    envNameForQuery ?? defaultValue,
+  );
+
+  const valueState: "loading" | "not-set" | "set" = useMemo(() => {
+    if (isLoading) return "loading";
+    if (envValue === undefined || envValue === null || envValue === "")
+      return "not-set";
+    return "set";
+  }, [isLoading, envValue]);
 
   return (
     <FormField
@@ -126,11 +73,41 @@ export function EnvVarField<TFieldName extends Path<FormConfig>>({
       name={fieldName}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
+          <FormLabel>
+            {label}{" "}
+            {dimField ? (
+              <span className="text-xs text-muted-foreground"> (not used)</span>
+            ) : (
+              ""
+            )}
+          </FormLabel>
           <FormControl>
-            <Input type="text" placeholder={placeholder} {...field} />
+            <InputWrapper className={dimField ? "!bg-muted" : ""}>
+              <Input type="text" placeholder={placeholder} {...field} />
+              {valueState === "set" ? (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <CircleCheck
+                      className={cn(
+                        "size-4",
+                        dimField ? "!text-muted-foreground" : "!text-green-500",
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{envValue}</TooltipContent>
+                </Tooltip>
+              ) : valueState === "loading" ? (
+                <Loader className="size-4 animate-spin" />
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <CircleSlash className="size-4 !text-destructive" />
+                  </TooltipTrigger>
+                  <TooltipContent>Not set</TooltipContent>
+                </Tooltip>
+              )}
+            </InputWrapper>
           </FormControl>
-          <EnvValueDisplay fieldName={fieldName} defaultValue={defaultValue} />
           <FormMessage />
         </FormItem>
       )}

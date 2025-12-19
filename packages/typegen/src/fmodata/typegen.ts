@@ -25,7 +25,11 @@ export async function generateODataTablesSingle(config: FmodataConfig) {
     const tableName = tableConfig.tableName;
 
     // Download metadata for this table
-    const tableMetadataXml = await downloadTableMetadata(config, tableName);
+    const tableMetadataXml = await downloadTableMetadata({
+      config,
+      tableName,
+      reduceAnnotations: tableConfig.reduceMetadata,
+    });
 
     // Parse the metadata
     const parsedMetadata = await parseMetadata(tableMetadataXml);

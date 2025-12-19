@@ -11,14 +11,20 @@ type FmodataConfig = Extract<
 /**
  * Downloads OData metadata for a single table from a FileMaker server.
  *
- * @param config - The fmodata config object containing connection details
- * @param tableName - The name of the table to download metadata for
+ * @param params - Object containing function parameters
+ * @param params.config - The fmodata config object containing connection details
+ * @param params.tableName - The name of the table to download metadata for
  * @returns Promise that resolves with the XML metadata string
  */
-export async function downloadTableMetadata(
-  config: FmodataConfig,
-  tableName: string,
-): Promise<string> {
+export async function downloadTableMetadata({
+  config,
+  tableName,
+  reduceAnnotations = false,
+}: {
+  config: FmodataConfig;
+  tableName: string;
+  reduceAnnotations?: boolean;
+}): Promise<string> {
   const envValues = getEnvValues(config.envNames);
   const validationResult = validateEnvValues(envValues, config.envNames);
 
@@ -44,6 +50,7 @@ export async function downloadTableMetadata(
   const tableMetadata = await database.getMetadata({
     tableName,
     format: "xml",
+    reduceAnnotations,
   });
 
   return tableMetadata;

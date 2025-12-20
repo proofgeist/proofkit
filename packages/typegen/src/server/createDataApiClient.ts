@@ -55,22 +55,25 @@ function getEnvVarsFromConfig(
   const server =
     process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
   const db = process.env[getEnvName(envNames?.db, defaultEnvNames.db)];
-  const apiKey =
-    (envNames?.auth && "apiKey" in envNames.auth
-      ? process.env[getEnvName(envNames.auth.apiKey, defaultEnvNames.apiKey)]
-      : undefined) ?? process.env[defaultEnvNames.apiKey];
-  const username =
-    (envNames?.auth && "username" in envNames.auth
-      ? process.env[
-          getEnvName(envNames.auth.username, defaultEnvNames.username)
-        ]
-      : undefined) ?? process.env[defaultEnvNames.username];
-  const password =
-    (envNames?.auth && "password" in envNames.auth
-      ? process.env[
-          getEnvName(envNames.auth.password, defaultEnvNames.password)
-        ]
-      : undefined) ?? process.env[defaultEnvNames.password];
+
+  // Always attempt to read all auth methods from environment variables,
+  // regardless of which type is specified in envNames.auth
+  const apiKeyEnvName =
+    envNames?.auth && "apiKey" in envNames.auth
+      ? getEnvName(envNames.auth.apiKey, defaultEnvNames.apiKey)
+      : defaultEnvNames.apiKey;
+  const usernameEnvName =
+    envNames?.auth && "username" in envNames.auth
+      ? getEnvName(envNames.auth.username, defaultEnvNames.username)
+      : defaultEnvNames.username;
+  const passwordEnvName =
+    envNames?.auth && "password" in envNames.auth
+      ? getEnvName(envNames.auth.password, defaultEnvNames.password)
+      : defaultEnvNames.password;
+
+  const apiKey = process.env[apiKeyEnvName];
+  const username = process.env[usernameEnvName];
+  const password = process.env[passwordEnvName];
 
   // Validate required env vars
   if (!server || !db || (!apiKey && !username)) {

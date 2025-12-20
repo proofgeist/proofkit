@@ -24,7 +24,7 @@ export function ConnectionWarning({ onRefresh }: ConnectionWarningProps) {
               UI Server Unavailable
             </h2>
             <p className="text-destructive/90 mb-6">
-              Did you stop the @proofkit/ui command?
+              Did you stop the @proofkit/typegen ui command?
             </p>
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">

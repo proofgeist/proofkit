@@ -177,11 +177,11 @@ const generateTypedClientsSingle = async (
                 apiKey: undefined,
                 username:
                   envNames?.auth && "username" in envNames.auth
-                    ? envNames.auth.username ?? defaultEnvNames.username
+                    ? (envNames.auth.username ?? defaultEnvNames.username)
                     : defaultEnvNames.username,
                 password:
                   envNames?.auth && "password" in envNames.auth
-                    ? envNames.auth.password ?? defaultEnvNames.password
+                    ? (envNames.auth.password ?? defaultEnvNames.password)
                     : defaultEnvNames.password,
               },
         db: envNames?.db ?? defaultEnvNames.db,

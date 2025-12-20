@@ -280,4 +280,75 @@ describe("typegen", () => {
     // Step 3: Clean up generated files
     await cleanupGeneratedFiles(genPath);
   }, 30000);
+
+  it("should use OttoAdapter when apiKey is provided in envNames", async () => {
+    const config: Extract<
+      z.infer<typeof typegenConfigSingle>,
+      { type: "fmdapi" }
+    > = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "layout",
+          schemaName: "testLayout",
+          generateClient: true,
+        },
+      ],
+      path: "typegen-output/auth-otto",
+      envNames: {
+        auth: { apiKey: "TEST_OTTO_API_KEY" as OttoAPIKey },
+        server: "TEST_FM_SERVER",
+        db: "TEST_FM_DATABASE",
+      },
+      generateClient: true,
+    };
+
+    const genPath = await generateTypes(config);
+
+    // Check that the generated client uses OttoAdapter
+    const clientPath = path.join(genPath, "client", "testLayout.ts");
+    const clientContent = await fs.readFile(clientPath, "utf-8");
+
+    expect(clientContent).toContain("OttoAdapter");
+    expect(clientContent).not.toContain("FetchAdapter");
+    expect(clientContent).toContain("TEST_OTTO_API_KEY");
+
+    await cleanupGeneratedFiles(genPath);
+  }, 30000);
+
+  it("should use FetchAdapter when username/password is provided in envNames", async () => {
+    const config: Extract<
+      z.infer<typeof typegenConfigSingle>,
+      { type: "fmdapi" }
+    > = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "layout",
+          schemaName: "testLayout",
+          generateClient: true,
+        },
+      ],
+      path: "typegen-output/auth-fetch",
+      envNames: {
+        auth: { username: "TEST_USERNAME", password: "TEST_PASSWORD" },
+        server: "TEST_FM_SERVER",
+        db: "TEST_FM_DATABASE",
+      },
+      generateClient: true,
+    };
+
+    const genPath = await generateTypes(config);
+
+    // Check that the generated client uses FetchAdapter
+    const clientPath = path.join(genPath, "client", "testLayout.ts");
+    const clientContent = await fs.readFile(clientPath, "utf-8");
+
+    expect(clientContent).toContain("FetchAdapter");
+    expect(clientContent).not.toContain("OttoAdapter");
+    expect(clientContent).toContain("TEST_USERNAME");
+    expect(clientContent).toContain("TEST_PASSWORD");
+
+    await cleanupGeneratedFiles(genPath);
+  }, 30000);
 });

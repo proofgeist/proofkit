@@ -7,11 +7,11 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   type ColumnDef,
+  flexRender,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { DataGrid, DataGridContainer } from "./ui/data-grid";
-import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
-import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { Input, InputWrapper } from "./ui/input";
 import { Switch } from "./ui/switch";
 import { Skeleton } from "./ui/skeleton";
@@ -130,6 +130,13 @@ export function MetadataFieldsDialog({
   const { control, setValue } = useFormContext<{ config: SingleConfig[] }>();
 
   const [globalFilter, setGlobalFilter] = useState("");
+
+  // Reset search filter when dialog opens or table changes
+  useEffect(() => {
+    if (open) {
+      setGlobalFilter("");
+    }
+  }, [open, tableName]);
 
   // Get the config type to validate we're working with fmodata
   const configType = useWatch({
@@ -923,7 +930,7 @@ export function MetadataFieldsDialog({
               )}
               <span
                 className={`font-medium ${
-                  row.isExcluded ? "text-muted-foreground line-through" : ""
+                  row.isExcluded ? "italic text-muted-foreground/50" : ""
                 }`}
               >
                 {info.getValue() as string}
@@ -1055,6 +1062,40 @@ export function MetadataFieldsDialog({
     return fieldsData.filter((row) => !row.isExcluded).length;
   }, [fieldsData]);
 
+  // Ref for the scrollable container
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // Get filtered rows for virtualization
+  const { rows } = fieldsTable.getRowModel();
+
+  // Setup virtualizer
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 57, // Estimated row height in pixels
+    overscan: 10, // Number of items to render outside of the visible area
+  });
+
+  // Recalculate virtualizer when dialog opens or rows change
+  useEffect(() => {
+    if (open && tableContainerRef.current && rows.length > 0) {
+      // Small delay to ensure container is fully rendered
+      const timeoutId = setTimeout(() => {
+        rowVirtualizer.measure();
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [open, rows.length, rowVirtualizer]);
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+
+  const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
+      : 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -1100,11 +1141,126 @@ export function MetadataFieldsDialog({
                 emptyMessage="No fields found."
                 tableLayout={{ width: "auto", headerSticky: true }}
               >
-                <DataGridContainer>
-                  <ScrollArea className="max-h-[650px]">
-                    <DataGridTable />
-                    <ScrollBar orientation="horizontal" />
-                  </ScrollArea>
+                <DataGridContainer border={true}>
+                  <div
+                    ref={tableContainerRef}
+                    className="overflow-auto"
+                    style={{
+                      contain: "strict",
+                      height: "650px",
+                      maxHeight: "650px",
+                    }}
+                  >
+                    <table className="w-full border-separate border-spacing-0">
+                      <thead className="sticky top-0 z-10 bg-background">
+                        {fieldsTable.getHeaderGroups().map((headerGroup) => (
+                          <tr key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <th
+                                key={header.id}
+                                className="h-10 px-4 text-left align-middle font-normal text-secondary-foreground/80 border-b"
+                                style={{
+                                  width: header.getSize(),
+                                }}
+                              >
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext(),
+                                    )}
+                              </th>
+                            ))}
+                          </tr>
+                        ))}
+                      </thead>
+                      <tbody>
+                        {isLoading ? (
+                          <tr>
+                            <td
+                              colSpan={fieldsTable.getAllColumns().length}
+                              className="text-center py-8"
+                            >
+                              <div className="text-muted-foreground">
+                                Loading fields...
+                              </div>
+                            </td>
+                          </tr>
+                        ) : rows.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={fieldsTable.getAllColumns().length}
+                              className="text-center py-8"
+                            >
+                              <div className="text-muted-foreground">
+                                No fields found.
+                              </div>
+                            </td>
+                          </tr>
+                        ) : virtualRows.length === 0 && rows.length > 0 ? (
+                          // Fallback: if virtualizer hasn't initialized yet, show all rows
+                          rows.map((row) => (
+                            <tr
+                              key={row.id}
+                              className="hover:bg-muted/40 border-b"
+                            >
+                              {row.getVisibleCells().map((cell) => (
+                                <td
+                                  key={cell.id}
+                                  className="px-4 py-3 align-middle"
+                                >
+                                  {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext(),
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        ) : (
+                          <>
+                            {paddingTop > 0 && (
+                              <tr>
+                                <td
+                                  colSpan={fieldsTable.getAllColumns().length}
+                                  style={{ height: `${paddingTop}px` }}
+                                />
+                              </tr>
+                            )}
+                            {virtualRows.map((virtualRow) => {
+                              const row = rows[virtualRow.index];
+                              return (
+                                <tr
+                                  key={row.id}
+                                  className="hover:bg-muted/40 border-b"
+                                >
+                                  {row.getVisibleCells().map((cell) => (
+                                    <td
+                                      key={cell.id}
+                                      className="px-4 py-3 align-middle"
+                                    >
+                                      {flexRender(
+                                        cell.column.columnDef.cell,
+                                        cell.getContext(),
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                            {paddingBottom > 0 && (
+                              <tr>
+                                <td
+                                  colSpan={fieldsTable.getAllColumns().length}
+                                  style={{ height: `${paddingBottom}px` }}
+                                />
+                              </tr>
+                            )}
+                          </>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </DataGridContainer>
               </DataGrid>
             )}

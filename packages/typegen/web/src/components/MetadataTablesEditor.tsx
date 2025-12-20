@@ -23,6 +23,7 @@ import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { Skeleton } from "./ui/skeleton";
 import { Badge } from "./ui/badge";
 import { DropdownMenuItem } from "./ui/dropdown-menu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 
 interface MetadataTablesEditorProps {
   configIndex: number;
@@ -136,6 +137,72 @@ function FieldCountCell({
   }
 
   return <span className="text-sm">{fieldCount}</span>;
+}
+
+// Helper component to fetch and display relationship count for a table
+function RelationshipCountCell({
+  tableName,
+  isIncluded,
+  configIndex,
+}: {
+  tableName: string;
+  isIncluded: boolean;
+  configIndex: number;
+}) {
+  const { data: parsedMetadata, isLoading } = useTableMetadata(
+    configIndex,
+    tableName,
+    isIncluded, // Only fetch when table is included
+  );
+
+  const relationships = useMemo(() => {
+    if (!parsedMetadata?.entitySets || !parsedMetadata?.entityTypes) {
+      return [];
+    }
+
+    const entitySet = Object.values(parsedMetadata.entitySets).find(
+      (es) => es.Name === tableName,
+    );
+    if (!entitySet) return [];
+
+    const entityType = parsedMetadata.entityTypes[entitySet.EntityType];
+    if (!entityType?.NavigationProperties) return [];
+
+    const navProps = entityType.NavigationProperties;
+    // Handle both Array and other formats
+    if (Array.isArray(navProps)) {
+      return navProps.map((np) => np.Name);
+    }
+    return [];
+  }, [parsedMetadata, tableName]);
+
+  if (isLoading) {
+    return <Skeleton className="w-12 h-5" />;
+  }
+
+  if (!isIncluded) {
+    return null;
+  }
+
+  const count = relationships.length;
+
+  if (count === 0) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+
+  const relationshipNames = relationships.join(", ");
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="text-sm cursor-help">{count}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <div className="font-medium mb-1">Relationships:</div>
+        <div className="text-xs">{relationshipNames}</div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function MetadataTablesEditor({
@@ -358,12 +425,15 @@ export function MetadataTablesEditor({
           <DataGridColumnHeader column={column} title="Table Occurrence Name" />
         ),
         enableSorting: true,
+        // Use a large size relative to other columns so it takes most space
+        // In fixed layout, space is distributed proportionally
+
         cell: (info) => {
           const row = info.row.original;
           return (
             <span
               className={`font-medium ${
-                !row.isIncluded ? "text-muted-foreground" : ""
+                !row.isIncluded ? "italic text-muted-foreground" : ""
               }`}
             >
               {info.getValue() as string}
@@ -380,7 +450,9 @@ export function MetadataTablesEditor({
           <DataGridColumnHeader column={column} title="Fields" />
         ),
         enableSorting: false,
-        size: 100,
+        size: 50,
+        minSize: 50,
+        maxSize: 100,
         cell: (info) => {
           const row = info.row.original;
           if (!row.isIncluded) {
@@ -388,6 +460,32 @@ export function MetadataTablesEditor({
           }
           return (
             <FieldCountCell
+              tableName={row.tableName}
+              isIncluded={row.isIncluded}
+              configIndex={configIndex}
+            />
+          );
+        },
+        meta: {
+          skeleton: <Skeleton className="w-12 h-5" />,
+        },
+      },
+      {
+        id: "relationships",
+        header: ({ column }) => (
+          <DataGridColumnHeader column={column} title="Relationships" />
+        ),
+        enableSorting: false,
+        size: 50,
+        minSize: 10,
+        maxSize: 100,
+        cell: (info) => {
+          const row = info.row.original;
+          if (!row.isIncluded) {
+            return null;
+          }
+          return (
+            <RelationshipCountCell
               tableName={row.tableName}
               isIncluded={row.isIncluded}
               configIndex={configIndex}
@@ -600,7 +698,11 @@ export function MetadataTablesEditor({
             recordCount={tablesTable.getFilteredRowModel().rows.length}
             isLoading={isLoadingTables}
             emptyMessage="No tables found."
-            tableLayout={{ width: "fixed", headerSticky: true }}
+            tableLayout={{
+              width: "auto",
+              headerSticky: true,
+              dense: true,
+            }}
           >
             <DataGridContainer>
               <ScrollArea className="max-h-[650px]">

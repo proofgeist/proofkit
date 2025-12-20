@@ -63,10 +63,22 @@ function FieldCountCell({
     name: `config.${configIndex}.tables` as const,
   });
 
+  // Get the top-level includeAllFieldsByDefault value
+  const topLevelIncludeAllFieldsByDefault = useWatch({
+    control,
+    name: `config.${configIndex}.includeAllFieldsByDefault` as const,
+  });
+
   const tableConfig = Array.isArray(allTablesConfig)
     ? allTablesConfig.find((t) => t?.tableName === tableName)
     : undefined;
   const fieldsConfig = tableConfig?.fields ?? [];
+
+  // Get the effective includeAllFieldsByDefault value (table-level override or top-level default)
+  const effectiveIncludeAllFieldsByDefault =
+    tableConfig?.includeAllFieldsByDefault ??
+    topLevelIncludeAllFieldsByDefault ??
+    true;
 
   const fieldCount = useMemo(() => {
     if (!parsedMetadata?.entitySets || !parsedMetadata?.entityTypes) {
@@ -94,14 +106,17 @@ function FieldCountCell({
   const includedFieldCount = useMemo(() => {
     if (fieldCount === undefined) return undefined;
 
-    // Count excluded fields
-    const excludedFields = fieldsConfig.filter(
-      (f) => f?.exclude === true,
-    ).length;
-
-    // Total fields minus excluded fields
-    return fieldCount - excludedFields;
-  }, [fieldCount, fieldsConfig]);
+    if (effectiveIncludeAllFieldsByDefault) {
+      // If includeAllFieldsByDefault is true, count all fields minus explicitly excluded ones
+      const excludedFields = fieldsConfig.filter(
+        (f) => f?.exclude === true,
+      ).length;
+      return fieldCount - excludedFields;
+    } else {
+      // If includeAllFieldsByDefault is false, only count fields explicitly in the array that are not excluded
+      return fieldsConfig.filter((f) => f?.exclude !== true).length;
+    }
+  }, [fieldCount, fieldsConfig, effectiveIncludeAllFieldsByDefault]);
 
   if (isLoading) {
     return <Skeleton className="w-12 h-5" />;

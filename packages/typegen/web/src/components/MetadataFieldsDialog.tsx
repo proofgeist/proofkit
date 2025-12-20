@@ -248,10 +248,7 @@ export function MetadataFieldsDialog({
           // If includeAllFieldsByDefault is false, add field to array to include it
           setValue(
             `config.${configIndex}.tables` as any,
-            [
-              ...currentTables,
-              { tableName, fields: [{ fieldName }] },
-            ],
+            [...currentTables, { tableName, fields: [{ fieldName }] }],
             { shouldDirty: true },
           );
         }
@@ -298,13 +295,18 @@ export function MetadataFieldsDialog({
 
             if (Object.keys(rest).length === 1 && rest.fieldName) {
               // Only fieldName left, remove entire field entry
-              const newFields = currentFields.filter((_, i) => i !== fieldIndex);
+              const newFields = currentFields.filter(
+                (_, i) => i !== fieldIndex,
+              );
               const newTables = [...currentTables];
 
-              if (
-                newFields.length === 0 &&
-                Object.keys(newTables[tableIndex]!).length === 2
-              ) {
+              const table = newTables[tableIndex]!;
+              const tableKeys = Object.keys(table);
+              const hasOnlyTableNameAndFields =
+                tableKeys.length === 2 &&
+                tableKeys.includes("tableName") &&
+                tableKeys.includes("fields");
+              if (newFields.length === 0 && hasOnlyTableNameAndFields) {
                 // Only tableName and fields left, remove entire table entry
                 const filteredTables = currentTables.filter(
                   (_, i) => i !== tableIndex,
@@ -466,10 +468,13 @@ export function MetadataFieldsDialog({
             const newFields = currentFields.filter((_, i) => i !== fieldIndex);
             const newTables = [...currentTables];
 
-            if (
-              newFields.length === 0 &&
-              Object.keys(newTables[tableIndex]!).length === 2
-            ) {
+            const table = newTables[tableIndex]!;
+            const tableKeys = Object.keys(table);
+            const hasOnlyTableNameAndFields =
+              tableKeys.length === 2 &&
+              tableKeys.includes("tableName") &&
+              tableKeys.includes("fields");
+            if (newFields.length === 0 && hasOnlyTableNameAndFields) {
               // Only tableName and fields left, remove entire table entry
               const filteredTables = currentTables.filter(
                 (_, i) => i !== tableIndex,
@@ -510,8 +515,15 @@ export function MetadataFieldsDialog({
 
   // Get the effective includeAllFieldsByDefault value (table-level override or top-level default)
   const effectiveIncludeAllFieldsByDefault = useMemo(() => {
-    return tableConfig?.includeAllFieldsByDefault ?? topLevelIncludeAllFieldsByDefault ?? true;
-  }, [tableConfig?.includeAllFieldsByDefault, topLevelIncludeAllFieldsByDefault]);
+    return (
+      tableConfig?.includeAllFieldsByDefault ??
+      topLevelIncludeAllFieldsByDefault ??
+      true
+    );
+  }, [
+    tableConfig?.includeAllFieldsByDefault,
+    topLevelIncludeAllFieldsByDefault,
+  ]);
 
   // Get fields for the selected table
   const fieldsData = useMemo<FieldRow[]>(() => {
@@ -556,7 +568,7 @@ export function MetadataFieldsDialog({
         const fieldConfig = Array.isArray(fieldsConfig)
           ? fieldsConfig.find((f) => f?.fieldName === fieldName)
           : undefined;
-        
+
         // Determine if field is excluded:
         // - If explicitly excluded (exclude === true), always exclude
         // - If includeAllFieldsByDefault is false, exclude if field is not in fields array
@@ -571,7 +583,7 @@ export function MetadataFieldsDialog({
           // Default behavior: include all unless explicitly excluded
           isExcluded = false;
         }
-        
+
         const typeOverride = fieldConfig?.typeOverride;
         const isPrimaryKey = keyFields.includes(fieldName);
 
@@ -606,7 +618,7 @@ export function MetadataFieldsDialog({
         const fieldConfig = Array.isArray(fieldsConfig)
           ? fieldsConfig.find((f) => f?.fieldName === fieldName)
           : undefined;
-        
+
         // Determine if field is excluded:
         // - If explicitly excluded (exclude === true), always exclude
         // - If includeAllFieldsByDefault is false, exclude if field is not in fields array
@@ -621,7 +633,7 @@ export function MetadataFieldsDialog({
           // Default behavior: include all unless explicitly excluded
           isExcluded = false;
         }
-        
+
         const typeOverride = fieldConfig?.typeOverride;
         const isPrimaryKey = keyFields.includes(fieldName);
 
@@ -639,7 +651,12 @@ export function MetadataFieldsDialog({
     }
 
     return fields;
-  }, [tableName, parsedMetadata, fieldsConfig, effectiveIncludeAllFieldsByDefault]);
+  }, [
+    tableName,
+    parsedMetadata,
+    fieldsConfig,
+    effectiveIncludeAllFieldsByDefault,
+  ]);
 
   // Check if all fields are included or excluded
   const allFieldsIncluded = useMemo(() => {
@@ -659,57 +676,116 @@ export function MetadataFieldsDialog({
       (t) => t?.tableName === tableName,
     );
 
-    if (tableIndex < 0) {
-      // Table doesn't exist in config, nothing to do
-      return;
-    }
+    // Get effective includeAllFieldsByDefault value
+    const tableConfig = tableIndex >= 0 ? currentTables[tableIndex] : undefined;
+    const effectiveIncludeAllFieldsByDefault =
+      tableConfig?.includeAllFieldsByDefault ??
+      topLevelIncludeAllFieldsByDefault ??
+      true;
 
-    const currentFields = currentTables[tableIndex]?.fields ?? [];
+    const currentFields =
+      tableIndex >= 0 ? (currentTables[tableIndex]?.fields ?? []) : [];
     const allFieldNames = fieldsData.map((f) => f.fieldName);
 
-    // Remove exclude flags from all fields
-    const newFields = currentFields
-      .map((fieldConfig) => {
-        const fieldName = fieldConfig?.fieldName;
-        if (fieldName && allFieldNames.includes(fieldName)) {
-          const { exclude: _, ...rest } = fieldConfig;
-          // If only fieldName is left, don't include it
-          if (Object.keys(rest).length === 1 && rest.fieldName) {
-            return null;
-          }
-          return Object.keys(rest).length > 1 ? rest : null;
-        }
-        return fieldConfig;
-      })
-      .filter((f) => f !== null) as any[];
+    let newFields: any[];
+    let newTables: any[];
 
-    const newTables = [...currentTables];
-    if (newFields.length === 0) {
-      // No fields left, remove fields array or entire table entry if only tableName and fields
-      if (Object.keys(newTables[tableIndex]!).length === 2) {
-        const filteredTables = currentTables.filter((_, i) => i !== tableIndex);
-        setValue(
-          `config.${configIndex}.tables` as any,
-          filteredTables.length > 0 ? filteredTables : undefined,
-          { shouldDirty: true },
-        );
+    if (effectiveIncludeAllFieldsByDefault) {
+      // If includeAllFieldsByDefault is true, remove all field entries (or just remove exclude flags)
+      // since all fields are included by default
+      newFields = currentFields
+        .map((fieldConfig) => {
+          const fieldName = fieldConfig?.fieldName;
+          if (fieldName && allFieldNames.includes(fieldName)) {
+            const { exclude: _, ...rest } = fieldConfig;
+            // If only fieldName is left, don't include it
+            if (Object.keys(rest).length === 1 && rest.fieldName) {
+              return null;
+            }
+            return Object.keys(rest).length > 1 ? rest : null;
+          }
+          return fieldConfig;
+        })
+        .filter((f) => f !== null) as any[];
+
+      newTables = [...currentTables];
+      if (tableIndex < 0) {
+        // Table doesn't exist, but with includeAllFieldsByDefault=true, we don't need to add it
+        return;
+      }
+
+      if (newFields.length === 0) {
+        // No fields left, remove fields array or entire table entry if only tableName and fields
+        const table = newTables[tableIndex]!;
+        const tableKeys = Object.keys(table);
+        const hasOnlyTableNameAndFields =
+          tableKeys.length === 2 &&
+          tableKeys.includes("tableName") &&
+          tableKeys.includes("fields");
+        if (hasOnlyTableNameAndFields) {
+          const filteredTables = currentTables.filter(
+            (_, i) => i !== tableIndex,
+          );
+          setValue(
+            `config.${configIndex}.tables` as any,
+            filteredTables.length > 0 ? filteredTables : undefined,
+            { shouldDirty: true },
+          );
+        } else {
+          newTables[tableIndex] = {
+            ...newTables[tableIndex]!,
+            fields: undefined,
+          };
+          setValue(`config.${configIndex}.tables` as any, newTables, {
+            shouldDirty: true,
+          });
+        }
       } else {
         newTables[tableIndex] = {
           ...newTables[tableIndex]!,
-          fields: undefined,
+          fields: newFields,
         };
         setValue(`config.${configIndex}.tables` as any, newTables, {
           shouldDirty: true,
         });
       }
     } else {
-      newTables[tableIndex] = {
-        ...newTables[tableIndex]!,
-        fields: newFields,
-      };
-      setValue(`config.${configIndex}.tables` as any, newTables, {
-        shouldDirty: true,
+      // If includeAllFieldsByDefault is false, add all fields to the array (or ensure they're all there)
+      // Create a map of existing field configs
+      const fieldConfigMap = new Map(
+        currentFields.map((f) => [f?.fieldName, f]),
+      );
+
+      // Ensure all fields are in the array without exclude flags
+      newFields = allFieldNames.map((fieldName) => {
+        const existing = fieldConfigMap.get(fieldName);
+        if (existing) {
+          // Remove exclude flag if present
+          const { exclude: _, ...rest } = existing;
+          return rest;
+        }
+        // Add new field entry
+        return { fieldName };
       });
+
+      if (tableIndex < 0) {
+        // Table doesn't exist, add it with all fields
+        setValue(
+          `config.${configIndex}.tables` as any,
+          [...currentTables, { tableName, fields: newFields }],
+          { shouldDirty: true },
+        );
+      } else {
+        // Update existing table
+        newTables = [...currentTables];
+        newTables[tableIndex] = {
+          ...newTables[tableIndex]!,
+          fields: newFields,
+        };
+        setValue(`config.${configIndex}.tables` as any, newTables, {
+          shouldDirty: true,
+        });
+      }
     }
   }, [
     configType,
@@ -718,6 +794,7 @@ export function MetadataFieldsDialog({
     allTablesConfig,
     setValue,
     fieldsData,
+    topLevelIncludeAllFieldsByDefault,
   ]);
 
   // Helper to exclude all fields
@@ -1189,7 +1266,8 @@ export function MetadataFieldsDialog({
                 }
                 render={({ field }) => {
                   const isDefault = field.value === undefined;
-                  const effectiveValue = field.value ?? topLevelIncludeAllFieldsByDefault ?? true;
+                  const effectiveValue =
+                    field.value ?? topLevelIncludeAllFieldsByDefault ?? true;
                   return (
                     <FormItem className="flex-1">
                       <FormLabel>
@@ -1228,7 +1306,8 @@ export function MetadataFieldsDialog({
                               className="italic text-muted-foreground"
                             >
                               Use Top-Level Setting
-                              {isDefault && ` (${effectiveValue ? "Include All" : "Only Explicit"})`}
+                              {isDefault &&
+                                ` (${effectiveValue ? "Include All" : "Only Explicit"})`}
                             </SelectItem>
                             <SelectItem value="true">
                               Include All Fields By Default

@@ -56,6 +56,16 @@ function flattenLayouts(
 }
 
 export function createApiApp(context: ApiContext) {
+  // Request-validation schema: add default `type` for backwards compatibility.
+  // Important: we keep `typegenConfigSingleForValidation` as a pure discriminated union
+  // so JSON Schema generation (apps/docs) remains unchanged.
+  const typegenConfigSingleRequestForValidation = z.preprocess((data) => {
+    if (data && typeof data === "object" && !("type" in data)) {
+      return { ...(data as Record<string, unknown>), type: "fmdapi" };
+    }
+    return data;
+  }, typegenConfigSingleForValidation);
+
   // Define all routes with proper chaining for type inference
   const app = new Hono()
     .basePath("/api")
@@ -103,7 +113,7 @@ export function createApiApp(context: ApiContext) {
       zValidator(
         "json",
         z.object({
-          config: z.array(typegenConfigSingleForValidation),
+          config: z.array(typegenConfigSingleRequestForValidation),
         }),
       ),
       async (c) => {
@@ -213,8 +223,8 @@ export function createApiApp(context: ApiContext) {
         "json",
         z.object({
           config: z.union([
-            z.array(typegenConfigSingleForValidation),
-            typegenConfigSingleForValidation,
+            z.array(typegenConfigSingleRequestForValidation),
+            typegenConfigSingleRequestForValidation,
           ]),
         }),
       ),
@@ -366,7 +376,7 @@ export function createApiApp(context: ApiContext) {
       zValidator(
         "json",
         z.object({
-          config: typegenConfigSingleForValidation,
+          config: typegenConfigSingleRequestForValidation,
           tableName: z.string(),
         }),
       ),
@@ -471,7 +481,7 @@ export function createApiApp(context: ApiContext) {
       "/test-connection",
       zValidator(
         "json",
-        z.object({ config: typegenConfigSingleForValidation }),
+        z.object({ config: typegenConfigSingleRequestForValidation }),
       ),
       async (c) => {
         try {

@@ -24,45 +24,57 @@ const layoutConfig = z.object({
   }),
 });
 
-const envNames = z
+// Base schema without transforms for JSON Schema generation (used in API validation)
+export const envNamesBase = z
   .object({
-    server: z
-      .string()
-      .optional()
-      .transform((val) => (val === "" ? undefined : val)),
-    db: z
-      .string()
-      .optional()
-      .transform((val) => (val === "" ? undefined : val)),
+    server: z.string().optional(),
+    db: z.string().optional(),
     auth: z
       .object({
-        apiKey: z
-          .string()
-          .optional()
-          .transform((val) => (val === "" ? undefined : val)),
-        username: z
-          .string()
-          .optional()
-          .transform((val) => (val === "" ? undefined : val)),
-        password: z
-          .string()
-          .optional()
-          .transform((val) => (val === "" ? undefined : val)),
+        apiKey: z.string().optional(),
+        username: z.string().optional(),
+        password: z.string().optional(),
       })
-      .optional()
-      .transform((val) => {
-        if (!val || Object.values(val).every((v) => v === undefined)) {
-          return undefined;
-        }
-        return val;
-      }),
+      .optional(),
   })
   .optional()
+  .meta({
+    description:
+      "If you're using other environment variables than the default, custom the NAMES of them here for the typegen to lookup their values when it runs.",
+  });
+
+// Runtime schema with transforms (used for actual typegen processing)
+const envNames = envNamesBase
   .transform((val) => {
-    if (val && Object.values(val).every((v) => v === undefined)) {
+    if (!val) return undefined;
+
+    // Transform empty strings to undefined
+    const transformed: typeof val = {
+      server: val.server === "" ? undefined : val.server,
+      db: val.db === "" ? undefined : val.db,
+      auth: val.auth
+        ? {
+            apiKey: val.auth.apiKey === "" ? undefined : val.auth.apiKey,
+            username: val.auth.username === "" ? undefined : val.auth.username,
+            password: val.auth.password === "" ? undefined : val.auth.password,
+          }
+        : undefined,
+    };
+
+    // Remove auth if all values are undefined
+    if (
+      transformed.auth &&
+      Object.values(transformed.auth).every((v) => v === undefined)
+    ) {
+      transformed.auth = undefined;
+    }
+
+    // Return undefined if all top-level values are undefined
+    if (Object.values(transformed).every((v) => v === undefined)) {
       return undefined;
     }
-    return val ?? undefined;
+
+    return transformed;
   })
   .meta({
     description:
@@ -134,63 +146,106 @@ const tableConfig = z.object({
   }),
 });
 
-const typegenConfigSingleBase = z.discriminatedUnion("type", [
+// Shared field definitions to avoid duplication
+const clearOldFilesField = z.boolean().default(false).optional().meta({
+  description:
+    "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
+});
+
+const validatorField = z
+  .union([z.enum(["zod", "zod/v4", "zod/v3"]), z.literal(false)])
+  .default("zod/v4")
+  .optional()
+  .meta({
+    description:
+      "If set to 'zod', 'zod/v4', or 'zod/v3', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
+  });
+
+const clientSuffixField = z.string().default("Layout").optional().meta({
+  description: "The suffix to be added to the schema name for each layout",
+});
+
+const generateClientField = z.boolean().default(true).optional().meta({
+  description:
+    "If true, a layout-specific client will be generated for each layout provided, otherwise it will only generate the types. This option can be overridden for each layout individually.",
+});
+
+const webviewerScriptNameField = z.string().optional().meta({
+  description:
+    "The name of the webviewer script to be used. If this key is set, the generated client will use the @proofkit/webviewer adapter instead of the OttoFMS or Fetch adapter, which will only work when loaded inside of a FileMaker webviewer.",
+});
+
+const reduceMetadataField = z.boolean().optional().meta({
+  description:
+    "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+});
+
+const alwaysOverrideFieldNamesField = z
+  .boolean()
+  .default(true)
+  .optional()
+  .meta({
+    description:
+      "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
+  });
+
+const tablesField = z.array(tableConfig).default([]).meta({
+  description:
+    "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
+});
+
+const includeAllFieldsByDefaultField = z
+  .boolean()
+  .default(true)
+  .optional()
+  .meta({
+    description:
+      "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
+  });
+
+// Helper function to create config objects with different envNames schemas
+const createFmdapiConfig = (
+  envNamesSchema: typeof envNames | typeof envNamesBase,
+) =>
   z.object({
     type: z.literal("fmdapi"),
     configName: z.string().optional(),
-    envNames,
+    envNames: envNamesSchema,
     layouts: z.array(layoutConfig).default([]),
     path,
-    clearOldFiles: z.boolean().default(false).optional().meta({
-      description:
-        "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
-    }),
-    validator: z
-      .union([z.enum(["zod", "zod/v4", "zod/v3"]), z.literal(false)])
-      .default("zod/v4")
-      .optional()
-      .meta({
-        description:
-          "If set to 'zod', 'zod/v4', or 'zod/v3', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
-      }),
-    clientSuffix: z.string().default("Layout").optional().meta({
-      description: "The suffix to be added to the schema name for each layout",
-    }),
-    generateClient: z.boolean().default(true).optional().meta({
-      description:
-        "If true, a layout-specific client will be generated for each layout provided, otherwise it will only generate the types. This option can be overridden for each layout individually.",
-    }),
-    webviewerScriptName: z.string().optional().meta({
-      description:
-        "The name of the webviewer script to be used. If this key is set, the generated client will use the @proofkit/webviewer adapter instead of the OttoFMS or Fetch adapter, which will only work when loaded inside of a FileMaker webviewer.",
-    }),
-  }),
+    clearOldFiles: clearOldFilesField,
+    validator: validatorField,
+    clientSuffix: clientSuffixField,
+    generateClient: generateClientField,
+    webviewerScriptName: webviewerScriptNameField,
+  });
+
+const createFmodataConfig = (
+  envNamesSchema: typeof envNames | typeof envNamesBase,
+) =>
   z.object({
     type: z.literal("fmodata"),
     configName: z.string().optional(),
-    envNames: z.optional(envNames),
+    envNames: z.optional(envNamesSchema),
     path,
-    reduceMetadata: z.boolean().optional().meta({
-      description:
-        "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
-    }),
-    clearOldFiles: z.boolean().default(false).optional().meta({
-      description:
-        "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
-    }),
-    alwaysOverrideFieldNames: z.boolean().default(true).optional().meta({
-      description:
-        "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
-    }),
-    tables: z.array(tableConfig).default([]).meta({
-      description:
-        "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
-    }),
-    includeAllFieldsByDefault: z.boolean().default(true).optional().meta({
-      description:
-        "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
-    }),
-  }),
+    reduceMetadata: reduceMetadataField,
+    clearOldFiles: clearOldFilesField,
+    alwaysOverrideFieldNames: alwaysOverrideFieldNamesField,
+    tables: tablesField,
+    includeAllFieldsByDefault: includeAllFieldsByDefaultField,
+  });
+
+// Runtime schema with transforms (used for actual typegen processing)
+const typegenConfigSingleBase = z.discriminatedUnion("type", [
+  createFmdapiConfig(envNames),
+  createFmodataConfig(envNames),
+]);
+
+// Validation schema without transforms/preprocess for API routes (JSON Schema compatible)
+// This schema is used in API validation where JSON Schema generation is needed
+export const typegenConfigSingleForValidation = z.discriminatedUnion("type", [
+  createFmdapiConfig(envNamesBase),
+  createFmodataConfig(envNamesBase),
 ]);
 
 // Add default "type" field for backwards compatibility
@@ -203,6 +258,14 @@ export const typegenConfigSingle = z.preprocess((data) => {
 
 export const typegenConfig = z.object({
   config: z.union([z.array(typegenConfigSingle), typegenConfigSingle]),
+});
+
+// Validation version for JSON Schema generation (no transforms, no preprocess)
+export const typegenConfigForValidation = z.object({
+  config: z.union([
+    z.array(typegenConfigSingleForValidation),
+    typegenConfigSingleForValidation,
+  ]),
 });
 
 export type TypegenConfig = z.infer<typeof typegenConfig>;

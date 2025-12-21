@@ -3,7 +3,11 @@ import { zValidator } from "@hono/zod-validator";
 import fs from "fs-extra";
 import path from "path";
 import { parse } from "jsonc-parser";
-import { typegenConfig, typegenConfigSingle } from "../types";
+import {
+  typegenConfig,
+  typegenConfigSingle,
+  typegenConfigSingleForValidation,
+} from "../types";
 import z from "zod/v4";
 import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
 import {
@@ -99,15 +103,28 @@ export function createApiApp(context: ApiContext) {
       zValidator(
         "json",
         z.object({
-          config: z.array(typegenConfigSingle),
+          config: z.array(typegenConfigSingleForValidation),
         }),
       ),
       async (c) => {
         try {
           const data = c.req.valid("json");
 
+          // Transform validated data using runtime schema (applies transforms)
+          const transformedData = {
+            config: data.config.map((config) => {
+              // Add default type if missing (backwards compatibility)
+              const configWithType =
+                "type" in config && config.type
+                  ? config
+                  : { ...config, type: "fmdapi" as const };
+              // Parse with runtime schema to apply transforms
+              return typegenConfigSingle.parse(configWithType);
+            }),
+          };
+
           // Validate with Zod (data is already { config: [...] })
-          const validation = typegenConfig.safeParse(data);
+          const validation = typegenConfig.safeParse(transformedData);
 
           if (!validation.success) {
             const issues = validation.error.issues.map((err) => ({
@@ -138,7 +155,14 @@ export function createApiApp(context: ApiContext) {
 
           // Write to disk as pretty JSON (replacing JSONC)
           const fullPath = path.resolve(context.cwd, context.configPath);
-          const jsonContent = JSON.stringify(validation.data, null, 2) + "\n";
+          // Add $schema at the top of the config
+          const configData = validation.data as Record<string, unknown>;
+          const { $schema: _, ...rest } = configData;
+          const configWithSchema = {
+            $schema: "https://proofkit.dev/typegen-config-schema.json",
+            ...rest,
+          };
+          const jsonContent = JSON.stringify(configWithSchema, null, 2) + "\n";
 
           await fs.ensureDir(path.dirname(fullPath));
           await fs.writeFile(fullPath, jsonContent, "utf8");
@@ -186,12 +210,31 @@ export function createApiApp(context: ApiContext) {
       zValidator(
         "json",
         z.object({
-          config: z.union([z.array(typegenConfigSingle), typegenConfigSingle]),
+          config: z.union([
+            z.array(typegenConfigSingleForValidation),
+            typegenConfigSingleForValidation,
+          ]),
         }),
       ),
       async (c, next) => {
-        const data = c.req.valid("json");
-        const config = data.config;
+        const rawData = c.req.valid("json");
+        // Transform validated data using runtime schema (applies transforms)
+        const configArray = Array.isArray(rawData.config)
+          ? rawData.config
+          : [rawData.config];
+        const transformedConfig = configArray.map((config) => {
+          // Add default type if missing (backwards compatibility)
+          const configWithType =
+            "type" in config && config.type
+              ? config
+              : { ...config, type: "fmdapi" as const };
+          // Parse with runtime schema to apply transforms
+          return typegenConfigSingle.parse(configWithType);
+        });
+        const config =
+          transformedConfig.length === 1
+            ? transformedConfig[0]
+            : transformedConfig;
 
         await generateTypedClients(config);
         await next();
@@ -319,13 +362,19 @@ export function createApiApp(context: ApiContext) {
       zValidator(
         "json",
         z.object({
-          config: typegenConfigSingle,
+          config: typegenConfigSingleForValidation,
           tableName: z.string(),
         }),
       ),
       async (c) => {
-        const input = c.req.valid("json");
-        const config = input.config;
+        const rawInput = c.req.valid("json");
+        // Transform validated data using runtime schema (applies transforms)
+        const configWithType =
+          "type" in rawInput.config && rawInput.config.type
+            ? rawInput.config
+            : { ...rawInput.config, type: "fmdapi" as const };
+        const config = typegenConfigSingle.parse(configWithType);
+        const tableName = rawInput.tableName;
         const { tableName } = input;
         if (config.type !== "fmodata") {
           return c.json({ error: "Invalid config type" }, 400);
@@ -415,11 +464,19 @@ export function createApiApp(context: ApiContext) {
     // POST /api/test-connection
     .post(
       "/test-connection",
-      zValidator("json", z.object({ config: typegenConfigSingle })),
+      zValidator(
+        "json",
+        z.object({ config: typegenConfigSingleForValidation }),
+      ),
       async (c) => {
         try {
-          const data = c.req.valid("json");
-          const config = data.config;
+          const rawData = c.req.valid("json");
+          // Transform validated data using runtime schema (applies transforms)
+          const configWithType =
+            "type" in rawData.config && rawData.config.type
+              ? rawData.config
+              : { ...rawData.config, type: "fmdapi" as const };
+          const config = typegenConfigSingle.parse(configWithType);
 
           // Validate config type
           if (config.type === "fmdapi") {

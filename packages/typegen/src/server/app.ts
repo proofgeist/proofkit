@@ -117,7 +117,9 @@ export function createApiApp(context: ApiContext) {
               const configWithType =
                 "type" in config && config.type
                   ? config
-                  : { ...config, type: "fmdapi" as const };
+                  : Object.assign({}, config as Record<string, unknown>, {
+                      type: "fmdapi" as const,
+                    });
               // Parse with runtime schema to apply transforms
               return typegenConfigSingle.parse(configWithType);
             }),
@@ -227,13 +229,15 @@ export function createApiApp(context: ApiContext) {
           const configWithType =
             "type" in config && config.type
               ? config
-              : { ...config, type: "fmdapi" as const };
+              : Object.assign({}, config as Record<string, unknown>, {
+                  type: "fmdapi" as const,
+                });
           // Parse with runtime schema to apply transforms
           return typegenConfigSingle.parse(configWithType);
         });
-        const config =
+        const config: z.infer<typeof typegenConfig>["config"] =
           transformedConfig.length === 1
-            ? transformedConfig[0]
+            ? transformedConfig[0]!
             : transformedConfig;
 
         await generateTypedClients(config);
@@ -372,10 +376,11 @@ export function createApiApp(context: ApiContext) {
         const configWithType =
           "type" in rawInput.config && rawInput.config.type
             ? rawInput.config
-            : { ...rawInput.config, type: "fmdapi" as const };
+            : Object.assign({}, rawInput.config as Record<string, unknown>, {
+                type: "fmdapi" as const,
+              });
         const config = typegenConfigSingle.parse(configWithType);
         const tableName = rawInput.tableName;
-        const { tableName } = input;
         if (config.type !== "fmodata") {
           return c.json({ error: "Invalid config type" }, 400);
         }
@@ -475,7 +480,9 @@ export function createApiApp(context: ApiContext) {
           const configWithType =
             "type" in rawData.config && rawData.config.type
               ? rawData.config
-              : { ...rawData.config, type: "fmdapi" as const };
+              : Object.assign({}, rawData.config as Record<string, unknown>, {
+                  type: "fmdapi" as const,
+                });
           const config = typegenConfigSingle.parse(configWithType);
 
           // Validate config type

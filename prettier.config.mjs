@@ -1,5 +1,5 @@
 /**
- * @type {import('prettier').Config & import("@ianvs/prettier-plugin-sort-imports").PluginConfig}
+ * @type {import('prettier').Config}
  */
 const config = {
   arrowParens: "always",

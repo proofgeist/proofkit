@@ -12,11 +12,15 @@
     "@proofkit/registry": "1.0.0",
     "tmp": "0.0.0",
     "@proofkit/typegen": "1.0.10",
-    "@proofkit/webviewer": "3.0.6"
+    "@proofkit/webviewer": "3.0.6",
+    "@proofkit/fmodata": "0.1.0-alpha.20",
+    "@proofkit/typegen-web": "0.0.0"
   },
   "changesets": [
     "brown-keys-float",
+    "olive-coins-trade",
     "quick-ends-drop",
+    "real-ideas-sort",
     "swift-swans-rush",
     "tough-forks-start",
     "ui-default-shadcn"

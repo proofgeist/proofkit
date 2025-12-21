@@ -1,5 +1,17 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.2
+
+### Minor Changes
+
+- 7672233: New command: `npx @proofkit/typegen@latest ui` will launch a web UI for configuring and running your typegen config.
+  (beta) support for @proofkit/fmodata typegen config.
+
+### Patch Changes
+
+- Updated dependencies
+  - @proofkit/fmodata@0.1.0-beta.21
+
 ## 1.0.11-beta.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/cli",
-  "version": "2.0.0-beta.6",
+  "version": "2.0.0-beta.7",
   "description": "Create web application with the ProofKit stack",
   "license": "MIT",
   "repository": {
@@ -59,7 +59,6 @@
     "@better-fetch/fetch": "1.1.17",
     "@clack/core": "^0.3.4",
     "@clack/prompts": "^0.11.0",
-    "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@proofkit/fmdapi": "workspace:*",
     "@proofkit/typegen": "workspace:*",
     "@types/glob": "^8.1.0",

@@ -115,7 +115,14 @@ async function handlePostConfig(
 
     // Write to disk as pretty JSON (replacing JSONC)
     const fullPath = path.resolve(context.cwd, context.configPath);
-    const jsonContent = JSON.stringify(validation.data, null, 2) + "\n";
+    // Add $schema at the top of the config
+    const configData = validation.data as Record<string, unknown>;
+    const { $schema: _, ...rest } = configData;
+    const configWithSchema = {
+      $schema: "https://proofkit.dev/typegen-config-schema.json",
+      ...rest,
+    };
+    const jsonContent = JSON.stringify(configWithSchema, null, 2) + "\n";
 
     await fs.ensureDir(path.dirname(fullPath));
     await fs.writeFile(fullPath, jsonContent, "utf8");

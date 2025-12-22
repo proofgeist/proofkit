@@ -554,16 +554,21 @@ export class RecordBuilder<
   /**
    * Builds the complete query string including $select and $expand parameters.
    */
-  private buildQueryString(includeSpecialColumns?: boolean): string {
+  private buildQueryString(
+    includeSpecialColumns?: boolean,
+    useEntityIds?: boolean,
+  ): string {
     // Use merged includeSpecialColumns if provided, otherwise use database-level default
     const finalIncludeSpecialColumns =
       includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
+    // Use merged useEntityIds if provided, otherwise use database-level default
+    const finalUseEntityIds = useEntityIds ?? this.databaseUseEntityIds;
 
     return buildSelectExpandQueryString({
       selectedFields: this.selectedFields,
       expandConfigs: this.expandConfigs,
       table: this.table,
-      useEntityIds: this.databaseUseEntityIds,
+      useEntityIds: finalUseEntityIds,
       logger: this.logger,
       includeSpecialColumns: finalIncludeSpecialColumns,
     });
@@ -629,6 +634,7 @@ export class RecordBuilder<
       // Add query string for select/expand (only when not getting a single field)
       const queryString = this.buildQueryString(
         mergedOptions.includeSpecialColumns,
+        mergedOptions.useEntityIds,
       );
       url += queryString;
     }
@@ -710,7 +716,8 @@ export class RecordBuilder<
   /**
    * Returns the query string for this record builder (for testing purposes).
    */
-  getQueryString(): string {
+  getQueryString(options?: { useEntityIds?: boolean }): string {
+    const useEntityIds = options?.useEntityIds ?? this.databaseUseEntityIds;
     let path: string;
 
     // Build the path depending on navigation context
@@ -722,20 +729,18 @@ export class RecordBuilder<
       path = `/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
     } else {
       // Use getTableId to respect entity ID settings (same as getRequestConfig)
-      const tableId = this.getTableId(this.databaseUseEntityIds);
+      const tableId = this.getTableId(useEntityIds);
       path = `/${tableId}('${this.recordId}')`;
     }
 
     if (this.operation === "getSingleField" && this.operationColumn) {
-      return `${path}/${this.operationColumn.getFieldIdentifier(
-        this.databaseUseEntityIds,
-      )}`;
+      return `${path}/${this.operationColumn.getFieldIdentifier(useEntityIds)}`;
     } else if (this.operation === "getSingleField" && this.operationParam) {
       // Fallback for backwards compatibility (shouldn't happen in normal flow)
       return `${path}/${this.operationParam}`;
     }
 
-    const queryString = this.buildQueryString();
+    const queryString = this.buildQueryString(undefined, useEntityIds);
     return `${path}${queryString}`;
   }
 

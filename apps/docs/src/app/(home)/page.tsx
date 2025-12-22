@@ -10,6 +10,7 @@ import { Card } from "fumadocs-ui/components/card";
 import { Cards } from "fumadocs-ui/components/card";
 import {
   Code,
+  Database,
   Globe,
   RectangleEllipsis,
   Terminal,
@@ -44,7 +45,7 @@ export default function HomePage() {
 
         <div className="mt-8 space-y-8 text-center w-full ">
           <h1 className="text-4xl font-bold">
-            A collection of tools for FileMaker-aware JavaScript applications
+            A collection of tools for FileMaker-aware TypeScript applications
           </h1>
           <p className="text-xl text-gray-500 font-medium">
             For new and experienced developers alike, the ProofKit toolset is
@@ -61,15 +62,30 @@ export default function HomePage() {
             </Card>
             <Card icon={<Code />} href="/docs/typegen" title={"Typegen"}>
               Automatically generate runtime validators and TypeScript files
-              from your own FileMaker layouts.
+              from your own FileMaker layouts or table occurrences.
             </Card>
             <Card
-              icon={<WebhookIcon className="text-blue-300" />}
+              icon={<WebhookIcon />}
               title="Filemaker Data API"
               href="/docs/fmdapi"
             >
               A type-safe API for your FileMaker layouts. Easily connect without
               worrying about token management.
+            </Card>
+            <Card
+              icon={<Database />}
+              title={
+                <span className="flex items-center gap-2">
+                  FileMaker OData API{" "}
+                  <Badge variant="success" appearance="light">
+                    New
+                  </Badge>
+                </span>
+              }
+              href="/docs/fmodata"
+            >
+              A strongly-typed OData API client with full TypeScript inference,
+              runtime validation, and a fluent query builder.
             </Card>
             <Card
               icon={<Globe />}
@@ -82,10 +98,10 @@ export default function HomePage() {
             <Card
               icon={<RectangleEllipsis />}
               title={
-                <span>
+                <span className="flex items-center gap-2">
                   Better-Auth Adapter{" "}
-                  <Badge className="bg-blue-200 text-blue-700 dark:bg-blue-600 dark:text-blue-50 uppercase">
-                    beta
+                  <Badge variant="info" appearance="light">
+                    Beta
                   </Badge>
                 </span>
               }

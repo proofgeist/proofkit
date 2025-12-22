@@ -1,6 +1,44 @@
 ---
-title: FileMaker OData API Library
+title: Overview
 description: "@proofkit/fmodata"
 ---
 
-FileMaker OData API Library
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card, Cards } from "fumadocs-ui/components/card";
+
+<Callout type="warning">
+This library is in beta status. We don't expect the method names or arguments to change further, but please submit feedback or report issues on the [community forum](https://community.ottomatic.cloud/c/proofkit/13) or on [GitHub](https://github.com/proofgeist/proofkit/issues).
+</Callout>
+
+A strongly-typed FileMaker OData API client that provides full TypeScript type inference, runtime validation, and a fluent query builder API.
+
+## Key Features
+
+- **Type-safe queries** - Full TypeScript inference for field names and types
+- **ORM-style API** - Fluent builder pattern with column references
+- **Runtime validation** - Optional standard schema validation for data transformation
+- **Relationship navigation** - Type-safe navigation and expansion of related records
+- **Batch operations** - Execute multiple operations atomically
+- **Schema management** - Create and modify tables and fields programmatically
+- **Entity IDs** - Protect against field/table name changes using FileMaker IDs
+- **Webhooks** - Easily manage webhooks on your FileMaker Server to monitor table changes
+
+## Prerequisites
+
+To use this library you need:
+
+- OData service enabled on your FileMaker server
+- A FileMaker account with `fmodata` privilege enabled
+- (if using OttoFMS) a Data API key setup for your FileMaker account with OData enabled
+
+
+## When to Use OData vs Data API
+
+Claris has given signals that OData is the future of data access for FileMaker. It's much faster and more powerful than the Data API since it does not require the server to spin up a server-side client or maintain a session for each request. However, it's a new paradigm for thinking about how we can interact with the FileMaker server and may take some adjustment. You should not worry about continuing to use the Data API if needed, but we suggest trying OData for new projects.
+
+<Cards>
+  <Card title="Quick Start" href="/docs/fmodata/quick-start">Get up and running in minutes</Card>
+  <Card title="Schema Definitions" href="/docs/fmodata/schema">Learn how to define your table schemas</Card>
+  <Card title="Querying Data" href="/docs/fmodata/queries">Filter, sort, and paginate your queries</Card>
+  <Card title="CRUD Operations" href="/docs/fmodata/crud">Create, read, update, and delete records</Card>
+</Cards>

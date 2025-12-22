@@ -1,0 +1,82 @@
+---
+title: Schema Management
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## Schema Management
+
+The library provides methods for managing database schema through the `db.schema` property. You can create and delete tables, add and remove fields, and manage indexes.
+
+### Creating Tables
+
+```typescript
+import type { Field } from "@proofkit/fmodata";
+
+const fields: Field[] = [
+  {
+    name: "id",
+    type: "string",
+    primary: true,
+    maxLength: 36,
+  },
+  {
+    name: "username",
+    type: "string",
+    nullable: false,
+    unique: true,
+    maxLength: 50,
+  },
+  {
+    name: "email",
+    type: "string",
+    nullable: false,
+    maxLength: 255,
+  },
+];
+
+const tableDefinition = await db.schema.createTable("users", fields);
+console.log(tableDefinition.tableName); // "users"
+console.log(tableDefinition.fields); // Array of field definitions
+```
+
+### Adding Fields
+
+```typescript
+const newFields: Field[] = [
+  {
+    name: "phone",
+    type: "string",
+    nullable: true,
+    maxLength: 20,
+  },
+];
+
+const updatedTable = await db.schema.addFields("users", newFields);
+```
+
+### Deleting Tables and Fields
+
+```typescript
+// Delete an entire table
+await db.schema.deleteTable("old_table");
+
+// Delete a specific field
+await db.schema.deleteField("users", "old_field");
+```
+
+### Managing Indexes
+
+```typescript
+// Create an index
+const index = await db.schema.createIndex("users", "email");
+console.log(index.indexName); // "email"
+
+// Delete an index
+await db.schema.deleteIndex("users", "email");
+```
+
+<Callout type="info">
+Schema management operations require appropriate access privileges on your FileMaker account. Operations will throw errors if you don't have the necessary permissions.
+</Callout>
+

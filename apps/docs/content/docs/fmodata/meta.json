@@ -2,5 +2,27 @@
   "title": "FileMaker OData API",
   "description": "@proofkit/fmodata",
   "icon": "Database",
+  "pages": [
+    "index",
+    "---Setup---",
+    "quick-start",
+    "schema",
+    "---Guides---",
+    "queries",
+    "crud",
+    "relationships",
+    "scripts",
+    "webhooks",
+    "batch",
+    "schema-management",
+    "---Advanced Features---",
+    "inspecting-queries",
+    "entity-ids",
+    "extra-properties",
+    "custom-fetch-handlers",
+    "---Reference---",
+    "errors",
+    "methods"
+  ],
   "root": true
 }

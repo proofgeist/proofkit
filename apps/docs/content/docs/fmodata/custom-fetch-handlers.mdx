@@ -1,0 +1,16 @@
+---
+title: Custom Fetch Handlers
+description: You can provide custom fetch handlers for testing or custom networking
+---
+
+```typescript
+const customFetch = async (url, options) => {
+  console.log("Fetching:", url);
+  return fetch(url, options);
+};
+
+const result = await db.from("users").list().execute({
+  fetchHandler: customFetch,
+});
+```
+

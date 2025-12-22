@@ -788,10 +788,11 @@ export class QueryBuilder<
     });
   }
 
-  getQueryString(): string {
+  getQueryString(options?: { useEntityIds?: boolean }): string {
     const queryString = this.buildQueryString();
+    const useEntityIds = options?.useEntityIds ?? this.databaseUseEntityIds;
     return this.urlBuilder.buildPath(queryString, {
-      useEntityIds: this.databaseUseEntityIds,
+      useEntityIds,
       navigation: this.navigation,
     });
   }

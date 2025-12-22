@@ -1,0 +1,152 @@
+---
+title: Modifying Data
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+## Insert
+
+Insert new records with type-safe data:
+
+```typescript
+// Insert a new user
+const result = await db
+  .from(users)
+  .insert({
+    username: "johndoe",
+    email: "john@example.com",
+    active: true,
+  })
+  .execute();
+
+if (result.data) {
+  console.log("Created user:", result.data);
+}
+```
+
+Fields are automatically required for insert if they use `.notNull()`. Read-only fields (including primary keys) are automatically excluded:
+
+```typescript
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(), // Auto-required, but excluded from insert (primaryKey)
+  username: textField().notNull(), // Auto-required (notNull)
+  email: textField().notNull(), // Auto-required (notNull)
+  phone: textField(), // Optional by default (nullable)
+  createdAt: timestampField().readOnly(), // Excluded from insert/update
+});
+
+// TypeScript enforces: username and email are required
+// TypeScript excludes: id and createdAt cannot be provided
+const result = await db
+  .from(users)
+  .insert({
+    username: "johndoe",
+    email: "john@example.com",
+    phone: "+1234567890", // Optional
+  })
+  .execute();
+```
+
+## Update
+
+Update records by ID or filter:
+
+```typescript
+// Update by ID
+const result = await db
+  .from(users)
+  .update({ username: "newname" })
+  .byId("user-123")
+  .execute();
+
+if (result.data) {
+  console.log(`Updated ${result.data.updatedCount} record(s)`);
+}
+
+// Update by filter (using ORM API)
+import { lt, and, eq } from "@proofkit/fmodata";
+
+const result = await db
+  .from(users)
+  .update({ active: false })
+  .where(lt(users.lastLogin, "2023-01-01"))
+  .execute();
+
+// Complex filter example
+const result = await db
+  .from(users)
+  .update({ active: false })
+  .where(and(eq(users.active, true), lt(users.count, 5)))
+  .execute();
+```
+
+<Callout type="info">
+All fields are optional for updates (except read-only fields which are automatically excluded). TypeScript will enforce that you can only update fields that aren't marked as read-only.
+</Callout>
+
+## Delete
+
+Delete records by ID or filter:
+
+```typescript
+// Delete by ID
+const result = await db.from(users).delete().byId("user-123").execute();
+
+if (result.data) {
+  console.log(`Deleted ${result.data.deletedCount} record(s)`);
+}
+
+// Delete by filter (using ORM API)
+import { eq, and, lt } from "@proofkit/fmodata";
+
+const result = await db
+  .from(users)
+  .delete()
+  .where(eq(users.active, false))
+  .execute();
+
+// Delete with complex filters
+const result = await db
+  .from(users)
+  .delete()
+  .where(and(eq(users.active, false), lt(users.lastLogin, "2023-01-01")))
+  .execute();
+```
+
+## Required and Read-Only Fields
+
+The library automatically infers which fields are required based on field builder configuration:
+
+- **Auto-inference:** Fields with `.notNull()` are automatically required for insert
+- **Primary keys:** Fields with `.primaryKey()` are automatically read-only
+- **Read-only fields:** Use `.readOnly()` to exclude fields from insert/update (e.g., timestamps, calculated fields)
+- **Update flexibility:** All fields are optional for updates (except read-only fields)
+
+```typescript
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(), // Auto-required, auto-readOnly (primaryKey)
+  username: textField().notNull(), // Auto-required (notNull)
+  email: textField().notNull(), // Auto-required (notNull)
+  status: textField(), // Optional (nullable by default)
+  createdAt: timestampField().readOnly(), // Read-only system field
+  updatedAt: timestampField(), // Optional (nullable)
+});
+
+// Insert: username and email are required
+// Insert: id and createdAt are excluded (cannot be provided - read-only)
+db.from(users).insert({
+  username: "john",
+  email: "john@example.com",
+  status: "active", // Optional
+  updatedAt: new Date().toISOString(), // Optional
+});
+
+// Update: all fields are optional except id and createdAt are excluded
+db.from(users)
+  .update({
+    status: "active", // Optional
+    // id and createdAt cannot be modified (read-only)
+  })
+  .byId("user-123");
+```

@@ -110,7 +110,8 @@ describe("validator", () => {
         ],
       };
 
-      // Mock that the file exists
+      // Mock that the file exists (existsSync is used for file check)
+      mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readdirSync.mockReturnValue([
         "component.tsx",
         "_meta.ts",
@@ -137,8 +138,10 @@ describe("validator", () => {
         ],
       };
 
-      // Mock that the file doesn't exist
-      mockedFs.readdirSync.mockReturnValue(["_meta.ts"] as any);
+      // Mock that the file doesn't exist (existsSync returns false for the file)
+      mockedFs.existsSync.mockReturnValue(false);
+      // Mock readdirSync to return the _meta.ts and some other files (so it passes "has content" check)
+      mockedFs.readdirSync.mockReturnValue(["_meta.ts", "other-file.ts"] as any);
 
       expect(() =>
         validateTemplateMetadata(metaWithMissingFile, mockContext),
@@ -161,8 +164,10 @@ describe("validator", () => {
         ],
       };
 
-      // Mock empty directory (only _meta.ts) - this will trigger "file does not exist" first
-      mockedFs.readdirSync.mockReturnValue(["_meta.ts"] as any);
+      // Mock that the file doesn't exist (existsSync returns false for the file)
+      mockedFs.existsSync.mockReturnValue(false);
+      // Mock readdirSync to return _meta.ts and some other files (so it passes "has content" check)
+      mockedFs.readdirSync.mockReturnValue(["_meta.ts", "other-file.ts"] as any);
 
       expect(() =>
         validateTemplateMetadata(metaWithFiles, mockContext),
@@ -217,7 +222,7 @@ describe("validator", () => {
         category: "utility",
         registryType: "registry:lib",
         files: [],
-        proofkitDependencies: ["nonexistent-template"],
+        registryDependencies: ["{proofkit}/r/nonexistent-template"],
       };
 
       // Mock that template doesn't exist
@@ -226,7 +231,7 @@ describe("validator", () => {
       expect(() =>
         validateTemplateMetadata(metaWithInvalidDeps, mockContext),
       ).toThrow(
-        /Invalid proofkitDependencies reference 'nonexistent-template'/,
+        /Invalid registryDependencies reference '{proofkit}\/r\/nonexistent-template'/,
       );
     });
 

@@ -7,7 +7,7 @@ import { transformResponseFields } from "../../transform";
 import { validateListResponse, validateSingleResponse } from "../../validation";
 import type { ExpandValidationConfig } from "../../validation";
 import type { ExpandConfig } from "./expand-builder";
-import { FMTable as FMTableClass } from "../../orm/table";
+import { FMTable as FMTableClass, getTableSchema } from "../../orm/table";
 import { InternalLogger } from "../../logger";
 
 /**
@@ -20,6 +20,7 @@ export interface ProcessQueryResponseConfig<T> {
   expandConfigs: ExpandConfig[];
   skipValidation?: boolean;
   useEntityIds?: boolean;
+  includeSpecialColumns?: boolean;
   // Mapping from field names to output keys (for renamed fields in select)
   fieldMapping?: Record<string, string>;
   logger: InternalLogger;
@@ -37,20 +38,12 @@ function buildExpandValidationConfigs(
     const targetTable = config.targetTable;
 
     // Extract schema from target table/occurrence
-    let targetSchema: Record<string, StandardSchemaV1> | undefined;
-    if (targetTable) {
-      const tableSchema = (targetTable as any)[FMTableClass.Symbol.Schema];
-      if (tableSchema) {
-        const zodSchema = tableSchema["~standard"]?.schema;
-        if (
-          zodSchema &&
-          typeof zodSchema === "object" &&
-          "shape" in zodSchema
-        ) {
-          targetSchema = zodSchema.shape as Record<string, StandardSchemaV1>;
-        }
-      }
-    }
+    // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
+    const targetSchema = targetTable
+      ? (getTableSchema(targetTable) as
+          | Record<string, StandardSchemaV1>
+          | undefined)
+      : undefined;
 
     // Extract selected fields from options
     const selectedFields = config.options?.select
@@ -193,16 +186,8 @@ export async function processQueryResponse<T>(
 
   // Validation path
   // Get schema from occurrence if available
-  let schema: Record<string, StandardSchemaV1> | undefined;
-  if (occurrence) {
-    const tableSchema = (occurrence as any)[FMTableClass.Symbol.Schema];
-    if (tableSchema) {
-      const zodSchema = tableSchema["~standard"]?.schema;
-      if (zodSchema && typeof zodSchema === "object" && "shape" in zodSchema) {
-        schema = zodSchema.shape as Record<string, StandardSchemaV1>;
-      }
-    }
-  }
+  // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
+  const schema = occurrence ? getTableSchema(occurrence) : undefined;
 
   const selectedFields = config.queryOptions.select
     ? ((Array.isArray(config.queryOptions.select)
@@ -214,6 +199,12 @@ export async function processQueryResponse<T>(
   );
 
   // Validate with original field names
+  // Special columns are excluded when using single() method (per OData spec behavior)
+  // Note: While FileMaker may return special columns in single mode if requested via header,
+  // we exclude them here to maintain OData spec compliance. The types will also not include
+  // special columns for single mode to match this runtime behavior.
+  const shouldIncludeSpecialColumns =
+    singleMode === false ? (config.includeSpecialColumns ?? false) : false;
   const validationResult =
     singleMode !== false
       ? await validateSingleResponse(
@@ -222,12 +213,14 @@ export async function processQueryResponse<T>(
           selectedFields as string[] | undefined,
           expandValidationConfigs,
           singleMode,
+          shouldIncludeSpecialColumns,
         )
       : await validateListResponse(
           data,
           schema,
           selectedFields as string[] | undefined,
           expandValidationConfigs,
+          shouldIncludeSpecialColumns,
         );
 
   if (!validationResult.valid) {

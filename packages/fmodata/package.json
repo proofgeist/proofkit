@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/fmodata",
-  "version": "0.1.0-alpha.19",
+  "version": "0.1.0-alpha.20",
   "description": "FileMaker OData API client",
   "repository": "git@github.com:proofgeist/proofkit.git",
   "author": "Eric <37158449+eluce2@users.noreply.github.com>",
@@ -63,7 +63,7 @@
     "vite": "^6.3.4",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.7",
-    "zod": "4.1.12"
+    "zod": "^4.1.13"
   },
   "engines": {
     "node": ">=18.0.0"

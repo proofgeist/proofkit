@@ -778,6 +778,173 @@ console.log(result.result.recordId);
 
 **Note:** OData doesn't support script names with special characters (e.g., `@`, `&`, `/`) or script names beginning with a number. TypeScript will catch these at compile time.
 
+## Webhooks
+
+Webhooks allow you to receive notifications when data changes in your FileMaker database. The library provides a type-safe API for managing webhooks through the `db.webhook` property.
+
+### Adding a Webhook
+
+Create a new webhook to monitor a table for changes:
+
+```typescript
+// Basic webhook
+const result = await db.webhook.add({
+  webhook: "https://example.com/webhook",
+  tableName: contactsTable,
+});
+
+// Access the created webhook ID
+console.log(result.webHookResult.webHookID);
+```
+
+### Webhook Configuration Options
+
+Webhooks support various configuration options:
+
+```typescript
+// With custom headers
+const result = await db.webhook.add({
+  webhook: "https://example.com/webhook",
+  tableName: contactsTable,
+  headers: {
+    "X-Custom-Header": "value",
+    Authorization: "Bearer token",
+  },
+  notifySchemaChanges: true, // Notify when schema changes
+});
+
+// With field selection (using column references)
+const result = await db.webhook.add({
+  webhook: "https://example.com/webhook",
+  tableName: contacts,
+  select: [contacts.name, contacts.email, contacts.PrimaryKey],
+});
+
+// With filtering (using filter expressions)
+import { eq, gt } from "@proofkit/fmodata";
+
+const result = await db.webhook.add({
+  webhook: "https://example.com/webhook",
+  tableName: contacts,
+  filter: eq(contacts.active, true),
+  select: [contacts.name, contacts.email],
+});
+
+// Complex filter example
+const result = await db.webhook.add({
+  webhook: "https://example.com/webhook",
+  tableName: users,
+  filter: and(eq(users.active, true), gt(users.age, 18)),
+  select: [users.username, users.email],
+});
+```
+
+**Webhook Configuration Properties:**
+
+- `webhook` (required) - The URL to call when the webhook is triggered
+- `tableName` (required) - The `FMTable` instance for the table to monitor
+- `headers` (optional) - Custom headers to include in webhook requests
+- `notifySchemaChanges` (optional) - Whether to notify on schema changes
+- `select` (optional) - Field selection as a string or array of `Column` references
+- `filter` (optional) - Filter expression (string or `FilterExpression`) to limit which records trigger the webhook
+
+### Listing Webhooks
+
+Get all webhooks configured for the database:
+
+```typescript
+const result = await db.webhook.list();
+
+console.log(result.Status); // Status of the operation
+console.log(result.WebHook); // Array of webhook configurations
+
+result.WebHook.forEach((webhook) => {
+  console.log(`Webhook ${webhook.webHookID}:`);
+  console.log(`  Table: ${webhook.tableName}`);
+  console.log(`  URL: ${webhook.url}`);
+  console.log(`  Notify Schema Changes: ${webhook.notifySchemaChanges}`);
+  console.log(`  Select: ${webhook.select}`);
+  console.log(`  Filter: ${webhook.filter}`);
+  console.log(`  Pending Operations: ${webhook.pendingOperations.length}`);
+});
+```
+
+### Getting a Webhook
+
+Retrieve a specific webhook by ID:
+
+```typescript
+const webhook = await db.webhook.get(1);
+
+console.log(webhook.webHookID);
+console.log(webhook.tableName);
+console.log(webhook.url);
+console.log(webhook.headers);
+console.log(webhook.notifySchemaChanges);
+console.log(webhook.select);
+console.log(webhook.filter);
+console.log(webhook.pendingOperations);
+```
+
+### Removing a Webhook
+
+Delete a webhook by ID:
+
+```typescript
+await db.webhook.remove(1);
+```
+
+### Invoking a Webhook
+
+Manually trigger a webhook. This is useful for testing or triggering webhooks on-demand:
+
+```typescript
+// Invoke for all rows matching the webhook's filter
+await db.webhook.invoke(1);
+
+// Invoke for specific row IDs
+await db.webhook.invoke(1, { rowIDs: [63, 61] });
+```
+
+### Complete Example
+
+Here's a complete example of setting up and managing webhooks:
+
+```typescript
+import { eq } from "@proofkit/fmodata";
+
+// Add a webhook to monitor active contacts
+const addResult = await db.webhook.add({
+  webhook: "https://api.example.com/webhooks/contacts",
+  tableName: contacts,
+  headers: {
+    "X-API-Key": "your-api-key",
+  },
+  filter: eq(contacts.active, true),
+  select: [contacts.name, contacts.email, contacts.PrimaryKey],
+  notifySchemaChanges: false,
+});
+
+const webhookId = addResult.webHookResult.webHookID;
+console.log(`Created webhook with ID: ${webhookId}`);
+
+// List all webhooks
+const listResult = await db.webhook.list();
+console.log(`Total webhooks: ${listResult.WebHook.length}`);
+
+// Get the webhook we just created
+const webhook = await db.webhook.get(webhookId);
+console.log(`Webhook URL: ${webhook.url}`);
+
+// Manually invoke the webhook for specific records
+await db.webhook.invoke(webhookId, { rowIDs: [1, 2, 3] });
+
+// Remove the webhook when done
+await db.webhook.remove(webhookId);
+```
+
+**Note:** Webhooks are triggered automatically by FileMaker when records matching the webhook's filter are created, updated, or deleted. The `invoke()` method allows you to manually trigger webhooks for testing or on-demand processing.
+
 ## Batch Operations
 
 Batch operations allow you to execute multiple queries and operations together in a single request. All operations in a batch are executed atomically - they all succeed or all fail together. This is both more efficient (fewer network round-trips) and ensures data consistency across related operations.
@@ -1274,6 +1441,37 @@ const users = fmTableOccurrence(
   },
 );
 ```
+
+### Special Columns (ROWID and ROWMODID)
+
+FileMaker provides special columns `ROWID` and `ROWMODID` that uniquely identify records and track modifications. These can be included in query responses when enabled.
+
+Enable special columns at the database level:
+
+```typescript
+const db = connection.database("MyDatabase", {
+  includeSpecialColumns: true,
+});
+
+const result = await db.from(users).list().execute();
+// result.data[0] will have ROWID and ROWMODID properties
+```
+
+Override at the request level:
+
+```typescript
+// Enable for this request only
+const result = await db.from(users).list().execute({
+  includeSpecialColumns: true,
+});
+
+// Disable for this request
+const result = await db.from(users).list().execute({
+  includeSpecialColumns: false,
+});
+```
+
+**Important:** Special columns are only included when no `$select` query is applied (per OData specification). When using `.select()`, special columns are excluded even if `includeSpecialColumns` is enabled.
 
 ### Error Handling
 

@@ -35,6 +35,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { config } from "dotenv";
 import { writeFileSync } from "fs";
+import * as prettier from "prettier";
 import createClient from "@fetchkit/ffetch";
 import { MOCK_SERVER_URL } from "../tests/utils/mock-server-url";
 
@@ -189,7 +190,7 @@ const queriesToCapture: {
   expectError?: boolean;
   execute: (
     client: ReturnType<typeof createAuthenticatedClient>,
-  ) => Promise<{ url: string; response: Response }>;
+  ) => Promise<{ url: string; method: string; response: Response }>;
 }[] = [
   {
     name: "list-basic",
@@ -199,7 +200,7 @@ const queriesToCapture: {
       const response = await client(path);
       // Get the full URL from the response
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -209,7 +210,7 @@ const queriesToCapture: {
       const path = "/contacts?$select=name,PrimaryKey&$top=10";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -219,7 +220,7 @@ const queriesToCapture: {
       const path = "/contacts?$orderby=name&$top=5";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -229,7 +230,7 @@ const queriesToCapture: {
       const path = "/contacts?$top=2&$skip=2";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
 
@@ -248,7 +249,7 @@ const queriesToCapture: {
         },
       });
       const url = response.url;
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
 
@@ -266,7 +267,7 @@ const queriesToCapture: {
       });
 
       const url = response.url;
-      return { url, response };
+      return { url, method: "POST", response };
     },
   },
   {
@@ -304,7 +305,7 @@ const queriesToCapture: {
       const path = `/contacts('${recordId}')`;
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   // Error cases - intentionally invalid queries to capture error responses
@@ -316,7 +317,7 @@ const queriesToCapture: {
       const path = "/contacts?$select=InvalidFieldName";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -327,7 +328,7 @@ const queriesToCapture: {
       const path = "/contacts?$orderby=InvalidFieldName";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -339,7 +340,7 @@ const queriesToCapture: {
       const path = "/contacts('00000000-0000-0000-0000-000000000000')";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -350,7 +351,7 @@ const queriesToCapture: {
       const path = "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')/name";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -361,7 +362,7 @@ const queriesToCapture: {
       const path = "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')/users";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -371,7 +372,7 @@ const queriesToCapture: {
       const path = "/contacts?$expand=users($select=not_real_field)";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -382,7 +383,7 @@ const queriesToCapture: {
         "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')?$expand=users";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -393,7 +394,7 @@ const queriesToCapture: {
         "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')?$expand=users($expand=user_customer($select=name))";
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
     },
   },
   {
@@ -403,7 +404,123 @@ const queriesToCapture: {
       const path = `/contacts?$top=2&$expand=users($expand=user_customer($select=name))`;
       const response = await client(path);
       const url = response.url;
-      return { url, response };
+      return { url, method: "GET", response };
+    },
+  },
+  // Webhook API queries
+  {
+    name: "webhook-list",
+    description: "List all webhooks",
+    execute: async (client) => {
+      const path = "/Webhook.GetAll";
+      const response = await client(path);
+      const url = response.url;
+      return { url, method: "GET", response };
+    },
+  },
+  {
+    name: "webhook-add",
+    description: "Add a new webhook",
+    execute: async (client) => {
+      const path = "/Webhook.Add";
+      const response = await client(path, {
+        method: "POST",
+        body: {
+          webhook: "https://example.com/webhook",
+          tableName: "contacts",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "",
+          filter: "",
+        },
+      });
+      const url = response.url;
+
+      // Clone the response before extracting the data
+      const cloned = response.clone();
+      const newWebhookId = (await cloned.json()).webHookResult.webHookID;
+      await client(`/Webhook.Delete(${newWebhookId})`);
+
+      return { url, method: "POST", response };
+    },
+  },
+  {
+    name: "webhook-add-with-options",
+    description: "Add a new webhook",
+    execute: async (client) => {
+      const path = "/Webhook.Add";
+      const response = await client(path, {
+        method: "POST",
+        body: {
+          webhook: "https://example.com/webhook",
+          tableName: "contacts",
+          headers: {
+            "X-Custom-Header": "test-value",
+          },
+          notifySchemaChanges: false,
+          select: "name, age",
+          filter: "name eq 'John'",
+        },
+      });
+      const url = response.url;
+
+      // Clone the response before extracting the data
+      const cloned = response.clone();
+      const newWebhookId = (await cloned.json()).webHookResult.webHookID;
+      await client(`/Webhook.Delete(${newWebhookId})`);
+
+      return { url, method: "POST", response };
+    },
+  },
+  {
+    name: "webhook-get",
+    description: "Get a webhook by ID",
+    execute: async (client) => {
+      const listResponse = await client("/Webhook.GetAll");
+      const listData = await listResponse.json();
+      const webhookId = listData.WebHook?.[0]?.webHookID;
+      if (!webhookId) {
+        throw new Error("No webhook ID found");
+      }
+
+      // First, try to get webhook ID 1, or use a known ID if available
+      const path = `/Webhook.Get(${webhookId})`;
+      const response = await client(path);
+      const url = response.url;
+      return { url, method: "GET", response };
+    },
+  },
+  {
+    name: "webhook-get-not-found",
+    description: "Error response for non-existent webhook",
+    expectError: true,
+    execute: async (client) => {
+      const path = "/Webhook.Get(99999)";
+      const response = await client(path);
+      const url = response.url;
+      return { url, method: "GET", response };
+    },
+  },
+  {
+    name: "webhook-delete",
+    description: "Delete a webhook by ID",
+    execute: async (client) => {
+      const listResponse = await client("/Webhook.GetAll");
+      const listData = await listResponse.json();
+      const webhookId = listData.WebHook?.[0]?.webHookID;
+      if (!webhookId) {
+        throw new Error("No webhook ID found");
+      }
+
+      // Use webhook ID 1, or a known ID if available
+      const path = `/Webhook.Delete(${webhookId})`;
+      const response = await client(path, {
+        method: "POST",
+      });
+      const url = response.url;
+      return { url, method: "POST", response };
     },
   },
 ];
@@ -489,7 +606,7 @@ function generateResponsesFile(
  * 2. Run: pnpm capture
  * 3. The captured response will be added to this file automatically
  *
- * You can manually edit responses here if you need to modify test data.
+ * You MUST NOT manually edit this file. Any changes will be overwritten by the capture script.
  */
 
 export type MockResponse = {
@@ -539,7 +656,7 @@ async function main() {
       console.log(`Capturing: ${queryDef.name} - ${queryDef.description}`);
 
       // Execute the query directly with ffetch
-      const { url, response } = await queryDef.execute(client);
+      const { url, method, response } = await queryDef.execute(client);
 
       // Capture the response data (even for error status codes)
       const status = response.status;
@@ -567,7 +684,7 @@ async function main() {
       // Store captured response (including error responses)
       capturedResponses[queryDef.name] = {
         url: sanitizedUrl,
-        method: "GET",
+        method,
         status,
         headers:
           contentType || location
@@ -625,6 +742,8 @@ async function main() {
               serverUrl,
             );
 
+            // For error cases, we don't have the method from execute, so default to GET
+            // This should rarely happen as most errors still return a response
             capturedResponses[queryDef.name] = {
               url: sanitizedUrl,
               method: "GET",
@@ -669,7 +788,13 @@ async function main() {
     "../tests/fixtures/responses.ts",
   );
   const fileContent = generateResponsesFile(capturedResponses);
-  writeFileSync(fixturesPath, fileContent, "utf-8");
+
+  // Format the file content with prettier
+  const formattedContent = await prettier.format(fileContent, {
+    filepath: fixturesPath,
+  });
+
+  writeFileSync(fixturesPath, formattedContent, "utf-8");
 
   console.log(`\nResponses written to: ${fixturesPath}`);
   console.log("\nYou can now use these mocks in your tests!");

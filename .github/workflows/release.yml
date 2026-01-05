@@ -8,6 +8,9 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
+  # Changesets/action needs to push version commits and open/update a PR
+  contents: write
+  pull-requests: write
   id-token: write # Required for OIDC
 
 jobs:
@@ -38,5 +41,5 @@ jobs:
           # This expects you to have a script called release which does a build for your packages and calls changeset publish
           publish: pnpm release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

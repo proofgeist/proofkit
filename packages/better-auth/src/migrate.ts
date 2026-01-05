@@ -1,8 +1,26 @@
-import { type BetterAuthDbSchema } from "better-auth/db";
 import { type Metadata } from "fm-odata-client";
 import chalk from "chalk";
 import z from "zod/v4";
 import { createRawFetch } from "./odata";
+
+type BetterAuthTableField = {
+  fieldName?: string;
+  type: unknown;
+};
+
+type BetterAuthTableDef = {
+  modelName: string;
+  fields: Record<string, BetterAuthTableField>;
+  order?: number;
+};
+
+export type BetterAuthAuthTables = Record<string, BetterAuthTableDef>;
+
+function normalizeBetterAuthFieldType(fieldType: unknown): string {
+  if (typeof fieldType === "string") return fieldType;
+  if (Array.isArray(fieldType)) return fieldType.map(String).join("|");
+  return String(fieldType);
+}
 
 export async function getMetadata(
   fetch: ReturnType<typeof createRawFetch>["fetch"],
@@ -31,7 +49,7 @@ export async function getMetadata(
 
 export async function planMigration(
   fetch: ReturnType<typeof createRawFetch>["fetch"],
-  betterAuthSchema: BetterAuthDbSchema,
+  betterAuthSchema: BetterAuthAuthTables,
   databaseName: string,
 ): Promise<MigrationPlan> {
   const metadata = await getMetadata(fetch, databaseName);
@@ -93,12 +111,23 @@ export async function planMigration(
     const fields: FmField[] = Object.entries(baTable.fields).map(
       ([key, field]) => ({
         name: field.fieldName ?? key,
+        // Better Auth's FieldType can be a string literal union or arrays.
+        // Normalize it to a string so our FM mapping logic remains stable.
+        // Examples: "number", "string[]", ["string", "number"] (plugin-defined)
+        // See Better Auth: FieldType = "string" | "number" | ... | Array<LiteralString>
+        //
+        // We only need coarse mapping for FileMaker field creation.
+        // Anything unknown falls back to "varchar".
+        //
         type:
-          field.type === "boolean" || field.type.includes("number")
-            ? "numeric"
-            : field.type === "date"
-              ? "timestamp"
-              : "varchar",
+          (() => {
+            const t = normalizeBetterAuthFieldType(field.type);
+            return t === "boolean" || t.includes("number")
+              ? "numeric"
+              : t === "date"
+                ? "timestamp"
+                : "varchar";
+          })(),
       }),
     );
 

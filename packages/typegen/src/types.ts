@@ -128,6 +128,10 @@ const tableConfig = z.object({
     description:
       "If undefined, the top-level setting will be used. If true, field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
   }),
+  includeAllFieldsByDefault: z.boolean().optional().meta({
+    description:
+      "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
+  }),
 });
 
 const typegenConfigSingleBase = z.discriminatedUnion("type", [
@@ -181,6 +185,10 @@ const typegenConfigSingleBase = z.discriminatedUnion("type", [
     tables: z.array(tableConfig).default([]).meta({
       description:
         "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
+    }),
+    includeAllFieldsByDefault: z.boolean().default(true).optional().meta({
+      description:
+        "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
     }),
   }),
 ]);

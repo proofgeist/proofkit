@@ -64,19 +64,15 @@ export function buildLayoutClient(
     addTypeGuardStatements(sourceFile, {
       envVarName: envNames.server ?? defaultEnvNames.server,
     });
-    if (typeof envNames.auth === "object" && "apiKey" in envNames.auth) {
+    if (typeof envNames.auth === "object") {
       addTypeGuardStatements(sourceFile, {
         envVarName: envNames.auth.apiKey ?? defaultEnvNames.apiKey,
       });
-    } else if (
-      typeof envNames.auth === "object" &&
-      "username" in envNames.auth
-    ) {
       addTypeGuardStatements(sourceFile, {
-        envVarName: envNames.auth?.username ?? defaultEnvNames.username,
+        envVarName: envNames.auth.username ?? defaultEnvNames.username,
       });
       addTypeGuardStatements(sourceFile, {
-        envVarName: envNames.auth?.password ?? defaultEnvNames.password,
+        envVarName: envNames.auth.password ?? defaultEnvNames.password,
       });
     }
   }

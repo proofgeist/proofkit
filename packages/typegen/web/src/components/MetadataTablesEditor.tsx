@@ -14,14 +14,15 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   type ColumnDef,
 } from "@tanstack/react-table";
 import { DataGrid, DataGridContainer } from "./ui/data-grid";
 import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
-import { DataGridPagination } from "./ui/data-grid-pagination";
+import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { Skeleton } from "./ui/skeleton";
+import { Badge } from "./ui/badge";
+import { DropdownMenuItem } from "./ui/dropdown-menu";
 
 interface MetadataTablesEditorProps {
   configIndex: number;
@@ -38,7 +39,6 @@ interface TableRow {
 const coreRowModel = getCoreRowModel();
 const sortedRowModel = getSortedRowModel();
 const filteredRowModel = getFilteredRowModel();
-const paginationRowModel = getPaginationRowModel();
 
 // Helper component to fetch and display field count for a table
 function FieldCountCell({
@@ -228,6 +228,57 @@ export function MetadataTablesEditor({
     [configIndex, setValue],
   );
 
+  // Helper to include all tables
+  const includeAllTables = useCallback(() => {
+    if (!tables || tables.length === 0) return;
+    const currentConfig = configRef.current;
+    if (currentConfig?.type !== "fmodata") return;
+
+    const currentTables = currentConfig.tables ?? [];
+    const currentTableNames = new Set(
+      currentTables.map((t) => t?.tableName).filter(Boolean),
+    );
+
+    // Add all tables that aren't already included
+    const tablesToAdd = tables.filter(
+      (tableName) => !currentTableNames.has(tableName),
+    );
+    if (tablesToAdd.length > 0) {
+      const newTables = [
+        ...currentTables,
+        ...tablesToAdd.map((tableName) => ({ tableName })),
+      ];
+      setValue(`config.${configIndex}.tables` as any, newTables, {
+        shouldDirty: true,
+      });
+    }
+  }, [tables, configIndex, setValue]);
+
+  // Helper to exclude all tables
+  const excludeAllTables = useCallback(() => {
+    const currentConfig = configRef.current;
+    if (currentConfig?.type !== "fmodata") return;
+
+    setValue(`config.${configIndex}.tables` as any, undefined, {
+      shouldDirty: true,
+    });
+  }, [configIndex, setValue]);
+
+  // Calculate if all tables are included/excluded
+  const allIncluded = useMemo(() => {
+    if (!tables || tables.length === 0) return false;
+    return tables.every((tableName) =>
+      tablesConfig.some((t) => t?.tableName === tableName),
+    );
+  }, [tables, tablesConfig]);
+
+  const allExcluded = useMemo(() => {
+    if (!tables || tables.length === 0) return true;
+    return tables.every(
+      (tableName) => !tablesConfig.some((t) => t?.tableName === tableName),
+    );
+  }, [tables, tablesConfig]);
+
   // Convert tables to table rows (filtering will be handled by DataGrid)
   const tableRows = useMemo<TableRow[]>(() => {
     if (!tables) return [];
@@ -243,10 +294,31 @@ export function MetadataTablesEditor({
       {
         accessorKey: "isIncluded",
         header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Include" />
+          <DataGridColumnHeader
+            column={column}
+            title="Include"
+            customActions={
+              <>
+                <DropdownMenuItem
+                  onClick={includeAllTables}
+                  disabled={allIncluded || isLoadingTables}
+                >
+                  Include All
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={excludeAllTables}
+                  disabled={allExcluded || isLoadingTables}
+                >
+                  Exclude All
+                </DropdownMenuItem>
+              </>
+            }
+          />
         ),
         enableSorting: true,
-        size: 100,
+        size: 45,
+        minSize: 45,
+        maxSize: 45,
         cell: (info) => {
           const row = info.row.original;
           return (
@@ -262,6 +334,7 @@ export function MetadataTablesEditor({
         },
         meta: {
           skeleton: <Skeleton className="w-11 h-6" />,
+          cellClassName: "!w-[45px] !min-w-[45px] !max-w-[45px]",
         },
       },
       {
@@ -340,7 +413,14 @@ export function MetadataTablesEditor({
         },
       },
     ],
-    [toggleTableInclude],
+    [
+      toggleTableInclude,
+      includeAllTables,
+      excludeAllTables,
+      allIncluded,
+      allExcluded,
+      isLoadingTables,
+    ],
   );
 
   // Create tables table instance
@@ -350,17 +430,11 @@ export function MetadataTablesEditor({
     getCoreRowModel: coreRowModel,
     getSortedRowModel: sortedRowModel,
     getFilteredRowModel: filteredRowModel,
-    getPaginationRowModel: paginationRowModel,
     globalFilterFn: "includesString",
     state: {
       globalFilter: searchFilter,
     },
     onGlobalFilterChange: setSearchFilter,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
   // Show loading state only when actively loading
@@ -476,7 +550,12 @@ export function MetadataTablesEditor({
     <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">OData Tables</h3>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            OData Tables{" "}
+            <Badge size="sm" variant="secondary">
+              {tableRows.filter((t) => t.isIncluded).length} selected
+            </Badge>
+          </h3>
           <Button
             type="button"
             variant="outline"
@@ -506,15 +585,13 @@ export function MetadataTablesEditor({
             recordCount={tablesTable.getFilteredRowModel().rows.length}
             isLoading={isLoadingTables}
             emptyMessage="No tables found."
-            tableLayout={{ width: "auto" }}
+            tableLayout={{ width: "fixed", headerSticky: true }}
           >
-            <DataGridContainer className="overflow-hidden">
-              <div className="overflow-x-auto">
+            <DataGridContainer>
+              <ScrollArea className="max-h-[650px]">
                 <DataGridTable />
-              </div>
-              <div className="border-t border-border px-5 min-h-14 flex items-center">
-                <DataGridPagination className="py-0" />
-              </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </DataGridContainer>
           </DataGrid>
         </div>

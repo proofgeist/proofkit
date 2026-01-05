@@ -1,7 +1,6 @@
 import {
   CleanedWhere,
   createAdapter,
-  type AdapterDebugLogs,
 } from "better-auth/adapters";
 import { createRawFetch, type FmOdataConfig } from "./odata";
 import { prettifyError, z } from "zod/v4";
@@ -25,7 +24,7 @@ interface FileMakerAdapterConfig {
   /**
    * Helps you debug issues with the adapter.
    */
-  debugLogs?: AdapterDebugLogs;
+  debugLogs?: boolean | { isRunningAdapterTests?: boolean };
   /**
    * If the table names in the schema are plural.
    */

@@ -16,6 +16,33 @@ import { AdapterOptions } from "../adapter";
 import { createRawFetch } from "../odata";
 import "dotenv/config";
 
+function getFileMakerAdapterConfigFromAdapterOptions(
+  options: unknown,
+): AdapterOptions["config"] {
+  if (!options || typeof options !== "object") {
+    throw new Error("FileMaker adapter options were missing.");
+  }
+
+  const opts = options as Record<string, unknown>;
+
+  // Our adapter returns: { options: { config: FileMakerAdapterConfig } }
+  if (opts.config && typeof opts.config === "object") {
+    return opts.config as AdapterOptions["config"];
+  }
+
+  // Some Better Auth versions wrap adapter options under `adapterConfig`.
+  if (opts.adapterConfig && typeof opts.adapterConfig === "object") {
+    const adapterConfig = opts.adapterConfig as Record<string, unknown>;
+    if (adapterConfig.config && typeof adapterConfig.config === "object") {
+      return adapterConfig.config as AdapterOptions["config"];
+    }
+  }
+
+  throw new Error(
+    "Could not locate FileMaker adapter configuration from Better Auth adapter options.",
+  );
+}
+
 async function main() {
   const program = new Command();
 
@@ -63,7 +90,9 @@ async function main() {
 
       const betterAuthSchema = getAuthTables(config);
 
-      const adapterConfig = (adapter.options as AdapterOptions).config;
+      const adapterConfig = getFileMakerAdapterConfigFromAdapterOptions(
+        adapter.options,
+      );
       const { fetch } = createRawFetch({
         ...adapterConfig.odata,
         auth:

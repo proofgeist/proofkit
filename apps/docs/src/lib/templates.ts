@@ -1,5 +1,5 @@
+import path from "node:path";
 import { getRegistryIndex, type TemplateMetadata } from "@proofkit/registry";
-import path from "path";
 
 type Category = TemplateMetadata["category"];
 
@@ -18,10 +18,9 @@ function getTemplatesPath(): string {
   if (process.env.NODE_ENV === "production") {
     // In production, templates are bundled in the public directory
     return path.join(process.cwd(), "public/registry-templates");
-  } else {
-    // In development, read directly from registry package
-    return path.resolve(process.cwd(), "../../packages/registry/templates");
   }
+  // In development, read directly from registry package
+  return path.resolve(process.cwd(), "../../packages/registry/templates");
 }
 
 /**
@@ -45,9 +44,7 @@ export async function getAllTemplates(): Promise<TemplateWithPath[]> {
 /**
  * Get templates grouped by category
  */
-export async function getTemplatesByCategory(): Promise<
-  Record<Category, TemplateWithPath[]>
-> {
+export async function getTemplatesByCategory(): Promise<Record<Category, TemplateWithPath[]>> {
   const templates = await getAllTemplates();
 
   const grouped = templates.reduce(
@@ -63,9 +60,9 @@ export async function getTemplatesByCategory(): Promise<
   );
 
   // Sort templates within each category by title
-  (Object.keys(grouped) as Category[]).forEach((category) => {
+  for (const category of Object.keys(grouped) as Category[]) {
     grouped[category].sort((a, b) => a.title.localeCompare(b.title));
-  });
+  }
 
   return grouped;
 }
@@ -73,9 +70,7 @@ export async function getTemplatesByCategory(): Promise<
 /**
  * Get a single template by name
  */
-export async function getTemplateByName(
-  name: string,
-): Promise<TemplateWithPath | null> {
+export async function getTemplateByName(name: string): Promise<TemplateWithPath | null> {
   const templates = await getAllTemplates();
   return templates.find((template) => template.name === name) || null;
 }
@@ -83,10 +78,7 @@ export async function getTemplateByName(
 /**
  * Search templates by title or description
  */
-export function searchTemplates(
-  templates: TemplateWithPath[],
-  query: string,
-): TemplateWithPath[] {
+export function searchTemplates(templates: TemplateWithPath[], query: string): TemplateWithPath[] {
   if (!query.trim()) {
     return templates;
   }

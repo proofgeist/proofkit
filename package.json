@@ -3,7 +3,7 @@
   "scripts": {
     "build": "turbo run build --filter={./packages/*} --filter=@proofkit/docs",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "lint": "turbo run lint --ui stream",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "changeset": "changeset",
@@ -12,21 +12,31 @@
     "sherif:fix": "pnpm sherif --fix",
     "release": "turbo run build --filter={./packages/*} && changeset publish",
     "test": "vitest",
-    "knip": "knip"
+    "knip": "knip",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.11",
     "@changesets/cli": "^2.29.3",
     "@types/node": "^22.17.1",
     "eslint": "^9.23.0",
+    "husky": "^9.1.7",
     "knip": "^5.56.0",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.5.3",
     "turbo": "^2.5.4",
     "typescript": "^5.9.3",
+    "ultracite": "7.0.8",
     "vitest": "^4.0.7"
   },
   "packageManager": "pnpm@10.14.0",
   "engines": {
     "node": ">=18"
   },
-  "name": "with-changesets"
+  "name": "with-changesets",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
+      "pnpm dlx ultracite fix"
+    ]
+  }
 }

@@ -6,5 +6,8 @@
     "tsdown.config.ts",
     "prettier.config.mjs",
     "index.d.ts"
-  ]
+  ],
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
 }

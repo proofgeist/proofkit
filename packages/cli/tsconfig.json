@@ -6,7 +6,8 @@
       "~/*": ["./src/*"],
       "@config/*": ["../config/*"]
     },
-    "checkJs": true
+    "checkJs": true,
+    "strictNullChecks": true
   },
   "exclude": ["template"],
   "include": [

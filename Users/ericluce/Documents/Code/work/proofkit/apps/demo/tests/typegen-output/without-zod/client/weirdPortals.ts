@@ -13,6 +13,8 @@ import { TweirdPortals, TweirdPortalsPortals } from "../weirdPortals";
 if (!process.env.DIFFERENT_FM_DATABASE) throw new Error("Missing env var: DIFFERENT_FM_DATABASE")
 if (!process.env.DIFFERENT_FM_SERVER) throw new Error("Missing env var: DIFFERENT_FM_SERVER")
 if (!process.env.DIFFERENT_OTTO_API_KEY) throw new Error("Missing env var: DIFFERENT_OTTO_API_KEY")
+if (!process.env.FM_USERNAME) throw new Error("Missing env var: FM_USERNAME")
+if (!process.env.FM_PASSWORD) throw new Error("Missing env var: FM_PASSWORD")
 
 export const client = DataApi<TweirdPortals, TweirdPortalsPortals>({
         adapter: new OttoAdapter({

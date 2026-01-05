@@ -1,20 +1,17 @@
+// biome-ignore lint/performance/noNamespaceImport: suggestion from docs
+import * as Twoslash from "fumadocs-twoslash/ui";
+import { createGenerator } from "fumadocs-typescript";
+import { AutoTypeTable } from "fumadocs-typescript/ui";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import defaultComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
-import { createGenerator } from "fumadocs-typescript";
-import * as Twoslash from "fumadocs-twoslash/ui";
-
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-
-import { AutoTypeTable } from "fumadocs-typescript/ui";
 
 const generator = createGenerator();
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultComponents,
-    AutoTypeTable: (props) => (
-      <AutoTypeTable {...props} generator={generator} />
-    ),
+    AutoTypeTable: (props) => <AutoTypeTable {...props} generator={generator} />,
     Tab,
     Tabs,
     ...Twoslash,

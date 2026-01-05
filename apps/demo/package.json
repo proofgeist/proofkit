@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome check . --write",
     "test": "op inject -i op.env -o .env.local -f && vitest",
     "migrate": "dotenv -e .env.local -- node ../../packages/better-auth/dist/esm/cli/index.js migrate"
   },

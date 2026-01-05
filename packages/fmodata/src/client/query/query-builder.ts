@@ -1,51 +1,42 @@
-import { QueryOptions } from "odata-query";
-import buildQuery from "odata-query";
-import type {
-  ExecutionContext,
-  ExecutableBuilder,
-  Result,
-  ExecuteOptions,
-  ConditionallyWithODataAnnotations,
-  ConditionallyWithSpecialColumns,
-  NormalizeIncludeSpecialColumns,
-  ExecuteMethodOptions,
-} from "../../types";
+import type { FFetchOptions } from "@fetchkit/ffetch";
+import buildQuery, { type QueryOptions } from "odata-query";
 import { RecordCountMismatchError } from "../../errors";
-import { type FFetchOptions } from "@fetchkit/ffetch";
-import { transformOrderByField } from "../../transform";
-import { safeJsonParse } from "../sanitize-json";
-import { parseErrorResponse } from "../error-parser";
-import { isColumn, type Column } from "../../orm/column";
+import { createLogger, type InternalLogger } from "../../logger";
+import { type Column, isColumn } from "../../orm/column";
+import { type FilterExpression, isOrderByExpression, type OrderByExpression } from "../../orm/operators";
 import {
-  FilterExpression,
-  OrderByExpression,
-  isOrderByExpression,
-} from "../../orm/operators";
-import {
-  FMTable,
+  type ExtractTableName,
+  type FMTable,
+  getTableName,
   type InferSchemaOutputFromFMTable,
   type ValidExpandTarget,
-  type ExtractTableName,
-  getTableName,
 } from "../../orm/table";
+import { transformOrderByField } from "../../transform";
+import type {
+  ConditionallyWithODataAnnotations,
+  ConditionallyWithSpecialColumns,
+  ExecutableBuilder,
+  ExecuteMethodOptions,
+  ExecuteOptions,
+  ExecutionContext,
+  NormalizeIncludeSpecialColumns,
+  Result,
+} from "../../types";
 import {
+  buildSelectExpandQueryString,
+  createODataRequest,
   ExpandBuilder,
   type ExpandConfig,
   type ExpandedRelations,
-  resolveTableId,
   mergeExecuteOptions,
   processQueryResponse,
   processSelectWithRenames,
-  buildSelectExpandQueryString,
-  createODataRequest,
+  resolveTableId,
 } from "../builders/index";
-import { QueryUrlBuilder, type NavigationConfig } from "./url-builder";
-import type {
-  TypeSafeOrderBy,
-  QueryReturnType,
-  SystemColumnsOption,
-} from "./types";
-import { createLogger, InternalLogger } from "../../logger";
+import { parseErrorResponse } from "../error-parser";
+import { safeJsonParse } from "../sanitize-json";
+import type { QueryReturnType, SystemColumnsOption, TypeSafeOrderBy } from "./types";
+import { type NavigationConfig, QueryUrlBuilder } from "./url-builder";
 
 // Re-export QueryReturnType for backward compatibility
 export type { QueryReturnType };
@@ -63,10 +54,7 @@ export class QueryBuilder<
   Occ extends FMTable<any, any>,
   Selected extends
     | keyof InferSchemaOutputFromFMTable<Occ>
-    | Record<
-        string,
-        Column<any, any, ExtractTableName<Occ>>
-      > = keyof InferSchemaOutputFromFMTable<Occ>,
+    | Record<string, Column<any, any, ExtractTableName<Occ>>> = keyof InferSchemaOutputFromFMTable<Occ>,
   SingleMode extends "exact" | "maybe" | false = false,
   IsCount extends boolean = false,
   Expands extends ExpandedRelations = {},
@@ -74,19 +62,10 @@ export class QueryBuilder<
   SystemCols extends SystemColumnsOption | undefined = undefined,
 > implements
     ExecutableBuilder<
-      QueryReturnType<
-        InferSchemaOutputFromFMTable<Occ>,
-        Selected,
-        SingleMode,
-        IsCount,
-        Expands,
-        SystemCols
-      >
+      QueryReturnType<InferSchemaOutputFromFMTable<Occ>, Selected, SingleMode, IsCount, Expands, SystemCols>
     >
 {
-  private queryOptions: Partial<
-    QueryOptions<InferSchemaOutputFromFMTable<Occ>>
-  > = {};
+  private queryOptions: Partial<QueryOptions<InferSchemaOutputFromFMTable<Occ>>> = {};
   private expandConfigs: ExpandConfig[] = [];
   private singleMode: SingleMode = false as SingleMode;
   private isCountMode = false as IsCount;
@@ -116,25 +95,15 @@ export class QueryBuilder<
     this.context = config.context;
     this.logger = config.context?._getLogger?.() ?? createLogger();
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns =
-      config.databaseIncludeSpecialColumns ?? false;
-    this.expandBuilder = new ExpandBuilder(
-      this.databaseUseEntityIds,
-      this.logger,
-    );
-    this.urlBuilder = new QueryUrlBuilder(
-      this.databaseName,
-      this.occurrence,
-      this.context,
-    );
+    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
+    this.expandBuilder = new ExpandBuilder(this.databaseUseEntityIds, this.logger);
+    this.urlBuilder = new QueryUrlBuilder(this.databaseName, this.occurrence, this.context);
   }
 
   /**
    * Helper to merge database-level useEntityIds and includeSpecialColumns with per-request options
    */
-  private mergeExecuteOptions(
-    options?: RequestInit & FFetchOptions & ExecuteOptions,
-  ): RequestInit &
+  private mergeExecuteOptions(options?: RequestInit & FFetchOptions & ExecuteOptions): RequestInit &
     FFetchOptions & {
       useEntityIds?: boolean;
       includeSpecialColumns?: boolean;
@@ -142,8 +111,7 @@ export class QueryBuilder<
     const merged = mergeExecuteOptions(options, this.databaseUseEntityIds);
     return {
       ...merged,
-      includeSpecialColumns:
-        options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
+      includeSpecialColumns: options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
     };
   }
 
@@ -159,12 +127,7 @@ export class QueryBuilder<
    * @param useEntityIds - Optional override for entity ID usage
    */
   private getTableIdOrName(useEntityIds?: boolean): string {
-    return resolveTableId(
-      this.occurrence,
-      getTableName(this.occurrence),
-      this.context,
-      useEntityIds,
-    );
+    return resolveTableId(this.occurrence, getTableName(this.occurrence), this.context, useEntityIds);
   }
 
   /**
@@ -185,15 +148,7 @@ export class QueryBuilder<
     queryOptions?: Partial<QueryOptions<InferSchemaOutputFromFMTable<Occ>>>;
     fieldMapping?: Record<string, string>;
     systemColumns?: NewSystemCols;
-  }): QueryBuilder<
-    Occ,
-    NewSelected,
-    NewSingle,
-    NewCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    NewSystemCols
-  > {
+  }): QueryBuilder<Occ, NewSelected, NewSingle, NewCount, Expands, DatabaseIncludeSpecialColumns, NewSystemCols> {
     const newBuilder = new QueryBuilder<
       Occ,
       NewSelected,
@@ -217,17 +172,10 @@ export class QueryBuilder<
     newBuilder.singleMode = (changes.singleMode ?? this.singleMode) as any;
     newBuilder.isCountMode = (changes.isCountMode ?? this.isCountMode) as any;
     newBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
-    newBuilder.systemColumns =
-      changes.systemColumns !== undefined
-        ? changes.systemColumns
-        : this.systemColumns;
+    newBuilder.systemColumns = changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns;
     // Copy navigation metadata
     newBuilder.navigation = this.navigation;
-    newBuilder.urlBuilder = new QueryUrlBuilder(
-      this.databaseName,
-      this.occurrence,
-      this.context,
-    );
+    newBuilder.urlBuilder = new QueryUrlBuilder(this.databaseName, this.occurrence, this.context);
     return newBuilder;
   }
 
@@ -254,29 +202,14 @@ export class QueryBuilder<
    * @returns QueryBuilder with updated selected fields
    */
   select<
-    TSelect extends Record<
-      string,
-      Column<any, any, ExtractTableName<Occ>, false>
-    >,
+    TSelect extends Record<string, Column<any, any, ExtractTableName<Occ>, false>>,
     TSystemCols extends SystemColumnsOption = {},
   >(
     fields: TSelect,
     systemColumns?: TSystemCols,
-  ): QueryBuilder<
-    Occ,
-    TSelect,
-    SingleMode,
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    TSystemCols
-  > {
+  ): QueryBuilder<Occ, TSelect, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, TSystemCols> {
     const tableName = getTableName(this.occurrence);
-    const { selectedFields, fieldMapping } = processSelectWithRenames(
-      fields,
-      tableName,
-      this.logger,
-    );
+    const { selectedFields, fieldMapping } = processSelectWithRenames(fields, tableName, this.logger);
 
     // Add system columns to selectedFields if requested
     const finalSelectedFields = [...selectedFields];
@@ -292,8 +225,7 @@ export class QueryBuilder<
       queryOptions: {
         select: finalSelectedFields,
       },
-      fieldMapping:
-        Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
+      fieldMapping: Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
       systemColumns: systemColumns as any,
     });
   }
@@ -310,15 +242,7 @@ export class QueryBuilder<
    */
   where(
     expression: FilterExpression | string,
-  ): QueryBuilder<
-    Occ,
-    Selected,
-    SingleMode,
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     // Handle raw string filters (escape hatch)
     if (typeof expression === "string") {
       this.queryOptions.filter = expression;
@@ -363,20 +287,9 @@ export class QueryBuilder<
         ]
       | [
           Column<any, any, ExtractTableName<Occ>>,
-          ...Array<
-            | Column<any, any, ExtractTableName<Occ>>
-            | OrderByExpression<ExtractTableName<Occ>>
-          >,
+          ...Array<Column<any, any, ExtractTableName<Occ>> | OrderByExpression<ExtractTableName<Occ>>>,
         ]
-  ): QueryBuilder<
-    Occ,
-    Selected,
-    SingleMode,
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     const tableName = getTableName(this.occurrence);
 
     // Handle variadic arguments (multiple fields)
@@ -390,11 +303,10 @@ export class QueryBuilder<
             );
           }
           const fieldName = arg.column.fieldName;
-          const transformedField = this.occurrence
-            ? transformOrderByField(fieldName, this.occurrence)
-            : fieldName;
+          const transformedField = this.occurrence ? transformOrderByField(fieldName, this.occurrence) : fieldName;
           return `${transformedField} ${arg.direction}`;
-        } else if (isColumn(arg)) {
+        }
+        if (isColumn(arg)) {
           // Validate table match
           if (arg.tableName !== tableName) {
             this.logger.warn(
@@ -402,15 +314,10 @@ export class QueryBuilder<
             );
           }
           const fieldName = arg.fieldName;
-          const transformedField = this.occurrence
-            ? transformOrderByField(fieldName, this.occurrence)
-            : fieldName;
+          const transformedField = this.occurrence ? transformOrderByField(fieldName, this.occurrence) : fieldName;
           return transformedField; // Default to ascending
-        } else {
-          throw new Error(
-            "Variadic orderBy() only accepts Column or OrderByExpression arguments",
-          );
         }
+        throw new Error("Variadic orderBy() only accepts Column or OrderByExpression arguments");
       });
       this.queryOptions.orderBy = orderByParts;
       return this;
@@ -428,9 +335,7 @@ export class QueryBuilder<
         );
       }
       const fieldName = orderBy.column.fieldName;
-      const transformedField = this.occurrence
-        ? transformOrderByField(fieldName, this.occurrence)
-        : fieldName;
+      const transformedField = this.occurrence ? transformOrderByField(fieldName, this.occurrence) : fieldName;
       this.queryOptions.orderBy = `${transformedField} ${orderBy.direction}`;
       return this;
     }
@@ -445,9 +350,7 @@ export class QueryBuilder<
       }
       // Single Column reference without direction (defaults to ascending)
       const fieldName = orderBy.fieldName;
-      this.queryOptions.orderBy = this.occurrence
-        ? transformOrderByField(fieldName, this.occurrence)
-        : fieldName;
+      this.queryOptions.orderBy = this.occurrence ? transformOrderByField(fieldName, this.occurrence) : fieldName;
       return this;
     }
     // Transform field names to FMFIDs if using entity IDs
@@ -460,32 +363,20 @@ export class QueryBuilder<
           (orderBy[1] === "asc" || orderBy[1] === "desc")
         ) {
           // Single tuple: [field, direction] or [column, direction]
-          const field = isColumn(orderBy[0])
-            ? orderBy[0].fieldName
-            : orderBy[0];
+          const field = isColumn(orderBy[0]) ? orderBy[0].fieldName : orderBy[0];
           const direction = orderBy[1] as "asc" | "desc";
           this.queryOptions.orderBy = `${transformOrderByField(field, this.occurrence)} ${direction}`;
         } else {
           // Array of tuples: [[field, dir], [field, dir], ...]
-          this.queryOptions.orderBy = (
-            orderBy as Array<[any, "asc" | "desc"]>
-          ).map(([fieldOrCol, direction]) => {
-            const field = isColumn(fieldOrCol)
-              ? fieldOrCol.fieldName
-              : String(fieldOrCol);
-            const transformedField = transformOrderByField(
-              field,
-              this.occurrence!,
-            );
+          this.queryOptions.orderBy = (orderBy as Array<[any, "asc" | "desc"]>).map(([fieldOrCol, direction]) => {
+            const field = isColumn(fieldOrCol) ? fieldOrCol.fieldName : String(fieldOrCol);
+            const transformedField = transformOrderByField(field, this.occurrence!);
             return `${transformedField} ${direction}`;
           });
         }
       } else {
         // Single field name (string)
-        this.queryOptions.orderBy = transformOrderByField(
-          String(orderBy),
-          this.occurrence,
-        );
+        this.queryOptions.orderBy = transformOrderByField(String(orderBy), this.occurrence);
       }
     } else {
       // No occurrence/baseTable - pass through as-is
@@ -496,19 +387,13 @@ export class QueryBuilder<
           (orderBy[1] === "asc" || orderBy[1] === "desc")
         ) {
           // Single tuple: [field, direction] or [column, direction]
-          const field = isColumn(orderBy[0])
-            ? orderBy[0].fieldName
-            : orderBy[0];
+          const field = isColumn(orderBy[0]) ? orderBy[0].fieldName : orderBy[0];
           const direction = orderBy[1] as "asc" | "desc";
           this.queryOptions.orderBy = `${field} ${direction}`;
         } else {
           // Array of tuples
-          this.queryOptions.orderBy = (
-            orderBy as Array<[any, "asc" | "desc"]>
-          ).map(([fieldOrCol, direction]) => {
-            const field = isColumn(fieldOrCol)
-              ? fieldOrCol.fieldName
-              : String(fieldOrCol);
+          this.queryOptions.orderBy = (orderBy as Array<[any, "asc" | "desc"]>).map(([fieldOrCol, direction]) => {
+            const field = isColumn(fieldOrCol) ? fieldOrCol.fieldName : String(fieldOrCol);
             return `${field} ${direction}`;
           });
         }
@@ -521,30 +406,14 @@ export class QueryBuilder<
 
   top(
     count: number,
-  ): QueryBuilder<
-    Occ,
-    Selected,
-    SingleMode,
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     this.queryOptions.top = count;
     return this;
   }
 
   skip(
     count: number,
-  ): QueryBuilder<
-    Occ,
-    Selected,
-    SingleMode,
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     this.queryOptions.skip = count;
     return this;
   }
@@ -561,13 +430,7 @@ export class QueryBuilder<
   >(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
     callback?: (
-      builder: QueryBuilder<
-        TargetTable,
-        keyof InferSchemaOutputFromFMTable<TargetTable>,
-        false,
-        false,
-        {}
-      >,
+      builder: QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>,
     ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands>,
   ): QueryBuilder<
     Occ,
@@ -593,23 +456,12 @@ export class QueryBuilder<
       {},
       DatabaseIncludeSpecialColumns
     >;
-    const expandConfig = this.expandBuilder.processExpand<
-      TargetTable,
-      TargetBuilder
-    >(
+    const expandConfig = this.expandBuilder.processExpand<TargetTable, TargetBuilder>(
       targetTable,
       this.occurrence,
       callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
-        new QueryBuilder<
-          TargetTable,
-          any,
-          any,
-          any,
-          any,
-          DatabaseIncludeSpecialColumns,
-          undefined
-        >({
+        new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
           occurrence: targetTable,
           databaseName: this.databaseName,
           context: this.context,
@@ -622,39 +474,15 @@ export class QueryBuilder<
     return this as any;
   }
 
-  single(): QueryBuilder<
-    Occ,
-    Selected,
-    "exact",
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  single(): QueryBuilder<Occ, Selected, "exact", IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     return this.cloneWithChanges({ singleMode: "exact" as const });
   }
 
-  maybeSingle(): QueryBuilder<
-    Occ,
-    Selected,
-    "maybe",
-    IsCount,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  maybeSingle(): QueryBuilder<Occ, Selected, "maybe", IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     return this.cloneWithChanges({ singleMode: "maybe" as const });
   }
 
-  count(): QueryBuilder<
-    Occ,
-    Selected,
-    SingleMode,
-    true,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    SystemCols
-  > {
+  count(): QueryBuilder<Occ, Selected, SingleMode, true, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
     return this.cloneWithChanges({
       isCountMode: true as const,
       queryOptions: { count: true },
@@ -664,10 +492,7 @@ export class QueryBuilder<
   /**
    * Builds the OData query string from current query options and expand configs.
    */
-  private buildQueryString(
-    includeSpecialColumns?: boolean,
-    useEntityIds?: boolean,
-  ): string {
+  private buildQueryString(includeSpecialColumns?: boolean, useEntityIds?: boolean): string {
     // Build query without expand and select (we'll add them manually if using entity IDs)
     const queryOptionsWithoutExpandAndSelect = { ...this.queryOptions };
     const originalSelect = queryOptionsWithoutExpandAndSelect.select;
@@ -684,8 +509,7 @@ export class QueryBuilder<
       : undefined;
 
     // Use merged includeSpecialColumns if provided, otherwise use database-level default
-    const finalIncludeSpecialColumns =
-      includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
+    const finalIncludeSpecialColumns = includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
 
     // Use provided useEntityIds if provided, otherwise use database-level default
     const finalUseEntityIds = useEntityIds ?? this.databaseUseEntityIds;
@@ -702,9 +526,7 @@ export class QueryBuilder<
     // Append select/expand to existing query string
     if (selectExpandString) {
       // Strip leading ? from helper result and append with appropriate separator
-      const params = selectExpandString.startsWith("?")
-        ? selectExpandString.slice(1)
-        : selectExpandString;
+      const params = selectExpandString.startsWith("?") ? selectExpandString.slice(1) : selectExpandString;
       const separator = queryString.includes("?") ? "&" : "?";
       queryString = `${queryString}${separator}${params}`;
     }
@@ -718,19 +540,9 @@ export class QueryBuilder<
     Result<
       ConditionallyWithODataAnnotations<
         ConditionallyWithSpecialColumns<
-          QueryReturnType<
-            InferSchemaOutputFromFMTable<Occ>,
-            Selected,
-            SingleMode,
-            IsCount,
-            Expands,
-            SystemCols
-          >,
+          QueryReturnType<InferSchemaOutputFromFMTable<Occ>, Selected, SingleMode, IsCount, Expands, SystemCols>,
           // Use the merged value: if explicitly provided in options, use that; otherwise use database default
-          NormalizeIncludeSpecialColumns<
-            EO["includeSpecialColumns"],
-            DatabaseIncludeSpecialColumns
-          >,
+          NormalizeIncludeSpecialColumns<EO["includeSpecialColumns"], DatabaseIncludeSpecialColumns>,
           // Check if select was applied: if Selected is Record (object select) or a subset of keys, select was applied
           Selected extends Record<string, Column<any, any, any>>
             ? true
@@ -743,10 +555,7 @@ export class QueryBuilder<
     >
   > {
     const mergedOptions = this.mergeExecuteOptions(options);
-    const queryString = this.buildQueryString(
-      mergedOptions.includeSpecialColumns,
-      mergedOptions.useEntityIds,
-    );
+    const queryString = this.buildQueryString(mergedOptions.includeSpecialColumns, mergedOptions.useEntityIds);
 
     // Handle $count endpoint
     if (this.isCountMode) {
@@ -762,8 +571,7 @@ export class QueryBuilder<
       }
 
       // OData returns count as a string, convert to number
-      const count =
-        typeof result.data === "string" ? Number(result.data) : result.data;
+      const count = typeof result.data === "string" ? Number(result.data) : result.data;
       return { data: count as number, error: undefined } as any;
     }
 
@@ -827,23 +635,13 @@ export class QueryBuilder<
     response: Response,
     options?: ExecuteOptions,
   ): Promise<
-    Result<
-      QueryReturnType<
-        InferSchemaOutputFromFMTable<Occ>,
-        Selected,
-        SingleMode,
-        IsCount,
-        Expands,
-        SystemCols
-      >
-    >
+    Result<QueryReturnType<InferSchemaOutputFromFMTable<Occ>, Selected, SingleMode, IsCount, Expands, SystemCols>>
   > {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const error = await parseErrorResponse(
         response,
-        response.url ||
-          `/${this.databaseName}/${getTableName(this.occurrence)}`,
+        response.url || `/${this.databaseName}/${getTableName(this.occurrence)}`,
       );
       return { data: undefined, error };
     }

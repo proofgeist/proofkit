@@ -1,13 +1,13 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { OttoAPIKey } from "@proofkit/fmdapi";
 import { generateTypedClients } from "@proofkit/typegen";
-import { typegenConfigSingle } from "@proofkit/typegen/config";
-import { OttoAPIKey } from "@proofkit/fmdapi";
-import { z } from "zod/v4";
+import type { typegenConfigSingle } from "@proofkit/typegen/config";
+import { execSync } from "child_process";
+import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
-import { execSync } from "child_process";
+import { beforeAll, describe, expect, it } from "vitest";
+import type { z } from "zod/v4";
 
-import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, ".env.local") });
 
 async function testTypegenConfig(config: z.infer<typeof typegenConfigSingle>) {
@@ -68,10 +68,8 @@ describe("typegen", () => {
 
     const clientPath = path.join(genPath, "client", "testLayout.ts");
     const clientContent = await fs.readFile(clientPath, "utf-8");
-    await expect(clientContent).toMatchFileSnapshot(
-      path.join(__dirname, "__snapshots__", "with-zod.snap.ts"),
-    );
-  }, 30000);
+    await expect(clientContent).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "with-zod.snap.ts"));
+  }, 30_000);
 
   it("basic typegen without zod", async () => {
     // Define baseGenPath within the scope or ensure it's accessible
@@ -101,8 +99,6 @@ describe("typegen", () => {
 
     const clientPath = path.join(genPath, "client", "testLayout.ts");
     const clientContent = await fs.readFile(clientPath, "utf-8");
-    await expect(clientContent).toMatchFileSnapshot(
-      path.join(__dirname, "__snapshots__", "without-zod.snap.ts"),
-    );
-  }, 30000);
+    await expect(clientContent).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "without-zod.snap.ts"));
+  }, 30_000);
 });

@@ -1,9 +1,5 @@
-import { describe, it, expect } from "vitest";
-import {
-  getRegistryIndex,
-  getStaticComponent,
-  RegistryItem,
-} from "@proofkit/registry";
+import { getRegistryIndex, getStaticComponent, type RegistryItem } from "@proofkit/registry";
+import { describe, expect, it } from "vitest";
 
 describe("Registry utils (dynamic scanning)", () => {
   it("reads index dynamically", async () => {
@@ -22,18 +18,19 @@ describe("Registry utils (dynamic scanning)", () => {
     const comp = await getStaticComponent("components/mode-toggle");
     expect(comp).toHaveProperty("files");
     expect(comp.files).toBeInstanceOf(Array);
+    if (!comp.files) {
+      throw new Error("Files is undefined");
+    }
     expect(comp.files.length).toBeGreaterThan(0);
   });
 
   it("throws error for non-existent template", async () => {
-    await expect(getStaticComponent("non-existent")).rejects.toThrow(
-      'Template "non-existent" not found',
-    );
+    await expect(getStaticComponent("non-existent")).rejects.toThrow('Template "non-existent" not found');
   });
 
-  it("passes type check", async () => {
+  it("passes type check", () => {
     // this test doesn't return anything, but it should not throw any TypeScript errors
-    const test1: RegistryItem = {
+    const _test1: RegistryItem = {
       name: "test",
       type: "registry:component",
       files: [
@@ -46,7 +43,7 @@ describe("Registry utils (dynamic scanning)", () => {
       ],
     };
 
-    const test2: RegistryItem = {
+    const _test2: RegistryItem = {
       name: "test",
       type: "registry:component",
       files: [
@@ -60,7 +57,7 @@ describe("Registry utils (dynamic scanning)", () => {
     };
 
     // @ts-expect-error - files is missing
-    const test3: RegistryItem = {
+    const _test3: RegistryItem = {
       name: "test",
       type: "registry:component",
     };

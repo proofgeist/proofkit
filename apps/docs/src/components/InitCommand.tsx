@@ -1,5 +1,5 @@
 import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
-import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { cliVersion } from "@/lib/constants";
 
 const MANAGERS = [
@@ -10,15 +10,10 @@ const MANAGERS = [
 
 export function InitCommand() {
   return (
-    <Tabs
-      id="package-manager"
-      persist
-      items={MANAGERS.map((m) => m.label)}
-      groupId="package-manager"
-    >
+    <Tabs groupId="package-manager" id="package-manager" items={MANAGERS.map((m) => m.label)} persist>
       {MANAGERS.map((manager) => (
         <Tab key={manager.key} value={manager.label}>
-          <DynamicCodeBlock lang="bash" code={`${manager.command}`} />
+          <DynamicCodeBlock code={manager.command} lang="bash" />
         </Tab>
       ))}
     </Tabs>

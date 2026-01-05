@@ -1,0 +1,193 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { ExecutionContext, ExecutableBuilder, Metadata } from "../types";
+import { EntitySet } from "./entity-set";
+import { BatchBuilder } from "./batch-builder";
+import { SchemaManager } from "./schema-manager";
+import { FMTable } from "../orm/table";
+
+export class Database {
+  private _useEntityIds: boolean = false;
+  public readonly schema: SchemaManager;
+
+  constructor(
+    private readonly databaseName: string,
+    private readonly context: ExecutionContext,
+    config?: {
+      /**
+       * Whether to use entity IDs instead of field names in the actual requests to the server
+       * Defaults to true if all occurrences use entity IDs, false otherwise
+       * If set to false but some occurrences do not use entity IDs, an error will be thrown
+       */
+      useEntityIds?: boolean;
+    },
+  ) {
+    // Initialize schema manager
+    this.schema = new SchemaManager(this.databaseName, this.context);
+    this._useEntityIds = config?.useEntityIds ?? false;
+  }
+
+  from<T extends FMTable<any, any>>(table: T): EntitySet<T> {
+    // Only override database-level useEntityIds if table explicitly sets it
+    // (not if it's undefined, which would override the database setting)
+    if (
+      Object.prototype.hasOwnProperty.call(table, FMTable.Symbol.UseEntityIds)
+    ) {
+      const tableUseEntityIds = (table as any)[FMTable.Symbol.UseEntityIds];
+      if (typeof tableUseEntityIds === "boolean") {
+        this._useEntityIds = tableUseEntityIds;
+      }
+    }
+    return new EntitySet<T>({
+      occurrence: table as T,
+      databaseName: this.databaseName,
+      context: this.context,
+      database: this,
+    });
+  }
+
+  /**
+   * Retrieves the OData metadata for this database.
+   * @param args Optional configuration object
+   * @param args.format The format to retrieve metadata in. Defaults to "json".
+   * @returns The metadata in the specified format
+   */
+  async getMetadata(args: { format: "xml" }): Promise<string>;
+  async getMetadata(args?: { format?: "json" }): Promise<Metadata>;
+  async getMetadata(args?: {
+    format?: "xml" | "json";
+  }): Promise<string | Metadata> {
+    const result = await this.context._makeRequest<
+      Record<string, Metadata> | string
+    >(`/${this.databaseName}/$metadata`, {
+      headers: {
+        Accept: args?.format === "xml" ? "application/xml" : "application/json",
+      },
+    });
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (args?.format === "json") {
+      const data = result.data as Record<string, Metadata>;
+      const metadata = data[this.databaseName];
+      if (!metadata) {
+        throw new Error(
+          `Metadata for database "${this.databaseName}" not found in response`,
+        );
+      }
+      return metadata;
+    }
+    return result.data as string;
+  }
+
+  /**
+   * Lists all available tables (entity sets) in this database.
+   * @returns Promise resolving to an array of table names
+   */
+  async listTableNames(): Promise<string[]> {
+    const result = await this.context._makeRequest<{
+      value?: Array<{ name: string }>;
+    }>(`/${this.databaseName}`);
+    if (result.error) {
+      throw result.error;
+    }
+    if (result.data.value && Array.isArray(result.data.value)) {
+      return result.data.value.map((item) => item.name);
+    }
+    return [];
+  }
+
+  /**
+   * Executes a FileMaker script.
+   * @param scriptName - The name of the script to execute (must be valid according to OData rules)
+   * @param options - Optional script parameter and result schema
+   * @returns Promise resolving to script execution result
+   */
+  async runScript<ResultSchema extends StandardSchemaV1<string, any> = never>(
+    scriptName: string,
+    options?: {
+      scriptParam?: string | number | Record<string, any>;
+      resultSchema?: ResultSchema;
+    },
+  ): Promise<
+    [ResultSchema] extends [never]
+      ? { resultCode: number; result?: string }
+      : ResultSchema extends StandardSchemaV1<string, infer Output>
+        ? { resultCode: number; result: Output }
+        : { resultCode: number; result?: string }
+  > {
+    const body: { scriptParameterValue?: unknown } = {};
+    if (options?.scriptParam !== undefined) {
+      body.scriptParameterValue = options.scriptParam;
+    }
+
+    const result = await this.context._makeRequest<{
+      scriptResult: {
+        code: number;
+        resultParameter?: string;
+      };
+    }>(`/${this.databaseName}/Script.${scriptName}`, {
+      method: "POST",
+      body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    const response = result.data;
+
+    // If resultSchema is provided, validate the result through it
+    if (options?.resultSchema && response.scriptResult !== undefined) {
+      const validationResult = options.resultSchema["~standard"].validate(
+        response.scriptResult.resultParameter,
+      );
+      // Handle both sync and async validation
+      const result =
+        validationResult instanceof Promise
+          ? await validationResult
+          : validationResult;
+
+      if (result.issues) {
+        throw new Error(
+          `Script result validation failed: ${JSON.stringify(result.issues)}`,
+        );
+      }
+
+      return {
+        resultCode: response.scriptResult.code,
+        result: result.value,
+      } as any;
+    }
+
+    return {
+      resultCode: response.scriptResult.code,
+      result: response.scriptResult.resultParameter,
+    } as any;
+  }
+
+  /**
+   * Create a batch operation builder that allows multiple queries to be executed together
+   * in a single atomic request. All operations succeed or fail together (transactional).
+   *
+   * @param builders - Array of executable query builders to batch
+   * @returns A BatchBuilder that can be executed
+   * @example
+   * ```ts
+   * const result = await db.batch([
+   *   db.from('contacts').list().top(5),
+   *   db.from('users').list().top(5),
+   *   db.from('contacts').insert({ name: 'John' })
+   * ]).execute();
+   *
+   * if (result.data) {
+   *   const [contacts, users, insertResult] = result.data;
+   * }
+   * ```
+   */
+  batch<const Builders extends readonly ExecutableBuilder<any>[]>(
+    builders: Builders,
+  ): BatchBuilder<Builders> {
+    return new BatchBuilder(builders, this.databaseName, this.context);
+  }
+}

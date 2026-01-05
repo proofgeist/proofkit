@@ -1,0 +1,212 @@
+---
+title: Related Data
+description: How to retrieve related data from your FileMaker database
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+
+## FileMaker Relationships vs OData Navigation
+
+When FileMaker server parses your relationship graph for relationships, it can only create basic navigation paths between table occurences where the fields are equal to each other. Sorting via a relationship is not supported and other comparison operators (if used) will be ignored and everything will be treated as a simple equality match between the fields. For complex queries or sorting, you should use the other methods of OData.
+
+### Navigating vs Expanding
+
+When you navigate to a related table, are essentially changing the context of your query to the related table, but with a filtered subset of records related to the parent record(s). This is most often done if you know the primary key ID of the parent record and only need the children records.
+
+For example the query: `/users('123')/orders` will return all the orders for the user with the ID `123`. In @proofkit/fmodata, you can do this with the `navigate()` method.
+
+```typescript tab="Query"
+const result = await db.from(users).get("123").navigate(orders).execute();
+```
+
+```jsonc tab="Result"
+// data is from the orders table; no fields from the users table will be included.
+{
+  "data": [
+    { "id": "456", "amount": 100, "date": "2021-01-01" },
+    { "id": "789", "amount": 200, "date": "2021-01-02" },
+  ]
+}
+```
+
+When you use the `expand()` method, you are essentially adding the related records to the current query. This is most often done if you need to get the parent records along with the children records.
+
+```typescript tab="Query"
+const result = await db.from(users).get("123").expand(orders).execute();
+```
+
+```jsonc tab="Result"
+// data is from the users table, along with the related orders records.
+{
+  "data": {
+    "id": "123",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "orders": [
+      {
+        "id": "456",
+        "amount": 100,
+        "date": "2021-01-01"
+      },
+      {
+        "id": "789",
+        "amount": 200,
+        "date": "2021-01-02"
+      }
+    ]
+  }
+}
+```
+
+## Defining Navigation Paths
+
+Define navigation paths using the `navigationPaths` option when creating table occurrences. The same navigation paths are used whether you use the `navigate()` or `expand()` methods.
+
+<Callout type="info" title="Navigation Paths">
+These are created for you automatically when you use the `@proofkit/typegen` tool to generate your schema files.
+</Callout>
+
+```typescript
+import { fmTableOccurrence, textField } from "@proofkit/fmodata";
+
+const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    id: textField().primaryKey(),
+    name: textField().notNull(),
+    userId: textField().notNull(),
+  },
+  {
+    navigationPaths: ["users"], // Valid navigation targets
+  },
+);
+
+const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey(),
+    username: textField().notNull(),
+    email: textField().notNull(),
+  },
+  {
+    navigationPaths: ["contacts"], // Valid navigation targets
+  },
+);
+```
+
+The `navigationPaths` option:
+
+- Specifies which table occurrences can be navigated to from this table
+- Enables runtime validation when using `expand()` or `navigate()`
+- Throws descriptive errors if you try to navigate to an invalid path
+
+## Navigating Between Tables
+
+Navigate to related records:
+
+```typescript
+// Navigate from a specific record (using column references)
+const result = await db
+  .from(contacts)
+  .get("contact-123")
+  .navigate(users)
+  .select({
+    username: users.username,
+    email: users.email,
+  })
+  .execute();
+
+// Navigate without specifying a record first
+const result = await db.from(contacts).navigate(users).list().execute();
+```
+
+## Expanding Related Records
+
+Use `expand()` to include related records in your query results. The library validates that the target table is in the source table's `navigationPaths`:
+
+```typescript
+// Simple expand
+const result = await db.from(contacts).list().expand(users).execute();
+
+// Expand with field selection (using column references)
+const result = await db
+  .from(contacts)
+  .list()
+  .expand(users, (b) =>
+    b.select({
+      username: users.username,
+      email: users.email,
+    }),
+  )
+  .execute();
+
+// Expand with filtering (using ORM API)
+import { eq } from "@proofkit/fmodata";
+
+const result = await db
+  .from(contacts)
+  .list()
+  .expand(users, (b) => b.where(eq(users.active, true)))
+  .execute();
+
+// Multiple expands
+const result = await db
+  .from(contacts)
+  .list()
+  .expand(users, (b) => b.select({ username: users.username }))
+  .expand(orders, (b) => b.select({ total: orders.total }).top(5))
+  .execute();
+```
+
+## Nested Expands
+
+You can nest expands to include related records of related records:
+
+```typescript
+// Nested expands
+const result = await db
+  .from(contacts)
+  .list()
+  .expand(users, (usersBuilder) =>
+    usersBuilder
+      .select({
+        username: users.username,
+        email: users.email,
+      })
+      .expand(customers, (customerBuilder) =>
+        customerBuilder.select({
+          name: customers.name,
+          tier: customers.tier,
+        }),
+      ),
+  )
+  .execute();
+```
+
+## Complex Expand Examples
+
+Combine multiple options in a single expand:
+
+```typescript
+// Complex expand with multiple options
+const result = await db
+  .from(contacts)
+  .list()
+  .expand(users, (b) =>
+    b
+      .select({
+        username: users.username,
+        email: users.email,
+      })
+      .where(eq(users.active, true))
+      .orderBy(asc(users.username))
+      .top(10)
+      .expand(customers, (nested) => nested.select({ name: customers.name })),
+  )
+  .execute();
+```
+
+
+

@@ -1,0 +1,165 @@
+---
+title: Schema Definitions
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+import { Badge } from "@/components/ui/badge";
+
+This library relies on a schema-first approach for good type-safety and optional runtime validation. Use **`fmTableOccurrence()`** with field builders to create your schemas. This provides full TypeScript type inference for field names in queries.
+
+## Field Builders
+
+Field builders provide a fluent API for defining table fields with type-safe metadata. These field types map directly to the FileMaker field types:
+
+| Builder | FileMaker Type | Description |
+|---------|---------------|-------------|
+| `textField()` | Text | Text fields |
+| `numberField()` | Number | Numeric fields |
+| `dateField()` | Date | Date fields |
+| `timeField()` | Time | Time fields |
+| `timestampField()` | Timestamp | Date and time fields |
+| `containerField()` | Container | Container fields |
+| `calcField()` | Calculation | Calculated fields |
+
+### Chainable Methods
+
+Each field builder supports chainable methods:
+
+| Method | Description |
+|--------|-------------|
+| `.primaryKey()` | Mark as primary key (automatically read-only) |
+| `.notNull()` | Forces the type to not be null and requires you provided a value when inserting |
+| `.readOnly()` | Exclude from insert/update operations |
+| `.entityId(id)` | Assign FileMaker field ID (FMFID), allowing your API calls to survive FileMaker name changes |
+| `.readValidator(validator)` | Transform/validate data when reading from database (list and get operations) |
+| `.writeValidator(validator)` | Transform/validate data when writing to database (insert and update operations) |
+
+## Defining Tables
+
+Use `fmTableOccurrence()` to define a table with field builders:
+
+```typescript title="schema.ts"
+import { z } from "zod/v4";
+import {
+  fmTableOccurrence,
+  textField,
+  numberField,
+  timestampField,
+} from "@proofkit/fmodata";
+
+const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    id: textField().primaryKey().entityId("FMFID:1"),
+    name: textField().notNull().entityId("FMFID:2"),
+    email: textField().notNull().entityId("FMFID:3"),
+    phone: textField().entityId("FMFID:4"), // Optional (nullable by default)
+    createdAt: timestampField().readOnly().entityId("FMFID:5"),
+  },
+  {
+    entityId: "FMTID:100", // Optional: FileMaker table occurrence ID
+    defaultSelect: "schema", // Optional: "all", "schema", or function. Defaults to "schema".
+    navigationPaths: ["users"], // Optional: valid navigation targets
+  },
+);
+```
+
+The function returns a table object that can be used in queries and operations. To reference fields in a table, use the column references (e.g. in select and filter operations use `contacts.id`, `contacts.name`). Or use the object direclty to reference the table (such as in from, navigate, and expand operations).
+
+## Default Field Selection
+
+What should happen when you don't specify a `select` in your query? You can configure this at the table definition level using the `defaultSelect` option.
+
+### Option 1: `"schema"` <Badge variant="" appearance="light">Default</Badge>
+With this default option, the library will ensure there is always a `$select` parameter when making the request to FileMaker. The `$select` parameter will only include the fields that are defined in the schema, so you'll never get back any extra fields that are not defined in your schema.
+
+### Option 2: `"all"`
+This option turns off the library behavior and will revert to FileMaker's default behavior. All non-container fields will be returned at runtime, but you will only get type information for the fields that are defined in the schema.
+```typescript
+const users = fmTableOccurrence(
+  "users",
+  {
+    /* fields */
+  },
+  {
+    defaultSelect: "all", 
+  },
+);
+
+```
+
+### Option 3: Custom Select
+You can also provide a function that returns a custom select object. This function will be called with the table object and should return a custom select object.
+
+```typescript
+const users = fmTableOccurrence(
+  "users",
+  {
+    /* fields */
+  },
+  {
+    defaultSelect: (cols) => ({
+      username: cols.username,
+      email: cols.email,
+    }), // Only select these fields by default
+  },
+);
+```
+
+When you call `list()` or `get()`, the `defaultSelect` is applied automatically. You can still override with explicit `select()`:
+
+```typescript
+const result = await db
+  .from(users)
+  .list()
+  .select({ username: users.username, email: users.email, age: users.age }) // Always overrides at the per-request level
+  .execute();
+```
+
+## Read/Write Validators
+
+You can use Standard Schema validators to transform and validate data when reading from or writing to the database. We use Zod in our examples, but any other validation library that supports Standard Schema (Zod, Valibot, ArkType, etc.) will also work.
+
+```typescript
+import { z } from "zod/v4";
+
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(),
+  username: textField().notNull(),
+  email: textField().notNull(),
+  active: numberField()
+    .readValidator(z.coerce.boolean()) // Convert 1/0 to true/false when reading
+    .writeValidator(z.boolean().transform((v) => (v ? 1 : 0))), // Convert true/false to 1/0 when writing
+});
+```
+
+<Callout type="info">
+The validators must transform to/from the FileMaker data type. In the example above, the write validator would have thrown a type error if the result of the `transform` was a string.
+</Callout>
+
+## Required and Read-Only Fields
+
+The library automatically infers which fields are required based on field builder configuration:
+
+- Fields with `.notNull()` are automatically required for insert
+- Fields with `.readOnly()` are excluded from insert/update operations
+- Fields with `.primaryKey()` are automatically read-only
+
+```typescript
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(), // Auto-required, but excluded from insert (primaryKey)
+  username: textField().notNull(), // Auto-required (notNull)
+  email: textField().notNull(), // Auto-required (notNull)
+  phone: textField(), // Optional by default (nullable)
+  createdAt: timestampField().readOnly(), // Excluded from insert/update
+});
+
+// TypeScript enforces: username and email are required
+// TypeScript excludes: id and createdAt cannot be provided
+const result = await db.from(users).insert({
+  username: "johndoe",
+  email: "john@example.com",
+  phone: "+1234567890", // Optional
+});
+```

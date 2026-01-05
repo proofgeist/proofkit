@@ -1,0 +1,134 @@
+---
+title: Quick Start
+---
+
+import { Steps, Step } from "fumadocs-ui/components/steps";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "fumadocs-ui/components/tabs";
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+import { CliCommand } from "@/components/CliCommand";
+import { Badge } from "@/components/ui/badge";
+
+Here's a minimal example to get you started with `@proofkit/fmodata`:
+
+<Steps>
+  <Step>
+    ### Install the package
+
+    ```package-install
+    @proofkit/fmodata
+    ```
+
+  </Step>
+
+  <Step>
+    ### Create a server connection
+
+    Create a connection to your FileMaker server using either username/password or API key authentication (requires OttoFMS 4.11+):
+
+    ```typescript title="connection.ts" tab="Username/Password"
+    import { FMServerConnection } from "@proofkit/fmodata";
+
+    const connection = new FMServerConnection({
+      serverUrl: process.env.FM_SERVER,
+      auth: {
+        username: process.env.FM_USERNAME,
+        password: process.env.FM_PASSWORD,
+      },
+    });
+    ```
+
+    ```typescript title="connection.ts" tab="API key"
+    import { FMServerConnection } from "@proofkit/fmodata";
+
+    const connection = new FMServerConnection({
+      serverUrl: process.env.FM_SERVER,
+      auth: {
+        apiKey: process.env.OTTO_API_KEY,
+      },
+    });
+    ```
+
+  </Step>
+
+  <Step>
+    ### Define your table schema
+
+    <Tabs defaultValue="automatic">
+
+  <TabsList>
+    <TabsTrigger value="automatic">Automatically <Badge variant="success" appearance="light">Recommended</Badge></TabsTrigger>
+    <TabsTrigger value="manual">Manually</TabsTrigger>
+  </TabsList>
+  <TabsContent value="automatic">
+  Run this command in your project to launch a browser-based UI for configuring your schema definitions. You will need environment variables set for your FileMaker server and database.
+  <CliCommand command="ui" exec execPackage="@proofkit/typegen@latest" />
+
+Learn more about the [@proofkit/typegen](/docs/typegen) tool.
+
+  </TabsContent>
+<TabsContent value="manual">
+ Use field builders to create type-safe table schemas:
+
+    ```typescript title="schema.ts"
+    import {
+      fmTableOccurrence,
+      textField,
+      numberField,
+    } from "@proofkit/fmodata";
+    import { z } from "zod/v4";
+
+    const users = fmTableOccurrence("users", {
+      id: textField().primaryKey(),
+      username: textField().notNull(),
+      email: textField().notNull(),
+      active: numberField()
+        .readValidator(z.coerce.boolean())
+        .writeValidator(z.boolean().transform((v) => (v ? 1 : 0))),
+    });
+    ```
+
+</TabsContent>
+</Tabs>
+
+  </Step>
+
+  <Step>
+    ### Create a database instance and query data
+
+    Connect to your database and start querying:
+
+    ```typescript title="query.ts"
+    import { eq } from "@proofkit/fmodata";
+    import { connection } from "./connection";
+    import { users } from "./schema";
+
+    const db = connection.database(process.env.FM_DATABASE);
+
+    // Query all users
+    const { data, error } = await db.from(users).list().execute();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (data) {
+      console.log(data); // Array of users, properly typed
+    }
+
+    // Filter active users
+    const activeUsers = await db
+      .from(users)
+      .list()
+      .where(eq(users.active, true))
+      .execute();
+    ```
+
+  </Step>
+</Steps>

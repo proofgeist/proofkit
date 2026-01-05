@@ -1,0 +1,104 @@
+---
+title: Entity IDs vs. Field Names
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+
+This library supports using FileMaker's internal field identifiers (FMFID) and table occurrence identifiers (FMTID) instead of names. This protects your integration from both field and table occurrence name changes.
+
+## Why use Entity IDs?
+
+There are some pros and cons of this, so it's important to understand how this works behind the scenes so you can make the best decision for your use case.
+
+**Pros**:
+- ✅ Entity IDs are a persistent internal identifier that doesn't change when a field's name does, which can make your API calls more resilient.
+- ✅ Since each OData request is logged and query requests include your full search criteria, using entity IDs help obscure the logs to make it less obvious what your actual table and fields names are.
+
+**Cons**:
+- ⚠️ Harder to debug queries with obfuscated field/table names
+- ⚠️ IDs are scoped to the FileMaker file and therefore won't work if you want to make the same query on a different file.
+  - 📝 Note: If you are using OttoFMS to deploy files to multiple servers, entity IDs can be relied upon as long as you have strict practice of only deploying from a central development copy and never re-creating schema in each file.
+
+
+## How it works
+
+There are 2 steps to enable this feature:
+1. Define the entity IDs in your schema
+2. Enable `useEntityIds` in for your request. This can be set at the database, level, schema definition, or request level.
+
+Once enabled, this feature will feel transparent to you. Behind the scenes the library will transform the names to entity IDs in your request, and the response back to the names you specify in your schema.
+
+### Step 1: Define Entity IDs in your schema
+Define your schema with entity IDs using the `.entityId()` method on field builders and the `entityId` option in `fmTableOccurrence()`.
+
+<Callout type="info">
+This step is done for you automatically when you use the `@proofkit/typegen` tool to generate your schema.
+
+Otherwise, you can find them manually in the XML version of the `$metadata` endpoint for your database, or you can calculate them using these [custom functions](https://github.com/rwu2359/CFforID) from John Renfrew.
+</Callout>
+
+```typescript title="Example schema with entity IDs"
+import {
+  fmTableOccurrence,
+  textField,
+  timestampField,
+} from "@proofkit/fmodata";
+
+// Define a table with FileMaker field IDs and table occurrence ID
+const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey().entityId("FMFID:12039485"),
+    username: textField().notNull().entityId("FMFID:34323433"),
+    email: textField().entityId("FMFID:12232424"),
+    createdAt: timestampField().readOnly().entityId("FMFID:43234355"),
+  },
+  {
+    entityId: "FMTID:12432533", // FileMaker table occurrence ID
+  },
+);
+```
+
+### Step 2: Enable `useEntityIds` for your request(s)
+Enable `useEntityIds` in for your request. This can be set at the database, level, schema definition, or request level.
+
+```typescript tab="Database Level"
+// Enable for all requests to this database
+const db = connection.database("MyDatabase", {
+  useEntityIds: true,
+});
+```
+
+```typescript tab="Schema Level"
+// Enable for all requests to this schema
+const users = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey().entityId("FMFID:12039485"),
+    username: textField().notNull().entityId("FMFID:34323433"),
+    email: textField().entityId("FMFID:12232424"),
+    createdAt: timestampField().readOnly().entityId("FMFID:43234355"),
+  },
+  {
+    entityId: "FMTID:12432533", // FileMaker table occurrence ID
+    useEntityIds: true,
+  },
+);
+```
+
+```typescript tab="Request Level"
+// Enable for this request only
+const { data, error } = await db.from(users).list().execute({
+  useEntityIds: true,
+});
+```
+
+The heirarchy is Database > Schema > Request. This means that if you enable at the database level, you can turn it off at the schema level, or request level.
+
+To help you with debugging, you can also set `useEntityIds` in the `getQueryString()` method to inspect the query string with or without entity IDs.
+```typescript
+const queryString = db.from(users).list().getQueryString({ useEntityIds: false });
+console.log(queryString); // e.g. "/users?$select=id,username,email,createdAt"
+```

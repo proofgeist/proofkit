@@ -1,0 +1,272 @@
+---
+title: Error Handling
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+All operations return a `Result` type with either `data` or `error`. The library provides rich error types that help you handle different error scenarios appropriately.
+
+## Basic Error Checking
+
+```typescript
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  console.error("Query failed:", result.error.message);
+  return;
+}
+
+if (result.data) {
+  console.log("Query succeeded:", result.data);
+}
+```
+
+## HTTP Errors
+
+Handle HTTP status codes (4xx, 5xx) with the `HTTPError` class:
+
+```typescript
+import { HTTPError, isHTTPError } from "@proofkit/fmodata";
+
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  if (isHTTPError(result.error)) {
+    // TypeScript knows this is HTTPError
+    console.log("HTTP Status:", result.error.status);
+
+    if (result.error.isNotFound()) {
+      console.log("Resource not found");
+    } else if (result.error.isUnauthorized()) {
+      console.log("Authentication required");
+    } else if (result.error.is5xx()) {
+      console.log("Server error - try again later");
+    } else if (result.error.is4xx()) {
+      console.log("Client error:", result.error.statusText);
+    }
+
+    // Access the response body if available
+    if (result.error.response) {
+      console.log("Error details:", result.error.response);
+    }
+  }
+}
+```
+
+## Network Errors
+
+Handle network-level errors (timeouts, connection issues, etc.):
+
+```typescript
+import {
+  TimeoutError,
+  NetworkError,
+  RetryLimitError,
+  CircuitOpenError,
+} from "@proofkit/fmodata";
+
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  if (result.error instanceof TimeoutError) {
+    console.log("Request timed out");
+    // Show user-friendly timeout message
+  } else if (result.error instanceof NetworkError) {
+    console.log("Network connectivity issue");
+    // Show offline message
+  } else if (result.error instanceof RetryLimitError) {
+    console.log("Request failed after retries");
+    // Log the underlying error: result.error.cause
+  } else if (result.error instanceof CircuitOpenError) {
+    console.log("Service is currently unavailable");
+    // Show maintenance message
+  }
+}
+```
+
+## Validation Errors
+
+When schema validation fails, you get a `ValidationError` with rich context:
+
+```typescript
+import { ValidationError, isValidationError } from "@proofkit/fmodata";
+
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  if (isValidationError(result.error)) {
+    // Access validation issues (Standard Schema format)
+    console.log("Validation failed for field:", result.error.field);
+    console.log("Issues:", result.error.issues);
+    console.log("Failed value:", result.error.value);
+  }
+}
+```
+
+### Validator-Agnostic Error Handling
+
+The library uses [Standard Schema](https://github.com/standard-schema/standard-schema) to support any validation library (Zod, Valibot, ArkType, etc.). The `ValidationError.cause` property contains the normalized Standard Schema issues array:
+
+```typescript
+import { ValidationError } from "@proofkit/fmodata";
+
+const result = await db.from(users).list().execute();
+
+if (result.error instanceof ValidationError) {
+  // The cause property (ES2022 Error.cause) contains the Standard Schema issues array
+  // This is validator-agnostic and works with Zod, Valibot, ArkType, etc.
+  console.log("Validation issues:", result.error.cause);
+  console.log("Issues are also available directly:", result.error.issues);
+
+  // Both point to the same array
+  console.log(result.error.cause === result.error.issues); // true
+
+  // Access additional context
+  console.log("Failed field:", result.error.field);
+  console.log("Failed value:", result.error.value);
+
+  // Standard Schema issues have a normalized format
+  result.error.issues.forEach((issue) => {
+    console.log("Path:", issue.path);
+    console.log("Message:", issue.message);
+  });
+}
+```
+
+## OData Errors
+
+Handle OData-specific protocol errors:
+
+```typescript
+import { ODataError, isODataError } from "@proofkit/fmodata";
+
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  if (isODataError(result.error)) {
+    console.log("OData Error Code:", result.error.code);
+    console.log("OData Error Message:", result.error.message);
+    console.log("OData Error Details:", result.error.details);
+  }
+}
+```
+
+## Error Handling Patterns
+
+### Pattern 1: Using instanceof
+
+```typescript
+import {
+  HTTPError,
+  ValidationError,
+  TimeoutError,
+  NetworkError,
+} from "@proofkit/fmodata";
+
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  if (result.error instanceof TimeoutError) {
+    showTimeoutMessage();
+  } else if (result.error instanceof HTTPError) {
+    if (result.error.isNotFound()) {
+      showNotFoundMessage();
+    } else if (result.error.is5xx()) {
+      showServerErrorMessage();
+    }
+  } else if (result.error instanceof ValidationError) {
+    showValidationError(result.error.field, result.error.issues);
+  } else if (result.error instanceof NetworkError) {
+    showOfflineMessage();
+  }
+}
+```
+
+### Pattern 2: Using kind property (for exhaustive matching)
+
+```typescript
+const result = await db.from(users).list().execute();
+
+if (result.error) {
+  switch (result.error.kind) {
+    case "TimeoutError":
+      showTimeoutMessage();
+      break;
+    case "HTTPError":
+      handleHTTPError(result.error.status);
+      break;
+    case "ValidationError":
+      showValidationError(result.error.field, result.error.issues);
+      break;
+    case "NetworkError":
+      showOfflineMessage();
+      break;
+    case "ODataError":
+      handleODataError(result.error.code);
+      break;
+    // TypeScript ensures exhaustive matching!
+  }
+}
+```
+
+### Pattern 3: Using type guards
+
+```typescript
+import {
+  isHTTPError,
+  isValidationError,
+  isODataError,
+  isNetworkError,
+} from "@proofkit/fmodata";
+
+const result = await db.from("users").list().execute();
+
+if (result.error) {
+  if (isHTTPError(result.error)) {
+    // TypeScript knows this is HTTPError
+    console.log("Status:", result.error.status);
+  } else if (isValidationError(result.error)) {
+    // TypeScript knows this is ValidationError
+    console.log("Field:", result.error.field);
+    console.log("Issues:", result.error.issues);
+  } else if (isODataError(result.error)) {
+    // TypeScript knows this is ODataError
+    console.log("Code:", result.error.code);
+  } else if (isNetworkError(result.error)) {
+    // TypeScript knows this is NetworkError
+    console.log("Network issue:", result.error.cause);
+  }
+}
+```
+
+## Error Properties
+
+All errors include helpful metadata:
+
+```typescript
+if (result.error) {
+  // All errors have a timestamp
+  console.log("Error occurred at:", result.error.timestamp);
+
+  // All errors have a kind property for discriminated unions
+  console.log("Error kind:", result.error.kind);
+
+  // All errors have a message
+  console.log("Error message:", result.error.message);
+}
+```
+
+## Available Error Types
+
+- **`HTTPError`** - HTTP status errors (4xx, 5xx) with helper methods (`is4xx()`, `is5xx()`, `isNotFound()`, etc.)
+- **`ODataError`** - OData protocol errors with code and details
+- **`ValidationError`** - Schema validation failures with issues, schema reference, and failed value
+- **`ResponseStructureError`** - Malformed API responses
+- **`RecordCountMismatchError`** - When `single()` or `maybeSingle()` expectations aren't met
+- **`TimeoutError`** - Request timeout (from ffetch)
+- **`NetworkError`** - Network connectivity issues (from ffetch)
+- **`RetryLimitError`** - Request failed after retries (from ffetch)
+- **`CircuitOpenError`** - Circuit breaker is open (from ffetch)
+- **`AbortError`** - Request was aborted (from ffetch)
+- **`BatchTruncatedError`** - Batch operation was truncated due to an earlier error

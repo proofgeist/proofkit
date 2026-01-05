@@ -1,0 +1,20 @@
+---
+title: Inspecting Query Strings
+description: View the full query string without executing the request
+---
+
+To help you with debugging, you can inspect the full query string without executing the request using the `getQueryString()` method.
+
+```typescript
+const queryString = db
+  .from("users")
+  .list()
+  .select({ username: users.username, email: users.email })
+  .where(eq(users.active, true))
+  .orderBy(asc(users.username))
+  .top(10)
+  .getQueryString();
+
+console.log(queryString);
+// Output: "/users?$select=username,email&$filter=active eq true&$orderby=username&$top=10"
+```

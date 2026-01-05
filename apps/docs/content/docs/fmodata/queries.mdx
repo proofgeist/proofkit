@@ -1,0 +1,241 @@
+---
+title: Querying Data
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+## Basic Queries
+
+Use `list()` to retrieve multiple records:
+
+```typescript
+// Get all users
+const result = await db.from(users).list().execute();
+
+if (result.data) {
+  result.data.forEach((user) => {
+    console.log(user.username);
+  });
+}
+```
+
+Get a specific record by ID:
+
+```typescript
+const result = await db.from(users).get("user-123").execute();
+
+if (result.data) {
+  console.log(result.data.username);
+}
+```
+
+Get a single field value:
+
+```typescript
+const result = await db
+  .from(users)
+  .get("user-123")
+  .getSingleField(users.email)
+  .execute();
+
+if (result.data) {
+  console.log(result.data); // "user@example.com"
+}
+```
+
+## Filtering
+
+fmodata provides type-safe filter operations that prevent common errors at compile time. Use the ORM-style API with operators and column references:
+
+```typescript
+import { eq, gt, and, or, contains } from "@proofkit/fmodata";
+
+// Simple equality
+const result = await db
+  .from(users)
+  .list()
+  .where(eq(users.active, true))
+  .execute();
+
+// Comparison operators
+const result = await db.from(users).list().where(gt(users.age, 18)).execute();
+
+// String operators
+const result = await db
+  .from(users)
+  .list()
+  .where(contains(users.name, "John"))
+  .execute();
+
+// Combine with AND
+const result = await db
+  .from(users)
+  .list()
+  .where(and(eq(users.active, true), gt(users.age, 18)))
+  .execute();
+
+// Combine with OR
+const result = await db
+  .from(users)
+  .list()
+  .where(or(eq(users.role, "admin"), eq(users.role, "moderator")))
+  .execute();
+```
+
+### Available Operators
+
+**Comparison:**
+- `eq()` - Equal to
+- `ne()` - Not equal to
+- `gt()` - Greater than
+- `gte()` - Greater than or equal to
+- `lt()` - Less than
+- `lte()` - Less than or equal to
+
+**String:**
+- `contains()` - Contains substring
+- `startsWith()` - Starts with
+- `endsWith()` - Ends with
+
+**Array:**
+- `inArray()` - Value in array
+- `notInArray()` - Value not in array
+
+**Null:**
+- `isNull()` - Is null
+- `isNotNull()` - Is not null
+
+**Logical:**
+- `and()` - Logical AND
+- `or()` - Logical OR
+- `not()` - Logical NOT
+
+## Sorting
+
+Sort results using `orderBy()` with column references:
+
+```typescript
+import { asc, desc } from "@proofkit/fmodata";
+
+// Single field (ascending by default)
+const result = await db.from(users).list().orderBy(users.name).execute();
+
+// Single field with explicit direction
+const result = await db.from(users).list().orderBy(asc(users.name)).execute();
+const result = await db.from(users).list().orderBy(desc(users.age)).execute();
+
+// Multiple fields (variadic)
+const result = await db
+  .from(users)
+  .list()
+  .orderBy(asc(users.lastName), desc(users.firstName))
+  .execute();
+
+// Multiple fields (array syntax)
+const result = await db
+  .from(users)
+  .list()
+  .orderBy([
+    [users.lastName, "asc"],
+    [users.firstName, "desc"],
+  ])
+  .execute();
+```
+
+## Pagination
+
+Control the number of records returned and pagination:
+
+```typescript
+// Limit results
+const result = await db.from(users).list().top(10).execute();
+
+// Skip records (pagination)
+const result = await db.from(users).list().top(10).skip(20).execute();
+
+// Count total records
+const result = await db.from(users).list().count().execute();
+```
+
+## Selecting Fields
+
+Select specific fields to return using column references:
+
+```typescript
+// Using column references (type-safe, supports renaming)
+const result = await db
+  .from(users)
+  .list()
+  .select({
+    username: users.username,
+    email: users.email,
+    userId: users.id, // Renamed from "id" to "userId"
+  })
+  .execute();
+
+// result.data[0] will only have username, email, and userId fields
+```
+
+## Single Records
+
+Use `single()` to ensure exactly one record is returned (returns an error if zero or multiple records are found):
+
+```typescript
+const result = await db
+  .from(users)
+  .list()
+  .where(eq(users.email, "user@example.com"))
+  .single()
+  .execute();
+
+if (result.data) {
+  // result.data is a single record, not an array
+  console.log(result.data.username);
+}
+```
+
+Use `maybeSingle()` when you want at most one record (returns `null` if no record is found, returns an error if multiple records are found):
+
+```typescript
+const result = await db
+  .from(users)
+  .list()
+  .where(eq(users.email, "user@example.com"))
+  .maybeSingle()
+  .execute();
+
+if (result.data) {
+  // result.data is a single record or null
+  console.log(result.data?.username);
+} else {
+  // No record found - result.data would be null
+  console.log("User not found");
+}
+```
+
+**Difference between `single()` and `maybeSingle()`:**
+
+- `single()` - Requires exactly one record. Returns an error if zero or multiple records are found.
+- `maybeSingle()` - Allows zero or one record. Returns `null` if no record is found, returns an error only if multiple records are found.
+
+## Chaining Methods
+
+All query methods can be chained together:
+
+```typescript
+const result = await db
+  .from(users)
+  .list()
+  .select({
+    username: users.username,
+    email: users.email,
+    age: users.age,
+  })
+  .where(gt(users.age, 18))
+  .orderBy(asc(users.username))
+  .top(10)
+  .skip(0)
+  .execute();
+```
+

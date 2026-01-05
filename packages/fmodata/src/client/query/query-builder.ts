@@ -664,7 +664,10 @@ export class QueryBuilder<
   /**
    * Builds the OData query string from current query options and expand configs.
    */
-  private buildQueryString(includeSpecialColumns?: boolean): string {
+  private buildQueryString(
+    includeSpecialColumns?: boolean,
+    useEntityIds?: boolean,
+  ): string {
     // Build query without expand and select (we'll add them manually if using entity IDs)
     const queryOptionsWithoutExpandAndSelect = { ...this.queryOptions };
     const originalSelect = queryOptionsWithoutExpandAndSelect.select;
@@ -684,11 +687,14 @@ export class QueryBuilder<
     const finalIncludeSpecialColumns =
       includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
 
+    // Use provided useEntityIds if provided, otherwise use database-level default
+    const finalUseEntityIds = useEntityIds ?? this.databaseUseEntityIds;
+
     const selectExpandString = buildSelectExpandQueryString({
       selectedFields: selectArray,
       expandConfigs: this.expandConfigs,
       table: this.occurrence,
-      useEntityIds: this.databaseUseEntityIds,
+      useEntityIds: finalUseEntityIds,
       logger: this.logger,
       includeSpecialColumns: finalIncludeSpecialColumns,
     });
@@ -739,6 +745,7 @@ export class QueryBuilder<
     const mergedOptions = this.mergeExecuteOptions(options);
     const queryString = this.buildQueryString(
       mergedOptions.includeSpecialColumns,
+      mergedOptions.useEntityIds,
     );
 
     // Handle $count endpoint
@@ -788,10 +795,11 @@ export class QueryBuilder<
     });
   }
 
-  getQueryString(): string {
-    const queryString = this.buildQueryString();
+  getQueryString(options?: { useEntityIds?: boolean }): string {
+    const useEntityIds = options?.useEntityIds ?? this.databaseUseEntityIds;
+    const queryString = this.buildQueryString(undefined, useEntityIds);
     return this.urlBuilder.buildPath(queryString, {
-      useEntityIds: this.databaseUseEntityIds,
+      useEntityIds,
       navigation: this.navigation,
     });
   }

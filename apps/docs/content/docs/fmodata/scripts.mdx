@@ -1,0 +1,75 @@
+---
+title: Running Scripts
+description: Execute FileMaker scripts via OData
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+
+## Simple Script Execution
+
+```typescript
+// Simple script execution
+const result = await db.runScript("MyScriptName");
+
+console.log(result.resultCode); // Script result code
+console.log(result.result); // Optional script result string
+```
+
+
+<Callout type="warning">
+OData doesn't support script names with special characters (e.g., `@`, `&`, `/`) or script names beginning with a number.
+</Callout>
+
+## Passing Parameters
+
+Pass parameters to scripts:
+
+```typescript
+// Pass parameters to script
+const result = await db.runScript("MyScriptName", {
+  scriptParam: "some value",
+});
+
+// Script parameters can be strings, numbers, or objects
+const result = await db.runScript("ProcessOrder", {
+  scriptParam: {
+    orderId: "12345",
+    action: "approve",
+  },
+});
+```
+
+## Validating Script Results
+
+Validate script result with a Standard Schema.
+
+```typescript
+import { z } from "zod/v4";
+
+// NOTE: Your validator must be able to parse a string.
+// See Zod codecs for how to build a jsonCodec function that does this
+// https://zod.dev/codecs?id=jsonschema
+
+const schema = jsonCodec(
+  z.object({
+    success: z.boolean(),
+    message: z.string(),
+    recordId: z.string(),
+  }),
+);
+
+const result = await db.runScript("CreateRecord", {
+  resultSchema: schema,
+});
+
+// result.result is now typed based on your schema
+// An error will be thrown if the validator fails
+console.log(result.result.recordId);
+```
+
+<Callout type="info" title="Script results will always be a string">
+In the example above, we use a [Zod codec](https://zod.dev/codecs?id=jsonschema) helper function to parse the result into a JSON object before validating.
+</Callout>
+

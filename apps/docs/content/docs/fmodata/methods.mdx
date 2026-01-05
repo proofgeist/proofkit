@@ -1,0 +1,147 @@
+---
+title: API Reference
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card } from "fumadocs-ui/components/card";
+
+Quick reference for all available methods and operators in `@proofkit/fmodata`.
+
+## Query Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `list()` | Retrieve multiple records | `db.from(users).list().execute()` |
+| `get(id)` | Get a single record by ID | `db.from(users).get("user-123").execute()` |
+| `getSingleField(column)` | Get a single field value | `db.from(users).get("user-123").getSingleField(users.email).execute()` |
+| `single()` | Ensure exactly one record | `db.from(users).list().where(eq(...)).single().execute()` |
+| `maybeSingle()` | Get at most one record (returns null if none) | `db.from(users).list().where(eq(...)).maybeSingle().execute()` |
+
+## CRUD Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `insert(data)` | Insert a new record | `db.from(users).insert({ username: "john" }).execute()` |
+| `update(data)` | Update records | `db.from(users).update({ active: true }).byId("user-123").execute()` |
+| `delete()` | Delete records | `db.from(users).delete().byId("user-123").execute()` |
+
+## Query Modifiers
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `where(filter)` | Filter records | `db.from(users).list().where(eq(users.active, true)).execute()` |
+| `select(fields)` | Select specific fields | `db.from(users).list().select({ username: users.username }).execute()` |
+| `orderBy(...columns)` | Sort results | `db.from(users).list().orderBy(asc(users.name)).execute()` |
+| `top(n)` | Limit results | `db.from(users).list().top(10).execute()` |
+| `skip(n)` | Skip records (pagination) | `db.from(users).list().top(10).skip(20).execute()` |
+| `count()` | Get total count | `db.from(users).list().count().execute()` |
+| `expand(table, builder?)` | Expand related records | `db.from(contacts).list().expand(users).execute()` |
+| `navigate(table)` | Navigate to related table | `db.from(contacts).get("id").navigate(users).execute()` |
+
+## Filter Operators
+
+### Comparison Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `eq(column, value)` | Equal to | `eq(users.active, true)` |
+| `ne(column, value)` | Not equal to | `ne(users.role, "admin")` |
+| `gt(column, value)` | Greater than | `gt(users.age, 18)` |
+| `gte(column, value)` | Greater than or equal | `gte(users.score, 100)` |
+| `lt(column, value)` | Less than | `lt(users.age, 65)` |
+| `lte(column, value)` | Less than or equal | `lte(users.score, 0)` |
+
+### String Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `contains(column, value)` | Contains substring | `contains(users.name, "John")` |
+| `startsWith(column, value)` | Starts with | `startsWith(users.email, "admin")` |
+| `endsWith(column, value)` | Ends with | `endsWith(users.email, ".com")` |
+
+### Array Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `inArray(column, values)` | Value in array | `inArray(users.role, ["admin", "moderator"])` |
+| `notInArray(column, values)` | Value not in array | `notInArray(users.status, ["banned", "deleted"])` |
+
+### Null Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `isNull(column)` | Is null | `isNull(users.deletedAt)` |
+| `isNotNull(column)` | Is not null | `isNotNull(users.email)` |
+
+### Logical Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `and(...filters)` | Logical AND | `and(eq(users.active, true), gt(users.age, 18))` |
+| `or(...filters)` | Logical OR | `or(eq(users.role, "admin"), eq(users.role, "moderator"))` |
+| `not(filter)` | Logical NOT | `not(eq(users.active, false))` |
+
+## Sort Helpers
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `asc(column)` | Ascending order | `orderBy(asc(users.name))` |
+| `desc(column)` | Descending order | `orderBy(desc(users.age))` |
+
+## Webhook Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `webhook.add(config)` | Add a webhook | `db.webhook.add({ webhook: "https://...", tableName: users })` |
+| `webhook.list()` | List all webhooks | `db.webhook.list()` |
+| `webhook.get(id)` | Get a webhook by ID | `db.webhook.get(1)` |
+| `webhook.remove(id)` | Remove a webhook | `db.webhook.remove(1)` |
+| `webhook.invoke(id, options?)` | Manually invoke a webhook | `db.webhook.invoke(1, { rowIDs: [1, 2, 3] })` |
+
+## Schema Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `schema.createTable(name, fields)` | Create a new table | `db.schema.createTable("users", fields)` |
+| `schema.addFields(table, fields)` | Add fields to a table | `db.schema.addFields("users", newFields)` |
+| `schema.deleteTable(name)` | Delete a table | `db.schema.deleteTable("old_table")` |
+| `schema.deleteField(table, field)` | Delete a field | `db.schema.deleteField("users", "old_field")` |
+| `schema.createIndex(table, field)` | Create an index | `db.schema.createIndex("users", "email")` |
+| `schema.deleteIndex(table, field)` | Delete an index | `db.schema.deleteIndex("users", "email")` |
+
+## Script Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `runScript(name, options?)` | Execute a FileMaker script | `db.runScript("MyScript", { scriptParam: "value" })` |
+
+## Batch Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `batch(operations)` | Execute multiple operations | `db.batch([query1, query2]).execute()` |
+
+## Field Builders
+
+| Builder | FileMaker Type | Chainable Methods |
+|---------|---------------|-------------------|
+| `textField()` | Text | `.primaryKey()`, `.notNull()`, `.readOnly()`, `.entityId()`, `.readValidator()`, `.writeValidator()` |
+| `numberField()` | Number | Same as above |
+| `dateField()` | Date | Same as above |
+| `timeField()` | Time | Same as above |
+| `timestampField()` | Timestamp | Same as above |
+| `containerField()` | Container | Same as above |
+| `calcField()` | Calculation | Same as above |
+
+## Error Types
+
+| Error Type | Description | Type Guard |
+|------------|-------------|------------|
+| `HTTPError` | HTTP status errors (4xx, 5xx) | `isHTTPError()` |
+| `ODataError` | OData protocol errors | `isODataError()` |
+| `ValidationError` | Schema validation failures | `isValidationError()` |
+| `TimeoutError` | Request timeout | `instanceof TimeoutError` |
+| `NetworkError` | Network connectivity issues | `instanceof NetworkError` |
+| `RetryLimitError` | Request failed after retries | `instanceof RetryLimitError` |
+| `CircuitOpenError` | Circuit breaker is open | `instanceof CircuitOpenError` |
+| `BatchTruncatedError` | Batch operation truncated | `isBatchTruncatedError()` |

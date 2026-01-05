@@ -18,6 +18,7 @@
   },
   "changesets": [
     "brown-keys-float",
+    "get-query-string-entity-ids-override",
     "olive-coins-trade",
     "quick-ends-drop",
     "real-ideas-sort",

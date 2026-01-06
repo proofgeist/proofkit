@@ -3,7 +3,7 @@
   "properties": {
     "formatCommand": {
       "type": "string",
-      "description": "CLI command to format generated files. The output path(s) will be appended as arguments. Example: 'pnpm biome format --write' or 'npx prettier --write'"
+      "description": "Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'"
     },
     "config": {
       "anyOf": [

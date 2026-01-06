@@ -245,7 +245,7 @@ export const typegenConfigSingle = z.preprocess((data) => {
 export const typegenConfig = z.object({
   formatCommand: z.string().optional().meta({
     description:
-      "CLI command to format generated files. The output path(s) will be appended as arguments. Example: 'pnpm biome format --write' or 'npx prettier --write'",
+      "Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'",
   }),
   config: z.union([z.array(typegenConfigSingle), typegenConfigSingle]),
 });
@@ -254,7 +254,7 @@ export const typegenConfig = z.object({
 export const typegenConfigForValidation = z.object({
   formatCommand: z.string().optional().meta({
     description:
-      "CLI command to format generated files. The output path(s) will be appended as arguments. Example: 'pnpm biome format --write' or 'npx prettier --write'",
+      "Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'",
   }),
   config: z.union([z.array(typegenConfigSingleForValidation), typegenConfigSingleForValidation]),
 });

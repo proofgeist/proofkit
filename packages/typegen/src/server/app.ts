@@ -254,29 +254,29 @@ export function createApiApp(context: ApiContext) {
           }
         }
 
-        // Generate typed clients and collect output paths
-        const result = await generateTypedClients(config, {
+        // Generate typed clients
+        await generateTypedClients(config, {
           cwd: context.cwd,
           formatCommand,
         });
 
-        // Execute format command if provided
-        if (formatCommand && result && result.outputPaths.length > 0) {
+        // Execute post-generate command if provided
+        if (formatCommand) {
           try {
-            // Parse the format command into command and args, then append output paths
-            // This properly handles paths with spaces by passing them as separate arguments
+            // Run the command exactly as specified
             const [command, ...args] = parseCommandString(formatCommand);
             if (!command) {
-              throw new Error("Format command is empty");
+              throw new Error("Post-generate command is empty");
             }
-            const allArgs = [...args, ...result.outputPaths];
-            console.log(chalk.blue(`Running format command: ${command} ${allArgs.join(" ")}`));
-            await execa(command, allArgs, { cwd: context.cwd });
-            console.log(chalk.green("Format command completed successfully"));
+            console.log(chalk.blue(`Running post-generate command: ${command} ${args.join(" ")}`));
+            await execa(command, args, { cwd: context.cwd });
+            console.log(chalk.green("Post-generate command completed successfully"));
           } catch (error) {
             // Log error but don't fail the typegen
             console.log(
-              chalk.yellow(`Warning: Format command failed: ${error instanceof Error ? error.message : String(error)}`),
+              chalk.yellow(
+                `Warning: Post-generate command failed: ${error instanceof Error ? error.message : String(error)}`,
+              ),
             );
           }
         }

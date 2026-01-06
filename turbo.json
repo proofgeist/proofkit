@@ -7,6 +7,16 @@
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
       "dependsOn": ["^build"]
     },
+    "@proofkit/docs#build": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**",
+        "public/registry-templates/**"
+      ],
+      "dependsOn": ["^build"]
+    },
     "test": {
       "outputs": ["coverage/**"],
       "dependsOn": []

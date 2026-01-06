@@ -449,7 +449,7 @@ interface ButtonArrowProps extends React.SVGProps<SVGSVGElement> {
 }
 
 function ButtonArrow({ icon: Icon = ChevronDown, className, ...props }: ButtonArrowProps) {
-  return <Icon className={cn("ms-auto -me-1", className)} data-slot="button-arrow" {...props} />;
+  return <Icon className={cn("ms-auto -me-1", className)} data-slot="button-arrow" {...(props as any)} />;
 }
 
 export { Button, ButtonArrow, buttonVariants };

@@ -23,6 +23,13 @@ import { useHealthCheck } from "./hooks/useHealthCheck";
 import { client } from "./lib/api";
 import type { SingleConfig } from "./lib/config-utils";
 
+// Post-generate command presets
+const COMMAND_PRESETS = [
+  { label: "Biome", command: "npx @biomejs/biome format --write ." },
+  { label: "Prettier", command: "npx prettier --write ." },
+  { label: "ESLint", command: "npx eslint --fix ." },
+] as const;
+
 // Normalize config to always be an array
 function normalizeConfig(config: SingleConfig | SingleConfig[] | null): SingleConfig[] {
   if (Array.isArray(config)) {
@@ -87,7 +94,7 @@ function App() {
       const serverConfigs = normalizeConfig(configData);
       form.reset({
         config: serverConfigs,
-        formatCommand: configDataResponse?.formatCommand,
+        formatCommand: configDataResponse.exists ? configDataResponse.formatCommand : undefined,
       });
     }
   }, [configDataResponse]);
@@ -283,12 +290,32 @@ function App() {
                       name="formatCommand"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>
-                            Format Command{" "}
-                            <InfoTooltip label="Optional CLI command to format generated files after typegen runs. The output path(s) will be appended as arguments. Example: 'pnpm biome format --write' or 'npx prettier --write'" />
-                          </FormLabel>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>
+                              Post-Generate Command{" "}
+                              <InfoTooltip label="Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'" />
+                            </FormLabel>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button className="h-8" size="sm" variant="outline">
+                                  Presets
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {COMMAND_PRESETS.map((preset) => (
+                                  <DropdownMenuItem key={preset.label} onSelect={() => field.onChange(preset.command)}>
+                                    {preset.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                           <FormControl>
-                            <Input placeholder="pnpm biome format --write" {...field} value={field.value ?? ""} />
+                            <Input
+                              placeholder="e.g., pnpm biome format --write ."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

@@ -8,11 +8,10 @@ import { z } from "zod/v4";
 
 // @generated
 // prettier-ignore
-
 export const Ztest = z.object({
-  "related::related_field": z.string(),
-  "related::recordId": z.coerce.number().nullable().catch(null),
-});
+    "related::related_field": z.string(),
+    "related::recordId": z.coerce.number().nullable().catch(null),
+  });
 
 export type Ttest = z.infer<typeof Ztest>;
 

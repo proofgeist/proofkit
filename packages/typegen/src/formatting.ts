@@ -1,3 +1,5 @@
+import chalk from "chalk";
+import { execa } from "execa";
 import { format } from "prettier";
 import type { Project } from "ts-morph";
 
@@ -5,7 +7,7 @@ import type { Project } from "ts-morph";
  * Formats all source files in a ts-morph Project using prettier and saves the changes.
  * @param project The ts-morph Project containing the files to format
  */
-export async function formatAndSaveSourceFiles(project: Project) {
+export async function formatAndSaveSourceFiles(project: Project, postGenerateCommand?: string) {
   try {
     const files = project.getSourceFiles();
 
@@ -22,4 +24,14 @@ export async function formatAndSaveSourceFiles(project: Project) {
     // Ignore formatting errors and continue
   }
   await project.save();
+
+  if (postGenerateCommand) {
+    try {
+      await execa(postGenerateCommand, { cwd: process.cwd() });
+      console.log(chalk.green("Post-generate command completed successfully"));
+    } catch (error) {
+      console.log(chalk.yellow("Post-generate command failed"));
+      console.error(error);
+    }
+  }
 }

@@ -76,7 +76,7 @@ export function createApiApp(context: ApiContext) {
           path: configPath,
           fullPath,
           config: null,
-          formatCommand: undefined,
+          postGenerateCommand: undefined,
         });
       }
 
@@ -90,7 +90,7 @@ export function createApiApp(context: ApiContext) {
           path: configPath,
           fullPath,
           config: parsed.config,
-          formatCommand: parsed.postGenerateCommand,
+          postGenerateCommand: parsed.postGenerateCommand,
         });
       } catch (err) {
         console.log("error from get config", err);
@@ -109,7 +109,7 @@ export function createApiApp(context: ApiContext) {
         "json",
         z.object({
           config: z.array(typegenConfigSingleRequestForValidation),
-          formatCommand: z.string().optional(),
+          postGenerateCommand: z.string().optional(),
         }),
       ),
       async (c) => {
@@ -118,7 +118,7 @@ export function createApiApp(context: ApiContext) {
 
           // Transform validated data using runtime schema (applies transforms)
           const transformedData = {
-            formatCommand: data.formatCommand,
+            postGenerateCommand: data.postGenerateCommand,
             config: data.config.map((config) => {
               // Add default type if missing (backwards compatibility)
               const configWithType =
@@ -130,7 +130,7 @@ export function createApiApp(context: ApiContext) {
             }),
           };
 
-          // Validate with Zod (data is already { config: [...], formatCommand?: string })
+          // Validate with Zod (data is already { config: [...], postGenerateCommand?: string })
           const validation = typegenConfig.safeParse(transformedData);
 
           if (!validation.success) {
@@ -218,7 +218,7 @@ export function createApiApp(context: ApiContext) {
         "json",
         z.object({
           config: z.union([z.array(typegenConfigSingleRequestForValidation), typegenConfigSingleRequestForValidation]),
-          formatCommand: z.string().optional(),
+          postGenerateCommand: z.string().optional(),
         }),
       ),
       async (c, next) => {
@@ -237,9 +237,9 @@ export function createApiApp(context: ApiContext) {
         const config: z.infer<typeof typegenConfig>["config"] =
           transformedConfig.length === 1 && transformedConfig[0] ? transformedConfig[0] : transformedConfig;
 
-        // Get formatCommand from request or from config file
-        let formatCommand = rawData.formatCommand;
-        if (!formatCommand) {
+        // Get postGenerateCommand from request or from config file
+        let postGenerateCommand = rawData.postGenerateCommand;
+        if (!postGenerateCommand) {
           // Try to read from config file
           try {
             const configPath = path.resolve(context.cwd, context.configPath);
@@ -247,7 +247,7 @@ export function createApiApp(context: ApiContext) {
               const raw = fs.readFileSync(configPath, "utf8");
               const rawJson = parse(raw);
               const parsed = typegenConfig.parse(rawJson);
-              formatCommand = parsed.postGenerateCommand;
+              postGenerateCommand = parsed.postGenerateCommand;
             }
           } catch (_err) {
             // Ignore errors reading config
@@ -257,14 +257,14 @@ export function createApiApp(context: ApiContext) {
         // Generate typed clients
         await generateTypedClients(config, {
           cwd: context.cwd,
-          formatCommand,
+          postGenerateCommand,
         });
 
         // Execute post-generate command if provided
-        if (formatCommand) {
+        if (postGenerateCommand) {
           try {
             // Run the command exactly as specified
-            const [command, ...args] = parseCommandString(formatCommand);
+            const [command, ...args] = parseCommandString(postGenerateCommand);
             if (!command) {
               throw new Error("Post-generate command is empty");
             }

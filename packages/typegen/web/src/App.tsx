@@ -80,10 +80,10 @@ function App() {
   // Track active accordion item to preserve state
   const [activeAccordionItem, setActiveAccordionItem] = useState<number>(0);
 
-  // Use React Hook Form to manage the configs array and formatCommand
+  // Use React Hook Form to manage the configs array and postGenerateCommand
   interface FormData {
     config: SingleConfig[];
-    formatCommand?: string;
+    postGenerateCommand?: string;
   }
   const form = useForm<FormData>({});
 
@@ -94,7 +94,7 @@ function App() {
       const serverConfigs = normalizeConfig(configData);
       form.reset({
         config: serverConfigs,
-        formatCommand: configDataResponse.exists ? configDataResponse.formatCommand : undefined,
+        postGenerateCommand: configDataResponse.exists ? configDataResponse.postGenerateCommand : undefined,
       });
     }
   }, [configDataResponse]);
@@ -124,8 +124,8 @@ function App() {
     // If file doesn't exist, create it with the new config
     if (isFileMissing) {
       try {
-        const formatCommand = form.getValues("formatCommand");
-        await saveMutation.mutateAsync({ configsToSave: [newConfig], formatCommand });
+        const postGenerateCommand = form.getValues("postGenerateCommand");
+        await saveMutation.mutateAsync({ configsToSave: [newConfig], postGenerateCommand });
         await refetch();
         setTimeout(() => {
           setActiveAccordionItem(0);
@@ -146,22 +146,22 @@ function App() {
   // Run typegen mutation
   const runTypegenMutation = useMutation({
     mutationFn: async () => {
-      const formatCommand = form.getValues("formatCommand");
+      const postGenerateCommand = form.getValues("postGenerateCommand");
       await client.api.run.$post({
-        json: { config: configs, formatCommand },
+        json: { config: configs, postGenerateCommand },
       });
     },
   });
 
   const handleSaveAll = form.handleSubmit(async (data) => {
     try {
-      await saveMutation.mutateAsync({ configsToSave: data.config, formatCommand: data.formatCommand });
+      await saveMutation.mutateAsync({ configsToSave: data.config, postGenerateCommand: data.postGenerateCommand });
       // Reset the form with the current form state to clear dirty state
       // Use getValues() to get the current state, preserving any changes made during the save request
       // The accordion state is preserved because it's controlled and the component doesn't unmount
       const currentConfigs = form.getValues("config");
-      const currentFormatCommand = form.getValues("formatCommand");
-      form.reset({ config: currentConfigs, formatCommand: currentFormatCommand });
+      const currentPostGenerateCommand = form.getValues("postGenerateCommand");
+      form.reset({ config: currentConfigs, postGenerateCommand: currentPostGenerateCommand });
     } catch (err) {
       // Error is handled by the mutation
       console.error("Failed to save configs:", err);
@@ -287,7 +287,7 @@ function App() {
                     <h3 className="mb-4 font-semibold text-lg">Global Settings</h3>
                     <FormField
                       control={form.control}
-                      name="formatCommand"
+                      name="postGenerateCommand"
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center justify-between">

@@ -18,9 +18,11 @@ import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
 import { getLayoutMetadata } from "./getLayoutMetadata";
 import { type BuildSchemaArgs, typegenConfig, type typegenConfigSingle } from "./types";
 
+type GlobalOptions = Omit<z.infer<typeof typegenConfig>, "config">;
+
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
-  options?: { resetOverrides?: boolean; cwd?: string; formatCommand?: string },
+  options?: GlobalOptions & { resetOverrides?: boolean; cwd?: string },
 ): Promise<
   | {
       successCount: number;
@@ -39,7 +41,8 @@ export const generateTypedClients = async (
   }
 
   const configArray = Array.isArray(parsedConfig.data.config) ? parsedConfig.data.config : [parsedConfig.data.config];
-  const formatCommand = options?.formatCommand ?? parsedConfig.data.postGenerateCommand;
+  const postGenerateCommand = options?.postGenerateCommand ?? parsedConfig.data.postGenerateCommand;
+
   const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
 
   let totalSuccessCount = 0;
@@ -49,7 +52,7 @@ export const generateTypedClients = async (
 
   for (const singleConfig of configArray) {
     if (singleConfig.type === "fmdapi") {
-      const result = await generateTypedClientsSingle(singleConfig, { resetOverrides, cwd, formatCommand });
+      const result = await generateTypedClientsSingle(singleConfig, { resetOverrides, cwd, postGenerateCommand });
       if (result) {
         totalSuccessCount += result.successCount;
         totalErrorCount += result.errorCount;
@@ -59,7 +62,7 @@ export const generateTypedClients = async (
         }
       }
     } else if (singleConfig.type === "fmodata") {
-      const outputPath = await generateODataTablesSingle(singleConfig, { cwd, formatCommand });
+      const outputPath = await generateODataTablesSingle(singleConfig, { cwd, postGenerateCommand });
       if (outputPath) {
         outputPaths.push(outputPath);
       }
@@ -73,7 +76,7 @@ export const generateTypedClients = async (
 
 const generateTypedClientsSingle = async (
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>,
-  options?: { resetOverrides?: boolean; cwd?: string; formatCommand?: string },
+  options?: GlobalOptions & { resetOverrides?: boolean; cwd?: string },
 ) => {
   const {
     envNames,
@@ -85,7 +88,7 @@ const generateTypedClientsSingle = async (
     ...rest
   } = config;
 
-  const { resetOverrides = false, cwd = process.cwd(), formatCommand } = options ?? {};
+  const { resetOverrides = false, cwd = process.cwd(), postGenerateCommand } = options ?? {};
 
   const validator = rest.validator ?? "zod/v4";
 
@@ -249,7 +252,7 @@ const generateTypedClientsSingle = async (
   }
 
   // Only use built-in prettier formatting if no custom format command is provided
-  if (formatCommand) {
+  if (postGenerateCommand) {
     // Just save without formatting - the custom command will format
     await project.save();
   } else {

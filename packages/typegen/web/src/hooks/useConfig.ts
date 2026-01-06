@@ -33,9 +33,15 @@ export function useConfig() {
 
   // Save config mutation
   const saveMutation = useMutation({
-    mutationFn: async ({ configsToSave, formatCommand }: { configsToSave: SingleConfig[]; formatCommand?: string }) => {
+    mutationFn: async ({
+      configsToSave,
+      postGenerateCommand,
+    }: {
+      configsToSave: SingleConfig[];
+      postGenerateCommand?: string;
+    }) => {
       console.log("configsToSave", configsToSave);
-      return await saveConfig(configsToSave, formatCommand);
+      return await saveConfig(configsToSave, postGenerateCommand);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });

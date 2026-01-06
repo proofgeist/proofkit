@@ -1,12 +1,15 @@
 import path from "node:path";
-import type { FmodataConfig } from "../types";
+import type { z } from "zod/v4";
+import type { FmodataConfig, typegenConfig } from "../types";
 import { downloadTableMetadata } from "./downloadMetadata";
 import { generateODataTypes } from "./generateODataTypes";
 import { type ParsedMetadata, parseMetadata } from "./parseMetadata";
 
+type GlobalOptions = Omit<z.infer<typeof typegenConfig>, "config">;
+
 export async function generateODataTablesSingle(
   config: FmodataConfig,
-  options?: { cwd?: string; formatCommand?: string },
+  options?: GlobalOptions & { cwd?: string },
 ): Promise<string | undefined> {
   const { tables, reduceMetadata = false, path: outputPath = "schema" } = config;
   const { cwd = process.cwd() } = options ?? {};
@@ -57,7 +60,7 @@ export async function generateODataTablesSingle(
   };
 
   // Generate types from merged metadata
-  await generateODataTypes(mergedMetadata, { ...config, formatCommand: options?.formatCommand });
+  await generateODataTypes(mergedMetadata, { ...config, postGenerateCommand: options?.postGenerateCommand, cwd });
 
   // Return the resolved output path
   return path.resolve(cwd, outputPath);

@@ -878,7 +878,8 @@ export async function generateODataTypes(
   metadata: ParsedMetadata,
   config: FmodataConfig & {
     alwaysOverrideFieldNames?: boolean;
-    formatCommand?: string;
+    postGenerateCommand?: string;
+    cwd?: string;
   },
 ): Promise<void> {
   const { entityTypes, entitySets } = metadata;
@@ -888,7 +889,8 @@ export async function generateODataTypes(
     tables,
     alwaysOverrideFieldNames = true,
     includeAllFieldsByDefault = true,
-    formatCommand,
+    postGenerateCommand,
+    cwd = process.cwd(),
   } = config;
   const outputPath = path ?? "schema";
 
@@ -956,8 +958,8 @@ export async function generateODataTypes(
     }
   }
 
-  // Resolve and create output directory
-  const resolvedOutputPath = resolve(outputPath);
+  // Resolve and create output directory using the provided cwd
+  const resolvedOutputPath = resolve(cwd, outputPath);
   await mkdir(resolvedOutputPath, { recursive: true });
 
   if (clearOldFiles) {
@@ -1300,7 +1302,7 @@ export async function generateODataTypes(
   }
 
   // Only use built-in prettier formatting if no custom format command is provided
-  if (formatCommand) {
+  if (postGenerateCommand) {
     // Just save without formatting - the custom command will format
     await project.save();
   } else {

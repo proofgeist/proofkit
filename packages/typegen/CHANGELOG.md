@@ -1,5 +1,18 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.4
+
+### Minor Changes
+
+- 7dbfd63: Add optional `postGenerateCommand` config option to run custom formatter after typegen completes. Users can now specify their own CLI command (e.g., `pnpm biome format --write` or `npx prettier --write`) to format generated files. The output paths are automatically appended as arguments to the command. This setting can be configured in the typegen UI's Global Settings section.
+
+### Patch Changes
+
+- 863e1e8: Update tooling to Biome
+- Updated dependencies [863e1e8]
+  - @proofkit/fmodata@0.1.0-beta.23
+  - @proofkit/fmdapi@5.0.3-beta.1
+
 ## 1.1.0-beta.3
 
 ### Patch Changes

@@ -635,6 +635,9 @@ importers:
       dotenv:
         specifier: ^16.5.0
         version: 16.5.0
+      execa:
+        specifier: ^9.5.3
+        version: 9.5.3
       fast-xml-parser:
         specifier: ^5.3.2
         version: 5.3.2

@@ -1,9 +1,8 @@
-import { exec } from "node:child_process";
 import path from "node:path";
-import { promisify } from "node:util";
 import { zValidator } from "@hono/zod-validator";
 import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
 import chalk from "chalk";
+import { execa, parseCommandString } from "execa";
 import fs from "fs-extra";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -13,8 +12,6 @@ import { downloadTableMetadata, parseMetadata } from "../fmodata";
 import { generateTypedClients } from "../typegen";
 import { typegenConfig, typegenConfigSingle, typegenConfigSingleForValidation } from "../types";
 import { createClientFromConfig, createDataApiClient, createOdataClientFromConfig } from "./createDataApiClient";
-
-const execAsync = promisify(exec);
 
 export interface ApiContext {
   cwd: string;
@@ -266,10 +263,15 @@ export function createApiApp(context: ApiContext) {
         // Execute format command if provided
         if (formatCommand && result && result.outputPaths.length > 0) {
           try {
-            const pathsArg = result.outputPaths.join(" ");
-            const fullCommand = `${formatCommand} ${pathsArg}`;
-            console.log(chalk.blue(`Running format command: ${fullCommand}`));
-            await execAsync(fullCommand, { cwd: context.cwd });
+            // Parse the format command into command and args, then append output paths
+            // This properly handles paths with spaces by passing them as separate arguments
+            const [command, ...args] = parseCommandString(formatCommand);
+            if (!command) {
+              throw new Error("Format command is empty");
+            }
+            const allArgs = [...args, ...result.outputPaths];
+            console.log(chalk.blue(`Running format command: ${command} ${allArgs.join(" ")}`));
+            await execa(command, allArgs, { cwd: context.cwd });
             console.log(chalk.green("Format command completed successfully"));
           } catch (error) {
             // Log error but don't fail the typegen

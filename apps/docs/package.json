@@ -1,6 +1,7 @@
 {
   "name": "@proofkit/docs",
   "version": "0.0.2",
+  "type": "module",
   "private": true,
   "scripts": {
     "build": "pnpm --filter @proofkit/typegen build && node scripts/bundle-registry-templates.js && next build",

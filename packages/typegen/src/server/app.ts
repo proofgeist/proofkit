@@ -1,6 +1,9 @@
+import { exec } from "node:child_process";
 import path from "node:path";
+import { promisify } from "node:util";
 import { zValidator } from "@hono/zod-validator";
 import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
+import chalk from "chalk";
 import fs from "fs-extra";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -10,6 +13,8 @@ import { downloadTableMetadata, parseMetadata } from "../fmodata";
 import { generateTypedClients } from "../typegen";
 import { typegenConfig, typegenConfigSingle, typegenConfigSingleForValidation } from "../types";
 import { createClientFromConfig, createDataApiClient, createOdataClientFromConfig } from "./createDataApiClient";
+
+const execAsync = promisify(exec);
 
 export interface ApiContext {
   cwd: string;
@@ -74,6 +79,7 @@ export function createApiApp(context: ApiContext) {
           path: configPath,
           fullPath,
           config: null,
+          formatCommand: undefined,
         });
       }
 
@@ -87,6 +93,7 @@ export function createApiApp(context: ApiContext) {
           path: configPath,
           fullPath,
           config: parsed.config,
+          formatCommand: parsed.formatCommand,
         });
       } catch (err) {
         console.log("error from get config", err);
@@ -105,6 +112,7 @@ export function createApiApp(context: ApiContext) {
         "json",
         z.object({
           config: z.array(typegenConfigSingleRequestForValidation),
+          formatCommand: z.string().optional(),
         }),
       ),
       async (c) => {
@@ -113,6 +121,7 @@ export function createApiApp(context: ApiContext) {
 
           // Transform validated data using runtime schema (applies transforms)
           const transformedData = {
+            formatCommand: data.formatCommand,
             config: data.config.map((config) => {
               // Add default type if missing (backwards compatibility)
               const configWithType =
@@ -124,7 +133,7 @@ export function createApiApp(context: ApiContext) {
             }),
           };
 
-          // Validate with Zod (data is already { config: [...] })
+          // Validate with Zod (data is already { config: [...], formatCommand?: string })
           const validation = typegenConfig.safeParse(transformedData);
 
           if (!validation.success) {
@@ -205,13 +214,14 @@ export function createApiApp(context: ApiContext) {
         }
       },
     )
-    // POST /api/run (stub)
+    // POST /api/run
     .post(
       "/run",
       zValidator(
         "json",
         z.object({
           config: z.union([z.array(typegenConfigSingleRequestForValidation), typegenConfigSingleRequestForValidation]),
+          formatCommand: z.string().optional(),
         }),
       ),
       async (c, next) => {
@@ -230,7 +240,45 @@ export function createApiApp(context: ApiContext) {
         const config: z.infer<typeof typegenConfig>["config"] =
           transformedConfig.length === 1 && transformedConfig[0] ? transformedConfig[0] : transformedConfig;
 
-        await generateTypedClients(config);
+        // Get formatCommand from request or from config file
+        let formatCommand = rawData.formatCommand;
+        if (!formatCommand) {
+          // Try to read from config file
+          try {
+            const configPath = path.resolve(context.cwd, context.configPath);
+            if (fs.existsSync(configPath)) {
+              const raw = fs.readFileSync(configPath, "utf8");
+              const rawJson = parse(raw);
+              const parsed = typegenConfig.parse(rawJson);
+              formatCommand = parsed.formatCommand;
+            }
+          } catch (_err) {
+            // Ignore errors reading config
+          }
+        }
+
+        // Generate typed clients and collect output paths
+        const result = await generateTypedClients(config, {
+          cwd: context.cwd,
+          formatCommand,
+        });
+
+        // Execute format command if provided
+        if (formatCommand && result && result.outputPaths.length > 0) {
+          try {
+            const pathsArg = result.outputPaths.join(" ");
+            const fullCommand = `${formatCommand} ${pathsArg}`;
+            console.log(chalk.blue(`Running format command: ${fullCommand}`));
+            await execAsync(fullCommand, { cwd: context.cwd });
+            console.log(chalk.green("Format command completed successfully"));
+          } catch (error) {
+            // Log error but don't fail the typegen
+            console.log(
+              chalk.yellow(`Warning: Format command failed: ${error instanceof Error ? error.message : String(error)}`),
+            );
+          }
+        }
+
         await next();
       },
     )

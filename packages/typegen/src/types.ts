@@ -243,11 +243,19 @@ export const typegenConfigSingle = z.preprocess((data) => {
 }, typegenConfigSingleBase);
 
 export const typegenConfig = z.object({
+  formatCommand: z.string().optional().meta({
+    description:
+      "CLI command to format generated files. The output path(s) will be appended as arguments. Example: 'pnpm biome format --write' or 'npx prettier --write'",
+  }),
   config: z.union([z.array(typegenConfigSingle), typegenConfigSingle]),
 });
 
 // Validation version for JSON Schema generation (no transforms, no preprocess)
 export const typegenConfigForValidation = z.object({
+  formatCommand: z.string().optional().meta({
+    description:
+      "CLI command to format generated files. The output path(s) will be appended as arguments. Example: 'pnpm biome format --write' or 'npx prettier --write'",
+  }),
   config: z.union([z.array(typegenConfigSingleForValidation), typegenConfigSingleForValidation]),
 });
 

@@ -898,6 +898,7 @@ export async function generateODataTypes(
   metadata: ParsedMetadata,
   config: FmodataConfig & {
     alwaysOverrideFieldNames?: boolean;
+    formatCommand?: string;
   },
 ): Promise<void> {
   const { entityTypes, entitySets } = metadata;
@@ -907,6 +908,7 @@ export async function generateODataTypes(
     tables,
     alwaysOverrideFieldNames = true,
     includeAllFieldsByDefault = true,
+    formatCommand,
   } = config;
   const outputPath = path ?? "schema";
 
@@ -1317,8 +1319,13 @@ export async function generateODataTypes(
     exportStatements.push(`export { ${regenerated.varName} } from "./${sanitizeFileName(regenerated.varName)}";`);
   }
 
-  // Format and save all files
-  await formatAndSaveSourceFiles(project);
+  // Only use built-in prettier formatting if no custom format command is provided
+  if (formatCommand) {
+    // Just save without formatting - the custom command will format
+    await project.save();
+  } else {
+    await formatAndSaveSourceFiles(project);
+  }
 
   // Generate index.ts file that exports all table occurrences
   const indexContent = `// ============================================================================

@@ -15,9 +15,9 @@ export async function getConfig() {
   return data;
 }
 
-export async function saveConfig(config: SingleConfig[]) {
+export async function saveConfig(config: SingleConfig[], postGenerateCommand?: string) {
   const res = await client.api.config.$post({
-    json: { config },
+    json: { config, postGenerateCommand },
   });
   if (!res.ok) {
     const errorData = (await res.json().catch(() => ({}))) as {

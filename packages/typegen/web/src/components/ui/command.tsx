@@ -120,7 +120,7 @@ function CommandCheck({ icon: Icon = Check, className, ...props }: ButtonArrowPr
       className={cn("ms-auto size-4 text-primary", className)}
       data-check="true"
       data-slot="command-check"
-      {...props}
+      {...(props as any)}
     />
   );
 }

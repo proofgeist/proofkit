@@ -8,7 +8,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["!**/stubs", "!**/template"]
+    "includes": ["!**/stubs", "!**/template", "!**/__snapshots__"]
   },
   "formatter": {
     "enabled": true,

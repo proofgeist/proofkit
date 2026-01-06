@@ -7,6 +7,7 @@ import { ConfigEditor } from "./components/ConfigEditor";
 import { ConfigSummary } from "./components/ConfigSummary";
 import { ConnectionWarning } from "./components/ConnectionWarning";
 import { EmptyState } from "./components/EmptyState";
+import { InfoTooltip } from "./components/InfoTooltip";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import {
@@ -15,11 +16,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
-import { Form } from "./components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./components/ui/form";
+import { Input } from "./components/ui/input";
 import { useConfig } from "./hooks/useConfig";
 import { useHealthCheck } from "./hooks/useHealthCheck";
 import { client } from "./lib/api";
 import type { SingleConfig } from "./lib/config-utils";
+
+// Post-generate command presets
+const COMMAND_PRESETS = [
+  { label: "Biome", command: "npx @biomejs/biome format --write ." },
+  { label: "Prettier", command: "npx prettier --write ." },
+  { label: "ESLint", command: "npx eslint --fix ." },
+] as const;
 
 // Normalize config to always be an array
 function normalizeConfig(config: SingleConfig | SingleConfig[] | null): SingleConfig[] {
@@ -71,9 +80,10 @@ function App() {
   // Track active accordion item to preserve state
   const [activeAccordionItem, setActiveAccordionItem] = useState<number>(0);
 
-  // Use React Hook Form to manage the configs array
+  // Use React Hook Form to manage the configs array and postGenerateCommand
   interface FormData {
     config: SingleConfig[];
+    postGenerateCommand?: string;
   }
   const form = useForm<FormData>({});
 
@@ -82,7 +92,10 @@ function App() {
     if (configDataResponse) {
       const configData = configDataResponse?.config;
       const serverConfigs = normalizeConfig(configData);
-      form.reset({ config: serverConfigs });
+      form.reset({
+        config: serverConfigs,
+        postGenerateCommand: configDataResponse.exists ? configDataResponse.postGenerateCommand : undefined,
+      });
     }
   }, [configDataResponse]);
 
@@ -111,7 +124,8 @@ function App() {
     // If file doesn't exist, create it with the new config
     if (isFileMissing) {
       try {
-        await saveMutation.mutateAsync([newConfig]);
+        const postGenerateCommand = form.getValues("postGenerateCommand");
+        await saveMutation.mutateAsync({ configsToSave: [newConfig], postGenerateCommand });
         await refetch();
         setTimeout(() => {
           setActiveAccordionItem(0);
@@ -132,20 +146,22 @@ function App() {
   // Run typegen mutation
   const runTypegenMutation = useMutation({
     mutationFn: async () => {
+      const postGenerateCommand = form.getValues("postGenerateCommand");
       await client.api.run.$post({
-        json: { config: configs },
+        json: { config: configs, postGenerateCommand },
       });
     },
   });
 
   const handleSaveAll = form.handleSubmit(async (data) => {
     try {
-      await saveMutation.mutateAsync(data.config);
+      await saveMutation.mutateAsync({ configsToSave: data.config, postGenerateCommand: data.postGenerateCommand });
       // Reset the form with the current form state to clear dirty state
       // Use getValues() to get the current state, preserving any changes made during the save request
       // The accordion state is preserved because it's controlled and the component doesn't unmount
       const currentConfigs = form.getValues("config");
-      form.reset({ config: currentConfigs });
+      const currentPostGenerateCommand = form.getValues("postGenerateCommand");
+      form.reset({ config: currentConfigs, postGenerateCommand: currentPostGenerateCommand });
     } catch (err) {
       // Error is handled by the mutation
       console.error("Failed to save configs:", err);
@@ -264,69 +280,114 @@ function App() {
                 />
               </div>
             ) : (
-              <Accordion
-                className="mx-auto w-full lg:w-[75%]"
-                collapsible
-                onValueChange={(value) => setActiveAccordionItem(Number(value))}
-                type="single"
-                value={activeAccordionItem.toString()}
-                variant="outline"
-              >
-                {fields.map((field, index) => {
-                  const config = configs[index];
-                  return (
-                    <AccordionItem className="bg-card" key={field.id} value={index.toString()}>
-                      <AccordionTrigger>
-                        <ConfigSummary config={config} />
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <ConfigEditor index={index} onRemove={() => remove(index)} />
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
+              <>
+                {/* Global Settings Section */}
+                {!isFileMissing && (
+                  <div className="mx-auto mb-6 w-full rounded-lg border bg-card p-6 lg:w-[75%]">
+                    <h3 className="mb-4 font-semibold text-lg">Global Settings</h3>
+                    <FormField
+                      control={form.control}
+                      name="postGenerateCommand"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>
+                              Post-Generate Command{" "}
+                              <InfoTooltip label="Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'" />
+                            </FormLabel>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button className="h-8" size="sm" variant="outline">
+                                  Presets
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {COMMAND_PRESETS.map((preset) => (
+                                  <DropdownMenuItem key={preset.label} onSelect={() => field.onChange(preset.command)}>
+                                    {preset.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., pnpm biome format --write ."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
-                <div className="mt-6 flex w-full justify-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="lg" variant="inverse">
-                        <Plus className="h-4 w-4" />
-                        Add Connection
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-80">
-                      <DropdownMenuItem
-                        className="flex cursor-pointer flex-col items-start gap-1 p-4"
-                        onClick={() => handleAddConfig("fmdapi")}
-                      >
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-base">Data API</p>
-                          <Badge appearance="light" shape="circle" variant="info">
-                            Legacy
-                          </Badge>
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                          Reads/writes data using layout-specific context
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="flex cursor-pointer flex-col items-start gap-1 p-4"
-                        onClick={() => handleAddConfig("fmodata")}
-                      >
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-base">OData</p>
-                          <Badge appearance="light" shape="circle" variant="success">
-                            New
-                          </Badge>
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                          Reads/writes data directly to the database tables, using the relationship graph as context
-                        </div>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </Accordion>
+                <Accordion
+                  className="mx-auto w-full lg:w-[75%]"
+                  collapsible
+                  onValueChange={(value) => setActiveAccordionItem(Number(value))}
+                  type="single"
+                  value={activeAccordionItem.toString()}
+                  variant="outline"
+                >
+                  {fields.map((field, index) => {
+                    const config = configs[index];
+                    return (
+                      <AccordionItem className="bg-card" key={field.id} value={index.toString()}>
+                        <AccordionTrigger>
+                          <ConfigSummary config={config} />
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ConfigEditor index={index} onRemove={() => remove(index)} />
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+
+                  <div className="mt-6 flex w-full justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="lg" variant="inverse">
+                          <Plus className="h-4 w-4" />
+                          Add Connection
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-80">
+                        <DropdownMenuItem
+                          className="flex cursor-pointer flex-col items-start gap-1 p-4"
+                          onClick={() => handleAddConfig("fmdapi")}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-base">Data API</p>
+                            <Badge appearance="light" shape="circle" variant="info">
+                              Legacy
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            Reads/writes data using layout-specific context
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="flex cursor-pointer flex-col items-start gap-1 p-4"
+                          onClick={() => handleAddConfig("fmodata")}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-base">OData</p>
+                            <Badge appearance="light" shape="circle" variant="success">
+                              New
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            Reads/writes data directly to the database tables, using the relationship graph as context
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </Accordion>
+              </>
             )}
           </form>
         </Form>

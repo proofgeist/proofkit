@@ -89,6 +89,7 @@ async function runCodegen({ configLocation, resetOverrides = false }: ConfigArgs
 
   const result = await generateTypedClients(configParsed.data.config, {
     resetOverrides,
+    postGenerateCommand: configParsed.data.postGenerateCommand,
   }).catch((err: unknown) => {
     console.error(err);
     return process.exit(1);
@@ -221,7 +222,7 @@ function parseEnvs(envPath?: string | undefined) {
 
   // this should fail silently.
   // if we can't resolve the right env vars, they will be logged as errors later
-  const _envRes = config({ path: actualEnvPath });
+  config({ path: actualEnvPath });
   // if (envRes.error) {
   //   console.log(
   //     chalk.red(

@@ -18,14 +18,17 @@ import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
 import { getLayoutMetadata } from "./getLayoutMetadata";
 import { type BuildSchemaArgs, typegenConfig, type typegenConfigSingle } from "./types";
 
+type GlobalOptions = Omit<z.infer<typeof typegenConfig>, "config">;
+
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
-  options?: { resetOverrides?: boolean; cwd?: string },
+  options?: GlobalOptions & { resetOverrides?: boolean; cwd?: string },
 ): Promise<
   | {
       successCount: number;
       errorCount: number;
       totalCount: number;
+      outputPaths: string[];
     }
   | undefined
 > => {
@@ -38,32 +41,42 @@ export const generateTypedClients = async (
   }
 
   const configArray = Array.isArray(parsedConfig.data.config) ? parsedConfig.data.config : [parsedConfig.data.config];
+  const postGenerateCommand = options?.postGenerateCommand ?? parsedConfig.data.postGenerateCommand;
+
+  const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
 
   let totalSuccessCount = 0;
   let totalErrorCount = 0;
   let totalCount = 0;
+  const outputPaths: string[] = [];
 
   for (const singleConfig of configArray) {
     if (singleConfig.type === "fmdapi") {
-      const result = await generateTypedClientsSingle(singleConfig, options);
+      const result = await generateTypedClientsSingle(singleConfig, { resetOverrides, cwd, postGenerateCommand });
       if (result) {
         totalSuccessCount += result.successCount;
         totalErrorCount += result.errorCount;
         totalCount += result.totalCount;
+        if (result.outputPath) {
+          outputPaths.push(result.outputPath);
+        }
       }
     } else if (singleConfig.type === "fmodata") {
-      await generateODataTablesSingle(singleConfig);
+      const outputPath = await generateODataTablesSingle(singleConfig, { cwd, postGenerateCommand });
+      if (outputPath) {
+        outputPaths.push(outputPath);
+      }
     } else {
       console.log(chalk.red("ERROR: Invalid config type"));
     }
   }
 
-  return { successCount: totalSuccessCount, errorCount: totalErrorCount, totalCount };
+  return { successCount: totalSuccessCount, errorCount: totalErrorCount, totalCount, outputPaths };
 };
 
 const generateTypedClientsSingle = async (
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>,
-  options?: { resetOverrides?: boolean; cwd?: string },
+  options?: GlobalOptions & { resetOverrides?: boolean; cwd?: string },
 ) => {
   const {
     envNames,
@@ -75,7 +88,7 @@ const generateTypedClientsSingle = async (
     ...rest
   } = config;
 
-  const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
+  const { resetOverrides = false, cwd = process.cwd(), postGenerateCommand } = options ?? {};
 
   const validator = rest.validator ?? "zod/v4";
 
@@ -238,7 +251,8 @@ const generateTypedClientsSingle = async (
     successCount++;
   }
 
-  await formatAndSaveSourceFiles(project);
+  // Format and save files, then run post-generate command if provided
+  await formatAndSaveSourceFiles(project, postGenerateCommand, cwd);
 
-  return { successCount, errorCount, totalCount };
+  return { successCount, errorCount, totalCount, outputPath: rootDir };
 };

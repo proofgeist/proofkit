@@ -2,7 +2,7 @@
 
 import type { DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
-import { Check, type LucideIcon, Search } from "lucide-react";
+import { Check, type LucideIcon, type LucideProps, Search } from "lucide-react";
 import type React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -110,17 +110,17 @@ const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanE
   );
 };
 
-interface ButtonArrowProps extends React.SVGProps<SVGSVGElement> {
+interface CommandCheckProps extends LucideProps {
   icon?: LucideIcon; // Allows passing any Lucide icon
 }
 
-function CommandCheck({ icon: Icon = Check, className, ...props }: ButtonArrowProps) {
+function CommandCheck({ icon: Icon = Check, className, ...props }: CommandCheckProps) {
   return (
     <Icon
       className={cn("ms-auto size-4 text-primary", className)}
       data-check="true"
       data-slot="command-check"
-      {...(props as any)}
+      {...props}
     />
   );
 }

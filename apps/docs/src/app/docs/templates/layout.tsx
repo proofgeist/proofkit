@@ -1,7 +1,7 @@
-import type { PageTree } from "fumadocs-core/server";
+import type * as PageTree from "fumadocs-core/page-tree";
+import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { getSidebarTabs } from "fumadocs-ui/utils/get-sidebar-tabs";
 import type { ReactNode } from "react";
-import { DocsLayout } from "@/components/layout/docs";
 import { source } from "@/lib/source";
 import { getTemplatesByCategory } from "@/lib/templates";
 import { baseOptions } from "../../layout.config";

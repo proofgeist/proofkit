@@ -1,10 +1,11 @@
 // import { createReactComponent, iconsList,   } from "@tabler/icons-react"; // Remove this
+
+import { docs } from "fumadocs-mdx:collections/server";
 // biome-ignore lint/performance/noNamespaceImport: suggestion from docs
 import * as TablerIcons from "@tabler/icons-react"; // Add this
 import { loader } from "fumadocs-core/source";
 import { icons } from "lucide-react";
 import { createElement } from "react";
-import { docs } from "@/.source";
 
 // See https://fumadocs.vercel.app/docs/headless/source-api for more info
 export const source = loader({

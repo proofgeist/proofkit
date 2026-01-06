@@ -41,7 +41,7 @@
     "@types/node": "^22.17.1",
     "@types/uuid": "^10.0.0",
     "knip": "^5.56.0",
-    "publint": "^0.3.12",
+    "publint": "^0.3.16",
     "typescript": "^5.9.3",
     "vite": "^6.3.4"
   },

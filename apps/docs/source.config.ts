@@ -1,11 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { rehypeCodeDefaultOptions } from "fumadocs-core/mdx-plugins";
-import { remarkInstall } from "fumadocs-docgen";
+import { rehypeCodeDefaultOptions, remarkNpm } from "fumadocs-core/mdx-plugins";
 import { defineConfig, defineDocs } from "fumadocs-mdx/config";
 import { transformerTwoslash } from "fumadocs-twoslash";
-import type { LanguageRegistration } from "shiki";
+import type { LanguageRegistration, ShikiTransformer } from "shiki";
 
 import FileMakerLang from "./src/lib/FileMaker-tmLanguage.json";
 
@@ -16,7 +15,7 @@ export const docs = defineDocs({
 
 export default defineConfig({
   mdxOptions: {
-    remarkPlugins: [[remarkInstall, { persist: { id: "package-manager" } }]],
+    remarkPlugins: [[remarkNpm, { persist: { id: "package-manager" } }]],
     rehypeCodeOptions: {
       // You might want to configure themes here as well
       themes: {
@@ -25,10 +24,9 @@ export default defineConfig({
       },
       langs: ["ts", "tsx", "js", "javascript", "json", FileMakerLang as LanguageRegistration],
       transformers: [
-        ...(rehypeCodeDefaultOptions.transformers ?? []),
+        ...((rehypeCodeDefaultOptions.transformers ?? []) as ShikiTransformer[]),
         (() => {
-          const __filename = fileURLToPath(import.meta.url);
-          const __dirname = path.dirname(__filename);
+          const __dirname = path.dirname(fileURLToPath(import.meta.url));
           const tryPaths = [
             path.resolve(process.cwd(), "apps/docs/content/docs/fmdapi/CustomersLayout.ts"),
             path.resolve(process.cwd(), "content/docs/fmdapi/CustomersLayout.ts"),
@@ -62,9 +60,9 @@ export default defineConfig({
               fsCache: true,
               extraFiles,
             },
-          });
+          }) as ShikiTransformer;
         })(),
-      ],
+      ] as ShikiTransformer[],
     },
   },
 });

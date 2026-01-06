@@ -36,5 +36,11 @@
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
       "pnpm dlx ultracite fix"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "shiki": "3.13.0",
+      "@shikijs/types": "3.13.0"
+    }
   }
 }

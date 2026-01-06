@@ -17,8 +17,10 @@
     "@proofkit/typegen-web": "0.0.0"
   },
   "changesets": [
+    "add-format-command",
     "brown-keys-float",
     "get-query-string-entity-ids-override",
+    "happy-rocks-watch",
     "olive-coins-trade",
     "quick-ends-drop",
     "real-ideas-sort",

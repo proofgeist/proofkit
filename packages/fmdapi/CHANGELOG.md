@@ -1,5 +1,11 @@
 # @proofkit/fmdapi
 
+## 5.0.3-beta.1
+
+### Patch Changes
+
+- 863e1e8: Update tooling to Biome
+
 ## 5.0.3-beta.0
 
 ### Patch Changes

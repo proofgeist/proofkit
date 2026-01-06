@@ -1,5 +1,15 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.9
+
+### Patch Changes
+
+- 863e1e8: Update tooling to Biome
+- Updated dependencies [7dbfd63]
+- Updated dependencies [863e1e8]
+  - @proofkit/typegen@1.1.0-beta.4
+  - @proofkit/fmdapi@5.0.3-beta.1
+
 ## 2.0.0-beta.8
 
 ### Patch Changes

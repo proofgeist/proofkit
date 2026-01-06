@@ -1,5 +1,11 @@
 # @proofkit/better-auth
 
+## 0.3.1-beta.0
+
+### Patch Changes
+
+- 863e1e8: Update tooling to Biome
+
 ## 0.3.0
 
 ### Minor Changes

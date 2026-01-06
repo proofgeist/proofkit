@@ -251,13 +251,8 @@ const generateTypedClientsSingle = async (
     successCount++;
   }
 
-  // Only use built-in prettier formatting if no custom format command is provided
-  if (postGenerateCommand) {
-    // Just save without formatting - the custom command will format
-    await project.save();
-  } else {
-    await formatAndSaveSourceFiles(project);
-  }
+  // Format and save files, then run post-generate command if provided
+  await formatAndSaveSourceFiles(project, postGenerateCommand, cwd);
 
   return { successCount, errorCount, totalCount, outputPath: rootDir };
 };

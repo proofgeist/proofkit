@@ -1,8 +1,6 @@
 import path from "node:path";
 import { zValidator } from "@hono/zod-validator";
 import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
-import chalk from "chalk";
-import { execa, parseCommandString } from "execa";
 import fs from "fs-extra";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -254,32 +252,11 @@ export function createApiApp(context: ApiContext) {
           }
         }
 
-        // Generate typed clients
+        // Generate typed clients (postGenerateCommand will be executed inside)
         await generateTypedClients(config, {
           cwd: context.cwd,
           postGenerateCommand,
         });
-
-        // Execute post-generate command if provided
-        if (postGenerateCommand) {
-          try {
-            // Run the command exactly as specified
-            const [command, ...args] = parseCommandString(postGenerateCommand);
-            if (!command) {
-              throw new Error("Post-generate command is empty");
-            }
-            console.log(chalk.blue(`Running post-generate command: ${command} ${args.join(" ")}`));
-            await execa(command, args, { cwd: context.cwd });
-            console.log(chalk.green("Post-generate command completed successfully"));
-          } catch (error) {
-            // Log error but don't fail the typegen
-            console.log(
-              chalk.yellow(
-                `Warning: Post-generate command failed: ${error instanceof Error ? error.message : String(error)}`,
-              ),
-            );
-          }
-        }
 
         await next();
       },

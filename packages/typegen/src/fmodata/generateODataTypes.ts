@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import fs from "fs-extra";
 import {
@@ -1301,14 +1301,6 @@ export async function generateODataTypes(
     exportStatements.push(`export { ${regenerated.varName} } from "./${sanitizeFileName(regenerated.varName)}";`);
   }
 
-  // Only use built-in prettier formatting if no custom format command is provided
-  if (postGenerateCommand) {
-    // Just save without formatting - the custom command will format
-    await project.save();
-  } else {
-    await formatAndSaveSourceFiles(project);
-  }
-
   // Generate index.ts file that exports all table occurrences
   const indexContent = `// ============================================================================
 // Auto-generated index file - exports all table occurrences
@@ -1318,5 +1310,10 @@ ${exportStatements.join("\n")}
 `;
 
   const indexPath = join(resolvedOutputPath, "index.ts");
-  await writeFile(indexPath, indexContent, "utf-8");
+  project.createSourceFile(indexPath, indexContent, {
+    overwrite: true,
+  });
+
+  // Format and save files, then run post-generate command if provided
+  await formatAndSaveSourceFiles(project, postGenerateCommand, cwd);
 }

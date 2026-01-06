@@ -20,9 +20,7 @@
       ]
     }
   },
-  "required": [
-    "config"
-  ],
+  "required": ["config"],
   "additionalProperties": false,
   "definitions": {
     "__schema0": {
@@ -57,11 +55,7 @@
                   "valueLists": {
                     "description": "If set to 'strict', the value lists will be validated to ensure that the values are correct. If set to 'allowEmpty', the value lists will be validated to ensure that the values are correct, but empty value lists will be allowed. If set to 'ignore', the value lists will not be validated and typed as `string`.",
                     "type": "string",
-                    "enum": [
-                      "strict",
-                      "allowEmpty",
-                      "ignore"
-                    ]
+                    "enum": ["strict", "allowEmpty", "ignore"]
                   },
                   "generateClient": {
                     "description": "If true, a layout-specific client will be generated (unless set to `false` at the top level)",
@@ -72,10 +66,7 @@
                     "type": "boolean"
                   }
                 },
-                "required": [
-                  "layoutName",
-                  "schemaName"
-                ],
+                "required": ["layoutName", "schemaName"],
                 "additionalProperties": false
               }
             },
@@ -91,11 +82,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "enum": [
-                    "zod",
-                    "zod/v4",
-                    "zod/v3"
-                  ]
+                  "enum": ["zod", "zod/v4", "zod/v3"]
                 },
                 {
                   "type": "boolean",
@@ -118,10 +105,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "type",
-            "layouts"
-          ],
+          "required": ["type", "layouts"],
           "additionalProperties": false
         },
         {
@@ -199,9 +183,7 @@
                           ]
                         }
                       },
-                      "required": [
-                        "fieldName"
-                      ],
+                      "required": ["fieldName"],
                       "additionalProperties": false
                     }
                   },
@@ -218,9 +200,7 @@
                     "type": "boolean"
                   }
                 },
-                "required": [
-                  "tableName"
-                ],
+                "required": ["tableName"],
                 "additionalProperties": false
               }
             },
@@ -230,10 +210,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "type",
-            "tables"
-          ],
+          "required": ["type", "tables"],
           "additionalProperties": false
         }
       ]

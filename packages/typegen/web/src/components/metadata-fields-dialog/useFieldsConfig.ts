@@ -203,11 +203,9 @@ export function useFieldsConfig({ configIndex, tableName, fieldsData }: UseField
             if (newFields.length === 0 && hasOnlyTableNameAndFields) {
               // Only tableName and fields left, remove entire table entry
               const filteredTables = currentTables.filter((_, i) => i !== tableIdx);
-              if (filteredTables.length > 0) {
-                setValue(`config.${configIndex}.tables`, filteredTables, {
-                  shouldDirty: true,
-                });
-              }
+              setValue(`config.${configIndex}.tables`, filteredTables, {
+                shouldDirty: true,
+              });
             } else {
               // Keep table but update fields
               newTables[tableIdx] = {
@@ -365,11 +363,9 @@ export function useFieldsConfig({ configIndex, tableName, fieldsData }: UseField
           if (newFields.length === 0 && hasOnlyTableNameAndFields) {
             // Only tableName and fields left, remove entire table entry
             const filteredTables = currentTables.filter((_, i) => i !== tableIdx);
-            if (filteredTables.length > 0) {
-              setValue(`config.${configIndex}.tables`, filteredTables, {
-                shouldDirty: true,
-              });
-            }
+            setValue(`config.${configIndex}.tables`, filteredTables, {
+              shouldDirty: true,
+            });
           } else {
             // Keep table but update fields
             newTables[tableIdx] = {
@@ -456,11 +452,9 @@ export function useFieldsConfig({ configIndex, tableName, fieldsData }: UseField
           tableKeys.length === 2 && tableKeys.includes("tableName") && tableKeys.includes("fields");
         if (hasOnlyTableNameAndFields) {
           const filteredTables = currentTables.filter((_, i) => i !== tableIdx);
-          if (filteredTables.length > 0) {
-            setValue(`config.${configIndex}.tables`, filteredTables, {
-              shouldDirty: true,
-            });
-          }
+          setValue(`config.${configIndex}.tables`, filteredTables, {
+            shouldDirty: true,
+          });
         } else {
           const existingTable = newTables[tableIdx];
           if (!existingTable) {

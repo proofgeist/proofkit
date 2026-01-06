@@ -90,7 +90,7 @@ export function createApiApp(context: ApiContext) {
           path: configPath,
           fullPath,
           config: parsed.config,
-          formatCommand: parsed.formatCommand,
+          formatCommand: parsed.postGenerateCommand,
         });
       } catch (err) {
         console.log("error from get config", err);
@@ -247,7 +247,7 @@ export function createApiApp(context: ApiContext) {
               const raw = fs.readFileSync(configPath, "utf8");
               const rawJson = parse(raw);
               const parsed = typegenConfig.parse(rawJson);
-              formatCommand = parsed.formatCommand;
+              formatCommand = parsed.postGenerateCommand;
             }
           } catch (_err) {
             // Ignore errors reading config

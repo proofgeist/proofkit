@@ -39,7 +39,7 @@ export const generateTypedClients = async (
   }
 
   const configArray = Array.isArray(parsedConfig.data.config) ? parsedConfig.data.config : [parsedConfig.data.config];
-  const formatCommand = options?.formatCommand ?? parsedConfig.data.formatCommand;
+  const formatCommand = options?.formatCommand ?? parsedConfig.data.postGenerateCommand;
   const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
 
   let totalSuccessCount = 0;

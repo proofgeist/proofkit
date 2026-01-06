@@ -243,7 +243,7 @@ export const typegenConfigSingle = z.preprocess((data) => {
 }, typegenConfigSingleBase);
 
 export const typegenConfig = z.object({
-  formatCommand: z.string().optional().meta({
+  postGenerateCommand: z.string().optional().meta({
     description:
       "Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'",
   }),

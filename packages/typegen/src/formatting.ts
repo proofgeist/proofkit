@@ -1,5 +1,5 @@
-import { Project } from "ts-morph";
-import * as prettier from "prettier";
+import { format } from "prettier";
+import type { Project } from "ts-morph";
 
 /**
  * Formats all source files in a ts-morph Project using prettier and saves the changes.
@@ -12,17 +12,14 @@ export async function formatAndSaveSourceFiles(project: Project) {
     // run each file through the prettier formatter
     for await (const file of files) {
       const filePath = file.getFilePath();
-      const fileInfo = (await prettier.getFileInfo?.(filePath)) ?? {
-        ignored: false,
-      };
 
-      if (fileInfo.ignored) continue;
-
-      const formatted = await prettier.format(file.getFullText(), {
+      const formatted = await format(file.getFullText(), {
         filepath: filePath,
       });
       file.replaceWithText(formatted);
     }
-  } catch (error) {}
+  } catch (_error) {
+    // Ignore formatting errors and continue
+  }
   await project.save();
 }

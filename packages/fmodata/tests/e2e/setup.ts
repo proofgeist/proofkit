@@ -5,13 +5,9 @@
  * used across all E2E test files.
  */
 
-import path from "path";
+import path from "node:path";
+import { fmTableOccurrence, textField, timestampField } from "@proofkit/fmodata";
 import { config } from "dotenv";
-import {
-  fmTableOccurrence,
-  textField,
-  timestampField,
-} from "@proofkit/fmodata";
 import { z } from "zod/v4";
 
 config({ path: path.resolve(__dirname, "../../.env.local") });
@@ -64,9 +60,7 @@ export const contactsTOWithIds = fmTableOccurrence(
     PrimaryKey: textField().primaryKey().entityId("FMFID:4296032390"),
     CreationTimestamp: timestampField().readOnly().entityId("FMFID:8590999686"),
     CreatedBy: textField().readOnly().entityId("FMFID:12885966982"),
-    ModificationTimestamp: timestampField()
-      .readOnly()
-      .entityId("FMFID:17180934278"),
+    ModificationTimestamp: timestampField().readOnly().entityId("FMFID:17180934278"),
     ModifiedBy: textField().readOnly().entityId("FMFID:21475901574"),
     name_renamed: textField().entityId("FMFID:25770868870"), // in FM: "name"
     hobby: textField().entityId("FMFID:30065836166"),
@@ -84,9 +78,7 @@ export const usersTOWithIds = fmTableOccurrence(
     id: textField().primaryKey().entityId("FMFID:4296032389"),
     CreationTimestamp: timestampField().readOnly().entityId("FMFID:8590999685"),
     CreatedBy: textField().readOnly().entityId("FMFID:12885966981"),
-    ModificationTimestamp: timestampField()
-      .readOnly()
-      .entityId("FMFID:17180934277"),
+    ModificationTimestamp: timestampField().readOnly().entityId("FMFID:17180934277"),
     ModifiedBy: textField().readOnly().entityId("FMFID:21475901573"),
     name: textField().entityId("FMFID:25770868869"),
     id_customer: textField().entityId("FMFID:30065836165"),
@@ -108,9 +100,7 @@ export const contactsTOForBatch = fmTableOccurrence("contacts", {
   ModificationTimestamp: timestampField(),
   ModifiedBy: textField(),
   name: textField(),
-  hobby: textField().readValidator(
-    z.string().transform((val) => "static-value"),
-  ),
+  hobby: textField().readValidator(z.string().transform((_val) => "static-value")),
   id_user: textField(),
 });
 

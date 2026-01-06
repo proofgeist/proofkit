@@ -1,18 +1,21 @@
-import { QueryOptions } from "odata-query";
-import buildQuery from "odata-query";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import buildQuery, { type QueryOptions } from "odata-query";
 import { FMTable } from "../../orm/table";
 import type { ExpandValidationConfig } from "../../validation";
 import { formatSelectFields } from "../builders/select-utils";
 
+const FILTER_QUERY_REGEX = /\$filter=([^&]+)/;
+
 /**
  * Internal type for expand configuration
  */
-export type ExpandConfig = {
+export interface ExpandConfig {
   relation: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryOptions configuration
   options?: Partial<QueryOptions<any>>;
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   targetTable?: FMTable<any, any>;
-};
+}
 
 /**
  * Builds OData expand query strings and validation configs.
@@ -20,7 +23,11 @@ export type ExpandConfig = {
  * when using entity IDs.
  */
 export class ExpandBuilder {
-  constructor(private useEntityIds: boolean) {}
+  private readonly useEntityIds: boolean;
+
+  constructor(useEntityIds: boolean) {
+    this.useEntityIds = useEntityIds;
+  }
 
   /**
    * Builds OData expand query string from expand configurations.
@@ -46,14 +53,11 @@ export class ExpandBuilder {
     // FileMaker expects FMTID in $expand when Prefer header is set
     // Only use FMTID if databaseUseEntityIds is enabled
     let relationName = config.relation;
-    if (this.useEntityIds) {
-      if (targetTable && FMTable.Symbol.EntityId in targetTable) {
-        const tableId = (targetTable as any)[FMTable.Symbol.EntityId] as
-          | `FMTID:${string}`
-          | undefined;
-        if (tableId) {
-          relationName = tableId;
-        }
+    if (this.useEntityIds && targetTable && FMTable.Symbol.EntityId in targetTable) {
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for Symbol property access
+      const tableId = (targetTable as any)[FMTable.Symbol.EntityId] as `FMTID:${string}` | undefined;
+      if (tableId) {
+        relationName = tableId;
       }
     }
 
@@ -70,11 +74,7 @@ export class ExpandBuilder {
       const selectArray = Array.isArray(config.options.select)
         ? config.options.select.map(String)
         : [String(config.options.select)];
-      const selectFields = formatSelectFields(
-        selectArray,
-        targetTable,
-        this.useEntityIds,
-      );
+      const selectFields = formatSelectFields(selectArray, targetTable, this.useEntityIds);
       parts.push(`$select=${selectFields}`);
     }
 
@@ -82,7 +82,7 @@ export class ExpandBuilder {
       // Filter should already be transformed by the nested builder
       // Use odata-query to build filter string
       const filterQuery = buildQuery({ filter: config.options.filter });
-      const filterMatch = filterQuery.match(/\$filter=([^&]+)/);
+      const filterMatch = filterQuery.match(FILTER_QUERY_REGEX);
       if (filterMatch) {
         parts.push(`$filter=${filterMatch[1]}`);
       }
@@ -105,11 +105,9 @@ export class ExpandBuilder {
     }
 
     // Handle nested expands (from expand configs)
-    if (config.options.expand) {
+    if (config.options.expand && typeof config.options.expand === "string") {
       // If expand is a string, it's already been built
-      if (typeof config.options.expand === "string") {
-        parts.push(`$expand=${config.options.expand}`);
-      }
+      parts.push(`$expand=${config.options.expand}`);
     }
 
     if (parts.length === 0) {
@@ -131,32 +129,30 @@ export class ExpandBuilder {
       // Extract schema from target table/occurrence
       let targetSchema: Record<string, StandardSchemaV1> | undefined;
       if (targetTable) {
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for Symbol property access
         const tableSchema = (targetTable as any)[FMTable.Symbol.Schema];
         if (tableSchema) {
           const zodSchema = tableSchema["~standard"]?.schema;
-          if (
-            zodSchema &&
-            typeof zodSchema === "object" &&
-            "shape" in zodSchema
-          ) {
+          if (zodSchema && typeof zodSchema === "object" && "shape" in zodSchema) {
             targetSchema = zodSchema.shape as Record<string, StandardSchemaV1>;
           }
         }
       }
 
       // Extract selected fields from options
-      const selectedFields = config.options?.select
-        ? Array.isArray(config.options.select)
+      let selectedFields: string[] | undefined;
+      if (config.options?.select) {
+        selectedFields = Array.isArray(config.options.select)
           ? config.options.select.map((f) => String(f))
-          : [String(config.options.select)]
-        : undefined;
+          : [String(config.options.select)];
+      }
 
       return {
         relation: config.relation,
-        targetSchema: targetSchema,
-        targetTable: targetTable,
+        targetSchema,
+        targetTable,
         table: targetTable, // For transformation
-        selectedFields: selectedFields,
+        selectedFields,
         nestedExpands: undefined, // TODO: Handle nested expands if needed
       };
     });

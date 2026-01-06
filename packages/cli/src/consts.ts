@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { getVersion } from "./utils/getProofKitVersion.js";
 
@@ -32,10 +32,4 @@ declare const __REGISTRY_URL__: string;
 // Provide a safe fallback when running from source (not built)
 export const DEFAULT_REGISTRY_URL =
   // typeof check avoids ReferenceError if not defined at runtime
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - __REGISTRY_URL__ is injected at build time
-  typeof __REGISTRY_URL__ !== "undefined" && __REGISTRY_URL__
-    ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore - __REGISTRY_URL__ is injected at build time
-      __REGISTRY_URL__
-    : "https://proofkit.dev";
+  typeof __REGISTRY_URL__ !== "undefined" && __REGISTRY_URL__ ? __REGISTRY_URL__ : "https://proofkit.dev";

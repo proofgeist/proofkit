@@ -1,22 +1,23 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: library code */
 import { logger as betterAuthLogger } from "better-auth";
-import { err, ok, Result } from "neverthrow";
-import { z } from "zod/v4";
+import { err, ok, type Result } from "neverthrow";
+import type { z } from "zod/v4";
 
-type BasicAuthCredentials = {
+interface BasicAuthCredentials {
   username: string;
   password: string;
-};
-type OttoAPIKeyAuth = {
+}
+interface OttoAPIKeyAuth {
   apiKey: string;
-};
+}
 type ODataAuth = BasicAuthCredentials | OttoAPIKeyAuth;
 
-export type FmOdataConfig = {
+export interface FmOdataConfig {
   serverUrl: string;
   auth: ODataAuth;
   database: string;
   logging?: true | "verbose" | "none";
-};
+}
 
 export function validateUrl(input: string): Result<URL, unknown> {
   try {
@@ -36,7 +37,7 @@ export function createRawFetch(args: FmOdataConfig) {
 
   let baseURL = result.value.origin;
   if ("apiKey" in args.auth) {
-    baseURL += `/otto`;
+    baseURL += "/otto";
   }
   baseURL += `/fmi/odata/v4/${args.database}`;
 
@@ -63,9 +64,7 @@ export function createRawFetch(args: FmOdataConfig) {
       // Handle different input types
       if (typeof input === "string") {
         // If it's already a full URL, use as-is, otherwise prepend baseURL
-        url = input.startsWith("http")
-          ? input
-          : `${baseURL}${input.startsWith("/") ? input : `/${input}`}`;
+        url = input.startsWith("http") ? input : `${baseURL}${input.startsWith("/") ? input : `/${input}`}`;
       } else if (input instanceof URL) {
         url = input.toString();
       } else if (input instanceof Request) {
@@ -101,10 +100,7 @@ export function createRawFetch(args: FmOdataConfig) {
 
       // Optional logging
       if (args.logging === "verbose" || args.logging === true) {
-        betterAuthLogger.info(
-          "raw-fetch",
-          `${requestInit.method || "GET"} ${url}`,
-        );
+        betterAuthLogger.info("raw-fetch", `${requestInit.method || "GET"} ${url}`);
         if (requestInit.body) {
           betterAuthLogger.info("raw-fetch", "Request body:", requestInit.body);
         }
@@ -114,25 +110,15 @@ export function createRawFetch(args: FmOdataConfig) {
 
       // Optional logging for response details
       if (args.logging === "verbose" || args.logging === true) {
-        betterAuthLogger.info(
-          "raw-fetch",
-          `Response status: ${response.status} ${response.statusText}`,
-        );
-        betterAuthLogger.info(
-          "raw-fetch",
-          `Response headers:`,
-          Object.fromEntries(response.headers.entries()),
-        );
+        betterAuthLogger.info("raw-fetch", `Response status: ${response.status} ${response.statusText}`);
+        betterAuthLogger.info("raw-fetch", "Response headers:", Object.fromEntries(response.headers.entries()));
       }
 
       // Check if response is ok
       if (!response.ok) {
         const errorText = await response.text().catch(() => "Unknown error");
         if (args.logging === "verbose" || args.logging === true) {
-          betterAuthLogger.error(
-            "raw-fetch",
-            `HTTP Error ${response.status}: ${errorText}`,
-          );
+          betterAuthLogger.error("raw-fetch", `HTTP Error ${response.status}: ${errorText}`);
         }
         return {
           error: `HTTP ${response.status}: ${errorText}`,
@@ -145,51 +131,32 @@ export function createRawFetch(args: FmOdataConfig) {
       const contentType = response.headers.get("content-type");
 
       if (args.logging === "verbose" || args.logging === true) {
-        betterAuthLogger.info(
-          "raw-fetch",
-          `Response content-type: ${contentType || "none"}`,
-        );
+        betterAuthLogger.info("raw-fetch", `Response content-type: ${contentType || "none"}`);
       }
 
       if (contentType?.includes("application/json")) {
         try {
           const responseText = await response.text();
           if (args.logging === "verbose" || args.logging === true) {
-            betterAuthLogger.info(
-              "raw-fetch",
-              `Raw response text: "${responseText}"`,
-            );
-            betterAuthLogger.info(
-              "raw-fetch",
-              `Response text length: ${responseText.length}`,
-            );
+            betterAuthLogger.info("raw-fetch", `Raw response text: "${responseText}"`);
+            betterAuthLogger.info("raw-fetch", `Response text length: ${responseText.length}`);
           }
 
           // Handle empty responses
           if (responseText.trim() === "") {
             if (args.logging === "verbose" || args.logging === true) {
-              betterAuthLogger.info(
-                "raw-fetch",
-                "Empty JSON response, returning null",
-              );
+              betterAuthLogger.info("raw-fetch", "Empty JSON response, returning null");
             }
             responseData = null;
           } else {
             responseData = JSON.parse(responseText);
             if (args.logging === "verbose" || args.logging === true) {
-              betterAuthLogger.info(
-                "raw-fetch",
-                "Successfully parsed JSON response",
-              );
+              betterAuthLogger.info("raw-fetch", "Successfully parsed JSON response");
             }
           }
         } catch (parseError) {
           if (args.logging === "verbose" || args.logging === true) {
-            betterAuthLogger.error(
-              "raw-fetch",
-              "JSON parse error:",
-              parseError,
-            );
+            betterAuthLogger.error("raw-fetch", "JSON parse error:", parseError);
           }
           return {
             error: `Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : "Unknown parse error"}`,
@@ -200,29 +167,20 @@ export function createRawFetch(args: FmOdataConfig) {
         // Handle text responses (text/plain, text/html, etc.)
         responseData = await response.text();
         if (args.logging === "verbose" || args.logging === true) {
-          betterAuthLogger.info(
-            "raw-fetch",
-            `Text response: "${responseData}"`,
-          );
+          betterAuthLogger.info("raw-fetch", `Text response: "${responseData}"`);
         }
       } else {
         // For other content types, try to get text but don't fail if it's binary
         try {
           responseData = await response.text();
           if (args.logging === "verbose" || args.logging === true) {
-            betterAuthLogger.info(
-              "raw-fetch",
-              `Unknown content-type response as text: "${responseData}"`,
-            );
+            betterAuthLogger.info("raw-fetch", `Unknown content-type response as text: "${responseData}"`);
           }
         } catch {
           // If text parsing fails (e.g., binary data), return null
           responseData = null;
           if (args.logging === "verbose" || args.logging === true) {
-            betterAuthLogger.info(
-              "raw-fetch",
-              "Could not parse response as text, returning null",
-            );
+            betterAuthLogger.info("raw-fetch", "Could not parse response as text, returning null");
           }
         }
       }
@@ -235,12 +193,11 @@ export function createRawFetch(args: FmOdataConfig) {
             data: validation.data,
             response,
           };
-        } else {
-          return {
-            error: `Validation failed: ${validation.error.message}`,
-            response,
-          };
         }
+        return {
+          error: `Validation failed: ${validation.error.message}`,
+          response,
+        };
       }
 
       // Return unvalidated data
@@ -250,8 +207,7 @@ export function createRawFetch(args: FmOdataConfig) {
       };
     } catch (error) {
       return {
-        error:
-          error instanceof Error ? error.message : "Unknown error occurred",
+        error: error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
   };

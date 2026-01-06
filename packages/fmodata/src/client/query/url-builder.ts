@@ -1,7 +1,7 @@
 import type { FMTable } from "../../orm/table";
 import { getTableName } from "../../orm/table";
-import { resolveTableId } from "../builders/table-utils";
 import type { ExecutionContext } from "../../types";
+import { resolveTableId } from "../builders/table-utils";
 
 /**
  * Configuration for navigation from RecordBuilder or EntitySet
@@ -23,11 +23,17 @@ export interface NavigationConfig {
  * - Standard queries: /database/tableId
  */
 export class QueryUrlBuilder {
-  constructor(
-    private databaseName: string,
-    private occurrence: FMTable<any, any>,
-    private context: ExecutionContext,
-  ) {}
+  private readonly databaseName: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  private readonly occurrence: FMTable<any, any>;
+  private readonly context: ExecutionContext;
+
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  constructor(databaseName: string, occurrence: FMTable<any, any>, context: ExecutionContext) {
+    this.databaseName = databaseName;
+    this.occurrence = occurrence;
+    this.context = context;
+  }
 
   /**
    * Builds the full URL for a query request.
@@ -43,12 +49,7 @@ export class QueryUrlBuilder {
       navigation?: NavigationConfig;
     },
   ): string {
-    const tableId = resolveTableId(
-      this.occurrence,
-      getTableName(this.occurrence),
-      this.context,
-      options.useEntityIds,
-    );
+    const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), this.context, options.useEntityIds);
 
     const navigation = options.navigation;
     if (navigation?.recordId && navigation?.relation) {
@@ -67,11 +68,7 @@ export class QueryUrlBuilder {
    * Builds URL for record navigation: /database/sourceTable('recordId')/relation
    * or /database/sourceTable/baseRelation('recordId')/relation for chained navigations
    */
-  private buildRecordNavigation(
-    queryString: string,
-    tableId: string,
-    navigation: NavigationConfig,
-  ): string {
+  private buildRecordNavigation(queryString: string, _tableId: string, navigation: NavigationConfig): string {
     const { sourceTableName, baseRelation, recordId, relation } = navigation;
     const base = baseRelation
       ? `${sourceTableName}/${baseRelation}('${recordId}')`
@@ -83,11 +80,7 @@ export class QueryUrlBuilder {
    * Builds URL for entity set navigation: /database/sourceTable/relation
    * or /database/basePath/relation for chained navigations
    */
-  private buildEntitySetNavigation(
-    queryString: string,
-    tableId: string,
-    navigation: NavigationConfig,
-  ): string {
+  private buildEntitySetNavigation(queryString: string, _tableId: string, navigation: NavigationConfig): string {
     const { sourceTableName, basePath, relation } = navigation;
     const base = basePath || sourceTableName;
     return `/${this.databaseName}/${base}/${relation}${queryString}`;
@@ -97,34 +90,22 @@ export class QueryUrlBuilder {
    * Builds a query string path (without database prefix) for getQueryString().
    * Used when the full URL is not needed.
    */
-  buildPath(
-    queryString: string,
-    options?: { useEntityIds?: boolean; navigation?: NavigationConfig },
-  ): string {
+  buildPath(queryString: string, options?: { useEntityIds?: boolean; navigation?: NavigationConfig }): string {
     const useEntityIds = options?.useEntityIds;
     const navigation = options?.navigation;
-    const tableId = resolveTableId(
-      this.occurrence,
-      getTableName(this.occurrence),
-      this.context,
-      useEntityIds,
-    );
+    const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), this.context, useEntityIds);
 
     if (navigation?.recordId && navigation?.relation) {
       const { sourceTableName, baseRelation, recordId, relation } = navigation;
       const base = baseRelation
         ? `${sourceTableName}/${baseRelation}('${recordId}')`
         : `${sourceTableName}('${recordId}')`;
-      return queryString
-        ? `/${base}/${relation}${queryString}`
-        : `/${base}/${relation}`;
+      return queryString ? `/${base}/${relation}${queryString}` : `/${base}/${relation}`;
     }
     if (navigation?.relation) {
       const { sourceTableName, basePath, relation } = navigation;
       const base = basePath || sourceTableName;
-      return queryString
-        ? `/${base}/${relation}${queryString}`
-        : `/${base}/${relation}`;
+      return queryString ? `/${base}/${relation}${queryString}` : `/${base}/${relation}`;
     }
     return queryString ? `/${tableId}${queryString}` : `/${tableId}`;
   }
@@ -149,20 +130,11 @@ export class QueryUrlBuilder {
       navigateRelation?: string;
     },
   ): string {
-    const tableId = resolveTableId(
-      this.occurrence,
-      getTableName(this.occurrence),
-      this.context,
-      options?.useEntityIds,
-    );
+    const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), this.context, options?.useEntityIds);
 
     // Build the base URL depending on whether this came from a navigated EntitySet
     let url: string;
-    if (
-      options?.isNavigateFromEntitySet &&
-      options.navigateSourceTableName &&
-      options.navigateRelation
-    ) {
+    if (options?.isNavigateFromEntitySet && options.navigateSourceTableName && options.navigateRelation) {
       // From navigated EntitySet: /sourceTable/relation('recordId')
       url = `/${this.databaseName}/${options.navigateSourceTableName}/${options.navigateRelation}('${recordId}')`;
     } else {

@@ -1,26 +1,25 @@
-import path from "path";
+import path from "node:path";
 import { generateTypedClients } from "@proofkit/typegen";
-import { type typegenConfigSingle } from "@proofkit/typegen/config";
+import type { typegenConfigSingle } from "@proofkit/typegen/config";
 import { config as dotenvConfig } from "dotenv";
 import fs from "fs-extra";
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser";
-import { Project, SyntaxKind } from "ts-morph";
-import { type z } from "zod/v4";
+import { SyntaxKind } from "ts-morph";
+import type { z } from "zod/v4";
 
 import { state } from "~/state.js";
-import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
-import { getSettings, type envNamesSchema } from "~/utils/parseSettings.js";
+import { type envNamesSchema, getSettings } from "~/utils/parseSettings.js";
 import { getNewProject } from "~/utils/ts-morph.js";
 
 // Input schema for functions like addLayout
 // This might be different from the layout config stored in the file
-type Schema = {
+interface Schema {
   layoutName: string;
   schemaName: string;
   valueLists?: "strict" | "allowEmpty" | "ignore";
   generateClient?: boolean;
   strictNumbers?: boolean;
-};
+}
 
 // For a single data source configuration object
 type ImportedDataSourceConfig = z.infer<typeof typegenConfigSingle>;
@@ -28,15 +27,13 @@ type ImportedDataSourceConfig = z.infer<typeof typegenConfigSingle>;
 type ImportedLayoutConfig = ImportedDataSourceConfig["layouts"][number];
 
 // This type represents the actual structure of the JSONC file, including $schema
-type FullProofkitTypegenJsonFile = {
+interface FullProofkitTypegenJsonFile {
   $schema?: string;
   config: ImportedDataSourceConfig | ImportedDataSourceConfig[];
-};
+}
 
 // Helper functions for JSON config
-async function readJsonConfigFile(
-  configPath: string
-): Promise<FullProofkitTypegenJsonFile | null> {
+async function readJsonConfigFile(configPath: string): Promise<FullProofkitTypegenJsonFile | null> {
   if (!fs.existsSync(configPath)) {
     return null;
   }
@@ -45,10 +42,7 @@ async function readJsonConfigFile(
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
     return parsed;
   } catch (error) {
-    console.error(
-      `Error reading or parsing JSONC config at ${configPath}:`,
-      error
-    );
+    console.error(`Error reading or parsing JSONC config at ${configPath}:`, error);
     // Return a default structure for the *file* if parsing fails but file exists
     return {
       $schema: "https://proofkit.dev/typegen-config-schema.json",
@@ -57,10 +51,7 @@ async function readJsonConfigFile(
   }
 }
 
-async function writeJsonConfigFile(
-  configPath: string,
-  fileContent: FullProofkitTypegenJsonFile
-) {
+async function writeJsonConfigFile(configPath: string, fileContent: FullProofkitTypegenJsonFile) {
   // Check if file exists to preserve comments
   if (fs.existsSync(configPath)) {
     const originalText = await fs.readFile(configPath, "utf8");
@@ -102,7 +93,7 @@ export async function addLayout({
   }
 
   // Work with the 'config' property which is TypegenConfig['config']
-  let configProperty = fileContent.config;
+  const configProperty = fileContent.config;
 
   let configArray: ImportedDataSourceConfig[];
   if (Array.isArray(configProperty)) {
@@ -121,21 +112,18 @@ export async function addLayout({
   }));
 
   let targetDataSource: ImportedDataSourceConfig | undefined = configArray.find(
-    (ds) =>
-      ds.path?.endsWith(dataSourceName) ||
-      ds.path?.endsWith(dataSourceName + "/") ||
-      ds.path === dataSourceName
+    (ds) => ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName,
   );
 
-  if (!targetDataSource) {
+  if (targetDataSource) {
+    targetDataSource.layouts = targetDataSource.layouts || [];
+  } else {
     targetDataSource = {
       layouts: [],
       path: `./src/config/schemas/${dataSourceName}`,
       // other default properties for a new DataSourceConfig can be added here if needed
     };
     configArray.push(targetDataSource);
-  } else {
-    targetDataSource.layouts = targetDataSource.layouts || [];
   }
 
   targetDataSource.layouts.push(...layoutsToAdd);
@@ -162,17 +150,17 @@ export async function addConfig({
 
   const configsToAdd = Array.isArray(config) ? config : [config];
 
-  if (!fileContent) {
-    fileContent = {
-      $schema: "https://proofkit.dev/typegen-config-schema.json",
-      config: configsToAdd,
-    };
-  } else {
+  if (fileContent) {
     if (Array.isArray(fileContent.config)) {
       fileContent.config.push(...configsToAdd);
     } else {
       fileContent.config = [fileContent.config, ...configsToAdd];
     }
+  } else {
+    fileContent = {
+      $schema: "https://proofkit.dev/typegen-config-schema.json",
+      config: configsToAdd,
+    };
   }
 
   await writeJsonConfigFile(jsonConfigPath, fileContent);
@@ -190,14 +178,10 @@ export async function runCodegenCommand() {
     return;
   }
 
-  const hasFileMakerDataSources = settings.dataSources.some(
-    (ds) => ds.type === "fm"
-  );
+  const hasFileMakerDataSources = settings.dataSources.some((ds) => ds.type === "fm");
 
   if (hasFileMakerDataSources) {
-    const config = await readJsonConfigFile(
-      path.join(projectDir, "proofkit-typegen.config.jsonc")
-    );
+    const config = await readJsonConfigFile(path.join(projectDir, "proofkit-typegen.config.jsonc"));
     if (!config) {
       throw new Error("proofkit-typegen.config.jsonc not found");
     }
@@ -223,24 +207,15 @@ export function getClientSuffix({
     const fileContent = fs.readFileSync(jsonConfigPath, "utf8");
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
 
-    let targetDataSource: ImportedDataSourceConfig | undefined;
+    const configToSearch = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
 
-    const configToSearch = Array.isArray(parsed.config)
-      ? parsed.config
-      : [parsed.config];
-
-    targetDataSource = configToSearch.find(
+    const targetDataSource = configToSearch.find(
       (ds) =>
-        ds.path?.endsWith(dataSourceName) ||
-        ds.path?.endsWith(dataSourceName + "/") ||
-        ds.path === dataSourceName
+        ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName,
     );
     return targetDataSource?.clientSuffix ?? "Client";
   } catch (error) {
-    console.error(
-      `Error reading or parsing JSONC config for getClientSuffix: ${jsonConfigPath}`,
-      error
-    );
+    console.error(`Error reading or parsing JSONC config for getClientSuffix: ${jsonConfigPath}`, error);
     return "Client";
   }
 }
@@ -261,15 +236,11 @@ export function getExistingSchemas({
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
     let targetDataSource: ImportedDataSourceConfig | undefined;
 
-    const configToSearch = Array.isArray(parsed.config)
-      ? parsed.config
-      : [parsed.config];
+    const configToSearch = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
 
     targetDataSource = configToSearch.find(
       (ds) =>
-        ds.path?.endsWith(dataSourceName) ||
-        ds.path?.endsWith(dataSourceName + "/") ||
-        ds.path === dataSourceName
+        ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName,
     );
 
     if (targetDataSource?.layouts) {
@@ -280,10 +251,7 @@ export function getExistingSchemas({
     }
     return [];
   } catch (error) {
-    console.error(
-      `Error reading or parsing JSONC config for getExistingSchemas: ${jsonConfigPath}`,
-      error
-    );
+    console.error(`Error reading or parsing JSONC config for getExistingSchemas: ${jsonConfigPath}`, error);
     return [];
   }
 }
@@ -317,12 +285,7 @@ export async function addToFmschemaConfig({
     newDataSource.webviewerScriptName = "ExecuteDataApi";
   }
 
-  if (!fileContent) {
-    fileContent = {
-      $schema: "https://proofkit.dev/typegen-config-schema.json",
-      config: [newDataSource],
-    };
-  } else {
+  if (fileContent) {
     let configArray: ImportedDataSourceConfig[];
     if (Array.isArray(fileContent.config)) {
       configArray = fileContent.config;
@@ -331,43 +294,31 @@ export async function addToFmschemaConfig({
       fileContent.config = configArray;
     }
 
-    const existingDsIndex = configArray.findIndex(
-      (ds) => ds.path === newDataSource.path
-    );
+    const existingDsIndex = configArray.findIndex((ds) => ds.path === newDataSource.path);
     if (existingDsIndex === -1) {
       configArray.push(newDataSource);
     } else {
       configArray[existingDsIndex] = {
         ...configArray[existingDsIndex],
         ...newDataSource,
-        layouts:
-          newDataSource.layouts.length > 0
-            ? newDataSource.layouts
-            : configArray[existingDsIndex]?.layouts || [],
+        layouts: newDataSource.layouts.length > 0 ? newDataSource.layouts : configArray[existingDsIndex]?.layouts || [],
       };
     }
+  } else {
+    fileContent = {
+      $schema: "https://proofkit.dev/typegen-config-schema.json",
+      config: [newDataSource],
+    };
   }
   await writeJsonConfigFile(jsonConfigPath, fileContent);
 }
 
-export function getFieldNamesForSchema({
-  schemaName,
-  dataSourceName,
-}: {
-  schemaName: string;
-  dataSourceName: string;
-}) {
+export function getFieldNamesForSchema({ schemaName, dataSourceName }: { schemaName: string; dataSourceName: string }) {
   const projectDir = state.projectDir;
   const project = getNewProject(projectDir);
-  const sourceFilePath = path.join(
-    projectDir,
-    `src/config/schemas/${dataSourceName}/generated/${schemaName}.ts`
-  );
+  const sourceFilePath = path.join(projectDir, `src/config/schemas/${dataSourceName}/generated/${schemaName}.ts`);
 
-  const sourceFilePathAlternative = path.join(
-    projectDir,
-    `src/config/schemas/${dataSourceName}/${schemaName}.ts`
-  );
+  const sourceFilePathAlternative = path.join(projectDir, `src/config/schemas/${dataSourceName}/${schemaName}.ts`);
 
   let fileToUse = sourceFilePath;
   if (!fs.existsSync(sourceFilePath)) {
@@ -386,35 +337,21 @@ export function getFieldNamesForSchema({
       ?.getFirstDescendantByKind(SyntaxKind.ObjectLiteralExpression)
       ?.getProperties();
     return (
-      properties
-        ?.map((pr) =>
-          pr.asKind(SyntaxKind.PropertyAssignment)?.getName()?.replace(/"/g, "")
-        )
-        .filter(Boolean) ?? []
-    );
-  } else {
-    const typeAlias = sourceFile.getTypeAlias(`T${schemaName}`);
-    const properties = typeAlias
-      ?.getFirstDescendantByKind(SyntaxKind.TypeLiteral)
-      ?.getProperties();
-    return (
-      properties
-        ?.map((pr) =>
-          pr.asKind(SyntaxKind.PropertySignature)?.getName()?.replace(/"/g, "")
-        )
-        .filter(Boolean) ?? []
+      properties?.map((pr) => pr.asKind(SyntaxKind.PropertyAssignment)?.getName()?.replace(/"/g, "")).filter(Boolean) ??
+      []
     );
   }
+  const typeAlias = sourceFile.getTypeAlias(`T${schemaName}`);
+  const properties = typeAlias?.getFirstDescendantByKind(SyntaxKind.TypeLiteral)?.getProperties();
+  return (
+    properties?.map((pr) => pr.asKind(SyntaxKind.PropertySignature)?.getName()?.replace(/"/g, "")).filter(Boolean) ?? []
+  );
 }
 
-export async function removeFromFmschemaConfig({
-  dataSourceName,
-}: {
-  dataSourceName: string;
-}) {
+export async function removeFromFmschemaConfig({ dataSourceName }: { dataSourceName: string }) {
   const projectDir = state.projectDir;
   const jsonConfigPath = path.join(projectDir, "proofkit-typegen.config.jsonc");
-  let fileContent = await readJsonConfigFile(jsonConfigPath);
+  const fileContent = await readJsonConfigFile(jsonConfigPath);
 
   if (!fileContent) {
     return;
@@ -423,9 +360,7 @@ export async function removeFromFmschemaConfig({
   const pathToRemove = `./src/config/schemas/${dataSourceName}`;
 
   if (Array.isArray(fileContent.config)) {
-    fileContent.config = fileContent.config.filter(
-      (ds) => ds.path !== pathToRemove
-    );
+    fileContent.config = fileContent.config.filter((ds) => ds.path !== pathToRemove);
   } else {
     const currentConfig = fileContent.config as ImportedDataSourceConfig;
     if (currentConfig.path === pathToRemove) {
@@ -447,12 +382,10 @@ export async function removeLayout({
   runCodegen?: boolean;
 }) {
   const jsonConfigPath = path.join(projectDir, "proofkit-typegen.config.jsonc");
-  let fileContent = await readJsonConfigFile(jsonConfigPath);
+  const fileContent = await readJsonConfigFile(jsonConfigPath);
 
   if (!fileContent) {
-    throw new Error(
-      "proofkit-typegen.config.jsonc not found, cannot remove layout."
-    );
+    throw new Error("proofkit-typegen.config.jsonc not found, cannot remove layout.");
   }
 
   let dataSourceModified = false;
@@ -470,9 +403,7 @@ export async function removeLayout({
 
   if (targetDataSource?.layouts) {
     const initialCount = targetDataSource.layouts.length;
-    targetDataSource.layouts = targetDataSource.layouts.filter(
-      (layout) => layout.schemaName !== schemaName
-    );
+    targetDataSource.layouts = targetDataSource.layouts.filter((layout) => layout.schemaName !== schemaName);
     if (targetDataSource.layouts.length < initialCount) {
       dataSourceModified = true;
     }
@@ -482,14 +413,7 @@ export async function removeLayout({
     await writeJsonConfigFile(jsonConfigPath, fileContent);
   }
 
-  const schemaFilePath = path.join(
-    projectDir,
-    "src",
-    "config",
-    "schemas",
-    dataSourceName,
-    `${schemaName}.ts`
-  );
+  const schemaFilePath = path.join(projectDir, "src", "config", "schemas", dataSourceName, `${schemaName}.ts`);
   if (fs.existsSync(schemaFilePath)) {
     fs.removeSync(schemaFilePath);
   }

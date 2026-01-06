@@ -1,12 +1,12 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { ExecutionContext, ExecutableBuilder, Metadata } from "../types";
-import { EntitySet } from "./entity-set";
-import { BatchBuilder } from "./batch-builder";
-import { SchemaManager } from "./schema-manager";
 import { FMTable } from "../orm/table";
+import type { ExecutableBuilder, ExecutionContext, Metadata } from "../types";
+import { BatchBuilder } from "./batch-builder";
+import { EntitySet } from "./entity-set";
+import { SchemaManager } from "./schema-manager";
 import { WebhookManager } from "./webhook-builder";
 
-type MetadataArgs = {
+interface MetadataArgs {
   format?: "xml" | "json";
   /**
    * If provided, only the metadata for the specified table will be returned.
@@ -17,17 +17,19 @@ type MetadataArgs = {
    * If true, a reduced payload size will be returned by omitting certain annotations.
    */
   reduceAnnotations?: boolean;
-};
+}
 
 export class Database<IncludeSpecialColumns extends boolean = false> {
-  private _useEntityIds: boolean = false;
-  private _includeSpecialColumns: IncludeSpecialColumns;
-  public readonly schema: SchemaManager;
-  public readonly webhook: WebhookManager;
+  readonly schema: SchemaManager;
+  readonly webhook: WebhookManager;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private _useEntityIds: boolean;
+  private readonly _includeSpecialColumns: IncludeSpecialColumns;
 
   constructor(
-    private readonly databaseName: string,
-    private readonly context: ExecutionContext,
+    databaseName: string,
+    context: ExecutionContext,
     config?: {
       /**
        * Whether to use entity IDs instead of field names in the actual requests to the server
@@ -42,22 +44,35 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
       includeSpecialColumns?: IncludeSpecialColumns;
     },
   ) {
+    this.databaseName = databaseName;
+    this.context = context;
     // Initialize schema manager
     this.schema = new SchemaManager(this.databaseName, this.context);
     this.webhook = new WebhookManager(this.databaseName, this.context);
     this._useEntityIds = config?.useEntityIds ?? false;
-    this._includeSpecialColumns = (config?.includeSpecialColumns ??
-      false) as IncludeSpecialColumns;
+    this._includeSpecialColumns = (config?.includeSpecialColumns ?? false) as IncludeSpecialColumns;
   }
 
-  from<T extends FMTable<any, any>>(
-    table: T,
-  ): EntitySet<T, IncludeSpecialColumns> {
+  /**
+   * @internal Used by EntitySet to access database configuration
+   */
+  get _getUseEntityIds(): boolean {
+    return this._useEntityIds;
+  }
+
+  /**
+   * @internal Used by EntitySet to access database configuration
+   */
+  get _getIncludeSpecialColumns(): IncludeSpecialColumns {
+    return this._includeSpecialColumns;
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  from<T extends FMTable<any, any>>(table: T): EntitySet<T, IncludeSpecialColumns> {
     // Only override database-level useEntityIds if table explicitly sets it
     // (not if it's undefined, which would override the database setting)
-    if (
-      Object.prototype.hasOwnProperty.call(table, FMTable.Symbol.UseEntityIds)
-    ) {
+    if (Object.hasOwn(table, FMTable.Symbol.UseEntityIds)) {
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for Symbol property access
       const tableUseEntityIds = (table as any)[FMTable.Symbol.UseEntityIds];
       if (typeof tableUseEntityIds === "boolean") {
         this._useEntityIds = tableUseEntityIds;
@@ -80,9 +95,7 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
    * @returns The metadata in the specified format
    */
   async getMetadata(args: { format: "xml" } & MetadataArgs): Promise<string>;
-  async getMetadata(
-    args?: { format?: "json" } & MetadataArgs,
-  ): Promise<Metadata>;
+  async getMetadata(args?: { format?: "json" } & MetadataArgs): Promise<Metadata>;
   async getMetadata(args?: MetadataArgs): Promise<string | Metadata> {
     // Build the URL - if tableName is provided, append %23{tableName} to the path
     let url = `/${this.databaseName}/$metadata`;
@@ -97,12 +110,10 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
 
     // Add Prefer header if reduceAnnotations is true
     if (args?.reduceAnnotations) {
-      headers["Prefer"] = 'include-annotations="-*"';
+      headers.Prefer = 'include-annotations="-*"';
     }
 
-    const result = await this.context._makeRequest<
-      Record<string, Metadata> | string
-    >(url, {
+    const result = await this.context._makeRequest<Record<string, Metadata> | string>(url, {
       headers,
     });
     if (result.error) {
@@ -113,9 +124,7 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
       const data = result.data as Record<string, Metadata>;
       const metadata = data[this.databaseName];
       if (!metadata) {
-        throw new Error(
-          `Metadata for database "${this.databaseName}" not found in response`,
-        );
+        throw new Error(`Metadata for database "${this.databaseName}" not found in response`);
       }
       return metadata;
     }
@@ -145,9 +154,11 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
    * @param options - Optional script parameter and result schema
    * @returns Promise resolving to script execution result
    */
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   async runScript<ResultSchema extends StandardSchemaV1<string, any> = never>(
     scriptName: string,
     options?: {
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
       scriptParam?: string | number | Record<string, any>;
       resultSchema?: ResultSchema;
     },
@@ -181,30 +192,25 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
 
     // If resultSchema is provided, validate the result through it
     if (options?.resultSchema && response.scriptResult !== undefined) {
-      const validationResult = options.resultSchema["~standard"].validate(
-        response.scriptResult.resultParameter,
-      );
+      const validationResult = options.resultSchema["~standard"].validate(response.scriptResult.resultParameter);
       // Handle both sync and async validation
-      const result =
-        validationResult instanceof Promise
-          ? await validationResult
-          : validationResult;
+      const result = validationResult instanceof Promise ? await validationResult : validationResult;
 
       if (result.issues) {
-        throw new Error(
-          `Script result validation failed: ${JSON.stringify(result.issues)}`,
-        );
+        throw new Error(`Script result validation failed: ${JSON.stringify(result.issues)}`);
       }
 
       return {
         resultCode: response.scriptResult.code,
         result: result.value,
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
       } as any;
     }
 
     return {
       resultCode: response.scriptResult.code,
       result: response.scriptResult.resultParameter,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
     } as any;
   }
 
@@ -227,9 +233,8 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
    * }
    * ```
    */
-  batch<const Builders extends readonly ExecutableBuilder<any>[]>(
-    builders: Builders,
-  ): BatchBuilder<Builders> {
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any ExecutableBuilder result type
+  batch<const Builders extends readonly ExecutableBuilder<any>[]>(builders: Builders): BatchBuilder<Builders> {
     return new BatchBuilder(builders, this.databaseName, this.context);
   }
 }

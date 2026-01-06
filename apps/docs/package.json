@@ -1,13 +1,16 @@
 {
   "name": "@proofkit/docs",
   "version": "0.0.2",
+  "type": "module",
   "private": true,
   "scripts": {
     "build": "pnpm --filter @proofkit/typegen build && node scripts/bundle-registry-templates.js && next build",
     "dev": "next dev -p 3005",
     "start": "next start -p 3005",
     "postinstall": "fumadocs-mdx",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "biome check . --write",
+    "lint:summary": "biome check . --reporter=summary"
   },
   "dependencies": {
     "@base-ui-components/react": "1.0.0-rc.0",
@@ -51,7 +54,6 @@
     "@types/node": "^22.17.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "eslint-plugin-prettier": "^5.5.4",
     "happy-dom": "^15.11.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",

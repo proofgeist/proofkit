@@ -1,32 +1,22 @@
-import type {
-  ExecutionContext,
-  ExecutableBuilder,
-  Result,
-  WithSpecialColumns,
-  ExecuteOptions,
-  ExecuteMethodOptions,
-} from "../types";
+import type { FFetchOptions } from "@fetchkit/ffetch";
+import type { FMTable } from "../orm/table";
+import { getTableId as getTableIdHelper, getTableName, isUsingEntityIds } from "../orm/table";
+import type { ExecutableBuilder, ExecuteMethodOptions, ExecuteOptions, ExecutionContext, Result } from "../types";
 import { getAcceptHeader } from "../types";
-import type { FMTable, InferSchemaOutputFromFMTable } from "../orm/table";
-import {
-  getTableName,
-  getTableId as getTableIdHelper,
-  isUsingEntityIds,
-} from "../orm/table";
-import { QueryBuilder } from "./query-builder";
-import { type FFetchOptions } from "@fetchkit/ffetch";
 import { parseErrorResponse } from "./error-parser";
+import { QueryBuilder } from "./query-builder";
 
 /**
  * Initial delete builder returned from EntitySet.delete()
  * Requires calling .byId() or .where() before .execute() is available
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export class DeleteBuilder<Occ extends FMTable<any, any>> {
-  private databaseName: string;
-  private context: ExecutionContext;
-  private table: Occ;
-  private databaseUseEntityIds: boolean;
-  private databaseIncludeSpecialColumns: boolean;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly table: Occ;
+  private readonly databaseUseEntityIds: boolean;
+  private readonly databaseIncludeSpecialColumns: boolean;
 
   constructor(config: {
     occurrence: Occ;
@@ -39,8 +29,7 @@ export class DeleteBuilder<Occ extends FMTable<any, any>> {
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns =
-      config.databaseIncludeSpecialColumns ?? false;
+    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
   }
 
   /**
@@ -61,9 +50,7 @@ export class DeleteBuilder<Occ extends FMTable<any, any>> {
    * Delete records matching a filter query
    * @param fn Callback that receives a QueryBuilder for building the filter
    */
-  where(
-    fn: (q: QueryBuilder<Occ>) => QueryBuilder<Occ>,
-  ): ExecutableDeleteBuilder<Occ> {
+  where(fn: (q: QueryBuilder<Occ>) => QueryBuilder<Occ>): ExecutableDeleteBuilder<Occ> {
     // Create a QueryBuilder for the user to configure
     const queryBuilder = new QueryBuilder<Occ>({
       occurrence: this.table,
@@ -89,16 +76,17 @@ export class DeleteBuilder<Occ extends FMTable<any, any>> {
  * Executable delete builder - has execute() method
  * Returned after calling .byId() or .where()
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
   implements ExecutableBuilder<{ deletedCount: number }>
 {
-  private databaseName: string;
-  private context: ExecutionContext;
-  private table: Occ;
-  private mode: "byId" | "byFilter";
-  private recordId?: string | number;
-  private queryBuilder?: QueryBuilder<Occ>;
-  private databaseUseEntityIds: boolean;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly table: Occ;
+  private readonly mode: "byId" | "byFilter";
+  private readonly recordId?: string | number;
+  private readonly queryBuilder?: QueryBuilder<Occ>;
+  private readonly databaseUseEntityIds: boolean;
 
   constructor(config: {
     occurrence: Occ;
@@ -151,9 +139,7 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
     return getTableName(this.table);
   }
 
-  async execute(
-    options?: ExecuteMethodOptions<ExecuteOptions>,
-  ): Promise<Result<{ deletedCount: number }>> {
+  async execute(options?: ExecuteMethodOptions<ExecuteOptions>): Promise<Result<{ deletedCount: number }>> {
     // Merge database-level useEntityIds with per-request options
     const mergedOptions = this.mergeExecuteOptions(options);
 
@@ -175,11 +161,14 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
       const queryString = this.queryBuilder.getQueryString();
       // Remove the leading "/" and table name from the query string as we'll build our own URL
       const tableName = getTableName(this.table);
-      const queryParams = queryString.startsWith(`/${tableId}`)
-        ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${tableName}`)
-          ? queryString.slice(`/${tableName}`.length)
-          : queryString;
+      let queryParams: string;
+      if (queryString.startsWith(`/${tableId}`)) {
+        queryParams = queryString.slice(`/${tableId}`.length);
+      } else if (queryString.startsWith(`/${tableName}`)) {
+        queryParams = queryString.slice(`/${tableName}`.length);
+      } else {
+        queryParams = queryString;
+      }
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
     }
@@ -205,12 +194,14 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
       deletedCount = response;
     } else if (response && typeof response === "object") {
       // Check if the response has a count property (fallback)
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
       deletedCount = (response as any).deletedCount || 0;
     }
 
     return { data: { deletedCount }, error: undefined };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
     // For batch operations, use database-level setting (no per-request override available here)
     const tableId = this.getTableId(this.databaseUseEntityIds);
@@ -226,11 +217,14 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
 
       const queryString = this.queryBuilder.getQueryString();
       const tableName = getTableName(this.table);
-      const queryParams = queryString.startsWith(`/${tableId}`)
-        ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${tableName}`)
-          ? queryString.slice(`/${tableName}`.length)
-          : queryString;
+      let queryParams: string;
+      if (queryString.startsWith(`/${tableId}`)) {
+        queryParams = queryString.slice(`/${tableId}`.length);
+      } else if (queryString.startsWith(`/${tableName}`)) {
+        queryParams = queryString.slice(`/${tableName}`.length);
+      } else {
+        queryParams = queryString;
+      }
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
     }
@@ -253,17 +247,11 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
     });
   }
 
-  async processResponse(
-    response: Response,
-    options?: ExecuteOptions,
-  ): Promise<Result<{ deletedCount: number }>> {
+  async processResponse(response: Response, _options?: ExecuteOptions): Promise<Result<{ deletedCount: number }>> {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const tableName = getTableName(this.table);
-      const error = await parseErrorResponse(
-        response,
-        response.url || `/${this.databaseName}/${tableName}`,
-      );
+      const error = await parseErrorResponse(response, response.url || `/${this.databaseName}/${tableName}`);
       return { data: undefined, error };
     }
 
@@ -272,7 +260,7 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
     if (!text || text.trim() === "") {
       // For 204 No Content, check the fmodata.affected_rows header
       const affectedRows = response.headers.get("fmodata.affected_rows");
-      const deletedCount = affectedRows ? parseInt(affectedRows, 10) : 1;
+      const deletedCount = affectedRows ? Number.parseInt(affectedRows, 10) : 1;
       return { data: { deletedCount }, error: undefined };
     }
 
@@ -287,6 +275,7 @@ export class ExecutableDeleteBuilder<Occ extends FMTable<any, any>>
       deletedCount = rawResponse;
     } else if (rawResponse && typeof rawResponse === "object") {
       // Check if the response has a count property (fallback)
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
       deletedCount = (rawResponse as any).deletedCount || 0;
     }
 

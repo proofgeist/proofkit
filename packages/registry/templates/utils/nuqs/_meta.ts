@@ -1,4 +1,4 @@
-import { TemplateMetadata } from "@/lib/types";
+import type { TemplateMetadata } from "@/lib/types";
 
 export const meta: TemplateMetadata = {
   title: "Nuqs",

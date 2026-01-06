@@ -1,9 +1,9 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
 
 import { PKG_ROOT } from "~/consts.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
-import { type AvailableDependencies } from "~/installers/dependencyVersionMap.js";
+import type { AvailableDependencies } from "~/installers/dependencyVersionMap.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 
@@ -17,10 +17,7 @@ const BASE_DEPS = [
   "tailwindcss",
   "tw-animate-css",
 ] as AvailableDependencies[];
-const BASE_DEV_DEPS = [
-  "prettier",
-  "prettier-plugin-tailwindcss",
-] as AvailableDependencies[];
+const BASE_DEV_DEPS = [] as AvailableDependencies[];
 
 export async function addShadcn() {
   const projectDir = state.projectDir;
@@ -40,25 +37,12 @@ export async function addShadcn() {
   });
 
   // 2. Copy config and utility files
-  fs.copySync(
-    path.join(TEMPLATE_ROOT, "components.json"),
-    path.join(projectDir, "components.json")
-  );
-  fs.copySync(
-    path.join(TEMPLATE_ROOT, ".prettierrc"),
-    path.join(projectDir, ".prettierrc")
-  );
-  fs.copySync(
-    path.join(TEMPLATE_ROOT, "postcss.config.cjs"),
-    path.join(projectDir, "postcss.config.cjs")
-  );
-  fs.copySync(
-    path.join(TEMPLATE_ROOT, "src/utils/styles.ts"),
-    path.join(projectDir, "src/utils/styles.ts")
-  );
+  fs.copySync(path.join(TEMPLATE_ROOT, "components.json"), path.join(projectDir, "components.json"));
+  fs.copySync(path.join(TEMPLATE_ROOT, "postcss.config.cjs"), path.join(projectDir, "postcss.config.cjs"));
+  fs.copySync(path.join(TEMPLATE_ROOT, "src/utils/styles.ts"), path.join(projectDir, "src/utils/styles.ts"));
   fs.copySync(
     path.join(TEMPLATE_ROOT, "src/config/theme/globals.css"),
-    path.join(projectDir, "src/config/theme/globals.css")
+    path.join(projectDir, "src/config/theme/globals.css"),
   );
 
   // 3. Install dependencies

@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome check",
+    "format": "biome format --write",
     "proofkit": "proofkit",
     "typegen": "proofkit typegen",
     "deploy": "proofkit deploy"
@@ -34,9 +35,9 @@
     "@types/node": "^20",
     "@types/react": "npm:types-react@19.0.12",
     "@types/react-dom": "npm:types-react-dom@19.0.4",
-    "eslint": "^9.14.0",
-    "eslint-config-next": "15.2.6",
+    "@biomejs/biome": "2.3.11",
     "postcss": "^8.4.41",
+    "ultracite": "7.0.8",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5"

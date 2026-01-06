@@ -5,12 +5,12 @@ export const jsonCodec = <T extends z.core.$ZodType>(schema: T) =>
     decode: (jsonString, ctx) => {
       try {
         return JSON.parse(jsonString);
-      } catch (err: any) {
+      } catch (err: unknown) {
         ctx.issues.push({
           code: "invalid_format",
           format: "json",
           input: jsonString,
-          message: err.message,
+          message: err instanceof Error ? err.message : String(err),
         });
         return z.NEVER;
       }

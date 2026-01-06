@@ -1,6 +1,6 @@
-import { postInstallTableInfinite } from "./post-install/table-infinite.js";
 import { postInstallTable } from "./post-install/table.js";
-import { type TPostInstallFn } from "./types.js";
+import { postInstallTableInfinite } from "./post-install/table-infinite.js";
+import type { TPostInstallFn } from "./types.js";
 
 export interface Template {
   requireData: boolean;

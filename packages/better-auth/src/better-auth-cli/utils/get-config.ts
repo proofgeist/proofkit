@@ -1,24 +1,16 @@
-import { loadConfig } from "c12";
-import type { BetterAuthOptions } from "better-auth";
-import { logger } from "better-auth";
-import path from "path";
-// @ts-expect-error not typed
-import babelPresetTypeScript from "@babel/preset-typescript";
+import fs, { existsSync } from "node:fs";
+import path from "node:path";
 // @ts-expect-error not typed
 import babelPresetReact from "@babel/preset-react";
-import fs, { existsSync } from "fs";
-import { BetterAuthError } from "better-auth";
+// @ts-expect-error not typed
+import babelPresetTypeScript from "@babel/preset-typescript";
+import type { BetterAuthOptions } from "better-auth";
+import { BetterAuthError, logger } from "better-auth";
+import { loadConfig } from "c12";
 import { addSvelteKitEnvModules } from "./add-svelte-kit-env-modules";
 import { getTsconfigInfo } from "./get-tsconfig-info";
 
-let possiblePaths = [
-  "auth.ts",
-  "auth.tsx",
-  "auth.js",
-  "auth.jsx",
-  "auth.server.js",
-  "auth.server.ts",
-];
+let possiblePaths = ["auth.ts", "auth.tsx", "auth.js", "auth.jsx", "auth.server.js", "auth.server.ts"];
 
 possiblePaths = [
   ...possiblePaths,
@@ -47,10 +39,7 @@ function getPathAliases(cwd: string): Record<string, string> | null {
       for (const aliasedPath of aliasPaths) {
         const resolvedBaseUrl = path.join(cwd, baseUrl);
         const finalAlias = alias.slice(-1) === "*" ? alias.slice(0, -1) : alias;
-        const finalAliasedPath =
-          aliasedPath.slice(-1) === "*"
-            ? aliasedPath.slice(0, -1)
-            : aliasedPath;
+        const finalAliasedPath = aliasedPath.slice(-1) === "*" ? aliasedPath.slice(0, -1) : aliasedPath;
 
         result[finalAlias || ""] = path.join(resolvedBaseUrl, finalAliasedPath);
       }
@@ -99,7 +88,9 @@ export async function getConfig({
     let configFile: BetterAuthOptions | null = null;
     if (configPath) {
       let resolvedPath: string = path.join(cwd, configPath);
-      if (existsSync(configPath)) resolvedPath = configPath; // If the configPath is a file, use it as is, as it means the path wasn't relative.
+      if (existsSync(configPath)) {
+        resolvedPath = configPath; // If the configPath is a file, use it as is, as it means the path wasn't relative.
+      }
       const { config } = await loadConfig<{
         auth: {
           options: BetterAuthOptions;
@@ -112,7 +103,7 @@ export async function getConfig({
         dotenv: true,
         jitiOptions: jitiOptions(cwd),
       });
-      if (!config.auth && !config.default) {
+      if (!(config.auth || config.default)) {
         if (shouldThrowOnError) {
           throw new Error(
             `Couldn't read your auth config in ${resolvedPath}. Make sure to default export your auth instance or to export as a variable named auth.`,
@@ -142,8 +133,7 @@ export async function getConfig({
           });
           const hasConfig = Object.keys(config).length > 0;
           if (hasConfig) {
-            configFile =
-              config.auth?.options || config.default?.options || null;
+            configFile = config.auth?.options || config.default?.options || null;
             if (!configFile) {
               if (shouldThrowOnError) {
                 throw new Error(
@@ -165,9 +155,7 @@ export async function getConfig({
             e &&
             "message" in e &&
             typeof e.message === "string" &&
-            e.message.includes(
-              "This module cannot be imported from a Client Component module",
-            )
+            e.message.includes("This module cannot be imported from a Client Component module")
           ) {
             if (shouldThrowOnError) {
               throw new Error(
@@ -194,9 +182,7 @@ export async function getConfig({
       e &&
       "message" in e &&
       typeof e.message === "string" &&
-      e.message.includes(
-        "This module cannot be imported from a Client Component module",
-      )
+      e.message.includes("This module cannot be imported from a Client Component module")
     ) {
       if (shouldThrowOnError) {
         throw new Error(

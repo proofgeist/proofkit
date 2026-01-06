@@ -1,13 +1,7 @@
 import type { FMTable } from "./orm/table";
-import {
-  getBaseTableConfig,
-  getFieldId,
-  getFieldName,
-  getTableId,
-  getTableName,
-  isUsingEntityIds,
-} from "./orm/table";
-import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { getBaseTableConfig, getFieldId, getFieldName, getTableId, getTableName, isUsingEntityIds } from "./orm/table";
+
+const WHITESPACE_SPLIT_REGEX = /\s+/;
 
 /**
  * Transforms field names to FileMaker field IDs (FMFID) in an object
@@ -15,15 +9,19 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
  * @param table - FMTable instance to get field IDs from
  * @returns Object with FMFID keys instead of field names
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export function transformFieldNamesToIds<T extends Record<string, any>>(
   data: T,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table: FMTable<any, any>,
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
 ): Record<string, any> {
   const config = getBaseTableConfig(table);
   if (!config.fmfIds) {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
   const transformed: Record<string, any> = {};
   for (const [fieldName, value] of Object.entries(data)) {
     const fieldId = getFieldId(table, fieldName);
@@ -38,15 +36,19 @@ export function transformFieldNamesToIds<T extends Record<string, any>>(
  * @param table - FMTable instance to get field names from
  * @returns Object with field names as keys instead of FMFIDs
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export function transformFieldIdsToNames<T extends Record<string, any>>(
   data: T,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table: FMTable<any, any>,
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
 ): Record<string, any> {
   const config = getBaseTableConfig(table);
   if (!config.fmfIds) {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
   const transformed: Record<string, any> = {};
   for (const [key, value] of Object.entries(data)) {
     // Check if this is an OData metadata field (starts with @)
@@ -67,10 +69,8 @@ export function transformFieldIdsToNames<T extends Record<string, any>>(
  * @param table - FMTable instance to get field ID from
  * @returns The FMFID or field name
  */
-export function transformFieldName(
-  fieldName: string,
-  table: FMTable<any, any>,
-): string {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function transformFieldName(fieldName: string, table: FMTable<any, any>): string {
   return getFieldId(table, fieldName);
 }
 
@@ -79,6 +79,7 @@ export function transformFieldName(
  * @param table - FMTable instance to get table ID from
  * @returns The FMTID or table name
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function transformTableName(table: FMTable<any, any>): string {
   return getTableId(table);
 }
@@ -88,9 +89,8 @@ export function transformTableName(table: FMTable<any, any>): string {
  * @param table - FMTable instance
  * @returns Object with name (always present) and id (may be undefined if not using IDs)
  */
-export function getTableIdentifiers(
-  table: FMTable<any, any>,
-): { name: string; id: string | undefined } {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function getTableIdentifiers(table: FMTable<any, any>): { name: string; id: string | undefined } {
   return {
     name: getTableName(table),
     id: isUsingEntityIds(table) ? getTableId(table) : undefined,
@@ -107,12 +107,16 @@ export function getTableIdentifiers(
  * @returns Transformed data with field names instead of IDs
  */
 export function transformResponseFields(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response data transformation
   data: any,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table: FMTable<any, any>,
   expandConfigs?: Array<{
     relation: string;
+    // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
     table?: FMTable<any, any>;
   }>,
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response data transformation
 ): any {
   const config = getBaseTableConfig(table);
   if (!config.fmfIds) {
@@ -128,17 +132,14 @@ export function transformResponseFields(
   if (data.value && Array.isArray(data.value)) {
     return {
       ...data,
-      value: data.value.map((record: any) =>
-        transformSingleRecord(record, table, expandConfigs),
-      ),
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic record transformation
+      value: data.value.map((record: any) => transformSingleRecord(record, table, expandConfigs)),
     };
   }
 
   // Handle array of records
   if (Array.isArray(data)) {
-    return data.map((record) =>
-      transformSingleRecord(record, table, expandConfigs),
-    );
+    return data.map((record) => transformSingleRecord(record, table, expandConfigs));
   }
 
   // Handle single record
@@ -149,17 +150,22 @@ export function transformResponseFields(
  * Transforms a single record, converting field IDs to names and handling nested expands
  */
 function transformSingleRecord(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic record transformation
   record: any,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table: FMTable<any, any>,
   expandConfigs?: Array<{
     relation: string;
+    // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
     table?: FMTable<any, any>;
   }>,
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic record transformation
 ): any {
   if (!record || typeof record !== "object") {
     return record;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
   const transformed: Record<string, any> = {};
 
   for (const [key, value] of Object.entries(record)) {
@@ -176,30 +182,34 @@ function transformSingleRecord(
     // (FileMaker returns expanded relations with FMTID keys when using entity IDs)
     if (!expandConfig && key.startsWith("FMTID:")) {
       expandConfig = expandConfigs?.find(
-        (ec) =>
-          ec.table && isUsingEntityIds(ec.table) && getTableId(ec.table) === key,
+        (ec) => ec.table && isUsingEntityIds(ec.table) && getTableId(ec.table) === key,
       );
     }
 
-    if (expandConfig && expandConfig.table) {
+    if (expandConfig?.table) {
       // Transform the expanded relation data recursively
       // Use the relation name (not the FMTID) as the key
       const relationKey = expandConfig.relation;
 
       if (Array.isArray(value)) {
+        if (!expandConfig.table) {
+          transformed[relationKey] = value;
+          continue;
+        }
+        const nestedTable = expandConfig.table;
         transformed[relationKey] = value.map((nestedRecord) =>
           transformSingleRecord(
             nestedRecord,
-            expandConfig.table!,
+            nestedTable,
             undefined, // Don't pass nested expand configs for now
           ),
         );
       } else if (value && typeof value === "object") {
-        transformed[relationKey] = transformSingleRecord(
-          value,
-          expandConfig.table,
-          undefined,
-        );
+        if (!expandConfig.table) {
+          transformed[relationKey] = value;
+          continue;
+        }
+        transformed[relationKey] = transformSingleRecord(value, expandConfig.table, undefined);
       } else {
         transformed[relationKey] = value;
       }
@@ -220,10 +230,8 @@ function transformSingleRecord(
  * @param table - FMTable instance to get field IDs from
  * @returns Array of FMFIDs or field names
  */
-export function transformFieldNamesArray(
-  fieldNames: string[],
-  table: FMTable<any, any>,
-): string[] {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function transformFieldNamesArray(fieldNames: string[], table: FMTable<any, any>): string[] {
   const config = getBaseTableConfig(table);
   if (!config.fmfIds) {
     return fieldNames;
@@ -238,20 +246,18 @@ export function transformFieldNamesArray(
  * @param table - FMTable instance to get field ID from
  * @returns Transformed orderBy string with FMFID
  */
-export function transformOrderByField(
-  orderByString: string,
-  table: FMTable<any, any> | undefined,
-): string {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function transformOrderByField(orderByString: string, table: FMTable<any, any> | undefined): string {
   if (!table) {
     return orderByString;
   }
   const config = getBaseTableConfig(table);
-  if (!config || !config.fmfIds) {
+  if (!config?.fmfIds) {
     return orderByString;
   }
 
   // Parse the orderBy string to extract field name and direction
-  const parts = orderByString.trim().split(/\s+/);
+  const parts = orderByString.trim().split(WHITESPACE_SPLIT_REGEX);
   const fieldName = parts[0];
   if (!fieldName) {
     return orderByString;

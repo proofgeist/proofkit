@@ -1,18 +1,15 @@
-'use client';
-import type { TOCItemType } from 'fumadocs-core/server';
-import * as Primitive from 'fumadocs-core/toc';
-import { type ComponentProps, useEffect, useRef, useState } from 'react';
-import { cn } from '../../lib/cn';
-import { TocThumb } from './toc-thumb';
-import { useTOCItems } from './toc';
-import { mergeRefs } from '../../lib/merge-refs';
-import { useI18n } from 'fumadocs-ui/contexts/i18n';
+"use client";
+import type { TOCItemType } from "fumadocs-core/server";
+// biome-ignore lint/performance/noNamespaceImport: fumadocs-core/toc uses namespace exports
+import * as Primitive from "fumadocs-core/toc";
+import { useI18n } from "fumadocs-ui/contexts/i18n";
+import { type ComponentProps, useEffect, useRef, useState } from "react";
+import { cn } from "../../lib/cn";
+import { mergeRefs } from "../../lib/merge-refs";
+import { useTOCItems } from "./toc";
+import { TocThumb } from "./toc-thumb";
 
-export default function ClerkTOCItems({
-  ref,
-  className,
-  ...props
-}: ComponentProps<'div'>) {
+export default function ClerkTOCItems({ ref, className, ...props }: ComponentProps<"div">) {
   const containerRef = useRef<HTMLDivElement>(null);
   const items = useTOCItems();
   const { text } = useI18n();
@@ -24,37 +21,38 @@ export default function ClerkTOCItems({
   }>();
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
     const container = containerRef.current;
 
     function onResize(): void {
-      if (container.clientHeight === 0) return;
+      if (container.clientHeight === 0) {
+        return;
+      }
       let w = 0,
         h = 0;
       const d: string[] = [];
       for (let i = 0; i < items.length; i++) {
-        const element: HTMLElement | null = container.querySelector(
-          `a[href="#${items[i].url.slice(1)}"]`,
-        );
-        if (!element) continue;
+        const element: HTMLElement | null = container.querySelector(`a[href="#${items[i].url.slice(1)}"]`);
+        if (!element) {
+          continue;
+        }
 
         const styles = getComputedStyle(element);
         const offset = getLineOffset(items[i].depth) + 1,
-          top = element.offsetTop + parseFloat(styles.paddingTop),
-          bottom =
-            element.offsetTop +
-            element.clientHeight -
-            parseFloat(styles.paddingBottom);
+          top = element.offsetTop + Number.parseFloat(styles.paddingTop),
+          bottom = element.offsetTop + element.clientHeight - Number.parseFloat(styles.paddingBottom);
 
         w = Math.max(offset, w);
         h = Math.max(h, bottom);
 
-        d.push(`${i === 0 ? 'M' : 'L'}${offset} ${top}`);
+        d.push(`${i === 0 ? "M" : "L"}${offset} ${top}`);
         d.push(`L${offset} ${bottom}`);
       }
 
       setSvg({
-        path: d.join(' '),
+        path: d.join(" "),
         width: w + 1,
         height: h,
       });
@@ -69,12 +67,11 @@ export default function ClerkTOCItems({
     };
   }, [items]);
 
-  if (items.length === 0)
+  if (items.length === 0) {
     return (
-      <div className="rounded-lg border bg-fd-card p-3 text-xs text-fd-muted-foreground">
-        {text.tocNoHeadings}
-      </div>
+      <div className="rounded-lg border bg-fd-card p-3 text-fd-muted-foreground text-xs">{text.tocNoHeadings}</div>
     );
+  }
 
   return (
     <>
@@ -93,23 +90,14 @@ export default function ClerkTOCItems({
           }}
         >
           <TocThumb
-            containerRef={containerRef}
             className="mt-(--fd-top) h-(--fd-height) bg-fd-primary transition-all"
+            containerRef={containerRef}
           />
         </div>
       ) : null}
-      <div
-        ref={mergeRefs(containerRef, ref)}
-        className={cn('flex flex-col', className)}
-        {...props}
-      >
+      <div className={cn("flex flex-col", className)} ref={mergeRefs(containerRef, ref)} {...props}>
         {items.map((item, i) => (
-          <TOCItem
-            key={item.url}
-            item={item}
-            upper={items[i - 1]?.depth}
-            lower={items[i + 1]?.depth}
-          />
+          <TOCItem item={item} key={item.url} lower={items[i + 1]?.depth} upper={items[i - 1]?.depth} />
         ))}
       </div>
     </>
@@ -117,8 +105,12 @@ export default function ClerkTOCItems({
 }
 
 function getItemOffset(depth: number): number {
-  if (depth <= 2) return 14;
-  if (depth === 3) return 26;
+  if (depth <= 2) {
+    return 14;
+  }
+  if (depth === 3) {
+    return 26;
+  }
   return 36;
 }
 
@@ -141,33 +133,27 @@ function TOCItem({
 
   return (
     <Primitive.TOCItem
+      className="prose relative py-1.5 text-fd-muted-foreground text-sm transition-colors [overflow-wrap:anywhere] first:pt-0 last:pb-0 hover:text-fd-accent-foreground data-[active=true]:text-fd-primary"
       href={item.url}
       style={{
         paddingInlineStart: getItemOffset(item.depth),
       }}
-      className="prose relative py-1.5 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground transition-colors [overflow-wrap:anywhere] first:pt-0 last:pb-0 data-[active=true]:text-fd-primary"
     >
       {offset !== upperOffset ? (
         <svg
-          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+          className="absolute start-0 -top-1.5 size-4 rtl:-scale-x-100"
           viewBox="0 0 16 16"
-          className="absolute -top-1.5 start-0 size-4 rtl:-scale-x-100"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <line
-            x1={upperOffset}
-            y1="0"
-            x2={offset}
-            y2="12"
-            className="stroke-fd-foreground/10"
-            strokeWidth="1"
-          />
+          <line className="stroke-fd-foreground/10" strokeWidth="1" x1={upperOffset} x2={offset} y1="0" y2="12" />
         </svg>
       ) : null}
       <div
         className={cn(
-          'absolute inset-y-0 w-px bg-fd-foreground/10',
-          offset !== upperOffset && 'top-1.5',
-          offset !== lowerOffset && 'bottom-1.5',
+          "absolute inset-y-0 w-px bg-fd-foreground/10",
+          offset !== upperOffset && "top-1.5",
+          offset !== lowerOffset && "bottom-1.5",
         )}
         style={{
           insetInlineStart: offset,

@@ -6,27 +6,26 @@ import type {
   FieldData,
   GetParams,
   GetResponse,
-  ListParamsRaw,
   LayoutMetadataResponse,
+  ListParamsRaw,
   Query,
+  ScriptResponse,
   UpdateParams,
   UpdateResponse,
-  ScriptParams,
-  ScriptResponse,
 } from "../client-types.js";
 
-export type BaseRequest = {
+export interface BaseRequest {
   layout: string;
   fetch?: RequestInit;
   timeout?: number;
-};
+}
 
 export type ListOptions = BaseRequest & { data: ListParamsRaw };
 export type GetOptions = BaseRequest & {
   data: GetParams & { recordId: number };
 };
 export type FindOptions = BaseRequest & {
-  data: ListParamsRaw & { query: Array<Query> };
+  data: ListParamsRaw & { query: Query[] };
 };
 export type CreateOptions = BaseRequest & {
   data: CreateParams & { fieldData: Partial<FieldData> };
@@ -61,9 +60,7 @@ export interface Adapter {
   delete: (opts: DeleteOptions) => Promise<DeleteResponse>;
   containerUpload: (opts: ContainerUploadOptions) => Promise<void>;
 
-  layoutMetadata: (
-    opts: LayoutMetadataOptions,
-  ) => Promise<LayoutMetadataResponse>;
+  layoutMetadata: (opts: LayoutMetadataOptions) => Promise<LayoutMetadataResponse>;
 
   executeScript: (opts: ExecuteScriptOptions) => Promise<ScriptResponse>;
 }

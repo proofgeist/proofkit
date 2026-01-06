@@ -1,5 +1,5 @@
-import type { TokenStoreDefinitions } from "./types.js";
 import fs from "fs-extra";
+import type { TokenStoreDefinitions } from "./types.js";
 
 function getDataFromFile(devFileName: string): Record<string, string> {
   const data: Record<string, string> = {};
@@ -21,9 +21,7 @@ const getSharedData = (key: string, devFileName: string): string | null => {
   const data = getDataFromFile(devFileName);
   return data[key] ?? null;
 };
-export const fileTokenStore = (
-  fileName = "shared.json",
-): TokenStoreDefinitions => {
+export const fileTokenStore = (fileName = "shared.json"): TokenStoreDefinitions => {
   return {
     setToken: (key, value) => setSharedData(key, value, fileName),
     getToken: (key) => getSharedData(key, fileName),

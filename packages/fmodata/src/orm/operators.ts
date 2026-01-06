@@ -1,16 +1,21 @@
+import { needsFieldQuoting } from "../client/builders/select-utils";
 import type { Column } from "./column";
 import { isColumn } from "./column";
-import { needsFieldQuoting } from "../client/builders/select-utils";
 
 /**
  * FilterExpression represents a filter condition that can be used in where() clauses.
  * Internal representation of operator expressions that get converted to OData filter syntax.
  */
 export class FilterExpression {
-  constructor(
-    public readonly operator: string,
-    public readonly operands: (Column | any | FilterExpression)[],
-  ) {}
+  readonly operator: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Operands can be Column, FilterExpression, or any value type
+  readonly operands: (Column | any | FilterExpression)[];
+
+  // biome-ignore lint/suspicious/noExplicitAny: Operands can be Column, FilterExpression, or any value type
+  constructor(operator: string, operands: (Column | any | FilterExpression)[]) {
+    this.operator = operator;
+    this.operands = operands;
+  }
 
   /**
    * Convert this expression to OData filter syntax.
@@ -67,12 +72,14 @@ export class FilterExpression {
     const [left, right] = this.operands;
     // For binary ops, the column is typically the first operand and value is the second
     // But we also support column-to-column comparisons, so check both
-    const columnForValue =
-      isColumn(left) && !isColumn(right)
-        ? left
-        : isColumn(right) && !isColumn(left)
-          ? right
-          : undefined;
+    let columnForValue: typeof left | typeof right | undefined;
+    if (isColumn(left) && !isColumn(right)) {
+      columnForValue = left;
+    } else if (isColumn(right) && !isColumn(left)) {
+      columnForValue = right;
+    } else {
+      columnForValue = undefined;
+    }
     const leftStr = this._operandToString(left, useEntityIds, columnForValue);
     const rightStr = this._operandToString(right, useEntityIds, columnForValue);
     return `${leftStr} ${op} ${rightStr}`;
@@ -90,9 +97,8 @@ export class FilterExpression {
     const [column, values] = this.operands;
     const columnInstance = isColumn(column) ? column : undefined;
     const columnStr = this._operandToString(column, useEntityIds);
-    const valuesStr = (values as any[])
-      .map((v) => this._operandToString(v, useEntityIds, columnInstance))
-      .join(", ");
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic array of values from user input
+    const valuesStr = (values as any[]).map((v) => this._operandToString(v, useEntityIds, columnInstance)).join(", ");
     return `${columnStr} in (${valuesStr})`;
   }
 
@@ -100,9 +106,8 @@ export class FilterExpression {
     const [column, values] = this.operands;
     const columnInstance = isColumn(column) ? column : undefined;
     const columnStr = this._operandToString(column, useEntityIds);
-    const valuesStr = (values as any[])
-      .map((v) => this._operandToString(v, useEntityIds, columnInstance))
-      .join(", ");
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic array of values from user input
+    const valuesStr = (values as any[]).map((v) => this._operandToString(v, useEntityIds, columnInstance)).join(", ");
     return `not (${columnStr} in (${valuesStr}))`;
   }
 
@@ -142,16 +147,15 @@ export class FilterExpression {
   }
 
   private _operandToString(
+    // biome-ignore lint/suspicious/noExplicitAny: Operand can be Column, FilterExpression, or any value type
     operand: any,
-    useEntityIds?: boolean,
+    useEntityIds?: boolean, // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     column?: Column<any, any, any, any>,
   ): string {
     if (isColumn(operand)) {
       const fieldIdentifier = operand.getFieldIdentifier(useEntityIds);
       // Quote field names in OData filters per FileMaker OData API requirements
-      return needsFieldQuoting(fieldIdentifier)
-        ? `"${fieldIdentifier}"`
-        : fieldIdentifier;
+      return needsFieldQuoting(fieldIdentifier) ? `"${fieldIdentifier}"` : fieldIdentifier;
     }
 
     // If we have a column with an input validator, apply it to transform the value
@@ -171,7 +175,7 @@ export class FilterExpression {
           // Validation succeeded, use transformed value
           value = result.value;
         }
-      } catch (error) {
+      } catch (_error) {
         // If validation throws, use the original value (will likely cause a query error)
         // This maintains backward compatibility and allows the server to handle validation
         value = operand;
@@ -203,13 +207,10 @@ export class FilterExpression {
  * eq(users.id, contacts.id_user)   // cross-table comparison
  */
 export function eq<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-  value: NoInfer<TInput>,
-): FilterExpression;
-export function eq<TOutput, TInput>(
   column1: Column<TOutput, TInput>,
-  column2: Column<TOutput, TInput>,
+  column2: Column<TOutput, TInput> | NoInfer<TInput>,
 ): FilterExpression;
+// biome-ignore lint/suspicious/noExplicitAny: Implementation signature for overloads
 export function eq(column: Column, value: any): FilterExpression {
   return new FilterExpression("eq", [column, value]);
 }
@@ -222,13 +223,10 @@ export function eq(column: Column, value: any): FilterExpression {
  * ne(users.id, contacts.id_user)   // cross-table comparison
  */
 export function ne<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-  value: NoInfer<TInput>,
-): FilterExpression;
-export function ne<TOutput, TInput>(
   column1: Column<TOutput, TInput>,
-  column2: Column<TOutput, TInput>,
+  column2: Column<TOutput, TInput> | NoInfer<TInput>,
 ): FilterExpression;
+// biome-ignore lint/suspicious/noExplicitAny: Implementation signature for overloads
 export function ne(column: Column, value: any): FilterExpression {
   return new FilterExpression("ne", [column, value]);
 }
@@ -295,10 +293,7 @@ export function lte<TOutput extends number | string | Date | null, TInput>(
  * @example
  * contains(users.name, "John")    // name contains "John"
  */
-export function contains<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-  value: NoInfer<TInput>,
-): FilterExpression {
+export function contains<TOutput, TInput>(column: Column<TOutput, TInput>, value: NoInfer<TInput>): FilterExpression {
   return new FilterExpression("contains", [column, value]);
 }
 
@@ -308,10 +303,7 @@ export function contains<TOutput, TInput>(
  * @example
  * startsWith(users.email, "admin") // email starts with "admin"
  */
-export function startsWith<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-  value: NoInfer<TInput>,
-): FilterExpression {
+export function startsWith<TOutput, TInput>(column: Column<TOutput, TInput>, value: NoInfer<TInput>): FilterExpression {
   return new FilterExpression("startsWith", [column, value]);
 }
 
@@ -321,10 +313,7 @@ export function startsWith<TOutput, TInput>(
  * @example
  * endsWith(users.email, "@example.com") // email ends with "@example.com"
  */
-export function endsWith<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-  value: NoInfer<TInput>,
-): FilterExpression {
+export function endsWith<TOutput, TInput>(column: Column<TOutput, TInput>, value: NoInfer<TInput>): FilterExpression {
   return new FilterExpression("endsWith", [column, value]);
 }
 
@@ -338,10 +327,7 @@ export function endsWith<TOutput, TInput>(
  * @example
  * inArray(users.status, ["active", "pending"]) // status is "active" or "pending"
  */
-export function inArray<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-  values: NoInfer<TInput>[],
-): FilterExpression {
+export function inArray<TOutput, TInput>(column: Column<TOutput, TInput>, values: NoInfer<TInput>[]): FilterExpression {
   return new FilterExpression("in", [column, values]);
 }
 
@@ -368,9 +354,7 @@ export function notInArray<TOutput, TInput>(
  * @example
  * isNull(users.deletedAt)         // deletedAt is null
  */
-export function isNull<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-): FilterExpression {
+export function isNull<TOutput, TInput>(column: Column<TOutput, TInput>): FilterExpression {
   return new FilterExpression("isNull", [column]);
 }
 
@@ -380,9 +364,7 @@ export function isNull<TOutput, TInput>(
  * @example
  * isNotNull(users.email)          // email is not null
  */
-export function isNotNull<TOutput, TInput>(
-  column: Column<TOutput, TInput>,
-): FilterExpression {
+export function isNotNull<TOutput, TInput>(column: Column<TOutput, TInput>): FilterExpression {
   return new FilterExpression("isNotNull", [column]);
 }
 
@@ -449,15 +431,21 @@ export function not(expression: FilterExpression): FilterExpression {
  * Used in orderBy() clauses to provide type-safe sorting with direction.
  */
 export class OrderByExpression<TableName extends string = string> {
-  constructor(
-    public readonly column: Column<any, any, TableName>,
-    public readonly direction: "asc" | "desc",
-  ) {}
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  readonly column: Column<any, any, TableName>;
+  readonly direction: "asc" | "desc";
+
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  constructor(column: Column<any, any, TableName>, direction: "asc" | "desc") {
+    this.column = column;
+    this.direction = direction;
+  }
 }
 
 /**
  * Type guard to check if a value is an OrderByExpression instance.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Type guard accepting any value type
 export function isOrderByExpression(value: any): value is OrderByExpression {
   return value instanceof OrderByExpression;
 }
@@ -468,9 +456,8 @@ export function isOrderByExpression(value: any): value is OrderByExpression {
  * @example
  * asc(users.name)  // Sort by name ascending
  */
-export function asc<TableName extends string>(
-  column: Column<any, any, TableName>,
-): OrderByExpression<TableName> {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+export function asc<TableName extends string>(column: Column<any, any, TableName>): OrderByExpression<TableName> {
   return new OrderByExpression(column, "asc");
 }
 
@@ -480,8 +467,7 @@ export function asc<TableName extends string>(
  * @example
  * desc(users.age)  // Sort by age descending
  */
-export function desc<TableName extends string>(
-  column: Column<any, any, TableName>,
-): OrderByExpression<TableName> {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+export function desc<TableName extends string>(column: Column<any, any, TableName>): OrderByExpression<TableName> {
   return new OrderByExpression(column, "desc");
 }

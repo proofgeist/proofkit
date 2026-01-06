@@ -1,19 +1,20 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { QueryOptions } from "odata-query";
-import type { FMTable } from "../../orm/table";
-import type { Result } from "../../types";
 import { RecordCountMismatchError } from "../../errors";
+import type { InternalLogger } from "../../logger";
+import type { FMTable } from "../../orm/table";
+import { getTableSchema } from "../../orm/table";
 import { transformResponseFields } from "../../transform";
-import { validateListResponse, validateSingleResponse } from "../../validation";
+import type { Result } from "../../types";
 import type { ExpandValidationConfig } from "../../validation";
+import { validateListResponse, validateSingleResponse } from "../../validation";
 import type { ExpandConfig } from "./expand-builder";
-import { FMTable as FMTableClass, getTableSchema } from "../../orm/table";
-import { InternalLogger } from "../../logger";
 
 /**
  * Configuration for processing query responses
  */
 export interface ProcessQueryResponseConfig<T> {
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   occurrence?: FMTable<any, any>;
   singleMode: "exact" | "maybe" | false;
   queryOptions: Partial<QueryOptions<T>>;
@@ -30,9 +31,7 @@ export interface ProcessQueryResponseConfig<T> {
  * Builds expand validation configs from internal expand configurations.
  * These are used to validate expanded navigation properties.
  */
-function buildExpandValidationConfigs(
-  configs: ExpandConfig[],
-): ExpandValidationConfig[] {
+function buildExpandValidationConfigs(configs: ExpandConfig[]): ExpandValidationConfig[] {
   return configs.map((config) => {
     // Get target table/occurrence from config (stored during expand call)
     const targetTable = config.targetTable;
@@ -40,24 +39,23 @@ function buildExpandValidationConfigs(
     // Extract schema from target table/occurrence
     // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
     const targetSchema = targetTable
-      ? (getTableSchema(targetTable) as
-          | Record<string, StandardSchemaV1>
-          | undefined)
+      ? (getTableSchema(targetTable) as Record<string, StandardSchemaV1> | undefined)
       : undefined;
 
     // Extract selected fields from options
-    const selectedFields = config.options?.select
-      ? Array.isArray(config.options.select)
+    let selectedFields: string[] | undefined;
+    if (config.options?.select) {
+      selectedFields = Array.isArray(config.options.select)
         ? config.options.select.map((f) => String(f))
-        : [String(config.options.select)]
-      : undefined;
+        : [String(config.options.select)];
+    }
 
     return {
       relation: config.relation,
-      targetSchema: targetSchema,
-      targetTable: targetTable,
+      targetSchema,
+      targetTable,
       table: targetTable, // For transformation
-      selectedFields: selectedFields,
+      selectedFields,
       nestedExpands: undefined, // TODO: Handle nested expands if needed
     };
   });
@@ -67,10 +65,9 @@ function buildExpandValidationConfigs(
  * Extracts records from response data without validation.
  * Handles both single and list responses.
  */
-function extractRecords(
-  data: any,
-  singleMode: "exact" | "maybe" | false,
-): Result<any> {
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API, generic return type
+function extractRecords(data: any, singleMode: "exact" | "maybe" | false): Result<any> {
+  // biome-ignore lint/suspicious/noExplicitAny: Type assertion for response structure
   const resp = data as any;
   if (singleMode !== false) {
     const records = resp.value ?? [resp];
@@ -79,10 +76,7 @@ function extractRecords(
     if (count > 1) {
       return {
         data: undefined,
-        error: new RecordCountMismatchError(
-          singleMode === "exact" ? "one" : "at-most-one",
-          count,
-        ),
+        error: new RecordCountMismatchError(singleMode === "exact" ? "one" : "at-most-one", count),
       };
     }
 
@@ -93,26 +87,26 @@ function extractRecords(
           error: new RecordCountMismatchError("one", 0),
         };
       }
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
       return { data: null as any, error: undefined };
     }
 
     const record = Array.isArray(records) ? records[0] : records;
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
     return { data: record as any, error: undefined };
-  } else {
-    // Handle list response structure
-    const records = resp.value ?? [];
-    return { data: records as any, error: undefined };
   }
+  // Handle list response structure
+  const records = resp.value ?? [];
+  // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
+  return { data: records as any, error: undefined };
 }
 
 /**
  * Renames fields in response data according to the field mapping.
  * Used when select() is called with renamed fields (e.g., { userEmail: users.email }).
  */
-function renameFieldsInResponse(
-  data: any,
-  fieldMapping: Record<string, string>,
-): any {
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic response data transformation
+function renameFieldsInResponse(data: any, fieldMapping: Record<string, string>): any {
   if (!data || typeof data !== "object") {
     return data;
   }
@@ -126,13 +120,13 @@ function renameFieldsInResponse(
   if ("value" in data && Array.isArray(data.value)) {
     return {
       ...data,
-      value: data.value.map((item: any) =>
-        renameFieldsInResponse(item, fieldMapping),
-      ),
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic record transformation
+      value: data.value.map((item: any) => renameFieldsInResponse(item, fieldMapping)),
     };
   }
 
   // Handle single record
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
   const renamed: Record<string, any> = {};
   for (const [key, value] of Object.entries(data)) {
     // Check if this field should be renamed
@@ -152,23 +146,18 @@ function renameFieldsInResponse(
  * across multiple navigation branches in QueryBuilder.execute().
  */
 export async function processQueryResponse<T>(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
   response: any,
   config: ProcessQueryResponseConfig<T>,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic return type for interface compliance
 ): Promise<Result<any>> {
-  const { occurrence, singleMode, skipValidation, useEntityIds, fieldMapping } =
-    config;
+  const { occurrence, singleMode, skipValidation, useEntityIds, fieldMapping } = config;
 
   // Transform response if needed
   let data = response;
   if (occurrence && useEntityIds) {
-    const expandValidationConfigs = buildExpandValidationConfigs(
-      config.expandConfigs,
-    );
-    data = transformResponseFields(
-      response,
-      occurrence,
-      expandValidationConfigs,
-    );
+    const expandValidationConfigs = buildExpandValidationConfigs(config.expandConfigs);
+    data = transformResponseFields(response, occurrence, expandValidationConfigs);
   }
 
   // Skip validation path
@@ -194,17 +183,14 @@ export async function processQueryResponse<T>(
         ? config.queryOptions.select.map((f) => String(f))
         : [String(config.queryOptions.select)]) as (keyof T)[])
     : undefined;
-  const expandValidationConfigs = buildExpandValidationConfigs(
-    config.expandConfigs,
-  );
+  const expandValidationConfigs = buildExpandValidationConfigs(config.expandConfigs);
 
   // Validate with original field names
   // Special columns are excluded when using single() method (per OData spec behavior)
   // Note: While FileMaker may return special columns in single mode if requested via header,
   // we exclude them here to maintain OData spec compliance. The types will also not include
   // special columns for single mode to match this runtime behavior.
-  const shouldIncludeSpecialColumns =
-    singleMode === false ? (config.includeSpecialColumns ?? false) : false;
+  const shouldIncludeSpecialColumns = singleMode === false ? (config.includeSpecialColumns ?? false) : false;
   const validationResult =
     singleMode !== false
       ? await validateSingleResponse(
@@ -235,5 +221,6 @@ export async function processQueryResponse<T>(
     };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
   return { data: validationResult.data as any, error: undefined };
 }

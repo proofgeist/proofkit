@@ -1,31 +1,17 @@
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, Loader2, Server, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
 import { defaultEnvNames } from "../../../src/constants";
-import { EnvVarField } from "./EnvVarField";
-import { useEnvVarIndicator } from "./useEnvVarIndicator";
+import { setDialogOpen, useTestConnection } from "../hooks/useTestConnection";
+import type { SingleConfig } from "../lib/config-utils";
 import { useEnvValue } from "../lib/envValues";
-import { useTestConnection, setDialogOpen } from "../hooks/useTestConnection";
+import { EnvVarField } from "./EnvVarField";
 import { Alert, AlertContent, AlertDescription, AlertIcon } from "./ui/alert";
+import { Button } from "./ui/button";
 import { Card, CardContent, CardTitle } from "./ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Separator } from "./ui/separator";
-import {
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  AlertTriangle,
-  Server,
-  Info,
-} from "lucide-react";
+import { useEnvVarIndicator } from "./useEnvVarIndicator";
 
 interface EnvVarDialogProps {
   index: number;
@@ -47,7 +33,7 @@ function getErrorMessage(error: unknown): string {
 
 export function EnvVarDialog({ index }: EnvVarDialogProps) {
   const { control, setValue, getValues } = useFormContext<{
-    config: any[];
+    config: SingleConfig[];
   }>();
   const [dialogOpen, setDialogOpenState] = useState(false);
 
@@ -60,8 +46,7 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
   }, [index, dialogOpen]);
 
   // Get indicator data
-  const { hasCustomValues, serverValue, serverLoading, dbValue, dbLoading } =
-    useEnvVarIndicator(index);
+  const { hasCustomValues, serverValue, serverLoading, dbValue, dbLoading } = useEnvVarIndicator(index);
 
   // Watch the auth env names from the form
   const envNamesAuth = useWatch({
@@ -96,31 +81,26 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
       : defaultEnvNames.password;
 
   // Resolve all three auth env values
-  const { data: apiKeyValue, isLoading: apiKeyLoading } =
-    useEnvValue(apiKeyEnvName);
-  const { data: usernameValue, isLoading: usernameLoading } =
-    useEnvValue(usernameEnvName);
-  const { data: passwordValue, isLoading: passwordLoading } =
-    useEnvValue(passwordEnvName);
+  const { data: apiKeyValue, isLoading: apiKeyLoading } = useEnvValue(apiKeyEnvName);
+  const { data: usernameValue, isLoading: usernameLoading } = useEnvValue(usernameEnvName);
+  const { data: passwordValue, isLoading: passwordLoading } = useEnvValue(passwordEnvName);
 
   // Determine which authentication method will be used
   // Default to API key if it resolves to a value, otherwise use username/password if both resolve
-  const activeAuthMethod =
-    !apiKeyLoading &&
-    apiKeyValue !== undefined &&
-    apiKeyValue !== null &&
-    apiKeyValue !== ""
-      ? "apiKey"
-      : !usernameLoading &&
-          !passwordLoading &&
-          usernameValue !== undefined &&
-          usernameValue !== null &&
-          usernameValue !== "" &&
-          passwordValue !== undefined &&
-          passwordValue !== null &&
-          passwordValue !== ""
-        ? "username"
-        : null;
+  let activeAuthMethod: "apiKey" | "username" | null = null;
+  if (!apiKeyLoading && apiKeyValue !== undefined && apiKeyValue !== null && apiKeyValue !== "") {
+    activeAuthMethod = "apiKey";
+  } else if (
+    !(usernameLoading || passwordLoading) &&
+    usernameValue !== undefined &&
+    usernameValue !== null &&
+    usernameValue !== "" &&
+    passwordValue !== undefined &&
+    passwordValue !== null &&
+    passwordValue !== ""
+  ) {
+    activeAuthMethod = "username";
+  }
 
   // Test connection hook - enable when dialog is closed, disable when open
   // When dialog is open, it will only run when the retry button is clicked
@@ -134,14 +114,9 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
 
   // Check if any values resolve to undefined/null/empty (only check after loading completes)
   // For auth, check that at least one complete auth method is configured (either API key OR username+password)
-  const hasApiKeyAuth =
-    !apiKeyLoading &&
-    apiKeyValue !== undefined &&
-    apiKeyValue !== null &&
-    apiKeyValue !== "";
+  const hasApiKeyAuth = !apiKeyLoading && apiKeyValue !== undefined && apiKeyValue !== null && apiKeyValue !== "";
   const hasUsernamePasswordAuth =
-    !usernameLoading &&
-    !passwordLoading &&
+    !(usernameLoading || passwordLoading) &&
     usernameValue !== undefined &&
     usernameValue !== null &&
     usernameValue !== "" &&
@@ -151,17 +126,13 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
   const hasAuth = hasApiKeyAuth || hasUsernamePasswordAuth;
 
   const hasUndefinedValues =
-    (!serverLoading &&
-      (serverValue === undefined ||
-        serverValue === null ||
-        serverValue === "")) ||
-    (!dbLoading &&
-      (dbValue === undefined || dbValue === null || dbValue === "")) ||
-    (!apiKeyLoading && !usernameLoading && !passwordLoading && !hasAuth);
+    (!serverLoading && (serverValue === undefined || serverValue === null || serverValue === "")) ||
+    (!dbLoading && (dbValue === undefined || dbValue === null || dbValue === "")) ||
+    !(apiKeyLoading || usernameLoading || passwordLoading || hasAuth);
 
   // Initialize auth fields if not already set
   useEffect(() => {
-    const currentAuth = getValues(`config.${index}.envNames.auth` as any);
+    const currentAuth = getValues(`config.${index}.envNames.auth` as const);
     if (!currentAuth) {
       setValue(`config.${index}.envNames.auth` as const, {
         apiKey: "",
@@ -179,52 +150,48 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
   }, [setValue, getValues, index]);
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpenState}>
-      <div className="relative overflow-visible mr-2">
+    <Dialog onOpenChange={setDialogOpenState} open={dialogOpen}>
+      <div className="relative mr-2 overflow-visible">
         <DialogTrigger asChild>
-          <Button type="button" variant="outline" className="relative">
+          <Button className="relative" type="button" variant="outline">
             <Server className="size-4" />
             Connection Settings
-            {testStatus === "error" && (
-              <AlertTriangle className="size-4 ml-2 text-yellow-500" />
-            )}
+            {testStatus === "error" && <AlertTriangle className="ml-2 size-4 text-yellow-500" />}
           </Button>
         </DialogTrigger>
         {(hasUndefinedValues || hasCustomValues) && (
           <span
-            className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold pointer-events-none z-50 ${
-              hasUndefinedValues
-                ? "bg-destructive text-destructive-foreground"
-                : "bg-primary text-primary-foreground"
+            className={`pointer-events-none absolute -top-1 -right-1 z-50 flex h-5 w-5 items-center justify-center rounded-full font-semibold text-[10px] ${
+              hasUndefinedValues ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
             }`}
           >
             {hasUndefinedValues ? "!" : "•"}
           </span>
         )}
       </div>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Custom Environment Variable Names</DialogTitle>
           <DialogDescription>
-            Enter the <span className="font-medium text-foreground">names</span>{" "}
-            of the environment variables below, not the values
+            Enter the <span className="font-medium text-foreground">names</span> of the environment variables below, not
+            the values
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <EnvVarField
+              defaultValue={defaultEnvNames.server}
               fieldName={`config.${index}.envNames.server` as const}
               label="Server"
               placeholder={defaultEnvNames.server}
-              defaultValue={defaultEnvNames.server}
             />
 
             <EnvVarField
+              defaultValue={defaultEnvNames.db}
               fieldName={`config.${index}.envNames.db` as const}
               label="Database"
               placeholder={defaultEnvNames.db}
-              defaultValue={defaultEnvNames.db}
             />
 
             <div className="col-span-full">
@@ -233,42 +200,36 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
                   <CardTitle>Authentication</CardTitle>
                   {/* API Key on its own line */}
                   <EnvVarField
+                    defaultValue={defaultEnvNames.apiKey}
+                    dimField={activeAuthMethod !== "apiKey"}
                     fieldName={`config.${index}.envNames.auth.apiKey` as const}
                     label="API Key"
                     placeholder={defaultEnvNames.apiKey}
-                    defaultValue={defaultEnvNames.apiKey}
-                    dimField={activeAuthMethod !== "apiKey"}
                   />
 
                   {/* OR Divider */}
                   <div className="flex items-center gap-3">
                     <Separator className="flex-1" />
-                    <span className="text-sm text-muted-foreground font-medium">
-                      OR
-                    </span>
+                    <span className="font-medium text-muted-foreground text-sm">OR</span>
                     <Separator className="flex-1" />
                   </div>
 
                   {/* Username and Password on the same line */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <EnvVarField
-                      fieldName={
-                        `config.${index}.envNames.auth.username` as const
-                      }
-                      label="Username"
-                      placeholder={defaultEnvNames.username}
                       defaultValue={defaultEnvNames.username}
                       dimField={activeAuthMethod !== "username"}
+                      fieldName={`config.${index}.envNames.auth.username` as const}
+                      label="Username"
+                      placeholder={defaultEnvNames.username}
                     />
 
                     <EnvVarField
-                      fieldName={
-                        `config.${index}.envNames.auth.password` as const
-                      }
-                      label="Password"
-                      placeholder={defaultEnvNames.password}
                       defaultValue={defaultEnvNames.password}
                       dimField={activeAuthMethod !== "username"}
+                      fieldName={`config.${index}.envNames.auth.password` as const}
+                      label="Password"
+                      placeholder={defaultEnvNames.password}
                     />
                   </div>
                 </CardContent>
@@ -276,35 +237,33 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
             </div>
           </div>
 
-          <Alert variant="mono" appearance="light" size="sm">
+          <Alert appearance="light" size="sm" variant="mono">
             <AlertIcon>
               <Info className="size-4" />
             </AlertIcon>
             <AlertContent>
               <AlertDescription>
                 You will need to rerun the{" "}
-                <code className="font-mono bg-muted px-1 py-0.5 rounded-md">
-                  @proofkit/typegen ui
-                </code>{" "}
-                command if you change any environment variables.
+                <code className="rounded-md bg-muted px-1 py-0.5 font-mono">@proofkit/typegen ui</code> command if you
+                change any environment variables.
               </AlertDescription>
             </AlertContent>
           </Alert>
 
           {/* Test Connection Section */}
-          <div className="border-t pt-4 space-y-3">
+          <div className="space-y-3 border-t pt-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">Connection Status</h4>
+              <h4 className="font-medium text-sm">Connection Status</h4>
               <Button
+                disabled={testStatus === "pending"}
+                onClick={() => runTest()}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => runTest()}
-                disabled={testStatus === "pending"}
               >
                 {testStatus === "pending" ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Testing...
                   </>
                 ) : (
@@ -316,17 +275,19 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
             {/* Test Results - Show automatically when available */}
             {testStatus !== "idle" && (
               <div
-                className={`rounded-md border p-3 text-sm ${
-                  testStatus === "success"
-                    ? "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400"
-                    : testStatus === "error"
-                      ? "border-destructive/50 bg-destructive/10 text-destructive"
-                      : ""
-                }`}
+                className={`rounded-md border p-3 text-sm ${(() => {
+                  if (testStatus === "success") {
+                    return "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400";
+                  }
+                  if (testStatus === "error") {
+                    return "border-destructive/50 bg-destructive/10 text-destructive";
+                  }
+                  return "";
+                })()}`}
               >
                 {testStatus === "pending" && (
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Testing connection...</span>
                   </div>
                 )}
@@ -334,23 +295,19 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
                 {testStatus === "success" && testData && (
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
+                      <CheckCircle2 className="h-4 w-4" />
                       <span>Connection OK</span>
                     </div>
-                    <div className="pl-6 space-y-0.5 text-xs">
+                    <div className="space-y-0.5 pl-6 text-xs">
                       <div>
-                        <span className="font-medium">Server:</span>{" "}
-                        {testData.server}
+                        <span className="font-medium">Server:</span> {testData.server}
                       </div>
                       <div>
-                        <span className="font-medium">Database:</span>{" "}
-                        {testData.db}
+                        <span className="font-medium">Database:</span> {testData.db}
                       </div>
                       <div>
                         <span className="font-medium">Auth Type:</span>{" "}
-                        {testData.authType === "apiKey"
-                          ? "API Key"
-                          : "Username/Password"}
+                        {testData.authType === "apiKey" ? "API Key" : "Username/Password"}
                       </div>
                     </div>
                   </div>
@@ -359,91 +316,67 @@ export function EnvVarDialog({ index }: EnvVarDialogProps) {
                 {testStatus === "error" && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 font-medium">
-                      <XCircle className="w-4 h-4" />
+                      <XCircle className="h-4 w-4" />
                       <span>Connection Failed</span>
                     </div>
                     {errorDetails && (
-                      <div className="pl-6 space-y-1 text-xs">
+                      <div className="space-y-1 pl-6 text-xs">
                         <div className="font-medium">
-                          {errorDetails.message ||
-                            getErrorMessage(errorDetails.error as unknown) ||
-                            "Unknown error"}
+                          {errorDetails.message || getErrorMessage(errorDetails.error as unknown) || "Unknown error"}
                         </div>
                         {errorDetails.details?.missing && (
                           <div className="space-y-0.5">
-                            <div className="font-medium">
-                              Missing environment variables:
-                            </div>
-                            <ul className="list-disc list-inside space-y-0.5">
+                            <div className="font-medium">Missing environment variables:</div>
+                            <ul className="list-inside list-disc space-y-0.5">
                               {errorDetails.details.missing.server && (
-                                <li>
-                                  Server (
-                                  {errorDetails.suspectedField === "server" &&
-                                    "⚠️"}
-                                  )
-                                </li>
+                                <li>Server ({errorDetails.suspectedField === "server" && "⚠️"})</li>
                               )}
                               {errorDetails.details.missing.db && (
-                                <li>
-                                  Database (
-                                  {errorDetails.suspectedField === "db" && "⚠️"}
-                                  )
-                                </li>
+                                <li>Database ({errorDetails.suspectedField === "db" && "⚠️"})</li>
                               )}
                               {errorDetails.details.missing.auth && (
-                                <li>
-                                  Authentication (
-                                  {errorDetails.suspectedField === "auth" &&
-                                    "⚠️"}
-                                  )
-                                </li>
+                                <li>Authentication ({errorDetails.suspectedField === "auth" && "⚠️"})</li>
                               )}
                               {errorDetails.details.missing.password && (
-                                <li>
-                                  Password (
-                                  {errorDetails.suspectedField === "auth" &&
-                                    "⚠️"}
-                                  )
-                                </li>
+                                <li>Password ({errorDetails.suspectedField === "auth" && "⚠️"})</li>
                               )}
                             </ul>
                           </div>
                         )}
                         {errorDetails.fmErrorCode && (
                           <div>
-                            <span className="font-medium">
-                              FileMaker Error Code:
-                            </span>{" "}
-                            {errorDetails.fmErrorCode}
+                            <span className="font-medium">FileMaker Error Code:</span> {errorDetails.fmErrorCode}
                           </div>
                         )}
-                        {errorDetails.suspectedField &&
-                          !errorDetails.details?.missing && (
-                            <div className="flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" />
-                              <span>
-                                Suspected issue with:{" "}
-                                {errorDetails.suspectedField === "server"
-                                  ? "Server URL"
-                                  : errorDetails.suspectedField === "db"
-                                    ? "Database name"
-                                    : "Credentials"}
-                              </span>
-                            </div>
-                          )}
+                        {errorDetails.suspectedField && !errorDetails.details?.missing && (
+                          <div className="flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            <span>
+                              Suspected issue with: {(() => {
+                                if (errorDetails.suspectedField === "server") {
+                                  return "Server URL";
+                                }
+                                if (errorDetails.suspectedField === "db") {
+                                  return "Database name";
+                                }
+                                return "Credentials";
+                              })()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                     {testError && !errorDetails && (
                       <div className="pl-6 text-xs">
-                        {testError instanceof Error
-                          ? testError.message
-                          : typeof testError === "object" &&
-                              testError !== null &&
-                              "message" in testError
-                            ? String(
-                                (testError as { message: unknown }).message,
-                              )
-                            : "Unknown error"}
+                        {(() => {
+                          if (testError instanceof Error) {
+                            return testError.message;
+                          }
+                          if (typeof testError === "object" && testError !== null && "message" in testError) {
+                            return String((testError as { message: unknown }).message);
+                          }
+                          return "Unknown error";
+                        })()}
                       </div>
                     )}
                   </div>

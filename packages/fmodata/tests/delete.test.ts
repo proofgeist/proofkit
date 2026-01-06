@@ -5,19 +5,10 @@
  * This validates type safety, builder pattern, and operation modes.
  */
 
-import { describe, it, expect, expectTypeOf, vi } from "vitest";
+import { and, eq, fmTableOccurrence, type InferTableSchema, lt, numberField, textField } from "@proofkit/fmodata";
+import { DeleteBuilder, ExecutableDeleteBuilder } from "@proofkit/fmodata/client/delete-builder";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod/v4";
-import {
-  fmTableOccurrence,
-  textField,
-  numberField,
-  type InferTableSchema,
-  eq,
-  and,
-  lt,
-} from "@proofkit/fmodata";
-import { DeleteBuilder } from "@proofkit/fmodata/client/delete-builder";
-import { ExecutableDeleteBuilder } from "@proofkit/fmodata/client/delete-builder";
 import { simpleMock } from "./utils/mock-fetch";
 import { createMockClient } from "./utils/test-setup";
 
@@ -32,7 +23,7 @@ describe("delete method", () => {
     lastLogin: textField(),
   });
 
-  type UserSchema = InferTableSchema<typeof usersTO>;
+  type _UserSchema = InferTableSchema<typeof usersTO>;
 
   describe("builder pattern", () => {
     it("should return DeleteBuilder when delete() is called", () => {
@@ -89,7 +80,7 @@ describe("delete method", () => {
       expect(config.url).toBe("/test_db/users('user-123')");
     });
 
-    it("should return deletedCount result type", async () => {
+    it("should return deletedCount result type", () => {
       const db = client.database("test_db");
 
       db.from(usersTO).delete().byId("user-123");
@@ -105,11 +96,7 @@ describe("delete method", () => {
 
       const db = client.database("test_db");
 
-      const result = await db
-        .from(usersTO)
-        .delete()
-        .byId("user-123")
-        .execute({ fetchHandler: mockFetch });
+      const result = await db.from(usersTO).delete().byId("user-123").execute({ fetchHandler: mockFetch });
 
       expect(result.error).toBeUndefined();
       expect(result.data).toEqual({ deletedCount: 1 });
@@ -139,11 +126,7 @@ describe("delete method", () => {
       const deleteBuilder = db
         .from(usersTO)
         .delete()
-        .where((q) =>
-          q.where(
-            and(eq(usersTO.active, 0), lt(usersTO.lastLogin, "2023-01-01")),
-          ),
-        );
+        .where((q) => q.where(and(eq(usersTO.active, 0), lt(usersTO.lastLogin, "2023-01-01"))));
 
       const config = deleteBuilder.getRequestConfig();
 
@@ -166,7 +149,7 @@ describe("delete method", () => {
       expect(config.url).toContain("$top");
     });
 
-    it("should return deletedCount result type for filter-based delete", async () => {
+    it("should return deletedCount result type for filter-based delete", () => {
       const db = client.database("test_db");
       db.from(usersTO);
 

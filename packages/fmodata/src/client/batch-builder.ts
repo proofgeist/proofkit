@@ -1,24 +1,20 @@
+import { BatchTruncatedError } from "../errors";
 import type {
+  BatchItemResult,
+  BatchResult,
   ExecutableBuilder,
+  ExecuteMethodOptions,
+  ExecuteOptions,
   ExecutionContext,
   Result,
-  ExecuteOptions,
-  BatchResult,
-  BatchItemResult,
-  ExecuteMethodOptions,
 } from "../types";
-import { BatchTruncatedError } from "../errors";
-import { type FFetchOptions } from "@fetchkit/ffetch";
-import {
-  formatBatchRequestFromNative,
-  parseBatchResponse,
-  type ParsedBatchResponse,
-} from "./batch-request";
+import { formatBatchRequestFromNative, type ParsedBatchResponse, parseBatchResponse } from "./batch-request";
 
 /**
  * Helper type to extract result types from a tuple of ExecutableBuilders.
  * Uses a mapped type which TypeScript 4.1+ can handle for tuples.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any ExecutableBuilder result type
 type ExtractTupleTypes<T extends readonly ExecutableBuilder<any>[]> = {
   [K in keyof T]: T[K] extends ExecutableBuilder<infer U> ? U : never;
 };
@@ -41,8 +37,7 @@ function parsedToResponse(parsed: ParsedBatchResponse): Response {
   }
 
   // Convert body to string if it's not already
-  const bodyString =
-    typeof parsed.body === "string" ? parsed.body : JSON.stringify(parsed.body);
+  const bodyString = typeof parsed.body === "string" ? parsed.body : JSON.stringify(parsed.body);
 
   // Handle 204 No Content status - it cannot have a body per HTTP spec
   // If FileMaker returns 204 with a body, treat it as 200
@@ -52,7 +47,7 @@ function parsedToResponse(parsed: ParsedBatchResponse): Response {
   }
 
   return new Response(status === 204 ? null : bodyString, {
-    status: status,
+    status,
     statusText: parsed.statusText,
     headers,
   });
@@ -65,19 +60,19 @@ function parsedToResponse(parsed: ParsedBatchResponse): Response {
  * Note: BatchBuilder does not implement ExecutableBuilder because execute() returns
  * BatchResult instead of Result, which is a different return type structure.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any ExecutableBuilder result type
 export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
-  private builders: ExecutableBuilder<any>[];
-  private readonly originalBuilders: Builders;
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any ExecutableBuilder result type
+  private readonly builders: ExecutableBuilder<any>[];
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
 
-  constructor(
-    builders: Builders,
-    private readonly databaseName: string,
-    private readonly context: ExecutionContext,
-  ) {
+  constructor(builders: Builders, databaseName: string, context: ExecutionContext) {
     // Convert readonly tuple to mutable array for dynamic additions
     this.builders = [...builders];
     // Store original tuple for type preservation
-    this.originalBuilders = builders;
+    this.databaseName = databaseName;
+    this.context = context;
   }
 
   /**
@@ -103,6 +98,7 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
    * Get the request configuration for this batch operation.
    * This is used internally by the execution system.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
     // Note: This method is kept for compatibility but batch operations
     // should use execute() directly which handles the full Request/Response flow
@@ -113,7 +109,7 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
     };
   }
 
-  toRequest(baseUrl: string, options?: ExecuteOptions): Request {
+  toRequest(baseUrl: string, _options?: ExecuteOptions): Request {
     // Batch operations are not designed to be nested, but we provide
     // a basic implementation for interface compliance
     const fullUrl = `${baseUrl}/${this.databaseName}/$batch`;
@@ -126,20 +122,19 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
     });
   }
 
-  async processResponse(
-    response: Response,
-    options?: ExecuteOptions,
-  ): Promise<Result<any>> {
+  // biome-ignore lint/suspicious/noExplicitAny: Generic return type for interface compliance
+  processResponse(_response: Response, _options?: ExecuteOptions): Promise<Result<any>> {
     // This should not typically be called for batch operations
     // as they handle their own response processing
-    return {
+    return Promise.resolve({
       data: undefined,
       error: {
         name: "NotImplementedError",
         message: "Batch operations handle response processing internally",
         timestamp: new Date(),
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
       } as any,
-    };
+    });
   }
 
   /**
@@ -155,18 +150,20 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
     if (!baseUrl) {
       // Return BatchResult with all operations marked as failed
       const errorCount = this.builders.length;
-      const results: BatchItemResult<any>[] = this.builders.map((_, i) => ({
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any result type
+      const results: BatchItemResult<any>[] = this.builders.map((_, _i) => ({
         data: undefined,
         error: {
           name: "ConfigurationError",
-          message:
-            "Base URL not available - execution context must implement _getBaseUrl()",
+          message: "Base URL not available - execution context must implement _getBaseUrl()",
           timestamp: new Date(),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
         } as any,
         status: 0,
       }));
 
       return {
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         results: results as any,
         successCount: 0,
         errorCount,
@@ -177,41 +174,35 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
 
     try {
       // Convert builders to native Request objects
-      const requests: Request[] = this.builders.map((builder) =>
-        builder.toRequest(baseUrl, options),
-      );
+      const requests: Request[] = this.builders.map((builder) => builder.toRequest(baseUrl, options));
 
       // Format batch request (automatically groups mutations into changesets)
-      const { body, boundary } = await formatBatchRequestFromNative(
-        requests,
-        baseUrl,
-      );
+      const { body, boundary } = await formatBatchRequestFromNative(requests, baseUrl);
 
       // Execute the batch request
-      const response = await this.context._makeRequest<string>(
-        `/${this.databaseName}/$batch`,
-        {
-          ...options,
-          method: "POST",
-          headers: {
-            ...options?.headers,
-            "Content-Type": `multipart/mixed; boundary=${boundary}`,
-            "OData-Version": "4.0",
-          },
-          body,
+      const response = await this.context._makeRequest<string>(`/${this.databaseName}/$batch`, {
+        ...options,
+        method: "POST",
+        headers: {
+          ...options?.headers,
+          "Content-Type": `multipart/mixed; boundary=${boundary}`,
+          "OData-Version": "4.0",
         },
-      );
+        body,
+      });
 
       if (response.error) {
         // Return BatchResult with all operations marked as failed
         const errorCount = this.builders.length;
-        const results: BatchItemResult<any>[] = this.builders.map((_, i) => ({
+        // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any result type
+        const results: BatchItemResult<any>[] = this.builders.map((_, _i) => ({
           data: undefined,
           error: response.error,
           status: 0,
         }));
 
         return {
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
           results: results as any,
           successCount: 0,
           errorCount,
@@ -222,23 +213,18 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
 
       // Extract the actual boundary from the response
       // FileMaker uses its own boundary, not the one we sent
-      const firstLine =
-        response.data.split("\r\n")[0] || response.data.split("\n")[0] || "";
-      const actualBoundary = firstLine.startsWith("--")
-        ? firstLine.substring(2)
-        : boundary;
+      const firstLine = response.data.split("\r\n")[0] || response.data.split("\n")[0] || "";
+      const actualBoundary = firstLine.startsWith("--") ? firstLine.substring(2) : boundary;
 
       // Parse the multipart response
       const contentTypeHeader = `multipart/mixed; boundary=${actualBoundary}`;
-      const parsedResponses = parseBatchResponse(
-        response.data,
-        contentTypeHeader,
-      );
+      const parsedResponses = parseBatchResponse(response.data, contentTypeHeader);
 
       // Process each response using the corresponding builder
       // Build BatchResult with per-item results
-      type ResultTuple = ExtractTupleTypes<Builders>;
+      type _ResultTuple = ExtractTupleTypes<Builders>;
 
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any result type
       const results: BatchItemResult<any>[] = [];
       let successCount = 0;
       let errorCount = 0;
@@ -270,11 +256,14 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
               name: "BatchError",
               message: `Builder at index ${i} is undefined`,
               timestamp: new Date(),
+              // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
             } as any,
             status: parsed.status,
           });
           errorCount++;
-          if (firstErrorIndex === null) firstErrorIndex = i;
+          if (firstErrorIndex === null) {
+            firstErrorIndex = i;
+          }
           continue;
         }
 
@@ -291,7 +280,9 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
             status: parsed.status,
           });
           errorCount++;
-          if (firstErrorIndex === null) firstErrorIndex = i;
+          if (firstErrorIndex === null) {
+            firstErrorIndex = i;
+          }
         } else {
           results.push({
             data: result.data,
@@ -303,6 +294,7 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
       }
 
       return {
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         results: results as any,
         successCount,
         errorCount,
@@ -312,17 +304,20 @@ export class BatchBuilder<Builders extends readonly ExecutableBuilder<any>[]> {
     } catch (err) {
       // On exception, return a BatchResult with all operations marked as failed
       const errorCount = this.builders.length;
-      const results: BatchItemResult<any>[] = this.builders.map((_, i) => ({
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any result type
+      const results: BatchItemResult<any>[] = this.builders.map((_, _i) => ({
         data: undefined,
         error: {
           name: "BatchError",
           message: err instanceof Error ? err.message : "Unknown error",
           timestamp: new Date(),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
         } as any,
         status: 0,
       }));
 
       return {
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         results: results as any,
         successCount: 0,
         errorCount,

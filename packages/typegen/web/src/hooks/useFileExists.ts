@@ -24,4 +24,3 @@ export function useFileExists(path: string | undefined) {
     retry: false,
   });
 }
-

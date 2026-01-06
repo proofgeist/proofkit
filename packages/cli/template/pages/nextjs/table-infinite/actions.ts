@@ -19,7 +19,7 @@ export const fetchData = __ACTION_CLIENT__
     })
   )
   .action(async ({ parsedInput: { offset, sorting, columnFilters } }) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const getOptions: clientTypes.ListParams<__TYPE_NAME__, any> & {
       query: clientTypes.Query<__TYPE_NAME__>[];
     } = {

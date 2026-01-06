@@ -55,7 +55,9 @@
     "dev": "vite",
     "check-exports": "attw --pack .",
     "release": "pnpm build && changeset publish --access public",
-    "knip": "knip"
+    "knip": "knip",
+    "lint": "biome check . --write",
+    "lint:summary": "biome check . --reporter=summary"
   },
   "repository": {
     "type": "git",

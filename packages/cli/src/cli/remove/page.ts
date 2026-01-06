@@ -1,13 +1,8 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
 import { Command } from "commander";
 import fs from "fs-extra";
-import {
-  Node,
-  SyntaxKind,
-  type Project,
-  type PropertyAssignment,
-} from "ts-morph";
+import { Node, type Project, type PropertyAssignment, SyntaxKind } from "ts-morph";
 
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
@@ -15,13 +10,13 @@ import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 
-const getExistingRoutes = (
-  project: Project
-): { label: string; href: string }[] => {
+const getExistingRoutes = (project: Project): { label: string; href: string }[] => {
   const navFilePath = path.join(state.projectDir, "src/app/navigation.tsx");
 
   // If navigation file doesn't exist (e.g., webviewer apps), there are no nav routes to remove
-  if (!fs.existsSync(navFilePath)) return [];
+  if (!fs.existsSync(navFilePath)) {
+    return [];
+  }
 
   const sourceFile = project.addSourceFileAtPath(navFilePath);
 
@@ -33,29 +28,25 @@ const getExistingRoutes = (
     ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression)
     ?.getElements();
 
-  primaryRoutes?.forEach((element) => {
-    if (Node.isObjectLiteralExpression(element)) {
-      const labelProp = element
-        .getProperties()
-        .find(
-          (prop): prop is PropertyAssignment =>
-            Node.isPropertyAssignment(prop) && prop.getName() === "label"
-        );
-      const hrefProp = element
-        .getProperties()
-        .find(
-          (prop): prop is PropertyAssignment =>
-            Node.isPropertyAssignment(prop) && prop.getName() === "href"
-        );
+  if (primaryRoutes) {
+    for (const element of primaryRoutes) {
+      if (Node.isObjectLiteralExpression(element)) {
+        const labelProp = element
+          .getProperties()
+          .find((prop): prop is PropertyAssignment => Node.isPropertyAssignment(prop) && prop.getName() === "label");
+        const hrefProp = element
+          .getProperties()
+          .find((prop): prop is PropertyAssignment => Node.isPropertyAssignment(prop) && prop.getName() === "href");
 
-      const label = labelProp?.getInitializer()?.getText().replace(/['"]/g, "");
-      const href = hrefProp?.getInitializer()?.getText().replace(/['"]/g, "");
+        const label = labelProp?.getInitializer()?.getText().replace(/['"]/g, "");
+        const href = hrefProp?.getInitializer()?.getText().replace(/['"]/g, "");
 
-      if (label && href) {
-        routes.push({ label, href });
+        if (label && href) {
+          routes.push({ label, href });
+        }
       }
     }
-  });
+  }
 
   // Get secondary routes
   const secondaryRoutes = sourceFile
@@ -63,29 +54,25 @@ const getExistingRoutes = (
     ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression)
     ?.getElements();
 
-  secondaryRoutes?.forEach((element) => {
-    if (Node.isObjectLiteralExpression(element)) {
-      const labelProp = element
-        .getProperties()
-        .find(
-          (prop): prop is PropertyAssignment =>
-            Node.isPropertyAssignment(prop) && prop.getName() === "label"
-        );
-      const hrefProp = element
-        .getProperties()
-        .find(
-          (prop): prop is PropertyAssignment =>
-            Node.isPropertyAssignment(prop) && prop.getName() === "href"
-        );
+  if (secondaryRoutes) {
+    for (const element of secondaryRoutes) {
+      if (Node.isObjectLiteralExpression(element)) {
+        const labelProp = element
+          .getProperties()
+          .find((prop): prop is PropertyAssignment => Node.isPropertyAssignment(prop) && prop.getName() === "label");
+        const hrefProp = element
+          .getProperties()
+          .find((prop): prop is PropertyAssignment => Node.isPropertyAssignment(prop) && prop.getName() === "href");
 
-      const label = labelProp?.getInitializer()?.getText().replace(/['"]/g, "");
-      const href = hrefProp?.getInitializer()?.getText().replace(/['"]/g, "");
+        const label = labelProp?.getInitializer()?.getText().replace(/['"]/g, "");
+        const href = hrefProp?.getInitializer()?.getText().replace(/['"]/g, "");
 
-      if (label && href) {
-        routes.push({ label, href });
+        if (label && href) {
+          routes.push({ label, href });
+        }
       }
     }
-  });
+  }
 
   return routes;
 };
@@ -94,7 +81,9 @@ const removeRouteFromNav = async (project: Project, routeToRemove: string) => {
   const navFilePath = path.join(state.projectDir, "src/app/navigation.tsx");
 
   // Skip if there is no navigation file
-  if (!fs.existsSync(navFilePath)) return;
+  if (!fs.existsSync(navFilePath)) {
+    return;
+  }
 
   const sourceFile = project.addSourceFileAtPath(navFilePath);
 
@@ -110,10 +99,7 @@ const removeRouteFromNav = async (project: Project, routeToRemove: string) => {
       if (Node.isObjectLiteralExpression(element)) {
         const hrefProp = element
           .getProperties()
-          .find(
-            (prop): prop is PropertyAssignment =>
-              Node.isPropertyAssignment(prop) && prop.getName() === "href"
-          );
+          .find((prop): prop is PropertyAssignment => Node.isPropertyAssignment(prop) && prop.getName() === "href");
 
         const href = hrefProp?.getInitializer()?.getText().replace(/['"]/g, "");
 
@@ -136,10 +122,7 @@ const removeRouteFromNav = async (project: Project, routeToRemove: string) => {
       if (Node.isObjectLiteralExpression(element)) {
         const hrefProp = element
           .getProperties()
-          .find(
-            (prop): prop is PropertyAssignment =>
-              Node.isPropertyAssignment(prop) && prop.getName() === "href"
-          );
+          .find((prop): prop is PropertyAssignment => Node.isPropertyAssignment(prop) && prop.getName() === "href");
 
         const href = hrefProp?.getInitializer()?.getText().replace(/['"]/g, "");
 
@@ -154,7 +137,7 @@ const removeRouteFromNav = async (project: Project, routeToRemove: string) => {
 };
 
 export const runRemovePageAction = async (routeName?: string) => {
-  const settings = getSettings();
+  const _settings = getSettings();
   const projectDir = state.projectDir;
   const project = getNewProject(projectDir);
 
@@ -165,26 +148,27 @@ export const runRemovePageAction = async (routeName?: string) => {
     return p.cancel("No pages found in the navigation.");
   }
 
-  if (!routeName) {
-    routeName = abortIfCancel(
+  let selectedRouteName = routeName;
+  if (!selectedRouteName) {
+    selectedRouteName = abortIfCancel(
       await p.select({
         message: "Select the page to remove",
         options: routes.map((route) => ({
           label: `${route.label} (${route.href})`,
           value: route.href,
         })),
-      })
+      }),
     );
   }
 
-  if (!routeName.startsWith("/")) {
-    routeName = `/${routeName}`;
+  if (!selectedRouteName.startsWith("/")) {
+    selectedRouteName = `/${selectedRouteName}`;
   }
 
   const pagePath =
     state.appType === "browser"
-      ? path.join(projectDir, "src/app/(main)", routeName)
-      : path.join(projectDir, "src/routes", routeName);
+      ? path.join(projectDir, "src/app/(main)", selectedRouteName)
+      : path.join(projectDir, "src/routes", selectedRouteName);
 
   const spinner = p.spinner();
   spinner.start("Removing page");
@@ -193,11 +177,11 @@ export const runRemovePageAction = async (routeName?: string) => {
     // Check if directory exists
     if (!fs.existsSync(pagePath)) {
       spinner.stop("Page not found!");
-      return p.cancel(`Page at ${routeName} does not exist`);
+      return p.cancel(`Page at ${selectedRouteName} does not exist`);
     }
 
     // Remove from navigation first (if present)
-    await removeRouteFromNav(project, routeName);
+    await removeRouteFromNav(project, selectedRouteName);
 
     // Remove the page directory
     await fs.remove(pagePath);

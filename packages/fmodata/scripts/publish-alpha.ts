@@ -10,18 +10,24 @@
  *   bun run scripts/publish-alpha.ts
  */
 
-import { readFileSync, writeFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
-import { execSync } from "child_process";
-import readline from "readline";
+import { execSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import readline from "node:readline";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Regex patterns
+const VERSION_REGEX = /^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/;
+const VERSION_SPLIT_REGEX = /[.-]/;
+const ALPHA_MATCH_REGEX = /alpha\.(\d+)$/;
+const ALPHA_REPLACE_REGEX = /alpha\.\d+$/;
+
 // Read package.json
 const packagePath = resolve(__dirname, "../package.json");
-let packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
+const packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
 const packageName = packageJson.name;
 let version = packageJson.version;
 
@@ -35,9 +41,7 @@ function question(query: string): Promise<string> {
   return new Promise((resolve) => rl.question(query, resolve));
 }
 
-async function getPublishedVersion(
-  packageName: string,
-): Promise<{ version: string; gitHead?: string } | null> {
+async function getPublishedVersion(packageName: string): Promise<{ version: string; gitHead?: string } | null> {
   try {
     const registryUrl = `https://registry.npmjs.org/${packageName}`;
     const response = await fetch(registryUrl);
@@ -107,20 +111,21 @@ function hasUncommittedChanges(): { hasChanges: boolean; details: string } {
     }).trim();
 
     // Check for untracked files in this package
-    const untracked = execSync(
-      "git ls-files --others --exclude-standard packages/fmodata/",
-      {
-        cwd: resolve(__dirname, "../.."),
-        encoding: "utf-8",
-      },
-    ).trim();
+    const untracked = execSync("git ls-files --others --exclude-standard packages/fmodata/", {
+      cwd: resolve(__dirname, "../.."),
+      encoding: "utf-8",
+    }).trim();
 
     const changes: string[] = [];
-    if (staged) changes.push(`staged: ${staged.split("\n").length} file(s)`);
-    if (unstaged)
+    if (staged) {
+      changes.push(`staged: ${staged.split("\n").length} file(s)`);
+    }
+    if (unstaged) {
       changes.push(`unstaged: ${unstaged.split("\n").length} file(s)`);
-    if (untracked)
+    }
+    if (untracked) {
       changes.push(`untracked: ${untracked.split("\n").length} file(s)`);
+    }
 
     return {
       hasChanges: changes.length > 0,
@@ -142,7 +147,7 @@ function commitChanges(message: string): void {
     }).trim();
 
     if (!status) {
-      console.log(`ℹ️  No changes to commit`);
+      console.log("ℹ️  No changes to commit");
       return;
     }
 
@@ -167,10 +172,10 @@ function commitChanges(message: string): void {
 function compareVersions(v1: string, v2: string): number {
   // Parse semantic versions (handles pre-release versions like alpha)
   const parseVersion = (v: string) => {
-    const match = v.match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
+    const match = v.match(VERSION_REGEX);
     if (!match) {
       // Fallback for non-standard versions
-      const parts = v.split(/[.-]/).map(Number);
+      const parts = v.split(VERSION_SPLIT_REGEX).map(Number);
       return {
         major: parts[0] || 0,
         minor: parts[1] || 0,
@@ -179,9 +184,9 @@ function compareVersions(v1: string, v2: string): number {
       };
     }
     return {
-      major: parseInt(match[1]),
-      minor: parseInt(match[2]),
-      patch: parseInt(match[3]),
+      major: Number.parseInt(match[1], 10),
+      minor: Number.parseInt(match[2], 10),
+      patch: Number.parseInt(match[3], 10),
       prerelease: match[4] || null,
     };
   };
@@ -201,8 +206,12 @@ function compareVersions(v1: string, v2: string): number {
   }
 
   // If versions are equal, pre-release versions are considered lower
-  if (ver1.prerelease && !ver2.prerelease) return -1;
-  if (!ver1.prerelease && ver2.prerelease) return 1;
+  if (ver1.prerelease && !ver2.prerelease) {
+    return -1;
+  }
+  if (!ver1.prerelease && ver2.prerelease) {
+    return 1;
+  }
   if (ver1.prerelease && ver2.prerelease) {
     // Compare prerelease strings (e.g., "alpha.0" vs "alpha.1")
     return ver1.prerelease.localeCompare(ver2.prerelease);
@@ -211,28 +220,25 @@ function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
-function bumpVersion(
-  currentVersion: string,
-  type: "patch" | "minor" | "major",
-): string {
-  const parts = currentVersion.split(/[.-]/);
-  const major = parseInt(parts[0]) || 0;
-  const minor = parseInt(parts[1]) || 0;
-  const patch = parseInt(parts[2]) || 0;
+function bumpVersion(currentVersion: string, type: "patch" | "minor" | "major"): string {
+  const parts = currentVersion.split(VERSION_SPLIT_REGEX);
+  const major = Number.parseInt(parts[0], 10) || 0;
+  const minor = Number.parseInt(parts[1], 10) || 0;
+  const patch = Number.parseInt(parts[2], 10) || 0;
 
   if (type === "major") {
     return `${major + 1}.0.0-alpha.0`;
-  } else if (type === "minor") {
-    return `${major}.${minor + 1}.0-alpha.0`;
-  } else {
-    // patch - increment the alpha number if it exists, otherwise start at alpha.0
-    const alphaMatch = currentVersion.match(/alpha\.(\d+)$/);
-    if (alphaMatch) {
-      const alphaNum = parseInt(alphaMatch[1]);
-      return currentVersion.replace(/alpha\.\d+$/, `alpha.${alphaNum + 1}`);
-    }
-    return `${major}.${minor}.${patch + 1}-alpha.0`;
   }
+  if (type === "minor") {
+    return `${major}.${minor + 1}.0-alpha.0`;
+  }
+  // patch - increment the alpha number if it exists, otherwise start at alpha.0
+  const alphaMatch = currentVersion.match(ALPHA_MATCH_REGEX);
+  if (alphaMatch) {
+    const alphaNum = Number.parseInt(alphaMatch[1], 10);
+    return currentVersion.replace(ALPHA_REPLACE_REGEX, `alpha.${alphaNum + 1}`);
+  }
+  return `${major}.${minor}.${patch + 1}-alpha.0`;
 }
 
 function autoBumpPatch(fromVersion?: string): string {
@@ -246,7 +252,7 @@ function checkNpmAuth(): boolean {
       stdio: "pipe",
     });
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -277,20 +283,16 @@ async function ensureNpmAuth(): Promise<void> {
       stdio: "inherit",
     });
     console.log("\n✅ Successfully logged in to npm");
-  } catch (error) {
+  } catch (_error) {
     console.error("\n❌ Failed to log in to npm");
     rl.close();
     process.exit(1);
   }
 }
 
-async function updateVersion(newVersion: string) {
+function updateVersion(newVersion: string): void {
   packageJson.version = newVersion;
-  writeFileSync(
-    packagePath,
-    JSON.stringify(packageJson, null, 2) + "\n",
-    "utf-8",
-  );
+  writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf-8");
   version = newVersion;
   console.log(`✅ Version updated to ${newVersion}`);
 }
@@ -309,17 +311,14 @@ async function main() {
 
       console.log(`   Published version: ${publishedVersion}`);
       if (publishedGitHash) {
-        console.log(
-          `   Published git hash: ${publishedGitHash.substring(0, 7)}`,
-        );
+        console.log(`   Published git hash: ${publishedGitHash.substring(0, 7)}`);
       }
       console.log(`   Local version: ${version}`);
       if (localGitHash) {
         console.log(`   Local git hash: ${localGitHash.substring(0, 7)}`);
       }
 
-      const gitHashesMatch =
-        publishedGitHash && localGitHash && publishedGitHash === localGitHash;
+      const gitHashesMatch = publishedGitHash && localGitHash && publishedGitHash === localGitHash;
 
       // Only check for uncommitted changes if git hashes match
       // If hashes match but there are uncommitted changes, that's fine - we'll commit later
@@ -327,12 +326,8 @@ async function main() {
       if (gitHashesMatch) {
         const gitStatus = hasUncommittedChanges();
         if (!gitStatus.hasChanges) {
-          console.log(
-            `\n⚠️  Git hashes match and there are no uncommitted changes.`,
-          );
-          console.log(
-            "❌ Cannot republish the exact same code that's already on npm.",
-          );
+          console.log("\n⚠️  Git hashes match and there are no uncommitted changes.");
+          console.log("❌ Cannot republish the exact same code that's already on npm.");
           rl.close();
           process.exit(0);
         }
@@ -351,35 +346,33 @@ async function main() {
             `\n🔄 Git hashes match but you have uncommitted changes - automatically bumping from ${versionToBumpFrom}...`,
           );
           const newVersion = autoBumpPatch(versionToBumpFrom);
-          await updateVersion(newVersion);
+          updateVersion(newVersion);
         } else {
           // Git hashes differ, auto-bump patch version from the HIGHER version
           // (usually the published version when local is behind)
           const versionToBumpFrom = comparison < 0 ? publishedVersion : version;
-          console.log(
-            `\n🔄 Git hashes differ - automatically bumping from ${versionToBumpFrom}...`,
-          );
+          console.log(`\n🔄 Git hashes differ - automatically bumping from ${versionToBumpFrom}...`);
           const newVersion = autoBumpPatch(versionToBumpFrom);
-          await updateVersion(newVersion);
+          updateVersion(newVersion);
         }
       } else {
         // Local version is greater than published version (not yet published)
-        console.log(`✅ Local version is newer than published version`);
+        console.log("✅ Local version is newer than published version");
         if (gitHashesMatch) {
-          console.log(`✅ Git hashes match`);
+          console.log("✅ Git hashes match");
         }
       }
     } else {
-      console.log(`   No published version found (first publish)`);
+      console.log("   No published version found (first publish)");
       // If version hasn't been published, ensure we have a valid version
       // The current version should be fine, but we could bump if needed
       console.log(`   Using current version: ${version}`);
     }
 
-    console.log(`\n📦 Ready to publish:`);
+    console.log("\n📦 Ready to publish:");
     console.log(`   Package: ${packageName}`);
     console.log(`   Version: ${version}`);
-    console.log(`   Tag: alpha\n`);
+    console.log("   Tag: alpha\n");
 
     // Build the package
     console.log("🔨 Building package...");
@@ -391,9 +384,7 @@ async function main() {
     console.log("✅ Build complete!\n");
 
     // Prompt for confirmation
-    const answer = await question(
-      `Continue with publish of ${packageName}@${version}? (y/n): `,
-    );
+    const answer = await question(`Continue with publish of ${packageName}@${version}? (y/n): `);
 
     if (answer.toLowerCase() !== "y" && answer.toLowerCase() !== "yes") {
       console.log("❌ Publish cancelled.");
@@ -421,7 +412,7 @@ async function main() {
     console.log("\n✅ Successfully published!");
 
     // Commit the version change with the version number as the commit message
-    console.log(`\n📝 Committing version change...`);
+    console.log("\n📝 Committing version change...");
     commitChanges(version);
   } catch (error) {
     console.error("\n❌ Error:", error);
@@ -432,4 +423,7 @@ async function main() {
   }
 }
 
-main();
+main().catch((error) => {
+  console.error("Error:", error);
+  process.exit(1);
+});

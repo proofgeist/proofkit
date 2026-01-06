@@ -10,11 +10,7 @@ import { abortIfCancel } from "./utils.js";
 interface WizardResponse {
   token: string;
 }
-export async function getOttoFMSToken({
-  url,
-}: {
-  url: URL;
-}): Promise<{ token: string }> {
+export async function getOttoFMSToken({ url }: { url: URL }): Promise<{ token: string }> {
   // generate a random string
   const hash = randomstring.generate({ length: 18, charset: "alphanumeric" });
 
@@ -23,11 +19,13 @@ export async function getOttoFMSToken({
   const urlToOpen = loginUrl.toString();
   clack.log.info(
     `${chalk.bold(
-      `If the browser window didn't open automatically, please open the following link to login into your OttoFMS server:`
-    )}\n\n${chalk.cyan(urlToOpen)}`
+      `If the browser window didn't open automatically, please open the following link to login into your OttoFMS server:`,
+    )}\n\n${chalk.cyan(urlToOpen)}`,
   );
 
-  void open(loginUrl.toString());
+  open(loginUrl.toString()).catch(() => {
+    // Ignore errors from open() - the user can manually open the URL
+  });
 
   const loginSpinner = clack.spinner();
 
@@ -36,23 +34,24 @@ export async function getOttoFMSToken({
   const data = await new Promise<WizardResponse>((resolve) => {
     const pollingInterval = setInterval(() => {
       axios
-        .get<{ response: WizardResponse }>(
-          `${url.origin}/otto/api/cli/checkHash/${hash}`,
-          {
-            headers: {
-              "Accept-Encoding": "deflate",
-            },
-          }
-        )
+        .get<{ response: WizardResponse }>(`${url.origin}/otto/api/cli/checkHash/${hash}`, {
+          headers: {
+            "Accept-Encoding": "deflate",
+          },
+        })
         .then((result) => {
           resolve(result.data.response);
           clearTimeout(timeout);
           clearInterval(pollingInterval);
-          void axios.delete(`${url.origin}/otto/api/cli/checkHash/${hash}`, {
-            headers: {
-              "Accept-Encoding": "deflate",
-            },
-          });
+          axios
+            .delete(`${url.origin}/otto/api/cli/checkHash/${hash}`, {
+              headers: {
+                "Accept-Encoding": "deflate",
+              },
+            })
+            .catch(() => {
+              // Ignore cleanup errors
+            });
         })
         .catch(() => {
           // noop - just try again
@@ -61,9 +60,7 @@ export async function getOttoFMSToken({
 
     const timeout = setTimeout(() => {
       clearInterval(pollingInterval);
-      loginSpinner.stop(
-        "Login timed out. No worries - it happens to the best of us."
-      );
+      loginSpinner.stop("Login timed out. No worries - it happens to the best of us.");
     }, 180_000); // 3 minutes
   });
   // clack.log.info(`Token: ${JSON.stringify(data)}`);
@@ -91,14 +88,11 @@ interface ListFilesResponse {
 }
 
 export async function listFiles({ url, token }: { url: URL; token: string }) {
-  const response = await axios.get<ListFilesResponse>(
-    `${url.origin}/otto/fmi/admin/api/v2/databases`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await axios.get<ListFilesResponse>(`${url.origin}/otto/fmi/admin/api/v2/databases`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   return response.data.response.databases;
 }
@@ -119,14 +113,11 @@ interface ListAPIKeysResponse {
 }
 
 export async function listAPIKeys({ url, token }: { url: URL; token: string }) {
-  const response = await axios.get<ListAPIKeysResponse>(
-    `${url.origin}/otto/api/api-key`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await axios.get<ListAPIKeysResponse>(`${url.origin}/otto/api/api-key`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   return response.data.response["api-keys"];
 }
@@ -137,28 +128,22 @@ interface CreateAPIKeyResponse {
     token: string;
   };
 }
-export async function createDataAPIKey({
-  url,
-  filename,
-}: {
-  url: URL;
-  filename: string;
-}) {
+export async function createDataAPIKey({ url, filename }: { url: URL; filename: string }) {
   clack.log.info(
-    `${chalk.cyan("Creating a Data API Key")}\nEnter FileMaker credentials for ${chalk.bold(filename)}.\n${chalk.dim(`The account must have the fmrest extended privilege enabled.`)}`
+    `${chalk.cyan("Creating a Data API Key")}\nEnter FileMaker credentials for ${chalk.bold(filename)}.\n${chalk.dim("The account must have the fmrest extended privilege enabled.")}`,
   );
 
   while (true) {
     const username = abortIfCancel(
       await clack.text({
         message: `Enter the account name for ${chalk.bold(filename)}`,
-      })
+      }),
     );
 
     const password = abortIfCancel(
       await clack.password({
         message: `Enter the password for ${chalk.bold(username)}`,
-      })
+      }),
     );
 
     try {
@@ -171,21 +156,14 @@ export async function createDataAPIKey({
 
       return response;
     } catch (error) {
-      if (!(error instanceof AxiosError)) {
-        clack.log.error(
-          `${chalk.red("Error creating Data API key:")} Unknown error`
-        );
-      } else {
+      if (error instanceof AxiosError) {
         const respMsg =
           error.response?.data && "messages" in error.response.data
-            ? (error.response.data as { messages?: { text?: string }[] })
-                .messages?.[0]?.text
+            ? (error.response.data as { messages?: { text?: string }[] }).messages?.[0]?.text
             : undefined;
 
         clack.log.error(
-          `${chalk.red("Error creating Data API key:")} ${
-            respMsg ?? `Error code ${error.response?.status}`
-          }
+          `${chalk.red("Error creating Data API key:")} ${respMsg ?? `Error code ${error.response?.status}`}
 ${chalk.dim(
   error.response?.status === 400 &&
     `Common reasons this might happen:
@@ -193,17 +171,19 @@ ${chalk.dim(
 - The account does not have the fmrest extended privilege enabled.
 
 You may also want to try to create an API directly in the OttoFMS dashboard:
-${url.origin}/otto/app/api-keys`
+${url.origin}/otto/app/api-keys`,
 )}
-        `
+        `,
         );
+      } else {
+        clack.log.error(`${chalk.red("Error creating Data API key:")} Unknown error`);
       }
       const tryAgain = abortIfCancel(
         await clack.confirm({
           message: "Do you want to try and enter credentials again?",
           active: "Yes, try again",
           inactive: "No, abort",
-        })
+        }),
       );
       if (!tryAgain) {
         throw new Error("User cancelled");
@@ -223,28 +203,17 @@ export async function createDataAPIKeyWithCredentials({
   username: string;
   password: string;
 }) {
-  const response = await axios.post<CreateAPIKeyResponse>(
-    `${url.origin}/otto/api/api-key/create-only`,
-    {
-      database: filename,
-      label: "For FM Web App",
-      user: username,
-      pass: password,
-    }
-  );
+  const response = await axios.post<CreateAPIKeyResponse>(`${url.origin}/otto/api/api-key/create-only`, {
+    database: filename,
+    label: "For FM Web App",
+    user: username,
+    pass: password,
+  });
 
   return { apiKey: response.data.response.key };
 }
 
-export async function startDeployment({
-  payload,
-  url,
-  token,
-}: {
-  payload: any;
-  url: URL;
-  token: string;
-}) {
+export async function startDeployment({ payload, url, token }: { payload: unknown; url: URL; token: string }) {
   const responseSchema = z.object({
     response: z.object({
       started: z.boolean(),
@@ -280,14 +249,7 @@ export async function getDeploymentStatus({
   const schema = z.object({
     response: z.object({
       id: z.number(),
-      status: z.enum([
-        "queued",
-        "running",
-        "scheduled",
-        "complete",
-        "aborted",
-        "unknown",
-      ]),
+      status: z.enum(["queued", "running", "scheduled", "complete", "aborted", "unknown"]),
       running: z.coerce.boolean(),
       created_at: z.string(),
       started_at: z.string(),
@@ -296,14 +258,11 @@ export async function getDeploymentStatus({
     messages: z.array(z.object({ code: z.number(), text: z.string() })),
   });
 
-  const response = await axios.get(
-    `${url.origin}/otto/api/deployment/${deploymentId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await axios.get(`${url.origin}/otto/api/deployment/${deploymentId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   return schema.parse(response.data);
 }

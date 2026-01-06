@@ -3,10 +3,7 @@ import { execa, type StdoutStderrOption } from "execa";
 import ora, { type Ora } from "ora";
 
 import { state } from "~/state.js";
-import {
-  getUserPkgManager,
-  type PackageManager,
-} from "~/utils/getUserPkgManager.js";
+import { getUserPkgManager, type PackageManager } from "~/utils/getUserPkgManager.js";
 import { logger } from "~/utils/logger.js";
 
 const execWithSpinner = async (
@@ -17,7 +14,7 @@ const execWithSpinner = async (
     stdout?: StdoutStderrOption;
     onDataHandle?: (spinner: Ora) => (data: Buffer) => void;
     loadingMessage?: string;
-  }
+  },
 ) => {
   const { onDataHandle, args = ["install"], stdout = "pipe" } = options;
 
@@ -25,9 +22,7 @@ const execWithSpinner = async (
     args.push("--prefer-offline");
   }
 
-  const spinner = ora(
-    options.loadingMessage ?? `Running ${pkgManager} ${args.join(" ")} ...`
-  ).start();
+  const spinner = ora(options.loadingMessage ?? `Running ${pkgManager} ${args.join(" ")} ...`).start();
   const subprocess = execa(pkgManager, args, {
     cwd: projectDir,
     stdout,
@@ -52,8 +47,8 @@ const execWithSpinner = async (
       stderrOutput += data.toString();
     });
 
-    void subprocess.on("error", (e) => rej(e));
-    void subprocess.on("close", (code) => {
+    subprocess.on("error", (e) => rej(e));
+    subprocess.on("close", (code) => {
       if (code === 0) {
         res();
       } else {
@@ -67,9 +62,7 @@ const execWithSpinner = async (
           .replace(/^\s*$/gm, "") // Remove empty lines
           .trim();
 
-        const errorMessage =
-          combinedOutput ||
-          `Command failed with exit code ${code}: ${pkgManager} ${args.join(" ")}`;
+        const errorMessage = combinedOutput || `Command failed with exit code ${code}: ${pkgManager} ${args.join(" ")}`;
         rej(new Error(errorMessage));
       }
     });
@@ -78,10 +71,7 @@ const execWithSpinner = async (
   return spinner;
 };
 
-const runInstallCommand = async (
-  pkgManager: PackageManager,
-  projectDir: string
-): Promise<Ora | null> => {
+const runInstallCommand = async (pkgManager: PackageManager, projectDir: string): Promise<Ora | null> => {
   switch (pkgManager) {
     // When using npm, inherit the stderr stream so that the progress bar is shown
     case "npm":
@@ -98,9 +88,7 @@ const runInstallCommand = async (
           const text = data.toString();
 
           if (text.includes("Progress")) {
-            spinner.text = text.includes("|")
-              ? (text.split(" | ")[1] ?? "")
-              : text;
+            spinner.text = text.includes("|") ? (text.split(" | ")[1] ?? "") : text;
           }
         },
       });
@@ -113,6 +101,8 @@ const runInstallCommand = async (
     // When using bun, the stdout stream is ignored and the spinner is shown
     case "bun":
       return execWithSpinner(projectDir, pkgManager, { stdout: "ignore" });
+    default:
+      throw new Error(`Unknown package manager: ${pkgManager}`);
   }
 };
 
@@ -125,9 +115,7 @@ export const installDependencies = async (args?: { projectDir?: string }) => {
 
   // If the spinner was used to show the progress, use succeed method on it
   // If not, use the succeed on a new spinner
-  (installSpinner ?? ora()).succeed(
-    chalk.green("Successfully installed dependencies!\n")
-  );
+  (installSpinner ?? ora()).succeed(chalk.green("Successfully installed dependencies!\n"));
 };
 
 export const runExecCommand = async ({
@@ -155,11 +143,7 @@ export const runExecCommand = async ({
     // If the spinner was used to show the progress, use succeed method on it
     // If not, use the succeed on a new spinner
     (spinner ?? ora()).succeed(
-      chalk.green(
-        successMessage
-          ? `${successMessage}\n`
-          : `Successfully ran ${command.join(" ")}!\n`
-      )
+      chalk.green(successMessage ? `${successMessage}\n` : `Successfully ran ${command.join(" ")}!\n`),
     );
   } catch (error) {
     // If we have a spinner, fail it, otherwise just throw the error
@@ -184,7 +168,7 @@ export const _runExecCommand = async ({
   const pkgManager = getUserPkgManager();
   switch (pkgManager) {
     // When using npm, capture both stdout and stderr to show error messages
-    case "npm":
+    case "npm": {
       const result = await execa("npx", [...command], {
         cwd: projectDir,
         stdout: "pipe",
@@ -204,14 +188,14 @@ export const _runExecCommand = async ({
           .trim();
 
         const errorMessage =
-          combinedOutput ||
-          `Command failed with exit code ${result.exitCode}: npx ${command.join(" ")}`;
+          combinedOutput || `Command failed with exit code ${result.exitCode}: npx ${command.join(" ")}`;
         throw new Error(errorMessage);
       }
 
       return null;
+    }
     // When using yarn or pnpm, use the stdout stream and ora spinner to show the progress
-    case "pnpm":
+    case "pnpm": {
       // For shadcn commands, don't use progress handler to capture full output
       const isInstallCommand = command.includes("install");
       return execWithSpinner(projectDir, "pnpm", {
@@ -222,14 +206,13 @@ export const _runExecCommand = async ({
               const text = data.toString();
 
               if (text.includes("Progress")) {
-                spinner.text = text.includes("|")
-                  ? (text.split(" | ")[1] ?? "")
-                  : text;
+                spinner.text = text.includes("|") ? (text.split(" | ")[1] ?? "") : text;
               }
             }
           : undefined,
       });
-    case "yarn":
+    }
+    case "yarn": {
       // For shadcn commands, don't use progress handler to capture full output
       const isYarnInstallCommand = command.includes("install");
       return execWithSpinner(projectDir, pkgManager, {
@@ -241,6 +224,7 @@ export const _runExecCommand = async ({
             }
           : undefined,
       });
+    }
     // When using bun, the stdout stream is ignored and the spinner is shown
     case "bun":
       return execWithSpinner(projectDir, "bunx", {
@@ -248,6 +232,8 @@ export const _runExecCommand = async ({
         args: [...command],
         loadingMessage,
       });
+    default:
+      throw new Error(`Unknown package manager: ${pkgManager}`);
   }
 };
 

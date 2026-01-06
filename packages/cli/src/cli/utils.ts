@@ -1,5 +1,6 @@
-import path from "path";
 // import { isCancel } from "@clack/core";
+
+import path from "node:path";
 import { cancel, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
@@ -12,20 +13,14 @@ import { getSettings } from "~/utils/parseSettings.js";
  * Runs before any add command is run. Checks if the user is in a ProofKit project and if the
  * proofkit.json file is valid.
  */
-export const ensureProofKitProject = ({
-  commandName,
-}: {
-  commandName: string;
-}) => {
-  const settingsExists = fs.existsSync(
-    path.join(process.cwd(), "proofkit.json")
-  );
+export const ensureProofKitProject = ({ commandName }: { commandName: string }) => {
+  const settingsExists = fs.existsSync(path.join(process.cwd(), "proofkit.json"));
   if (!settingsExists) {
     console.log(
       chalk.yellow(
         `The "${commandName}" command requires an existing ProofKit project.
-Please run " ${npmName} init" first, or try this command again when inside a ProofKit project.`
-      )
+Please run " ${npmName} init" first, or try this command again when inside a ProofKit project.`,
+      ),
     );
     process.exit(1);
   }
@@ -47,9 +42,7 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
 export class UserAbortedError extends Error {}
 export function abortIfCancel(value: symbol | string): string;
 export function abortIfCancel<T extends boolean>(value: symbol | T): T;
-export function abortIfCancel<T extends string | boolean>(
-  value: T | symbol
-): T {
+export function abortIfCancel<T extends string | boolean>(value: T | symbol): T {
   if (isCancel(value)) {
     cancel();
     throw new UserAbortedError();

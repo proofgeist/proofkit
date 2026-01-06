@@ -1,11 +1,11 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { execSync } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { z } from "zod/v4";
+import type { OttoAPIKey } from "../../fmdapi/src";
 import { generateTypedClients } from "../src/typegen";
-import { typegenConfigSingle } from "../src/types";
-import { OttoAPIKey } from "../../fmdapi/src";
-import { z } from "zod/v4";
-import fs from "fs/promises";
-import path from "path";
-import { execSync } from "child_process";
+import type { typegenConfigSingle } from "../src/types";
 
 // // Load the correct .env.local relative to this test file's directory
 // dotenv.config({ path: path.resolve(__dirname, ".env.local") });
@@ -13,32 +13,26 @@ import { execSync } from "child_process";
 // Remove the old genPath definition - we'll use baseGenPath consistently
 
 // Helper function to recursively get all .ts files (excluding index.ts)
-async function getAllTsFilesRecursive(dir: string): Promise<string[]> {
+async function _getAllTsFilesRecursive(dir: string): Promise<string[]> {
   let files: string[] = [];
   const entries = await fs.readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files = files.concat(await getAllTsFilesRecursive(fullPath));
-    } else if (
-      entry.isFile() &&
-      entry.name.endsWith(".ts") &&
-      !entry.name.includes("index.ts")
-    ) {
+      files = files.concat(await _getAllTsFilesRecursive(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.includes("index.ts")) {
       files.push(fullPath);
     }
   }
   return files;
 }
 
-async function generateTypes(
-  config: z.infer<typeof typegenConfigSingle>,
-): Promise<string> {
+async function generateTypes(config: z.infer<typeof typegenConfigSingle>): Promise<string> {
   const genPath = path.resolve(__dirname, config.path || "./typegen-output"); // Resolve relative path to absolute
 
   // 1. Generate the code
   await fs.mkdir(genPath, { recursive: true }); // Ensure genPath exists
-  await generateTypedClients(config, { cwd: __dirname }); // Pass the test directory as cwd
+  await generateTypedClients(config, { cwd: import.meta.dirname }); // Pass the test directory as cwd
   console.log(`Generated code in ${genPath}`);
 
   // // 2. Modify imports in generated files to point to local src
@@ -64,7 +58,7 @@ async function generateTypes(
   // }
 
   // 3. Run tsc for type checking directly on modified files
-  const relativeGenPath = path.relative(
+  const _relativeGenPath = path.relative(
     path.resolve(__dirname, "../../.."), // Relative from monorepo root
     genPath,
   );
@@ -89,9 +83,7 @@ async function cleanupGeneratedFiles(genPath: string): Promise<void> {
   console.log(`Cleaned up ${genPath}`);
 }
 
-async function testTypegenConfig(
-  config: z.infer<typeof typegenConfigSingle>,
-): Promise<void> {
+async function testTypegenConfig(config: z.infer<typeof typegenConfigSingle>): Promise<void> {
   const genPath = await generateTypes(config);
   await cleanupGeneratedFiles(genPath);
 }
@@ -117,7 +109,6 @@ function getBaseGenPath(): string {
 //    const basePath = getBaseGenPath();
 //    console.log(`Base path: ${basePath}`);
 //
-export { generateTypes, cleanupGeneratedFiles, getBaseGenPath };
 
 describe("typegen", () => {
   // Define a base path for generated files relative to the test file directory
@@ -130,10 +121,7 @@ describe("typegen", () => {
   });
 
   it("basic typegen with zod", async () => {
-    const config: Extract<
-      z.infer<typeof typegenConfigSingle>,
-      { type: "fmdapi" }
-    > = {
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
@@ -152,15 +140,12 @@ describe("typegen", () => {
       clientSuffix: "Layout",
     };
     await testTypegenConfig(config);
-  }, 30000);
+  }, 30_000);
 
   it("basic typegen without zod", async () => {
     // Define baseGenPath within the scope or ensure it's accessible
     // Assuming baseGenPath is accessible from the describe block's scope
-    const config: Extract<
-      z.infer<typeof typegenConfigSingle>,
-      { type: "fmdapi" }
-    > = {
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         // add your layouts and name schemas here
@@ -184,13 +169,10 @@ describe("typegen", () => {
       validator: false,
     };
     await testTypegenConfig(config);
-  }, 30000);
+  }, 30_000);
 
   it("basic typegen with strict numbers", async () => {
-    const config: Extract<
-      z.infer<typeof typegenConfigSingle>,
-      { type: "fmdapi" }
-    > = {
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
@@ -216,19 +198,14 @@ describe("typegen", () => {
     // This will create/update snapshots of the generated types files
     const typesPath = path.join(genPath, "generated", "testLayout.ts");
     const typesContent = await fs.readFile(typesPath, "utf-8");
-    await expect(typesContent).toMatchFileSnapshot(
-      path.join(__dirname, "__snapshots__", "strict-numbers.snap.ts"),
-    );
+    await expect(typesContent).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "strict-numbers.snap.ts"));
 
     // Step 3: Clean up generated files
     await cleanupGeneratedFiles(genPath);
-  }, 30000);
+  }, 30_000);
 
   it("zod validator", async () => {
-    const config: Extract<
-      z.infer<typeof typegenConfigSingle>,
-      { type: "fmdapi" }
-    > = {
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
@@ -272,20 +249,15 @@ describe("typegen", () => {
 
     for (const { generated, snapshot } of snapshotMap) {
       const generatedContent = await fs.readFile(generated, "utf-8");
-      await expect(generatedContent).toMatchFileSnapshot(
-        path.join(__dirname, "__snapshots__", snapshot),
-      );
+      await expect(generatedContent).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", snapshot));
     }
 
     // Step 3: Clean up generated files
     await cleanupGeneratedFiles(genPath);
-  }, 30000);
+  }, 30_000);
 
   it("should use OttoAdapter when apiKey is provided in envNames", async () => {
-    const config: Extract<
-      z.infer<typeof typegenConfigSingle>,
-      { type: "fmdapi" }
-    > = {
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
@@ -314,13 +286,10 @@ describe("typegen", () => {
     expect(clientContent).toContain("TEST_OTTO_API_KEY");
 
     await cleanupGeneratedFiles(genPath);
-  }, 30000);
+  }, 30_000);
 
   it("should use FetchAdapter when username/password is provided in envNames", async () => {
-    const config: Extract<
-      z.infer<typeof typegenConfigSingle>,
-      { type: "fmdapi" }
-    > = {
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
@@ -350,5 +319,5 @@ describe("typegen", () => {
     expect(clientContent).toContain("TEST_PASSWORD");
 
     await cleanupGeneratedFiles(genPath);
-  }, 30000);
+  }, 30_000);
 });

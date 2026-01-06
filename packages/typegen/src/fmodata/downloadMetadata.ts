@@ -1,12 +1,9 @@
 import { FMServerConnection } from "@proofkit/fmodata";
 import type { z } from "zod/v4";
-import type { typegenConfigSingle } from "../types";
 import { getEnvValues, validateEnvValues } from "../getEnvValues";
+import type { typegenConfigSingle } from "../types";
 
-type FmodataConfig = Extract<
-  z.infer<typeof typegenConfigSingle>,
-  { type: "fmodata" }
->;
+type FmodataConfig = Extract<z.infer<typeof typegenConfigSingle>, { type: "fmodata" }>;
 
 /**
  * Downloads OData metadata for a single table from a FileMaker server.
@@ -39,7 +36,7 @@ export async function downloadTableMetadata({
     serverUrl: server,
     auth,
     fetchClientOptions: {
-      timeout: 15000, // 15 seconds
+      timeout: 15_000, // 15 seconds
       retries: 2,
     },
   });

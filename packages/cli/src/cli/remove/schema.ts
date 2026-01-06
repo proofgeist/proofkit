@@ -18,16 +18,10 @@ export const runRemoveSchemaAction = async (opts?: {
   let sourceName = opts?.sourceName;
 
   // If there is more than one fm data source, prompt for which one to remove from
-  if (
-    !sourceName &&
-    settings.dataSources.filter((s) => s.type === "fm").length > 1
-  ) {
+  if (!sourceName && settings.dataSources.filter((s) => s.type === "fm").length > 1) {
     const dataSourceName = await p.select({
-      message:
-        "Which FileMaker data source do you want to remove a layout from?",
-      options: settings.dataSources
-        .filter((s) => s.type === "fm")
-        .map((s) => ({ label: s.name, value: s.name })),
+      message: "Which FileMaker data source do you want to remove a layout from?",
+      options: settings.dataSources.filter((s) => s.type === "fm").map((s) => ({ label: s.name, value: s.name })),
     });
     if (p.isCancel(dataSourceName)) {
       p.cancel();
@@ -36,15 +30,13 @@ export const runRemoveSchemaAction = async (opts?: {
     sourceName = z.string().parse(dataSourceName);
   }
 
-  if (!sourceName) sourceName = "filemaker";
+  if (!sourceName) {
+    sourceName = "filemaker";
+  }
 
-  const dataSource = settings.dataSources
-    .filter((s) => s.type === "fm")
-    .find((s) => s.name === sourceName);
+  const dataSource = settings.dataSources.filter((s) => s.type === "fm").find((s) => s.name === sourceName);
   if (!dataSource) {
-    throw new Error(
-      `FileMaker data source ${sourceName} not found in your ProofKit config`
-    );
+    throw new Error(`FileMaker data source ${sourceName} not found in your ProofKit config`);
   }
 
   // Get existing schemas for this data source
@@ -54,10 +46,7 @@ export const runRemoveSchemaAction = async (opts?: {
   });
 
   if (existingSchemas.length === 0) {
-    p.note(
-      `No layouts found in data source "${sourceName}"`,
-      "Nothing to remove"
-    );
+    p.note(`No layouts found in data source "${sourceName}"`, "Nothing to remove");
     return;
   }
 
@@ -73,7 +62,7 @@ export const runRemoveSchemaAction = async (opts?: {
             value: schema.schemaName ?? "",
           }))
           .filter((opt) => opt.value !== ""),
-      })
+      }),
     );
 
   // Confirm removal

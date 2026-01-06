@@ -23,8 +23,10 @@ export class HTTPError extends FMODataError {
   readonly url: string;
   readonly status: number;
   readonly statusText: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
   readonly response?: any;
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
   constructor(url: string, status: number, statusText: string, response?: any) {
     super(`HTTP ${status} ${statusText} for ${url}`);
     this.url = url;
@@ -63,8 +65,10 @@ export class ODataError extends FMODataError {
   readonly kind = "ODataError" as const;
   readonly url: string;
   readonly code?: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic error details from OData API
   readonly details?: any;
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic error details from OData API
   constructor(url: string, message: string, code?: string, details?: any) {
     super(`OData error: ${message}`);
     this.url = url;
@@ -77,8 +81,10 @@ export class SchemaLockedError extends FMODataError {
   readonly kind = "SchemaLockedError" as const;
   readonly url: string;
   readonly code: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic error details from OData API
   readonly details?: any;
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic error details from OData API
   constructor(url: string, message: string, details?: any) {
     super(`OData error: ${message}`);
     this.url = url;
@@ -106,10 +112,7 @@ export class ValidationError extends FMODataError {
       cause?: Error["cause"];
     },
   ) {
-    super(
-      message,
-      options?.cause !== undefined ? { cause: options.cause } : undefined,
-    );
+    super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
     this.field = options?.field;
     this.issues = issues;
     this.value = options?.value;
@@ -119,8 +122,10 @@ export class ValidationError extends FMODataError {
 export class ResponseStructureError extends FMODataError {
   readonly kind = "ResponseStructureError" as const;
   readonly expected: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
   readonly received: any;
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
   constructor(expected: string, received: any) {
     super(`Invalid response structure: expected ${expected}`);
     this.expected = expected;
@@ -156,11 +161,7 @@ export class ResponseParseError extends FMODataError {
   readonly url: string;
   readonly rawText?: string;
 
-  constructor(
-    url: string,
-    message: string,
-    options?: { rawText?: string; cause?: Error },
-  ) {
+  constructor(url: string, message: string, options?: { rawText?: string; cause?: Error }) {
     super(message, options?.cause ? { cause: options.cause } : undefined);
     this.url = url;
     this.rawText = options?.rawText;
@@ -173,9 +174,7 @@ export class BatchTruncatedError extends FMODataError {
   readonly failedAtIndex: number;
 
   constructor(operationIndex: number, failedAtIndex: number) {
-    super(
-      `Operation ${operationIndex} was not executed because operation ${failedAtIndex} failed`,
-    );
+    super(`Operation ${operationIndex} was not executed because operation ${failedAtIndex} failed`);
     this.operationIndex = operationIndex;
     this.failedAtIndex = failedAtIndex;
   }
@@ -197,33 +196,23 @@ export function isODataError(error: unknown): error is ODataError {
   return error instanceof ODataError;
 }
 
-export function isSchemaLockedError(
-  error: unknown,
-): error is SchemaLockedError {
+export function isSchemaLockedError(error: unknown): error is SchemaLockedError {
   return error instanceof SchemaLockedError;
 }
 
-export function isResponseStructureError(
-  error: unknown,
-): error is ResponseStructureError {
+export function isResponseStructureError(error: unknown): error is ResponseStructureError {
   return error instanceof ResponseStructureError;
 }
 
-export function isRecordCountMismatchError(
-  error: unknown,
-): error is RecordCountMismatchError {
+export function isRecordCountMismatchError(error: unknown): error is RecordCountMismatchError {
   return error instanceof RecordCountMismatchError;
 }
 
-export function isResponseParseError(
-  error: unknown,
-): error is ResponseParseError {
+export function isResponseParseError(error: unknown): error is ResponseParseError {
   return error instanceof ResponseParseError;
 }
 
-export function isBatchTruncatedError(
-  error: unknown,
-): error is BatchTruncatedError {
+export function isBatchTruncatedError(error: unknown): error is BatchTruncatedError {
   return error instanceof BatchTruncatedError;
 }
 
@@ -237,11 +226,11 @@ export function isFMODataError(error: unknown): error is FMODataError {
 
 // Re-export ffetch errors (they'll be imported from @fetchkit/ffetch)
 export type {
-  TimeoutError,
   AbortError,
+  CircuitOpenError,
   NetworkError,
   RetryLimitError,
-  CircuitOpenError,
+  TimeoutError,
 } from "@fetchkit/ffetch";
 
 export type FMODataErrorType =

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useWatch, useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { client } from "../lib/api";
 import type { SingleConfig } from "../lib/config-utils";
 
@@ -21,11 +21,7 @@ export interface ParsedMetadataResponse {
   };
 }
 
-export function useTableMetadata(
-  configIndex: number,
-  tableName: string | null,
-  enabled: boolean = true,
-) {
+export function useTableMetadata(configIndex: number, tableName: string | null, enabled = true) {
   const { control } = useFormContext<{ config: SingleConfig[] }>();
 
   // Watch the config at the given index
@@ -35,11 +31,7 @@ export function useTableMetadata(
   });
 
   // Only query if enabled, config is fmodata type, and tableName is provided
-  const shouldQuery =
-    enabled &&
-    config?.type === "fmodata" &&
-    tableName !== null &&
-    tableName.trim() !== "";
+  const shouldQuery = enabled && config?.type === "fmodata" && tableName !== null && tableName.trim() !== "";
 
   const { data, error, isLoading, isError } = useQuery<ParsedMetadataResponse>({
     queryKey: ["tableMetadata", configIndex, tableName],
@@ -76,4 +68,3 @@ export function useTableMetadata(
     isError,
   };
 }
-

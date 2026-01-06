@@ -1,13 +1,13 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
 
 import { PKG_ROOT } from "~/consts.js";
-import { type InstallerOptions } from "~/installers/index.js";
+import type { InstallerOptions } from "~/installers/index.js";
 import { state } from "~/state.js";
 
 type SelectBoilerplateProps = Required<Pick<InstallerOptions, "packages">>;
 
-export const selectLayoutFile = ({}: SelectBoilerplateProps) => {
+export const selectLayoutFile = (_props: SelectBoilerplateProps) => {
   const projectDir = state.projectDir;
   const layoutFileDir = path.join(PKG_ROOT, "template/extras/src/app/layout");
 
@@ -17,13 +17,10 @@ export const selectLayoutFile = ({}: SelectBoilerplateProps) => {
   const appDest = path.join(projectDir, "src/app/layout.tsx");
   fs.copySync(appSrc, appDest);
 
-  fs.copySync(
-    path.join(layoutFileDir, "main-shell.tsx"),
-    path.join(projectDir, "src/app/(main)/layout.tsx")
-  );
+  fs.copySync(path.join(layoutFileDir, "main-shell.tsx"), path.join(projectDir, "src/app/(main)/layout.tsx"));
 };
 
-export const selectPageFile = ({}: SelectBoilerplateProps) => {
+export const selectPageFile = (_props: SelectBoilerplateProps) => {
   const projectDir = state.projectDir;
   const indexFileDir = path.join(PKG_ROOT, "template/extras/src/app/page");
 

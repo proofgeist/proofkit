@@ -12,6 +12,8 @@
     "build": "pnpm -C web build && pnpm vite build && node scripts/build-copy.js && publint --strict",
     "build:watch": "vite build --watch",
     "ci": "pnpm run build && pnpm run test",
+    "lint": "biome check . --write",
+    "lint:summary": "biome check . --reporter=summary",
     "prepublishOnly": "pnpm run ci"
   },
   "bin": "./dist/esm/cli.js",
@@ -73,7 +75,7 @@
     "hono": "^4.9.0",
     "jsonc-parser": "^3.3.1",
     "open": "^10.1.0",
-    "prettier": "^3.5.3",
+    "prettier": "^3.7.4",
     "semver": "^7.7.2",
     "ts-morph": "^26.0.0",
     "ts-toolbelt": "^9.6.0",

@@ -1,15 +1,12 @@
-import path from "path";
-import { Project, SyntaxKind, type ReturnStatement } from "ts-morph";
+import path from "node:path";
+import { Project, type ReturnStatement, SyntaxKind } from "ts-morph";
 
 export { formatAndSaveSourceFiles } from "./formatting.js";
 
-export function ensureReturnStatementIsWrappedInFragment(
-  returnStatement: ReturnStatement | undefined
-) {
+export function ensureReturnStatementIsWrappedInFragment(returnStatement: ReturnStatement | undefined) {
   const expression =
-    returnStatement
-      ?.getExpressionIfKind(SyntaxKind.ParenthesizedExpression)
-      ?.getExpression() ?? returnStatement?.getExpression();
+    returnStatement?.getExpressionIfKind(SyntaxKind.ParenthesizedExpression)?.getExpression() ??
+    returnStatement?.getExpression();
 
   if (expression?.isKind(SyntaxKind.JsxFragment)) {
     return returnStatement;

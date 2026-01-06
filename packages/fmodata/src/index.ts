@@ -1,24 +1,80 @@
 // Barrel file - exports all public API from the client folder
+/** biome-ignore-all lint/performance/noBarrelFile: Re-exporting all public API from the client folder */
 
+export type { FFetchOptions } from "@fetchkit/ffetch";
+// Re-export ffetch errors and types
+export {
+  AbortError,
+  CircuitOpenError,
+  NetworkError,
+  RetryLimitError,
+  TimeoutError,
+} from "@fetchkit/ffetch";
+
+// Type-only exports - for type annotations only, not direct instantiation
+export type { Database } from "./client/database";
+export type { EntitySet } from "./client/entity-set";
 // Main API - use these functions to create tables and occurrences
 export { FMServerConnection } from "./client/filemaker-odata";
-
+export type {
+  ContainerField,
+  DateField,
+  Field,
+  NumericField,
+  SchemaManager,
+  StringField,
+  TimeField,
+  TimestampField,
+} from "./client/schema-manager";
+export type {
+  Webhook,
+  WebhookAddResponse,
+  WebhookInfo,
+  WebhookListResponse,
+} from "./client/webhook-builder";
+export type { FMODataErrorType } from "./errors";
+// Export our errors
+export {
+  BatchTruncatedError,
+  FMODataError,
+  HTTPError,
+  isBatchTruncatedError,
+  isFMODataError,
+  isHTTPError,
+  isODataError,
+  isRecordCountMismatchError,
+  isResponseParseError,
+  isResponseStructureError,
+  isSchemaLockedError,
+  isValidationError,
+  ODataError,
+  RecordCountMismatchError,
+  ResponseParseError,
+  ResponseStructureError,
+  SchemaLockedError,
+  ValidationError,
+} from "./errors";
+export type { Logger } from "./logger";
 // NEW ORM API - Drizzle-inspired field builders and operators
 export {
-  // Field builders
-  textField,
-  numberField,
-  dateField,
-  timeField,
-  timestampField,
-  containerField,
+  and,
+  asc,
+  // Column references
+  type Column,
   calcField,
+  containerField,
+  contains,
+  dateField,
+  desc,
+  endsWith,
+  eq,
   type FieldBuilder,
-  // Table definition
-  fmTableOccurrence,
+  // Filter operators
+  type FilterExpression,
   FMTable,
   type FMTableWithColumns as TableOccurrenceResult,
-  type InferTableSchema,
+  // Table definition
+  fmTableOccurrence,
   // Table helper functions
   // getTableFields,
   // getDefaultSelect,
@@ -27,99 +83,37 @@ export {
   // getFieldName,
   // getTableId,
   getTableColumns,
-  // Column references
-  type Column,
-  isColumn,
-  // Filter operators
-  type FilterExpression,
-  eq,
-  ne,
   gt,
   gte,
+  type InferTableSchema,
+  inArray,
+  isColumn,
+  isNotNull,
+  isNull,
   lt,
   lte,
-  contains,
-  startsWith,
-  endsWith,
-  inArray,
-  notInArray,
-  isNull,
-  isNotNull,
-  and,
-  or,
+  ne,
   not,
+  notInArray,
+  numberField,
   // OrderBy operators
   type OrderByExpression,
-  asc,
-  desc,
+  or,
+  startsWith,
+  // Field builders
+  textField,
+  timeField,
+  timestampField,
 } from "./orm/index";
-
-// Type-only exports - for type annotations only, not direct instantiation
-export type { Database } from "./client/database";
-export type { EntitySet } from "./client/entity-set";
-export type {
-  SchemaManager,
-  Field,
-  StringField,
-  NumericField,
-  DateField,
-  TimeField,
-  TimestampField,
-  ContainerField,
-} from "./client/schema-manager";
-export type {
-  Webhook,
-  WebhookInfo,
-  WebhookListResponse,
-  WebhookAddResponse,
-} from "./client/webhook-builder";
-
 // Utility types for type annotations
 export type {
-  Result,
-  BatchResult,
   BatchItemResult,
-  InferSchemaType,
-  ODataRecordMetadata,
-  Metadata,
-  FetchHandler,
+  BatchResult,
   ExecuteMethodOptions,
   ExecuteOptions,
+  FetchHandler,
+  InferSchemaType,
+  Metadata,
+  ODataRecordMetadata,
+  Result,
 } from "./types";
-
-// Re-export ffetch errors and types
-export {
-  TimeoutError,
-  AbortError,
-  NetworkError,
-  RetryLimitError,
-  CircuitOpenError,
-} from "@fetchkit/ffetch";
-
-export type { FFetchOptions } from "@fetchkit/ffetch";
-
-// Export our errors
-export {
-  FMODataError,
-  HTTPError,
-  ODataError,
-  SchemaLockedError,
-  ValidationError,
-  ResponseStructureError,
-  RecordCountMismatchError,
-  ResponseParseError,
-  BatchTruncatedError,
-  isHTTPError,
-  isValidationError,
-  isODataError,
-  isSchemaLockedError,
-  isResponseStructureError,
-  isRecordCountMismatchError,
-  isResponseParseError,
-  isBatchTruncatedError,
-  isFMODataError,
-} from "./errors";
-
-export type { FMODataErrorType } from "./errors";
-
-export type { Logger } from "./logger";

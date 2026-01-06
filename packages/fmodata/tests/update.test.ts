@@ -5,28 +5,27 @@
  * This validates type safety and required field constraints.
  */
 
-import { describe, it, expect, expectTypeOf, vi } from "vitest";
-import { z } from "zod/v4";
 import {
-  fmTableOccurrence,
-  textField,
-  numberField,
-  type InferTableSchema,
-  eq,
   and,
+  eq,
+  fmTableOccurrence,
+  type InferTableSchema,
   lt,
-  Result,
+  numberField,
+  type Result,
+  textField,
 } from "@proofkit/fmodata";
 import { InsertBuilder } from "@proofkit/fmodata/client/insert-builder";
-import { UpdateBuilder } from "@proofkit/fmodata/client/update-builder";
-import { ExecutableUpdateBuilder } from "@proofkit/fmodata/client/update-builder";
+import { ExecutableUpdateBuilder, UpdateBuilder } from "@proofkit/fmodata/client/update-builder";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { z } from "zod/v4";
 import { simpleMock } from "./utils/mock-fetch";
 import { createMockClient } from "./utils/test-setup";
 
 describe("insert and update methods", () => {
   const client = createMockClient();
 
-  const contactsTO = fmTableOccurrence(
+  const _contactsTO = fmTableOccurrence(
     "contacts",
     {
       id: textField().primaryKey(),
@@ -63,12 +62,12 @@ describe("insert and update methods", () => {
     createdAt: textField(),
   });
 
-  const testTO = fmTableOccurrence("test", {
+  const _testTO = fmTableOccurrence("test", {
     id: textField().primaryKey(),
     name: textField().notNull(),
   });
 
-  type UserFieldNames = keyof InferTableSchema<typeof users>;
+  type _UserFieldNames = keyof InferTableSchema<typeof users>;
 
   describe("insert method", () => {
     it("should return InsertBuilder when called", () => {
@@ -110,12 +109,8 @@ describe("insert and update methods", () => {
       });
 
       // Type check: username and email should be required
-      expectTypeOf(db.from(usersWithRequired).insert)
-        .parameter(0)
-        .toHaveProperty("username");
-      expectTypeOf(db.from(usersWithRequired).insert)
-        .parameter(0)
-        .toHaveProperty("email");
+      expectTypeOf(db.from(usersWithRequired).insert).parameter(0).toHaveProperty("username");
+      expectTypeOf(db.from(usersWithRequired).insert).parameter(0).toHaveProperty("email");
     });
 
     it("should have execute() that returns Result without ODataRecordMetadata by default", () => {
@@ -150,10 +145,7 @@ describe("insert and update methods", () => {
     it("should return ExecutableUpdateBuilder after byId()", () => {
       const db = client.database("test_db");
 
-      const result = db
-        .from(users)
-        .update({ username: "newname" })
-        .byId("user-123");
+      const result = db.from(users).update({ username: "newname" }).byId("user-123");
       expect(result).toBeInstanceOf(ExecutableUpdateBuilder);
     });
 
@@ -172,10 +164,7 @@ describe("insert and update methods", () => {
     it("should generate correct URL for update by ID", () => {
       const db = client.database("test_db");
 
-      const updateBuilder = db
-        .from(users)
-        .update({ username: "newname" })
-        .byId("user-123");
+      const updateBuilder = db.from(users).update({ username: "newname" }).byId("user-123");
       const config = updateBuilder.getRequestConfig();
 
       expect(config.method).toBe("PATCH");
@@ -183,18 +172,13 @@ describe("insert and update methods", () => {
       expect(config.body).toBe(JSON.stringify({ username: "newname" }));
     });
 
-    it("should return updatedCount type for update by ID", async () => {
+    it("should return updatedCount type for update by ID", () => {
       const db = client.database("test_db");
 
-      const updateBuilder = db
-        .from(users)
-        .update({ username: "newname" })
-        .byId("user-123");
+      const updateBuilder = db.from(users).update({ username: "newname" }).byId("user-123");
 
       // Type check: execute should return Result<{ updatedCount: number }>
-      expectTypeOf(updateBuilder.execute).returns.resolves.toEqualTypeOf<
-        Result<{ updatedCount: number }>
-      >();
+      expectTypeOf(updateBuilder.execute).returns.resolves.toEqualTypeOf<Result<{ updatedCount: number }>>();
     });
 
     it("should execute update by ID and return count", async () => {
@@ -264,7 +248,7 @@ describe("insert and update methods", () => {
       expect(config.url).toContain("$top");
     });
 
-    it("should return updatedCount result type for filter-based update", async () => {
+    it("should return updatedCount result type for filter-based update", () => {
       const db = client.database("test_db");
 
       const updateBuilder = db
@@ -375,17 +359,11 @@ describe("insert and update methods", () => {
       });
 
       // Type check: id, createdAt, modifiedAt should not be in insert data type
-      expectTypeOf(db.from(usersWithReadOnly).insert)
-        .parameter(0)
-        .not.toHaveProperty("id");
+      expectTypeOf(db.from(usersWithReadOnly).insert).parameter(0).not.toHaveProperty("id");
 
-      expectTypeOf(db.from(usersWithReadOnly).insert)
-        .parameter(0)
-        .not.toHaveProperty("createdAt");
+      expectTypeOf(db.from(usersWithReadOnly).insert).parameter(0).not.toHaveProperty("createdAt");
 
-      expectTypeOf(db.from(usersWithReadOnly).insert)
-        .parameter(0)
-        .not.toHaveProperty("modifiedAt");
+      expectTypeOf(db.from(usersWithReadOnly).insert).parameter(0).not.toHaveProperty("modifiedAt");
     });
 
     it("should exclude id field and readOnly fields from update", () => {
@@ -409,17 +387,11 @@ describe("insert and update methods", () => {
       });
 
       // Type check: id, createdAt, modifiedAt should not be in update data type
-      expectTypeOf(db.from(usersWithReadOnlyTO).update)
-        .parameter(0)
-        .not.toHaveProperty("id");
+      expectTypeOf(db.from(usersWithReadOnlyTO).update).parameter(0).not.toHaveProperty("id");
 
-      expectTypeOf(db.from(usersWithReadOnlyTO).update)
-        .parameter(0)
-        .not.toHaveProperty("createdAt");
+      expectTypeOf(db.from(usersWithReadOnlyTO).update).parameter(0).not.toHaveProperty("createdAt");
 
-      expectTypeOf(db.from(usersWithReadOnlyTO).update)
-        .parameter(0)
-        .not.toHaveProperty("modifiedAt");
+      expectTypeOf(db.from(usersWithReadOnlyTO).update).parameter(0).not.toHaveProperty("modifiedAt");
     });
 
     it("should allow inserts without specifying readOnly fields", () => {

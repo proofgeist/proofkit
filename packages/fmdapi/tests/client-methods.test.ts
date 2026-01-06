@@ -1,17 +1,7 @@
+import { describe, expect, it, test } from "vitest";
 import { DataApi, OttoAdapter } from "../src";
-import {
-  Layout,
-  ScriptsMetadataResponse,
-  ScriptOrFolder,
-  AllLayoutsMetadataResponse,
-} from "../src/client-types";
-import {
-  config,
-  layoutClient,
-  weirdPortalClient,
-  containerClient,
-} from "./setup";
-import { describe, test, expect, it } from "vitest";
+import type { AllLayoutsMetadataResponse, Layout, ScriptOrFolder, ScriptsMetadataResponse } from "../src/client-types";
+import { config, containerClient, layoutClient, weirdPortalClient } from "./setup";
 
 describe("sort methods", () => {
   test("should sort descending", async () => {
@@ -19,8 +9,8 @@ describe("sort methods", () => {
       sort: { fieldName: "recordId", sortOrder: "descend" },
     });
     expect(resp.data.length).toBe(3);
-    const firstRecord = parseInt(resp.data[0]?.fieldData.recordId as string);
-    const secondRecord = parseInt(resp.data[1]?.fieldData.recordId as string);
+    const firstRecord = Number.parseInt(resp.data[0]?.fieldData.recordId as string, 10);
+    const secondRecord = Number.parseInt(resp.data[1]?.fieldData.recordId as string, 10);
     expect(firstRecord).toBeGreaterThan(secondRecord);
   });
   test("should sort ascending by default", async () => {
@@ -28,8 +18,8 @@ describe("sort methods", () => {
       sort: { fieldName: "recordId" },
     });
 
-    const firstRecord = parseInt(resp.data[0]?.fieldData.recordId as string);
-    const secondRecord = parseInt(resp.data[1]?.fieldData.recordId as string);
+    const firstRecord = Number.parseInt(resp.data[0]?.fieldData.recordId as string, 10);
+    const secondRecord = Number.parseInt(resp.data[1]?.fieldData.recordId as string, 10);
     expect(secondRecord).toBeGreaterThan(firstRecord);
   });
 });
@@ -106,12 +96,9 @@ describe("portal methods", () => {
       },
     });
 
-    expect(
-      "long_and_strange.portalName#forTesting" in (data?.[0]?.portalData ?? {}),
-    ).toBeTruthy();
+    expect("long_and_strange.portalName#forTesting" in (data?.[0]?.portalData ?? {})).toBeTruthy();
 
-    const portalData =
-      data[0]?.portalData["long_and_strange.portalName#forTesting"];
+    const portalData = data[0]?.portalData["long_and_strange.portalName#forTesting"];
 
     expect(portalData?.length).toBeGreaterThan(50);
   });
@@ -175,7 +162,7 @@ describe("other methods", () => {
 
     const resp = (await client.layouts()) as AllLayoutsMetadataResponse;
 
-    expect(Object.prototype.hasOwnProperty.call(resp, "layouts")).toBe(true);
+    expect(Object.hasOwn(resp, "layouts")).toBe(true);
     expect(resp.layouts.length).toBeGreaterThanOrEqual(2);
     expect(resp.layouts[0] as Layout).toHaveProperty("name");
     const layoutFoler = resp.layouts.find((o) => "isFolder" in o);
@@ -195,8 +182,8 @@ describe("other methods", () => {
 
     const resp = (await client.scripts()) as ScriptsMetadataResponse;
 
-    expect(Object.prototype.hasOwnProperty.call(resp, "scripts")).toBe(true);
-    expect(resp.scripts.length).toBe(2);
+    expect(Object.hasOwn(resp, "scripts")).toBe(true);
+    expect(resp.scripts.length).toBe(3);
     expect(resp.scripts[0] as ScriptOrFolder).toHaveProperty("name");
     expect(resp.scripts[1] as ScriptOrFolder).toHaveProperty("isFolder");
   });

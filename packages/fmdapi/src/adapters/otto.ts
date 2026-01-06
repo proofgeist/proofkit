@@ -16,7 +16,9 @@ export function isOttoAPIKey(key: string): key is OttoAPIKey {
 }
 
 export function isOttoAuth(auth: unknown): auth is OttoAuth {
-  if (typeof auth !== "object" || auth === null) return false;
+  if (typeof auth !== "object" || auth === null) {
+    return false;
+  }
   return "apiKey" in auth;
 }
 
@@ -32,8 +34,8 @@ export type OttoAdapterOptions = BaseFetchAdapterOptions & {
 };
 
 export class OttoAdapter extends BaseFetchAdapter {
-  private apiKey: OttoAPIKey | Otto3APIKey;
-  private port: number | undefined;
+  private readonly apiKey: OttoAPIKey | Otto3APIKey;
+  private readonly port: number | undefined;
 
   constructor(options: OttoAdapterOptions) {
     super({ ...options, refreshToken: false });
@@ -47,13 +49,11 @@ export class OttoAdapter extends BaseFetchAdapter {
       // otto v4 uses default port, but with /otto prefix
       this.baseUrl.pathname = `otto/${this.baseUrl.pathname.replace(/^\/+|\/+$/g, "")}`;
     } else {
-      throw new Error(
-        "Invalid Otto API key format. Must start with 'KEY_' (Otto v3) or 'dk_' (OttoFMS)",
-      );
+      throw new Error("Invalid Otto API key format. Must start with 'KEY_' (Otto v3) or 'dk_' (OttoFMS)");
     }
   }
 
-  protected override getToken = async (): Promise<string> => {
-    return this.apiKey;
+  protected override getToken = (): Promise<string> => {
+    return Promise.resolve(this.apiKey);
   };
 }

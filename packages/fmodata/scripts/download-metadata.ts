@@ -16,11 +16,11 @@
  *   - API key and server URL
  */
 
-import { FMServerConnection } from "../src/client/filemaker-odata";
 import { writeFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
+import { FMServerConnection } from "../src/client/filemaker-odata";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,7 +50,7 @@ async function downloadMetadata(): Promise<void> {
   console.log(`Server URL: ${SERVER_URL}`);
   console.log(`Database: ${DATABASE_NAME}`);
 
-  if (!SERVER_URL || !DATABASE_NAME || !USERNAME || !PASSWORD) {
+  if (!(SERVER_URL && DATABASE_NAME && USERNAME && PASSWORD)) {
     throw new Error("Missing required configuration values");
   }
 
@@ -59,7 +59,7 @@ async function downloadMetadata(): Promise<void> {
     serverUrl: SERVER_URL,
     auth: { username: USERNAME, password: PASSWORD },
     fetchClientOptions: {
-      timeout: 15000, // 10 seconds
+      timeout: 15_000, // 10 seconds
       retries: 2,
     },
   });
@@ -80,12 +80,8 @@ async function downloadMetadata(): Promise<void> {
     await writeFile(outputPath, fullMetadata, "utf-8");
 
     console.log("✓ Metadata downloaded successfully!");
-    console.log(
-      `\nYou can now use this metadata file with typegen-starter.ts:`,
-    );
-    console.log(
-      `  bun scripts/typegen-starter.ts ${OUTPUT_FILE} output/occurrences.ts`,
-    );
+    console.log("\nYou can now use this metadata file with typegen-starter.ts:");
+    console.log(`  bun scripts/typegen-starter.ts ${OUTPUT_FILE} output/occurrences.ts`);
   } catch (error) {
     console.error("Error downloading metadata:", error);
     if (error instanceof Error) {

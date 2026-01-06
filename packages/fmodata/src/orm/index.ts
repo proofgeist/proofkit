@@ -1,60 +1,61 @@
+/** biome-ignore-all lint/performance/noBarrelFile: Re-exporting all ORM utilities */
 // Field builders - main API for defining table schemas
-export {
-  FieldBuilder,
-  textField,
-  numberField,
-  dateField,
-  timeField,
-  timestampField,
-  containerField,
-  calcField,
-  type ContainerDbType,
-} from "./field-builders";
 
 // Column references - used in queries and filters
 export { Column, isColumn } from "./column";
+export {
+  type ContainerDbType,
+  calcField,
+  containerField,
+  dateField,
+  FieldBuilder,
+  numberField,
+  textField,
+  timeField,
+  timestampField,
+} from "./field-builders";
 
 // Filter operators - eq, gt, lt, and, or, etc.
 export {
-  FilterExpression,
+  and,
+  asc,
+  contains,
+  desc,
+  endsWith,
   eq,
-  ne,
+  FilterExpression,
   gt,
   gte,
+  inArray,
+  isNotNull,
+  isNull,
+  isOrderByExpression,
   lt,
   lte,
-  contains,
-  startsWith,
-  endsWith,
-  inArray,
-  notInArray,
-  isNull,
-  isNotNull,
-  and,
-  or,
+  ne,
   not,
+  notInArray,
   // OrderBy operators
   OrderByExpression,
-  isOrderByExpression,
-  asc,
-  desc,
+  or,
+  startsWith,
 } from "./operators";
 
 // Table definition - fmTableOccurrence function
 export {
-  fmTableOccurrence,
   FMTable,
   type FMTableWithColumns,
-  type InferTableSchema,
-  // Helper functions for accessing FMTable internals
-  getTableName,
-  getTableEntityId,
+  fmTableOccurrence,
+  getBaseTableConfig,
   // getTableFields,
   getDefaultSelect,
-  getBaseTableConfig,
-  isUsingEntityIds,
   getFieldId,
   getFieldName,
-  getTableId,
   getTableColumns,
+  getTableEntityId,
+  getTableId,
+  // Helper functions for accessing FMTable internals
+  getTableName,
+  type InferTableSchema,
+  isUsingEntityIds,
 } from "./table";

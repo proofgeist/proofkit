@@ -16,19 +16,17 @@ export type ContainerDbType = string & { readonly __container: true };
  * @template TDbType - The database type (what FileMaker stores/expects)
  * @template TReadOnly - Whether this field is read-only (for type-level exclusion from insert/update)
  */
-export class FieldBuilder<
-  TOutput = any,
-  TInput = TOutput,
-  TDbType = TOutput,
-  TReadOnly extends boolean = false,
-> {
+// biome-ignore lint/suspicious/noExplicitAny: Default type parameter for flexibility
+export class FieldBuilder<TOutput = any, TInput = TOutput, TDbType = TOutput, TReadOnly extends boolean = false> {
   private _primaryKey = false;
   private _notNull = false;
   private _readOnly = false;
   private _entityId?: `FMFID:${string}`;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   private _outputValidator?: StandardSchemaV1<any, TOutput>;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   private _inputValidator?: StandardSchemaV1<TInput, any>;
-  private _fieldType: string;
+  private readonly _fieldType: string;
   private _comment?: string;
 
   constructor(fieldType: string) {
@@ -39,12 +37,8 @@ export class FieldBuilder<
    * Mark this field as the primary key for the table.
    * Primary keys are automatically read-only and non-nullable.
    */
-  primaryKey(): FieldBuilder<
-    NonNullable<TOutput>,
-    NonNullable<TInput>,
-    NonNullable<TDbType>,
-    true
-  > {
+  primaryKey(): FieldBuilder<NonNullable<TOutput>, NonNullable<TInput>, NonNullable<TDbType>, true> {
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal class mutation
     const builder = this._clone() as any;
     builder._primaryKey = true;
     builder._notNull = true; // Primary keys are automatically non-nullable
@@ -56,12 +50,8 @@ export class FieldBuilder<
    * Mark this field as non-nullable.
    * Updates the type to exclude null/undefined.
    */
-  notNull(): FieldBuilder<
-    NonNullable<TOutput>,
-    NonNullable<TInput>,
-    NonNullable<TDbType>,
-    TReadOnly
-  > {
+  notNull(): FieldBuilder<NonNullable<TOutput>, NonNullable<TInput>, NonNullable<TDbType>, TReadOnly> {
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal class mutation
     const builder = this._clone() as any;
     builder._notNull = true;
     return builder;
@@ -72,6 +62,7 @@ export class FieldBuilder<
    * Read-only fields are excluded from insert and update operations.
    */
   readOnly(): FieldBuilder<TOutput, TInput, TDbType, true> {
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal class mutation
     const builder = this._clone() as any;
     builder._readOnly = true;
     return builder;
@@ -81,9 +72,7 @@ export class FieldBuilder<
    * Assign a FileMaker field ID (FMFID) to this field.
    * When useEntityIds is enabled, this ID will be used in API requests instead of the field name.
    */
-  entityId(
-    id: `FMFID:${string}`,
-  ): FieldBuilder<TOutput, TInput, TDbType, TReadOnly> {
+  entityId(id: `FMFID:${string}`): FieldBuilder<TOutput, TInput, TDbType, TReadOnly> {
     const builder = this._clone();
     builder._entityId = id;
     return builder;
@@ -100,6 +89,7 @@ export class FieldBuilder<
   readValidator<O, VInput = TDbType>(
     validator: StandardSchemaV1<VInput, O>,
   ): FieldBuilder<O, TInput, TDbType, TReadOnly> {
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal class mutation
     const builder = this._clone() as any;
     builder._outputValidator = validator;
     return builder;
@@ -113,9 +103,8 @@ export class FieldBuilder<
    * numberField().writeValidator(z.boolean().transform(v => v ? 1 : 0))
    * // You pass true/false, FileMaker gets 1/0
    */
-  writeValidator<I>(
-    validator: StandardSchemaV1<I, TDbType>,
-  ): FieldBuilder<TOutput, I, TDbType, TReadOnly> {
+  writeValidator<I>(validator: StandardSchemaV1<I, TDbType>): FieldBuilder<TOutput, I, TDbType, TReadOnly> {
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal class mutation
     const builder = this._clone() as any;
     builder._inputValidator = validator;
     return builder;
@@ -156,9 +145,7 @@ export class FieldBuilder<
    * @private
    */
   private _clone(): FieldBuilder<TOutput, TInput, TDbType, TReadOnly> {
-    const builder = new FieldBuilder<TOutput, TInput, TDbType, TReadOnly>(
-      this._fieldType,
-    );
+    const builder = new FieldBuilder<TOutput, TInput, TDbType, TReadOnly>(this._fieldType);
     builder._primaryKey = this._primaryKey;
     builder._notNull = this._notNull;
     builder._readOnly = this._readOnly;
@@ -179,15 +166,8 @@ export class FieldBuilder<
  * textField().notNull()          // string
  * textField().entityId("FMFID:1") // with entity ID
  */
-export function textField(): FieldBuilder<
-  string | null,
-  string | null,
-  string | null,
-  false
-> {
-  return new FieldBuilder<string | null, string | null, string | null, false>(
-    "text",
-  );
+export function textField(): FieldBuilder<string | null, string | null, string | null, false> {
+  return new FieldBuilder<string | null, string | null, string | null, false>("text");
 }
 
 /**
@@ -199,15 +179,8 @@ export function textField(): FieldBuilder<
  * numberField().notNull()         // number
  * numberField().outputValidator(z.coerce.boolean()) // transform to boolean on read
  */
-export function numberField(): FieldBuilder<
-  number | null,
-  number | null,
-  number | null,
-  false
-> {
-  return new FieldBuilder<number | null, number | null, number | null, false>(
-    "number",
-  );
+export function numberField(): FieldBuilder<number | null, number | null, number | null, false> {
+  return new FieldBuilder<number | null, number | null, number | null, false>("number");
 }
 
 /**
@@ -218,15 +191,8 @@ export function numberField(): FieldBuilder<
  * dateField()         // string | null (ISO date format)
  * dateField().notNull() // string
  */
-export function dateField(): FieldBuilder<
-  string | null,
-  string | null,
-  string | null,
-  false
-> {
-  return new FieldBuilder<string | null, string | null, string | null, false>(
-    "date",
-  );
+export function dateField(): FieldBuilder<string | null, string | null, string | null, false> {
+  return new FieldBuilder<string | null, string | null, string | null, false>("date");
 }
 
 /**
@@ -237,15 +203,8 @@ export function dateField(): FieldBuilder<
  * timeField()         // string | null (ISO time format)
  * timeField().notNull() // string
  */
-export function timeField(): FieldBuilder<
-  string | null,
-  string | null,
-  string | null,
-  false
-> {
-  return new FieldBuilder<string | null, string | null, string | null, false>(
-    "time",
-  );
+export function timeField(): FieldBuilder<string | null, string | null, string | null, false> {
+  return new FieldBuilder<string | null, string | null, string | null, false>("time");
 }
 
 /**
@@ -257,15 +216,8 @@ export function timeField(): FieldBuilder<
  * timestampField().notNull() // string
  * timestampField().readOnly() // typical for CreationTimestamp
  */
-export function timestampField(): FieldBuilder<
-  string | null,
-  string | null,
-  string | null,
-  false
-> {
-  return new FieldBuilder<string | null, string | null, string | null, false>(
-    "timestamp",
-  );
+export function timestampField(): FieldBuilder<string | null, string | null, string | null, false> {
+  return new FieldBuilder<string | null, string | null, string | null, false>("timestamp");
 }
 
 /**
@@ -280,18 +232,8 @@ export function timestampField(): FieldBuilder<
  * containerField()         // string | null (base64 encoded)
  * containerField().notNull() // string
  */
-export function containerField(): FieldBuilder<
-  string | null,
-  string | null,
-  ContainerDbType | null,
-  false
-> {
-  return new FieldBuilder<
-    string | null,
-    string | null,
-    ContainerDbType | null,
-    false
-  >("container");
+export function containerField(): FieldBuilder<string | null, string | null, ContainerDbType | null, false> {
+  return new FieldBuilder<string | null, string | null, ContainerDbType | null, false>("container");
 }
 
 /**
@@ -302,17 +244,7 @@ export function containerField(): FieldBuilder<
  * calcField()         // string | null
  * calcField().notNull() // string
  */
-export function calcField(): FieldBuilder<
-  string | null,
-  string | null,
-  string | null,
-  true
-> {
-  const builder = new FieldBuilder<
-    string | null,
-    string | null,
-    string | null,
-    false
-  >("calculated");
+export function calcField(): FieldBuilder<string | null, string | null, string | null, true> {
+  const builder = new FieldBuilder<string | null, string | null, string | null, false>("calculated");
   return builder.readOnly();
 }

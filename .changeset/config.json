@@ -7,5 +7,5 @@
   "linked": [],
   "access": "public",
   "updateInternalDependencies": "patch",
-  "ignore": ["@proofkit/docs", "demo", "@proofkit/typegen-web"]
+  "ignore": ["@proofkit/docs", "@proofkit/typegen-web"]
 }

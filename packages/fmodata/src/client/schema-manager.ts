@@ -1,14 +1,14 @@
 import type { FFetchOptions } from "@fetchkit/ffetch";
 import type { ExecutionContext } from "../types";
 
-type GenericField = {
+interface GenericField {
   name: string;
   nullable?: boolean;
   primary?: boolean;
   unique?: boolean;
   global?: boolean;
   repetitions?: number;
-};
+}
 
 type StringField = GenericField & {
   type: "string";
@@ -40,54 +40,41 @@ type ContainerField = GenericField & {
   externalSecurePath?: string;
 };
 
-export type Field =
-  | StringField
-  | NumericField
-  | DateField
-  | TimeField
-  | TimestampField
-  | ContainerField;
+export type Field = StringField | NumericField | DateField | TimeField | TimestampField | ContainerField;
 
-export type {
-  StringField,
-  NumericField,
-  DateField,
-  TimeField,
-  TimestampField,
-  ContainerField,
-};
+export type { StringField, NumericField, DateField, TimeField, TimestampField, ContainerField };
 
 type FileMakerField = Omit<Field, "type" | "repetitions" | "maxLength"> & {
   type: string;
 };
 
-type TableDefinition = {
+interface TableDefinition {
   tableName: string;
   fields: FileMakerField[];
-};
+}
 
 export class SchemaManager {
-  public constructor(
-    private readonly databaseName: string,
-    private readonly context: ExecutionContext,
-  ) {}
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
 
-  public async createTable(
+  constructor(databaseName: string, context: ExecutionContext) {
+    this.databaseName = databaseName;
+    this.context = context;
+  }
+
+  async createTable(
     tableName: string,
     fields: Field[],
     options?: RequestInit & FFetchOptions,
   ): Promise<TableDefinition> {
-    const result = await this.context._makeRequest<TableDefinition>(
-      `/${this.databaseName}/FileMaker_Tables`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          tableName,
-          fields: fields.map(SchemaManager.compileFieldDefinition),
-        }),
-        ...options,
-      },
-    );
+    const result = await this.context._makeRequest<TableDefinition>(`/${this.databaseName}/FileMaker_Tables`, {
+      method: "POST",
+      body: JSON.stringify({
+        tableName,
+        fields: fields.map(SchemaManager.compileFieldDefinition),
+      }),
+      ...options,
+    });
 
     if (result.error) {
       throw result.error;
@@ -96,11 +83,7 @@ export class SchemaManager {
     return result.data;
   }
 
-  public async addFields(
-    tableName: string,
-    fields: Field[],
-    options?: RequestInit & FFetchOptions,
-  ): Promise<TableDefinition> {
+  async addFields(tableName: string, fields: Field[], options?: RequestInit & FFetchOptions): Promise<TableDefinition> {
     const result = await this.context._makeRequest<TableDefinition>(
       `/${this.databaseName}/FileMaker_Tables/${tableName}`,
       {
@@ -119,39 +102,29 @@ export class SchemaManager {
     return result.data;
   }
 
-  public async deleteTable(
-    tableName: string,
-    options?: RequestInit & FFetchOptions,
-  ): Promise<void> {
-    const result = await this.context._makeRequest(
-      `/${this.databaseName}/FileMaker_Tables/${tableName}`,
-      { method: "DELETE", ...options },
-    );
+  async deleteTable(tableName: string, options?: RequestInit & FFetchOptions): Promise<void> {
+    const result = await this.context._makeRequest(`/${this.databaseName}/FileMaker_Tables/${tableName}`, {
+      method: "DELETE",
+      ...options,
+    });
 
     if (result.error) {
       throw result.error;
     }
   }
 
-  public async deleteField(
-    tableName: string,
-    fieldName: string,
-    options?: RequestInit & FFetchOptions,
-  ): Promise<void> {
-    const result = await this.context._makeRequest(
-      `/${this.databaseName}/FileMaker_Tables/${tableName}/${fieldName}`,
-      {
-        method: "DELETE",
-        ...options,
-      },
-    );
+  async deleteField(tableName: string, fieldName: string, options?: RequestInit & FFetchOptions): Promise<void> {
+    const result = await this.context._makeRequest(`/${this.databaseName}/FileMaker_Tables/${tableName}/${fieldName}`, {
+      method: "DELETE",
+      ...options,
+    });
 
     if (result.error) {
       throw result.error;
     }
   }
 
-  public async createIndex(
+  async createIndex(
     tableName: string,
     fieldName: string,
     options?: RequestInit & FFetchOptions,
@@ -172,11 +145,7 @@ export class SchemaManager {
     return result.data;
   }
 
-  public async deleteIndex(
-    tableName: string,
-    fieldName: string,
-    options?: RequestInit & FFetchOptions,
-  ): Promise<void> {
+  async deleteIndex(tableName: string, fieldName: string, options?: RequestInit & FFetchOptions): Promise<void> {
     const result = await this.context._makeRequest(
       `/${this.databaseName}/FileMaker_Indexes/${tableName}/${fieldName}`,
       {
@@ -209,36 +178,52 @@ export class SchemaManager {
     }
 
     // Build the result object, excluding type, maxLength, and repetitions
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic result object construction
     const result: any = {
       name: field.name,
       type,
     };
 
     // Add optional properties that FileMaker expects
-    if (field.nullable !== undefined) result.nullable = field.nullable;
-    if (field.primary !== undefined) result.primary = field.primary;
-    if (field.unique !== undefined) result.unique = field.unique;
-    if (field.global !== undefined) result.global = field.global;
+    if (field.nullable !== undefined) {
+      result.nullable = field.nullable;
+    }
+    if (field.primary !== undefined) {
+      result.primary = field.primary;
+    }
+    if (field.unique !== undefined) {
+      result.unique = field.unique;
+    }
+    if (field.global !== undefined) {
+      result.global = field.global;
+    }
 
     // Add type-specific properties
     if (field.type === "string") {
       const stringField = field as StringField;
-      if (stringField.default !== undefined)
+      if (stringField.default !== undefined) {
         result.default = stringField.default;
+      }
     } else if (field.type === "date") {
       const dateField = field as DateField;
-      if (dateField.default !== undefined) result.default = dateField.default;
+      if (dateField.default !== undefined) {
+        result.default = dateField.default;
+      }
     } else if (field.type === "time") {
       const timeField = field as TimeField;
-      if (timeField.default !== undefined) result.default = timeField.default;
+      if (timeField.default !== undefined) {
+        result.default = timeField.default;
+      }
     } else if (field.type === "timestamp") {
       const timestampField = field as TimestampField;
-      if (timestampField.default !== undefined)
+      if (timestampField.default !== undefined) {
         result.default = timestampField.default;
+      }
     } else if (field.type === "container") {
       const containerField = field as ContainerField;
-      if (containerField.externalSecurePath !== undefined)
+      if (containerField.externalSecurePath !== undefined) {
         result.externalSecurePath = containerField.externalSecurePath;
+      }
     }
 
     return result as FileMakerField;

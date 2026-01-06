@@ -1,31 +1,28 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Typegen Config Editor</title>
     <script>
-      // Apply dark mode class based on system preference before page renders
-      (function () {
-        const prefersDark = window.matchMedia(
-          "(prefers-color-scheme: dark)",
-        ).matches;
-        if (prefersDark) {
-          document.documentElement.classList.add("dark");
-        }
+    "use strict";
+    // Apply dark mode class based on system preference before page renders
+    (() => {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      }
 
-        // Listen for changes to system preference
-        window
-          .matchMedia("(prefers-color-scheme: dark)")
-          .addEventListener("change", (e) => {
-            if (e.matches) {
-              document.documentElement.classList.add("dark");
-            } else {
-              document.documentElement.classList.remove("dark");
-            }
-          });
-      })();
+      // Listen for changes to system preference
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+        if (e.matches) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      });
+    })();
     </script>
   </head>
   <body>

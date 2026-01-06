@@ -10,7 +10,9 @@
     "build": "vite build && publint --strict",
     "build:watch": "vite build --watch",
     "ci": "pnpm run build && pnpm run test",
-    "prepublishOnly": "pnpm run ci"
+    "prepublishOnly": "pnpm run ci",
+    "lint": "biome check . --write",
+    "lint:summary": "biome check . --reporter=summary"
   },
   "bin": {
     "better-auth": "./dist/esm/cli/index.js"

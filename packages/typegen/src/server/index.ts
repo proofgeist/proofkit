@@ -1,8 +1,8 @@
+import { existsSync, readFileSync } from "node:fs";
+import { createServer } from "node:net";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { readFileSync, existsSync } from "fs";
-import { join, dirname, resolve } from "path";
-import { fileURLToPath } from "url";
-import { createServer } from "net";
 import { Hono } from "hono";
 import { createApiApp } from "./app";
 
@@ -30,7 +30,7 @@ export async function startServer(options: ServerOptions) {
   app.route("/", apiApp);
 
   // Serve static files (only for non-API routes)
-  app.get("*", async (c) => {
+  app.get("*", (c) => {
     const url = new URL(c.req.url);
     // Skip API routes
     if (url.pathname.startsWith("/api/")) {
@@ -39,8 +39,7 @@ export async function startServer(options: ServerOptions) {
 
     // Handle root path
     // Remove leading slash from pathname to avoid path.join() ignoring WEB_DIR
-    const pathname =
-      url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    const pathname = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
     const filePath = join(WEB_DIR, pathname);
 
     try {
@@ -52,7 +51,7 @@ export async function startServer(options: ServerOptions) {
           "Content-Type": contentType,
         });
       }
-    } catch (err) {
+    } catch (_err) {
       // Fall through to SPA fallback
     }
 
@@ -63,7 +62,7 @@ export async function startServer(options: ServerOptions) {
         const content = readFileSync(indexPath);
         return c.html(content.toString());
       }
-    } catch (err) {
+    } catch (_err) {
       // If we can't even serve index.html, return 404
     }
 
@@ -95,10 +94,7 @@ export async function startServer(options: ServerOptions) {
   });
 }
 
-async function findAvailablePort(
-  startPort: number,
-  maxAttempts: number,
-): Promise<number> {
+async function findAvailablePort(startPort: number, maxAttempts: number): Promise<number> {
   for (let i = 0; i < maxAttempts; i++) {
     const portToTry = startPort + i;
     const isAvailable = await checkPortAvailable(portToTry);
@@ -106,9 +102,7 @@ async function findAvailablePort(
       return portToTry;
     }
   }
-  throw new Error(
-    `Could not find an available port in range ${startPort}-${startPort + maxAttempts - 1}`,
-  );
+  throw new Error(`Could not find an available port in range ${startPort}-${startPort + maxAttempts - 1}`);
 }
 
 function checkPortAvailable(port: number): Promise<boolean> {

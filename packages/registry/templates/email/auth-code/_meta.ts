@@ -3,8 +3,7 @@ import type { TemplateMetadata } from "@/lib/types";
 export const meta: TemplateMetadata = {
   title: "Auth Code Email",
 
-  description:
-    "A email template for sending a one-time code to the user's email address.",
+  description: "A email template for sending a one-time code to the user's email address.",
   category: "email",
 
   registryType: "registry:file",

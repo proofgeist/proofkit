@@ -1,24 +1,15 @@
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { SemVer } from "semver";
-import { type z } from "zod/v4";
+import type { z } from "zod/v4";
 
-import {
-  createDataAPIKey,
-  getOttoFMSToken,
-  listAPIKeys,
-  listFiles,
-} from "~/cli/ottofms.js";
+import { createDataAPIKey, getOttoFMSToken, listAPIKeys, listFiles } from "~/cli/ottofms.js";
 import { abortIfCancel } from "~/cli/utils.js";
 import { addToFmschemaConfig } from "~/generators/fmdapi.js";
 import { fetchServerVersions } from "~/helpers/version-fetcher.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { addToEnv } from "~/utils/addToEnvs.js";
-import {
-  getSettings,
-  setSettings,
-  type dataSourceSchema,
-} from "~/utils/parseSettings.js";
+import { type dataSourceSchema, getSettings, setSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { runAddSchemaAction } from "../fmschema.js";
@@ -39,35 +30,29 @@ export async function promptForFileMakerDataSource({
 }) {
   const settings = getSettings();
 
-  const existingFmDataSourceNames = settings.dataSources
-    .filter((ds) => ds.type === "fm")
-    .map((ds) => ds.name);
+  const existingFmDataSourceNames = settings.dataSources.filter((ds) => ds.type === "fm").map((ds) => ds.name);
 
   const server = await getValidFileMakerServerUrl(opts.server);
 
-  const canDoBrowserLogin =
-    server.ottoVersion && server.ottoVersion.compare(new SemVer("4.7.0")) > 0;
+  const canDoBrowserLogin = server.ottoVersion && server.ottoVersion.compare(new SemVer("4.7.0")) > 0;
 
-  if (!canDoBrowserLogin && !opts.adminApiKey) {
+  if (!(canDoBrowserLogin || opts.adminApiKey)) {
     return p.cancel(
-      "OttoFMS 4.7.0 or later is required to auto-login with this CLI. Please install/upgrade OttoFMS on your server, or pass an Admin API key with the --adminApiKey flag then try again"
+      "OttoFMS 4.7.0 or later is required to auto-login with this CLI. Please install/upgrade OttoFMS on your server, or pass an Admin API key with the --adminApiKey flag then try again",
     );
   }
 
-  const token =
-    opts.adminApiKey || (await getOttoFMSToken({ url: server.url })).token;
+  const token = opts.adminApiKey || (await getOttoFMSToken({ url: server.url })).token;
 
   const fileList = await listFiles({ url: server.url, token });
-  const demoFileExists = fileList
-    .map((f) => f.filename.replace(".fmp12", ""))
-    .includes(filename.replace(".fmp12", ""));
+  const demoFileExists = fileList.map((f) => f.filename.replace(".fmp12", "")).includes(filename.replace(".fmp12", ""));
   let fmFile = opts.fileName;
   while (true) {
     fmFile =
       opts.fileName ||
       abortIfCancel(
         await p.select({
-          message: `Which file would you like to connect to? ${chalk.dim(`(TIP: Select the file where your data is stored)`)}`,
+          message: `Which file would you like to connect to? ${chalk.dim("(TIP: Select the file where your data is stored)")}`,
           maxItems: 10,
           options: [
             {
@@ -82,28 +67,33 @@ export async function promptForFileMakerDataSource({
                 label: file.filename,
               })),
           ],
-        })
+        }),
       );
 
-    if (fmFile !== "$deployDemoFile") break;
+    if (fmFile !== "$deployDemoFile") {
+      break;
+    }
 
     if (demoFileExists) {
       const replace = abortIfCancel(
         await p.confirm({
-          message:
-            "The demo file already exists, do you want to replace it with a fresh copy?",
+          message: "The demo file already exists, do you want to replace it with a fresh copy?",
           active: "Yes, replace",
           inactive: "No, select another file",
           initialValue: false,
-        })
+        }),
       );
-      if (replace) break;
+      if (replace) {
+        break;
+      }
     } else {
       break;
     }
   }
 
-  if (!fmFile) throw new Error("No file selected");
+  if (!fmFile) {
+    throw new Error("No file selected");
+  }
 
   let dataApiKey = opts.dataApiKey;
   if (fmFile === "$deployDemoFile") {
@@ -136,10 +126,14 @@ export async function promptForFileMakerDataSource({
               hint: "Requires FileMaker credentials for this file",
             },
           ],
-        })
+        }),
       );
-      if (typeof selectedKey !== "string") throw new Error("Invalid key");
-      if (selectedKey !== "create") dataApiKey = selectedKey;
+      if (typeof selectedKey !== "string") {
+        throw new Error("Invalid key");
+      }
+      if (selectedKey !== "create") {
+        dataApiKey = selectedKey;
+      }
     }
 
     if (!dataApiKey) {
@@ -151,7 +145,9 @@ export async function promptForFileMakerDataSource({
       dataApiKey = resp.apiKey;
     }
   }
-  if (!dataApiKey) throw new Error("No API key");
+  if (!dataApiKey) {
+    throw new Error("No API key");
+  }
 
   const name =
     existingFmDataSourceNames.length === 0
@@ -161,16 +157,19 @@ export async function promptForFileMakerDataSource({
           await p.text({
             message: "What do you want to call this data source?",
             validate: (value) => {
-              if (value === "filemaker") return "That name is reserved";
+              if (value === "filemaker") {
+                return "That name is reserved";
+              }
 
               // require name to be unique
-              if (existingFmDataSourceNames?.includes(value))
+              if (existingFmDataSourceNames?.includes(value)) {
                 return "That name is already in use in this project, pick something unique";
+              }
 
               // require name to be alphanumeric, lowercase, etc
               return validateAppName(value);
             },
-          })
+          }),
         ));
 
   const newDataSource: z.infer<typeof dataSourceSchema> = {
@@ -204,7 +203,7 @@ export async function promptForFileMakerDataSource({
       },
       {
         name: newDataSource.envNames.server,
-        zodValue: `z.string().url()`,
+        zodValue: "z.string().url()",
         type: "server",
         defaultValue: server.url.origin,
       },
@@ -217,9 +216,7 @@ export async function promptForFileMakerDataSource({
     ],
   });
 
-  const fmdapiImport = schemaFile.getImportDeclaration(
-    (imp) => imp.getModuleSpecifierValue() === "@proofkit/fmdapi"
-  );
+  const fmdapiImport = schemaFile.getImportDeclaration((imp) => imp.getModuleSpecifierValue() === "@proofkit/fmdapi");
   if (fmdapiImport) {
     fmdapiImport
       .getNamedImports()
@@ -260,9 +257,7 @@ export async function promptForFileMakerDataSource({
   });
 }
 
-async function getValidFileMakerServerUrl(
-  defaultServerUrl?: string | undefined
-): Promise<{
+async function getValidFileMakerServerUrl(defaultServerUrl?: string | undefined): Promise<{
   url: URL;
   fmsVersion: SemVer;
   ottoVersion: SemVer | null;
@@ -271,32 +266,34 @@ async function getValidFileMakerServerUrl(
   let url: URL | null = null;
   let fmsVersion: SemVer | null = null;
   let ottoVersion: SemVer | null = null;
+  let serverUrlToUse = defaultServerUrl;
 
   while (fmsVersion === null) {
     const serverUrl =
-      defaultServerUrl ??
+      serverUrlToUse ??
       abortIfCancel(
         await p.text({
           message: `What is the URL of your FileMaker Server?\n${chalk.cyan("TIP: You can copy any valid path on the server and paste it here.")}`,
           validate: (value) => {
             try {
               // try to make sure the url is https
-              if (!value.startsWith("https://")) {
-                if (value.startsWith("http://")) {
-                  value = value.replace("http://", "https://");
+              let normalizedValue = value;
+              if (!normalizedValue.startsWith("https://")) {
+                if (normalizedValue.startsWith("http://")) {
+                  normalizedValue = normalizedValue.replace("http://", "https://");
                 } else {
-                  value = `https://${value}`;
+                  normalizedValue = `https://${normalizedValue}`;
                 }
               }
 
               // try to make sure the url is valid
-              new URL(value);
+              new URL(normalizedValue);
               return;
             } catch {
               return "Please enter a valid URL";
             }
           },
-        })
+        }),
       );
 
     try {
@@ -315,15 +312,23 @@ async function getValidFileMakerServerUrl(
 
     spinner.stop();
 
-    fmsVersion = new SemVer(fmsInfo.ServerVersion.split(" ")[0]!) ?? null;
-    ottoVersion = new SemVer(ottoInfo?.Otto.version ?? "") ?? null;
-    defaultServerUrl = undefined;
+    const fmsVersionString = fmsInfo.ServerVersion.split(" ")[0];
+    if (!fmsVersionString) {
+      p.log.error("Unable to parse FileMaker Server version");
+      serverUrlToUse = undefined;
+      continue;
+    }
+    fmsVersion = new SemVer(fmsVersionString);
+    ottoVersion = ottoInfo?.Otto.version ? new SemVer(ottoInfo.Otto.version) : null;
+    serverUrlToUse = undefined;
   }
 
-  if (url === null) throw new Error("Unable to get FileMaker Server URL");
+  if (url === null) {
+    throw new Error("Unable to get FileMaker Server URL");
+  }
 
   p.note(`🎉 FileMaker Server version ${fmsVersion} detected \n
-    ${!!ottoVersion ? `🎉 OttoFMS version ${ottoVersion} detected` : "❌ OttoFMS not detected"}`);
+    ${ottoVersion ? `🎉 OttoFMS version ${ottoVersion} detected` : "❌ OttoFMS not detected"}`);
 
   return { url, ottoVersion, fmsVersion };
 }

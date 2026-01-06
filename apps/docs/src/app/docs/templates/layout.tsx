@@ -1,15 +1,11 @@
-import { DocsLayout } from "@/components/layout/docs";
-import type { ReactNode } from "react";
-import { baseOptions } from "../../layout.config";
-import { getTemplatesByCategory } from "@/lib/templates";
-import { type TemplateMetadata } from "@proofkit/registry";
-import { PageTree } from "fumadocs-core/server";
-import { source } from "@/lib/source";
-import { New_Tegomin } from "next/font/google";
+import type { PageTree } from "fumadocs-core/server";
 import { getSidebarTabs } from "fumadocs-ui/utils/get-sidebar-tabs";
-import { categoryConfigs, categoryConfigMap } from "./category-config";
-
-type Category = TemplateMetadata["category"];
+import type { ReactNode } from "react";
+import { DocsLayout } from "@/components/layout/docs";
+import { source } from "@/lib/source";
+import { getTemplatesByCategory } from "@/lib/templates";
+import { baseOptions } from "../../layout.config";
+import { categoryConfigs } from "./category-config";
 
 async function buildTemplatesTree() {
   const templatesByCategory = await getTemplatesByCategory();
@@ -23,9 +19,11 @@ async function buildTemplatesTree() {
   ];
 
   // Add each category as a separator followed by its templates in the defined order
-  categoryConfigs.forEach(({ category, name }) => {
+  for (const { category, name } of categoryConfigs) {
     const templates = templatesByCategory[category];
-    if (!templates || templates.length === 0) return;
+    if (!templates || templates.length === 0) {
+      continue;
+    }
 
     // Add category separator
     children.push({
@@ -34,14 +32,14 @@ async function buildTemplatesTree() {
     });
 
     // Add all templates in this category
-    templates.forEach((template) => {
+    for (const template of templates) {
       children.push({
         name: template.title,
         url: `/docs${template.path}`,
         type: "page",
       });
-    });
-  });
+    }
+  }
 
   return {
     children,
@@ -52,7 +50,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
   const templatesTree = await buildTemplatesTree();
 
   // Find the existing Templates folder in the source tree
-  const templatesFolder = source.pageTree.children.find(
+  const _templatesFolder = source.pageTree.children.find(
     (child) => child.type === "folder" && child.name === "Templates",
   );
 
@@ -80,17 +78,12 @@ export default async function Layout({ children }: { children: ReactNode }) {
       tree={newTree}
       {...baseOptions}
       sidebar={{
-        tabs: tabs,
+        tabs,
         footer: (
-          <div className="flex items-center justify-center text-xs text-muted-foreground mt-2">
+          <div className="mt-2 flex items-center justify-center text-muted-foreground text-xs">
             <p>
               Made with ❤️ by{" "}
-              <a
-                href="https://proofgeist.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
+              <a className="underline" href="https://proofgeist.com" rel="noopener noreferrer" target="_blank">
                 Proof+Geist
               </a>
             </p>

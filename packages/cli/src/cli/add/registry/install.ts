@@ -11,17 +11,9 @@ import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
 import { state } from "~/state.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { logger } from "~/utils/logger.js";
-import {
-  getSettings,
-  mergeSettings,
-  type DataSource,
-} from "~/utils/parseSettings.js";
+import { type DataSource, getSettings, mergeSettings } from "~/utils/parseSettings.js";
 import { getMetaFromRegistry } from "./getOptions.js";
-import {
-  buildHandlebarsData,
-  getFilePath,
-  randerHandlebarsToFile,
-} from "./postInstall/handlebars.js";
+import { buildHandlebarsData, randerHandlebarsToFile } from "./postInstall/handlebars.js";
 import { processPostInstallStep } from "./postInstall/index.js";
 import { preflightAddCommand } from "./preflight.js";
 
@@ -34,29 +26,30 @@ async function promptForSchemaFromDataSource({
 }) {
   if (dataSource.type === "supabase") {
     throw new Error("Not implemented");
-  } else {
-    const schemas = getExistingSchemas({
-      projectDir,
-      dataSourceName: dataSource.name,
-    })
-      .map((s) => s.schemaName)
-      .filter(Boolean);
-
-    if (schemas.length === 0) {
-      p.cancel("This data source doesn't have any schemas to load data from");
-      return undefined;
-    }
-
-    if (schemas.length === 1) return schemas[0];
-
-    const schemaName = abortIfCancel(
-      await p.select({
-        message: "Which schema should this template use?",
-        options: schemas.map((o) => ({ label: o, value: o ?? "" })),
-      })
-    );
-    return schemaName;
   }
+  const schemas = getExistingSchemas({
+    projectDir,
+    dataSourceName: dataSource.name,
+  })
+    .map((s) => s.schemaName)
+    .filter(Boolean);
+
+  if (schemas.length === 0) {
+    p.cancel("This data source doesn't have any schemas to load data from");
+    return undefined;
+  }
+
+  if (schemas.length === 1) {
+    return schemas[0];
+  }
+
+  const schemaName = abortIfCancel(
+    await p.select({
+      message: "Which schema should this template use?",
+      options: schemas.map((o) => ({ label: o, value: o ?? "" })),
+    }),
+  );
+  return schemaName;
 }
 
 export async function installFromRegistry(name: string) {
@@ -70,12 +63,9 @@ export async function installFromRegistry(name: string) {
       return;
     }
 
-    if (
-      meta.minimumProofKitVersion &&
-      semver.gt(meta.minimumProofKitVersion, getVersion())
-    ) {
+    if (meta.minimumProofKitVersion && semver.gt(meta.minimumProofKitVersion, getVersion())) {
       logger.error(
-        `Template ${name} requires ProofKit version ${meta.minimumProofKitVersion}, but you are using version ${getVersion()}`
+        `Template ${name} requires ProofKit version ${meta.minimumProofKitVersion}, but you are using version ${getVersion()}`,
       );
       spinner.fail("Template is not compatible with your ProofKit version");
       return;
@@ -95,9 +85,7 @@ export async function installFromRegistry(name: string) {
       const settings = getSettings();
 
       if (settings.dataSources.length === 0) {
-        spinner.fail(
-          "This template requires a data source, but you don't have any. Add a data source first."
-        );
+        spinner.fail("This template requires a data source, but you don't have any. Add a data source first.");
         return;
       }
 
@@ -110,13 +98,11 @@ export async function installFromRegistry(name: string) {
                   value: ds.name,
                   label: ds.name,
                 })),
-              })
+              }),
             )
           : settings.dataSources[0]?.name;
 
-      dataSource = settings.dataSources.find(
-        (ds) => ds.name === dataSourceName
-      );
+      dataSource = settings.dataSources.find((ds) => ds.name === dataSourceName);
 
       if (!dataSource) {
         spinner.fail(`Data source ${dataSourceName} not found`);
@@ -138,7 +124,7 @@ export async function installFromRegistry(name: string) {
       // Prompt user for the URL path of the page
       routeName = abortIfCancel(
         await p.text({
-          message: `Enter the URL PATH for your new page`,
+          message: "Enter the URL PATH for your new page",
           placeholder: "/my-page",
           validate: (value) => {
             if (value.length === 0) {
@@ -146,7 +132,7 @@ export async function installFromRegistry(name: string) {
             }
             return;
           },
-        })
+        }),
       );
 
       if (routeName.startsWith("/")) {
@@ -156,7 +142,7 @@ export async function installFromRegistry(name: string) {
       pageName = capitalize(routeName.replace("/", "").trim());
     }
 
-    let url = new URL(`${getRegistryUrl()}/r/${name}`);
+    const url = new URL(`${getRegistryUrl()}/r/${name}`);
     if (meta.category === "page") {
       url.searchParams.set("routeName", `/(main)/${routeName ?? name}`);
     }
@@ -166,8 +152,7 @@ export async function installFromRegistry(name: string) {
       name === "fmdapi" &&
       !previouslyInstalledTemplates.includes("utils/t3-env") &&
       // this last guard will allow this workaroudn to be bypassed if the registry server updates to start serving the dependency again
-      meta.registryDependencies?.find((d) => d.includes("utils/t3-env")) ===
-        undefined
+      meta.registryDependencies?.find((d) => d.includes("utils/t3-env")) === undefined
     ) {
       // install the t3-env template manually first
       await installFromRegistry("utils/t3-env");
@@ -181,7 +166,7 @@ export async function installFromRegistry(name: string) {
 
     if (handlebarsFiles.length > 0) {
       // Build template data with schema information if available
-      const templateData =
+      const baseTemplateData =
         dataSource && schemaName
           ? buildHandlebarsData({
               dataSource,
@@ -190,20 +175,16 @@ export async function installFromRegistry(name: string) {
           : buildHandlebarsData();
 
       // Add page information to template data if available
-      if (routeName) {
-        (templateData as any).routeName = routeName;
-      }
-      if (pageName) {
-        (templateData as any).pageName = pageName;
-      }
+      const templateData = {
+        ...baseTemplateData,
+        ...(routeName && { routeName }),
+        ...(pageName && { pageName }),
+      };
 
       // Resolve __PATH__ placeholders in file paths before handlebars processing
       const resolvedFiles = handlebarsFiles.map((file) => ({
         ...file,
-        destinationPath: file.destinationPath?.replace(
-          "__PATH__",
-          `/(main)/${routeName ?? name}`
-        ),
+        destinationPath: file.destinationPath?.replace("__PATH__", `/(main)/${routeName ?? name}`),
       }));
 
       for (const file of resolvedFiles) {
@@ -234,11 +215,7 @@ export async function installFromRegistry(name: string) {
 
     // update the settings
     mergeSettings({
-      registryTemplates: uniq([
-        ...previouslyInstalledTemplates,
-        name,
-        ...otherProofKitDependencies,
-      ]),
+      registryTemplates: uniq([...previouslyInstalledTemplates, name, ...otherProofKitDependencies]),
     });
   } catch (error) {
     spinner.fail("Failed to fetch template metadata.");

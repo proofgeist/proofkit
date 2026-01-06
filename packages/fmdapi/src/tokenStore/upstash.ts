@@ -1,10 +1,7 @@
-import type { TokenStoreDefinitions } from "./types.js";
 import type { RedisConfigNodejs } from "@upstash/redis";
+import type { TokenStoreDefinitions } from "./types.js";
 
-export function upstashTokenStore(
-  config: RedisConfigNodejs,
-  options: { prefix?: string } = {},
-): TokenStoreDefinitions {
+export function upstashTokenStore(config: RedisConfigNodejs, options: { prefix?: string } = {}): TokenStoreDefinitions {
   const { prefix = "" } = options;
 
   const getRedis = async () => {

@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 
 /**
  * Verifies that a project at the given directory can be built without errors

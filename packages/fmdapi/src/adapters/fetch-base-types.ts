@@ -1,5 +1,7 @@
-export type BaseFetchAdapterOptions = {
+export interface BaseFetchAdapterOptions {
   server: string;
   db: string;
-};
-export type GetTokenArguments = { refresh?: boolean };
+}
+export interface GetTokenArguments {
+  refresh?: boolean;
+}

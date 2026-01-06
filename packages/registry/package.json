@@ -29,7 +29,9 @@
     "dev": "pnpm run build && chokidar ./lib/**/* ./templates/**/* -c \"tsdown && NODE_OPTIONS='--max-old-space-size=4096' tsc --emitDeclarationOnly\" --silent",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:summary": "biome check . --reporter=summary"
   },
   "keywords": [
     "proofkit",

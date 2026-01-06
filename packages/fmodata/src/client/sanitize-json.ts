@@ -30,7 +30,7 @@ export function sanitizeFileMakerJson(text: string): string {
 
   // Replace unquoted ? values directly in arrays (not after colon)
   // e.g., [1, ?, 3] -> [1, null, 3]
-  result = result.replace(/(?<=[\[,])\s*\?(?=\s*[,\]])/g, " null");
+  result = result.replace(/(?<=[[,])\s*\?(?=\s*[,\]])/g, " null");
 
   return result;
 }
@@ -46,9 +46,7 @@ export function sanitizeFileMakerJson(text: string): string {
  * @returns Parsed JSON data
  * @throws ResponseParseError if the JSON is still invalid after sanitization (includes sanitized text for debugging)
  */
-export async function safeJsonParse<T = unknown>(
-  response: Response,
-): Promise<T> {
+export async function safeJsonParse<T = unknown>(response: Response): Promise<T> {
   const text = await response.text();
   const sanitized = sanitizeFileMakerJson(text);
   try {

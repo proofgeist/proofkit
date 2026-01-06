@@ -6,14 +6,14 @@
  */
 
 import {
+  dateField,
+  type FieldBuilder,
   FMServerConnection,
   fmTableOccurrence,
-  textField,
-  numberField,
-  timestampField,
-  dateField,
   type InferTableSchema,
-  type FieldBuilder,
+  numberField,
+  textField,
+  timestampField,
 } from "@proofkit/fmodata";
 import { z } from "zod/v4";
 
@@ -25,12 +25,7 @@ const booleanField = (): FieldBuilder<boolean, boolean, number | null, false> =>
     // Allows the user to pass a boolean when inserting or updating, converting it back to number
     .writeValidator(z.boolean().transform((val) => (val ? 1 : 0)));
 
-export const hobbyEnum = z.enum([
-  "Board games",
-  "Reading",
-  "Traveling",
-  "Unknown",
-]);
+export const hobbyEnum = z.enum(["Board games", "Reading", "Traveling", "Unknown"]);
 
 // Table occurrences using new ORM patterns
 
@@ -63,9 +58,7 @@ export const users = fmTableOccurrence(
     ModifiedBy: textField(),
     name: textField(),
     active: booleanField(),
-    fake_field: textField().readValidator(
-      z.string().catch("I only exist in the schema, not the database"),
-    ),
+    fake_field: textField().readValidator(z.string().catch("I only exist in the schema, not the database")),
     id_customer: textField(),
   },
   {
@@ -83,9 +76,7 @@ export const invoices = fmTableOccurrence(
     invoiceDate: dateField(),
     dueDate: dateField(),
     total: numberField(),
-    status: textField().readValidator(
-      z.enum(["draft", "sent", "paid", "overdue"]).nullable(),
-    ),
+    status: textField().readValidator(z.enum(["draft", "sent", "paid", "overdue"]).nullable()),
   },
   {
     defaultSelect: "all",
@@ -119,9 +110,7 @@ export const contactsTOWithIds = fmTableOccurrence(
     ModificationTimestamp: timestampField().entityId("FMFID:13"),
     ModifiedBy: textField().entityId("FMFID:14"),
     name: textField().entityId("FMFID:15"),
-    hobby: textField()
-      .entityId("FMFID:16")
-      .readValidator(hobbyEnum.nullable().catch("Unknown")),
+    hobby: textField().entityId("FMFID:16").readValidator(hobbyEnum.nullable().catch("Unknown")),
     id_user: textField().entityId("FMFID:17"),
   },
   {
@@ -144,9 +133,7 @@ export const usersTOWithIds = fmTableOccurrence(
     active: booleanField().entityId("FMFID:7"),
     fake_field: textField()
       .entityId("FMFID:8")
-      .readValidator(
-        z.string().catch("I only exist in the schema, not the database"),
-      ),
+      .readValidator(z.string().catch("I only exist in the schema, not the database")),
     id_customer: textField().entityId("FMFID:9"),
   },
   {
@@ -179,7 +166,9 @@ export type LineItemSchema = InferTableSchema<typeof lineItems>;
 // These extract the schema from the new FMTable instances
 import { containerField, FMTable } from "@proofkit/fmodata";
 
-function getSchemaFromTable<T extends FMTable<any, any>>(table: T) {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FMTable configuration
+function _getSchemaFromTable<T extends FMTable<any, any>>(table: T) {
+  // biome-ignore lint/suspicious/noExplicitAny: Symbol property access requires type assertion
   return (table as any)[FMTable.Symbol.Schema];
 }
 

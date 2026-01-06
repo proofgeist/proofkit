@@ -14,19 +14,19 @@
  * Run with: pnpm test schema-manager
  */
 
-import path from "path";
-import { describe, it, expect, afterEach } from "vitest";
-import { config } from "dotenv";
-import { FMServerConnection } from "@proofkit/fmodata";
+import path from "node:path";
 import type {
-  Field,
-  StringField,
-  NumericField,
+  ContainerField,
   DateField,
+  Field,
+  NumericField,
+  StringField,
   TimeField,
   TimestampField,
-  ContainerField,
 } from "@proofkit/fmodata";
+import { FMServerConnection } from "@proofkit/fmodata";
+import { config } from "dotenv";
+import { afterEach, describe, expect, it } from "vitest";
 
 config({ path: path.resolve(__dirname, "../.env.local") });
 
@@ -37,7 +37,7 @@ const database = process.env.FMODATA_DATABASE;
 
 describe("SchemaManager E2E Tests", () => {
   // Skip tests if credentials are not available
-  if (!serverUrl || !apiKey || !database) {
+  if (!(serverUrl && apiKey && database)) {
     console.warn(
       "Skipping SchemaManager E2E tests: FMODATA_SERVER_URL, FMODATA_API_KEY, and FMODATA_DATABASE environment variables are required",
     );

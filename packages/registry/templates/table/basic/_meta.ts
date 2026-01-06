@@ -1,4 +1,4 @@
-import { TemplateMetadata } from "@/lib/types";
+import type { TemplateMetadata } from "@/lib/types";
 
 export const meta: TemplateMetadata = {
   title: "Basic Table",
@@ -6,7 +6,11 @@ export const meta: TemplateMetadata = {
   category: "page",
   registryType: "registry:page",
   dependencies: [],
-  registryDependencies: ["{proofkit}/r/utils/nuqs","https://reui.io/r/data-grid.json","https://reui.io/r/scroll-area.json"],
+  registryDependencies: [
+    "{proofkit}/r/utils/nuqs",
+    "https://reui.io/r/data-grid.json",
+    "https://reui.io/r/scroll-area.json",
+  ],
   schemaRequired: true,
   files: [
     {

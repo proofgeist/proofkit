@@ -15,7 +15,9 @@
   "scripts": {
     "dev:watch": "node src/index.js",
     "pub:release": "npm publish --access public",
-    "pub:beta": "npm publish --tag beta --access public"
+    "pub:beta": "npm publish --tag beta --access public",
+    "lint": "biome check . --write",
+    "lint:summary": "biome check . --reporter=summary"
   },
   "dependencies": {
     "execa": "^9.5.1"

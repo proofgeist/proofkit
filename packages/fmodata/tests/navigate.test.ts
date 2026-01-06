@@ -5,15 +5,8 @@
  * This validates that navigation properties can be accessed from record instances.
  */
 
-import { describe, it, expect, expectTypeOf } from "vitest";
-import {
-  createMockClient,
-  users,
-  invoices,
-  contacts,
-  lineItems,
-  arbitraryTable,
-} from "./utils/test-setup";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { arbitraryTable, contacts, createMockClient, invoices, lineItems, users } from "./utils/test-setup";
 
 describe("navigate", () => {
   const client = createMockClient();
@@ -28,7 +21,7 @@ describe("navigate", () => {
     const entitySet = db.from(contacts);
 
     // @ts-expect-error - bad is not a valid navigation target
-    const entityQueryBuilder = entitySet.navigate("bad");
+    const _entityQueryBuilder = entitySet.navigate("bad");
 
     // expect(
     //   entityQueryBuilder
@@ -54,11 +47,9 @@ describe("navigate", () => {
     expectTypeOf(queryBuilder.select).parameter(0).not.toEqualTypeOf<string>();
 
     // Use actual fields from usersBase schema
-    expect(
-      queryBuilder
-        .select({ name: users.name, active: users.active })
-        .getQueryString(),
-    ).toBe("/contacts('test-id')/users?$select=name,active");
+    expect(queryBuilder.select({ name: users.name, active: users.active }).getQueryString()).toBe(
+      "/contacts('test-id')/users?$select=name,active",
+    );
   });
 
   it("should navigate w/o needing to get a record first", () => {
@@ -72,21 +63,14 @@ describe("navigate", () => {
 
   it("should handle expands", () => {
     const db = client.database("test_db");
-    expect(
-      db
-        .from(contacts)
-        .navigate(users)
-        .list()
-        .expand(contacts)
-        .getQueryString(),
-    ).toBe("/contacts/users?$top=1000&$expand=contacts");
+    expect(db.from(contacts).navigate(users).list().expand(contacts).getQueryString()).toBe(
+      "/contacts/users?$top=1000&$expand=contacts",
+    );
 
     const entitySet = db.from(users).list();
     expectTypeOf(entitySet.expand).parameter(0).not.toEqualTypeOf<string>();
 
-    expect(db.from(users).list().expand(contacts).getQueryString()).toBe(
-      "/users?$top=1000&$expand=contacts",
-    );
+    expect(db.from(users).list().expand(contacts).getQueryString()).toBe("/users?$top=1000&$expand=contacts");
   });
 
   it("should provide type-safe navigation with invoices and lineItems", () => {
@@ -104,9 +88,7 @@ describe("navigate", () => {
 
     // invoices -> lineItems navigation
     const lineItemsQuery = db.from(invoices).navigate(lineItems).list();
-    expectTypeOf(lineItemsQuery.select)
-      .parameter(0)
-      .not.toEqualTypeOf<string>();
+    expectTypeOf(lineItemsQuery.select).parameter(0).not.toEqualTypeOf<string>();
 
     // Should allow valid fields from lineItems schema
     lineItemsQuery.select({
@@ -114,28 +96,17 @@ describe("navigate", () => {
       quantity: lineItems.quantity,
     });
 
-    expect(lineItemsQuery.getQueryString()).toBe(
-      "/invoices/lineItems?$top=1000",
-    );
+    expect(lineItemsQuery.getQueryString()).toBe("/invoices/lineItems?$top=1000");
   });
 
-  it("should support multi-hop navigation patterns", async () => {
+  it("should support multi-hop navigation patterns", () => {
     const db = client.database("test_db");
 
-    const query = db
-      .from(contacts)
-      .navigate(invoices)
-      .navigate(lineItems)
-      .list();
-    expect(query.getQueryString()).toBe(
-      "/contacts/invoices/lineItems?$top=1000",
-    );
+    const query = db.from(contacts).navigate(invoices).navigate(lineItems).list();
+    expect(query.getQueryString()).toBe("/contacts/invoices/lineItems?$top=1000");
 
     // Navigate from a specific contact to their invoices
-    const contactInvoices = db
-      .from(contacts)
-      .get("contact-123")
-      .navigate(invoices);
+    const contactInvoices = db.from(contacts).get("contact-123").navigate(invoices);
 
     expect(
       contactInvoices
@@ -156,9 +127,7 @@ describe("navigate", () => {
           total: invoices.total,
         })
         .getQueryString(),
-    ).toBe(
-      "/invoices('inv-456')?$select=invoiceNumber,total&$expand=lineItems",
-    );
+    ).toBe("/invoices('inv-456')?$select=invoiceNumber,total&$expand=lineItems");
 
     const nestedExpand = db
       .from(contacts)

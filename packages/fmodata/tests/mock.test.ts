@@ -13,12 +13,12 @@
  * 3. The mock fetch will automatically match the request URL to the stored response
  */
 
-import { describe, it, expect, expectTypeOf } from "vitest";
-import { createMockFetch, simpleMock } from "./utils/mock-fetch";
-import { mockResponses } from "./fixtures/responses";
-import { createMockClient, contacts } from "./utils/test-setup";
+import { assert } from "node:console";
 import { eq } from "@proofkit/fmodata";
-import { assert } from "console";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { mockResponses } from "./fixtures/responses";
+import { createMockFetch, simpleMock } from "./utils/mock-fetch";
+import { contacts, createMockClient } from "./utils/test-setup";
 
 describe("Mock Fetch Tests", () => {
   const client = createMockClient();
@@ -30,13 +30,15 @@ describe("Mock Fetch Tests", () => {
         .from(contacts)
         .list()
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-pagination"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-pagination"] ?? {}),
         });
 
       expect(result).toBeDefined();
       expect(result.error).toBeUndefined();
       expect(result.data).toBeDefined();
-      if (!result.data) throw new Error("Expected result.data to be defined");
+      if (!result.data) {
+        throw new Error("Expected result.data to be defined");
+      }
       expect(Array.isArray(result.data)).toBe(true);
 
       const firstRecord = result.data[0];
@@ -49,14 +51,16 @@ describe("Mock Fetch Tests", () => {
         .from(contacts)
         .list()
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-pagination"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-pagination"] ?? {}),
           includeODataAnnotations: true,
         });
 
       expect(result).toBeDefined();
       expect(result.error).toBeUndefined();
       expect(result.data).toBeDefined();
-      if (!result.data) throw new Error("Expected result.data to be defined");
+      if (!result.data) {
+        throw new Error("Expected result.data to be defined");
+      }
       expect(Array.isArray(result.data)).toBe(true);
 
       const firstRecord = result.data[0];
@@ -70,7 +74,7 @@ describe("Mock Fetch Tests", () => {
         .list()
         .select({ name: contacts.name, PrimaryKey: contacts.PrimaryKey })
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-pagination"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-pagination"] ?? {}),
         });
 
       expect(result).toBeDefined();
@@ -79,7 +83,9 @@ describe("Mock Fetch Tests", () => {
       }
       expect(result.error).toBeUndefined();
       expect(result.data).toBeDefined();
-      if (!result.data) throw new Error("Expected result.data to be defined");
+      if (!result.data) {
+        throw new Error("Expected result.data to be defined");
+      }
       if (result.data.length > 0) {
         const firstRecord = result.data[0] as any;
         // Verify selected fields are present (if captured response has them)
@@ -93,13 +99,15 @@ describe("Mock Fetch Tests", () => {
         .list()
         .top(5)
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-orderby"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-orderby"] ?? {}),
         });
 
       expect(result).toBeDefined();
       expect(result.error).toBeUndefined();
       expect(result.data).toBeDefined();
-      if (!result.data) throw new Error("Expected result.data to be defined");
+      if (!result.data) {
+        throw new Error("Expected result.data to be defined");
+      }
       // If the mock response limits results, verify we got limited results
       if (result.data.length > 0) {
         expect(result.data.length).toBeLessThanOrEqual(5);
@@ -113,7 +121,7 @@ describe("Mock Fetch Tests", () => {
         .orderBy("name")
         .top(5)
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-orderby"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-orderby"] ?? {}),
         });
 
       expect(result).toBeDefined();
@@ -128,7 +136,7 @@ describe("Mock Fetch Tests", () => {
         .list()
         .single()
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-orderby"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-orderby"] ?? {}),
         });
 
       expect(result).toBeDefined();
@@ -171,7 +179,7 @@ describe("Mock Fetch Tests", () => {
         .top(2)
         .skip(2)
         .execute({
-          fetchHandler: createMockFetch(mockResponses["list-with-pagination"]!),
+          fetchHandler: createMockFetch(mockResponses["list-with-pagination"] ?? {}),
         });
 
       expect(result).toBeDefined();
@@ -187,7 +195,7 @@ describe("Mock Fetch Tests", () => {
         .from(contacts)
         .get("B5BFBC89-03E0-47FC-ABB6-D51401730227")
         .execute({
-          fetchHandler: createMockFetch(mockResponses["single-record"]!),
+          fetchHandler: createMockFetch(mockResponses["single-record"] ?? {}),
         });
 
       expect(result).toBeDefined();
@@ -207,7 +215,7 @@ describe("Mock Fetch Tests", () => {
         .get("B5BFBC89-03E0-47FC-ABB6-D51401730227")
         .getSingleField(contacts.name)
         .execute({
-          fetchHandler: createMockFetch(mockResponses["single-field"]!),
+          fetchHandler: createMockFetch(mockResponses["single-field"] ?? {}),
         });
 
       expect(result).toBeDefined();

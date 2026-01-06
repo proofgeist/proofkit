@@ -1,9 +1,4 @@
-import {
-  HTTPError,
-  ODataError,
-  SchemaLockedError,
-  FMODataErrorType,
-} from "../errors";
+import { type FMODataErrorType, HTTPError, ODataError, SchemaLockedError } from "../errors";
 import { safeJsonParse } from "./sanitize-json";
 
 /**
@@ -16,14 +11,9 @@ import { safeJsonParse } from "./sanitize-json";
  * @param url - The URL that was requested (for error context)
  * @returns An appropriate error object (ODataError, SchemaLockedError, or HTTPError)
  */
-export async function parseErrorResponse(
-  response: Response,
-  url: string,
-): Promise<FMODataErrorType> {
+export async function parseErrorResponse(response: Response, url: string): Promise<FMODataErrorType> {
   // Try to parse error body if it's JSON
-  let errorBody:
-    | { error?: { code?: string | number; message?: string } }
-    | undefined;
+  let errorBody: { error?: { code?: string | number; message?: string } } | undefined;
 
   try {
     if (response.headers.get("content-type")?.includes("application/json")) {
@@ -43,12 +33,7 @@ export async function parseErrorResponse(
       return new SchemaLockedError(url, errorMessage, errorBody.error);
     }
 
-    return new ODataError(
-      url,
-      errorMessage,
-      String(errorCode),
-      errorBody.error,
-    );
+    return new ODataError(url, errorMessage, String(errorCode), errorBody.error);
   }
 
   // Fall back to generic HTTPError

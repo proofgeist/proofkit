@@ -7,10 +7,9 @@
  * 3. Backward compatibility of regular classes
  */
 
-import { describe, it, expect } from "vitest";
-import { z } from "zod/v4";
-import { fmTableOccurrence, textField, FMTable } from "@proofkit/fmodata";
-import { createMockClient, users, contacts } from "./utils/test-setup";
+import { FMTable, fmTableOccurrence, textField } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
+import { createMockClient } from "./utils/test-setup";
 
 describe("BaseTable with entity IDs", () => {
   it("should create a table with fmfIds using fmTableOccurrence", () => {
@@ -48,9 +47,7 @@ describe("BaseTable with entity IDs", () => {
 
     expect((table as any)[FMTable.Symbol.Schema]).toBeDefined();
     expect((table as any)[FMTable.Symbol.BaseTableConfig].idField).toBe("id");
-    expect((table as any)[FMTable.Symbol.BaseTableConfig].readOnly).toContain(
-      "name",
-    );
+    expect((table as any)[FMTable.Symbol.BaseTableConfig].readOnly).toContain("name");
   });
 });
 
@@ -128,18 +125,16 @@ describe("Type enforcement (compile-time)", () => {
 
     expect(regularTableOcc).toBeDefined();
     expect(withIdsTableOcc).toBeDefined();
-    expect(
-      (withIdsTableOcc as any)[FMTable.Symbol.BaseTableConfig].fmfIds,
-    ).toBeDefined();
+    expect((withIdsTableOcc as any)[FMTable.Symbol.BaseTableConfig].fmfIds).toBeDefined();
   });
 
   it("should not allow mixture of occurrences when creating a database", () => {
-    const regularTableOcc = fmTableOccurrence("regular", {
+    const _regularTableOcc = fmTableOccurrence("regular", {
       id: textField().primaryKey(),
       name: textField(),
     });
 
-    const withIdsTableOcc = fmTableOccurrence(
+    const _withIdsTableOcc = fmTableOccurrence(
       "withIds",
       {
         id: textField().primaryKey().entityId("FMFID:1"),

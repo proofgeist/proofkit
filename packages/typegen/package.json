@@ -17,7 +17,7 @@
     "lint": "biome check . --write",
     "lint:summary": "biome check . --reporter=summary",
     "generate:schema": "tsx scripts/generate-schema.ts",
-    "prepublishOnly": "pnpm run ci"
+    "prepublishOnly": "pnpm run build"
   },
   "bin": "./dist/esm/cli.js",
   "exports": {

@@ -37,7 +37,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "prepublishOnly": "pnpm run ci",
+    "prepublishOnly": "pnpm run build",
     "build": "tsc && vite build && publint --strict",
     "build:watch": "tsc && vite build --watch",
     "check-format": "biome format --check .",

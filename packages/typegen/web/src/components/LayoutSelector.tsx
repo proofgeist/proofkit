@@ -1,8 +1,6 @@
-import * as React from "react";
-import { client } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Path, useFormContext } from "react-hook-form";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
+import { type Path, useFormContext } from "react-hook-form";
 import { Button, ButtonArrow } from "@/components/ui/button";
 import {
   Command,
@@ -13,32 +11,35 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
-import { SingleConfig } from "@/lib/config-utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { client } from "@/lib/api";
+import type { SingleConfig } from "@/lib/config-utils";
+import { cn } from "@/lib/utils";
 import { InfoTooltip } from "./InfoTooltip";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 
-type FormData = { config: SingleConfig[] };
+interface FormData {
+  config: SingleConfig[];
+}
 
-export function LayoutSelector({
-  configIndex,
-  path,
-}: {
-  configIndex: number;
-  path: Path<FormData>;
-}) {
+interface ErrorDetails {
+  missing?: {
+    server?: boolean;
+    db?: boolean;
+    auth?: boolean;
+    password?: boolean;
+  };
+  fmErrorCode?: string;
+  suspectedField?: "server" | "db" | "auth";
+}
+
+interface ErrorWithDetails extends Error {
+  details?: ErrorDetails;
+}
+
+export function LayoutSelector({ configIndex, path }: { configIndex: number; path: Path<FormData> }) {
   const { control, setValue, getValues } = useFormContext<FormData>();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
   const {
     data: layouts,
@@ -52,23 +53,45 @@ export function LayoutSelector({
         query: { configIndex: configIndex.toString() },
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as
+        | { layouts: Array<{ name: string }> }
+        | {
+            error: string;
+            missing?: {
+              server?: boolean;
+              db?: boolean;
+              auth?: boolean;
+              password?: boolean;
+            };
+            fmErrorCode?: string;
+            suspectedField?: "server" | "db" | "auth";
+          };
       if (!res.ok || "error" in data) {
         // Parse error JSON to get detailed error information
-        const errorMessage =
-          "error" in data ? data.error : "Failed to fetch layouts";
-        throw new Error(errorMessage);
+        const errorMessage = "error" in data ? data.error : "Failed to fetch layouts";
+        const error = new Error(errorMessage) as ErrorWithDetails;
+        // Preserve error details from the API response
+        if ("error" in data) {
+          error.details = {
+            missing: data.missing,
+            fmErrorCode: data.fmErrorCode,
+            suspectedField: data.suspectedField,
+          };
+        }
+        throw error;
       }
       return data.layouts;
     },
   });
 
   // Extract error details from the error object
-  const errorDetails = error && (error as any).details;
+  const errorDetails = error && (error as ErrorWithDetails).details;
 
   // Transform layouts array into combobox format
-  const layoutOptions = React.useMemo(() => {
-    if (!layouts) return [];
+  const layoutOptions = useMemo(() => {
+    if (!layouts) {
+      return [];
+    }
     return layouts.map((layout) => ({
       value: layout.name,
       label: layout.name,
@@ -82,26 +105,23 @@ export function LayoutSelector({
       render={({ field }) => (
         <FormItem>
           <FormLabel>
-            Layout Name{" "}
-            <InfoTooltip label="The layout name from your FileMaker file" />
+            Layout Name <InfoTooltip label="The layout name from your FileMaker file" />
           </FormLabel>
           <FormControl>
-            <Popover open={open} onOpenChange={setOpen}>
+            <Popover onOpenChange={setOpen} open={open}>
               <PopoverTrigger asChild>
                 <Button
-                  variant="outline"
-                  role="combobox"
-                  mode="input"
-                  placeholder={!field.value}
                   aria-expanded={open}
                   className="w-full justify-between"
                   disabled={isLoading || isError}
+                  mode="input"
+                  placeholder={!field.value}
+                  role="combobox"
+                  variant="outline"
                 >
                   <span className={cn("truncate")}>
                     {field.value
-                      ? layoutOptions.find(
-                          (layout) => layout.value === field.value,
-                        )?.label
+                      ? layoutOptions.find((layout) => layout.value === field.value)?.label
                       : "Select layout..."}
                   </span>
                   <ButtonArrow />
@@ -111,123 +131,108 @@ export function LayoutSelector({
                 <Command>
                   <CommandInput placeholder="Search layout..." />
                   <CommandList>
-                    {isLoading ? (
-                      <div className="py-6 text-center text-sm text-muted-foreground">
-                        Loading layouts...
-                      </div>
-                    ) : isError ? (
-                      <div className="py-6 px-4 space-y-2 text-sm text-destructive">
-                        <div className="font-medium text-center">
-                          {error instanceof Error
-                            ? error.message
-                            : "Failed to load layouts"}
-                        </div>
-                        {errorDetails && (
-                          <div className="space-y-1 text-xs">
-                            {errorDetails.missing && (
-                              <div>
-                                <div className="font-medium">
-                                  Missing environment variables:
-                                </div>
-                                <ul className="list-disc list-inside space-y-0.5 mt-1">
-                                  {errorDetails.missing.server && (
-                                    <li>
-                                      Server
-                                      {errorDetails.suspectedField ===
-                                        "server" && " ⚠️"}
-                                    </li>
-                                  )}
-                                  {errorDetails.missing.db && (
-                                    <li>
-                                      Database
-                                      {errorDetails.suspectedField === "db" &&
-                                        " ⚠️"}
-                                    </li>
-                                  )}
-                                  {errorDetails.missing.auth && (
-                                    <li>
-                                      Authentication
-                                      {errorDetails.suspectedField === "auth" &&
-                                        " ⚠️"}
-                                    </li>
-                                  )}
-                                  {errorDetails.missing.password && (
-                                    <li>
-                                      Password
-                                      {errorDetails.suspectedField === "auth" &&
-                                        " ⚠️"}
-                                    </li>
-                                  )}
-                                </ul>
+                    {(() => {
+                      if (isLoading) {
+                        return <div className="py-6 text-center text-muted-foreground text-sm">Loading layouts...</div>;
+                      }
+                      if (isError) {
+                        return (
+                          <div className="space-y-2 px-4 py-6 text-destructive text-sm">
+                            <div className="text-center font-medium">
+                              {error instanceof Error ? error.message : "Failed to load layouts"}
+                            </div>
+                            {errorDetails && (
+                              <div className="space-y-1 text-xs">
+                                {errorDetails.missing && (
+                                  <div>
+                                    <div className="font-medium">Missing environment variables:</div>
+                                    <ul className="mt-1 list-inside list-disc space-y-0.5">
+                                      {errorDetails.missing.server && (
+                                        <li>
+                                          Server
+                                          {errorDetails.suspectedField === "server" && " ⚠️"}
+                                        </li>
+                                      )}
+                                      {errorDetails.missing.db && (
+                                        <li>
+                                          Database
+                                          {errorDetails.suspectedField === "db" && " ⚠️"}
+                                        </li>
+                                      )}
+                                      {errorDetails.missing.auth && (
+                                        <li>
+                                          Authentication
+                                          {errorDetails.suspectedField === "auth" && " ⚠️"}
+                                        </li>
+                                      )}
+                                      {errorDetails.missing.password && (
+                                        <li>
+                                          Password
+                                          {errorDetails.suspectedField === "auth" && " ⚠️"}
+                                        </li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                )}
+                                {errorDetails.fmErrorCode && (
+                                  <div>
+                                    <span className="font-medium">FileMaker Error Code:</span>{" "}
+                                    {errorDetails.fmErrorCode}
+                                  </div>
+                                )}
+                                {errorDetails.suspectedField && !errorDetails.missing && (
+                                  <div>
+                                    Suspected issue with: {(() => {
+                                      if (errorDetails.suspectedField === "server") {
+                                        return "Server URL";
+                                      }
+                                      if (errorDetails.suspectedField === "db") {
+                                        return "Database name";
+                                      }
+                                      return "Credentials";
+                                    })()}
+                                  </div>
+                                )}
                               </div>
                             )}
-                            {errorDetails.fmErrorCode && (
-                              <div>
-                                <span className="font-medium">
-                                  FileMaker Error Code:
-                                </span>{" "}
-                                {errorDetails.fmErrorCode}
-                              </div>
-                            )}
-                            {errorDetails.suspectedField &&
-                              !errorDetails.missing && (
-                                <div>
-                                  Suspected issue with:{" "}
-                                  {errorDetails.suspectedField === "server"
-                                    ? "Server URL"
-                                    : errorDetails.suspectedField === "db"
-                                      ? "Database name"
-                                      : "Credentials"}
-                                </div>
-                              )}
+                            <div className="pt-2 text-center text-xs opacity-75">
+                              Check your connection settings in "Configure Environment Variables"
+                            </div>
                           </div>
-                        )}
-                        <div className="text-xs text-center opacity-75 pt-2">
-                          Check your connection settings in "Configure
-                          Environment Variables"
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <CommandEmpty>No layout found.</CommandEmpty>
-                        <CommandGroup>
-                          {layoutOptions.map((layout) => (
-                            <CommandItem
-                              key={layout.value}
-                              value={layout.value}
-                              onSelect={(currentValue) => {
-                                const newValue =
-                                  currentValue === field.value
-                                    ? ""
-                                    : currentValue;
-                                field.onChange(newValue);
+                        );
+                      }
+                      return (
+                        <>
+                          <CommandEmpty>No layout found.</CommandEmpty>
+                          <CommandGroup>
+                            {layoutOptions.map((layout) => (
+                              <CommandItem
+                                key={layout.value}
+                                onSelect={(currentValue) => {
+                                  const newValue = currentValue === field.value ? "" : currentValue;
+                                  field.onChange(newValue);
 
-                                // If schema name is undefined or empty, set it to the layout name
-                                if (newValue) {
-                                  const schemaNamePath = path.replace(
-                                    ".layoutName",
-                                    ".schemaName",
-                                  ) as Path<FormData>;
-                                  const currentSchemaName =
-                                    getValues(schemaNamePath);
-                                  if (
-                                    currentSchemaName === undefined ||
-                                    currentSchemaName === ""
-                                  ) {
-                                    setValue(schemaNamePath, newValue);
+                                  // If schema name is undefined or empty, set it to the layout name
+                                  if (newValue) {
+                                    const schemaNamePath = path.replace(".layoutName", ".schemaName") as Path<FormData>;
+                                    const currentSchemaName = getValues(schemaNamePath);
+                                    if (currentSchemaName === undefined || currentSchemaName === "") {
+                                      setValue(schemaNamePath, newValue);
+                                    }
                                   }
-                                }
 
-                                setOpen(false);
-                              }}
-                            >
-                              <span className="truncate">{layout.label}</span>
-                              {field.value === layout.value && <CommandCheck />}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </>
-                    )}
+                                  setOpen(false);
+                                }}
+                                value={layout.value}
+                              >
+                                <span className="truncate">{layout.label}</span>
+                                {field.value === layout.value && <CommandCheck />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </>
+                      );
+                    })()}
                   </CommandList>
                 </Command>
               </PopoverContent>

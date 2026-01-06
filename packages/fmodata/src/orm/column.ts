@@ -10,6 +10,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
  * @template IsContainer - Whether this column represents a container field (cannot be selected)
  */
 export class Column<
+  // biome-ignore lint/suspicious/noExplicitAny: Default type parameter for flexibility
   TOutput = any,
   TInput = TOutput,
   TableName extends string = string,
@@ -19,6 +20,7 @@ export class Column<
   readonly entityId?: `FMFID:${string}`;
   readonly tableName: TableName;
   readonly tableEntityId?: `FMTID:${string}`;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   readonly inputValidator?: StandardSchemaV1<TInput, any>;
 
   // Phantom types for TypeScript inference - never actually hold values
@@ -31,6 +33,7 @@ export class Column<
     entityId?: `FMFID:${string}`;
     tableName: TableName;
     tableEntityId?: `FMTID:${string}`;
+    // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
     inputValidator?: StandardSchemaV1<TInput, any>;
   }) {
     this.fieldName = config.fieldName;
@@ -81,6 +84,7 @@ export class Column<
 /**
  * Type guard to check if a value is a Column instance.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Type guard accepting any value type, generic constraint accepting any Column configuration
 export function isColumn(value: any): value is Column<any, any, any, any> {
   return value instanceof Column;
 }
@@ -90,16 +94,12 @@ export function isColumn(value: any): value is Column<any, any, any, any> {
  * This helper ensures TypeScript can infer TInput from the validator's input type.
  * @internal
  */
-export function createColumn<
-  TOutput,
-  TInput,
-  TName extends string,
-  IsContainer extends boolean = false,
->(config: {
+export function createColumn<TOutput, TInput, TName extends string, IsContainer extends boolean = false>(config: {
   fieldName: string;
   entityId?: `FMFID:${string}`;
   tableName: TName;
   tableEntityId?: `FMTID:${string}`;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   inputValidator?: StandardSchemaV1<TInput, any>;
 }): Column<TOutput, TInput, TName, IsContainer> {
   return new Column(config) as Column<TOutput, TInput, TName, IsContainer>;

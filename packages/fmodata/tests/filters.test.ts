@@ -13,33 +13,27 @@
  * 3. The mock fetch will automatically match the request URL to the stored response
  */
 
-import { describe, it, expect, expectTypeOf } from "vitest";
 import {
+  and,
+  contains,
+  endsWith,
   eq,
-  ne,
+  fmTableOccurrence,
   gt,
   gte,
+  inArray,
+  isNull,
   lt,
   lte,
-  contains,
-  startsWith,
-  endsWith,
-  inArray,
+  ne,
   notInArray,
-  and,
   or,
-  isNull,
-  isNotNull,
-  fmTableOccurrence,
+  startsWith,
   textField,
 } from "@proofkit/fmodata";
-import {
-  createMockClient,
-  users,
-  contacts,
-  usersTOWithIds,
-} from "./utils/test-setup";
+import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
+import { contacts, createMockClient, users, usersTOWithIds } from "./utils/test-setup";
 
 describe("Filter Tests", () => {
   const client = createMockClient();
@@ -47,27 +41,18 @@ describe("Filter Tests", () => {
 
   it("should enforce correct operator types for each field type", () => {
     // ✅ String operators
-    const stringQuery = db
-      .from(contacts)
-      .list()
-      .where(eq(contacts.name, "John"));
-    expect(stringQuery.getQueryString()).toBe(
-      "/contacts?$filter=name eq 'John'&$top=1000",
-    );
+    const stringQuery = db.from(contacts).list().where(eq(contacts.name, "John"));
+    expect(stringQuery.getQueryString()).toBe("/contacts?$filter=name eq 'John'&$top=1000");
 
     // ✅ Boolean operators
     // Note: active field has a writeValidator that converts boolean to number (1/0)
     const boolQuery = db.from(users).list().where(eq(users.active, true));
-    expect(boolQuery.getQueryString()).toBe(
-      "/users?$filter=active eq 1&$top=1000",
-    );
+    expect(boolQuery.getQueryString()).toBe("/users?$filter=active eq 1&$top=1000");
   });
 
   it("should support equality operator", () => {
     const query = db.from(contacts).list().where(eq(contacts.name, "John"));
-    expect(query.getQueryString()).toBe(
-      "/contacts?$filter=name eq 'John'&$top=1000",
-    );
+    expect(query.getQueryString()).toBe("/contacts?$filter=name eq 'John'&$top=1000");
   });
 
   it("should support multiple conditions with AND", () => {
@@ -81,24 +66,15 @@ describe("Filter Tests", () => {
 
   it("should support string operators", () => {
     // Contains operator
-    const containsQuery = db
-      .from(contacts)
-      .list()
-      .where(contains(contacts.name, "John"));
+    const containsQuery = db.from(contacts).list().where(contains(contacts.name, "John"));
     expect(containsQuery.getQueryString()).toContain("contains");
 
     // Starts with operator
-    const startsWithQuery = db
-      .from(contacts)
-      .list()
-      .where(startsWith(contacts.name, "J"));
+    const startsWithQuery = db.from(contacts).list().where(startsWith(contacts.name, "J"));
     expect(startsWithQuery.getQueryString()).toContain("startswith");
 
     // Ends with operator
-    const endsWithQuery = db
-      .from(contacts)
-      .list()
-      .where(endsWith(contacts.name, "n"));
+    const endsWithQuery = db.from(contacts).list().where(endsWith(contacts.name, "n"));
     expect(endsWithQuery.getQueryString()).toContain("endswith");
   });
 
@@ -166,13 +142,8 @@ describe("Filter Tests", () => {
       },
       { defaultSelect: "all" },
     );
-    const query = db
-      .from(weirdTable)
-      .list()
-      .where(eq(weirdTable["name with spaces"], "John"));
-    expect(query.getQueryString()).toContain(
-      "$filter=\"name with spaces\" eq 'John'",
-    );
+    const query = db.from(weirdTable).list().where(eq(weirdTable["name with spaces"], "John"));
+    expect(query.getQueryString()).toContain("$filter=\"name with spaces\" eq 'John'");
 
     const query2 = db.from(weirdTable).list().where(eq(weirdTable.id, "John"));
     expect(query2.getQueryString()).toContain(`$filter="id" eq 'John'`);
@@ -182,23 +153,13 @@ describe("Filter Tests", () => {
     const query = db
       .from(users)
       .list()
-      .where(
-        and(
-          or(eq(users.name, "John"), eq(users.name, "Jane")),
-          eq(users.active, true),
-        ),
-      );
+      .where(and(or(eq(users.name, "John"), eq(users.name, "Jane")), eq(users.active, true)));
     expect(query.getQueryString()).toContain("or");
     expect(query.getQueryString()).toContain("and");
   });
 
   it("should combine $count with filter", () => {
-    const queryString = db
-      .from(users)
-      .list()
-      .where(eq(users.active, true))
-      .count()
-      .getQueryString();
+    const queryString = db.from(users).list().where(eq(users.active, true)).count().getQueryString();
 
     expect(queryString).toContain("$count");
     expect(queryString).toContain("$filter");
@@ -269,12 +230,7 @@ describe("Filter Tests", () => {
   });
 
   it("should generate query string with single() and filter", () => {
-    const queryString = db
-      .from(users)
-      .list()
-      .where(eq(users.id, "123"))
-      .single()
-      .getQueryString();
+    const queryString = db.from(users).list().where(eq(users.id, "123")).single().getQueryString();
 
     expect(queryString).toContain("$filter");
     expect(queryString).toContain("id");
@@ -295,11 +251,7 @@ describe("Filter Tests", () => {
   });
 
   it("should URL encode special characters in filter values", () => {
-    const queryString = db
-      .from(contacts)
-      .list()
-      .where(eq(contacts.name, "John & Jane"))
-      .getQueryString();
+    const queryString = db.from(contacts).list().where(eq(contacts.name, "John & Jane")).getQueryString();
 
     expect(queryString).toContain("$filter");
     // Special characters should be properly encoded
@@ -307,11 +259,7 @@ describe("Filter Tests", () => {
   });
 
   it("should use entity IDs when enabled", () => {
-    const queryString = db
-      .from(usersTOWithIds)
-      .list()
-      .where(eq(usersTOWithIds.id, "123"))
-      .getQueryString();
+    const queryString = db.from(usersTOWithIds).list().where(eq(usersTOWithIds.id, "123")).getQueryString();
 
     expect(queryString).toContain("$filter");
     expect(queryString).toContain("FMFID");
@@ -339,9 +287,7 @@ describe("Filter Tests", () => {
         text: textField().primaryKey(),
         textNumber: textField().writeValidator(z.number().transform(toString)),
         enum: textField().writeValidator(z.enum(["a", "b", "c"])),
-        transform: textField().writeValidator(
-          z.string().transform(() => "static-value"),
-        ),
+        transform: textField().writeValidator(z.string().transform(() => "static-value")),
       },
       { useEntityIds: false },
     );
@@ -459,51 +405,27 @@ describe("Filter Tests", () => {
     notInArray(testTable.enum, ["d", "e"]);
 
     // Test that write validators are used for all operators
-    const queryStringEq = db
-      .from(testTable)
-      .list()
-      .where(eq(testTable.transform, "anything"))
-      .getQueryString();
+    const queryStringEq = db.from(testTable).list().where(eq(testTable.transform, "anything")).getQueryString();
     expect(queryStringEq).toContain("$filter");
     expect(queryStringEq).toContain("static-value");
 
-    const queryStringNe = db
-      .from(testTable)
-      .list()
-      .where(ne(testTable.transform, "anything"))
-      .getQueryString();
+    const queryStringNe = db.from(testTable).list().where(ne(testTable.transform, "anything")).getQueryString();
     expect(queryStringNe).toContain("$filter");
     expect(queryStringNe).toContain("static-value");
 
-    const queryStringGt = db
-      .from(testTable)
-      .list()
-      .where(gt(testTable.transform, "anything"))
-      .getQueryString();
+    const queryStringGt = db.from(testTable).list().where(gt(testTable.transform, "anything")).getQueryString();
     expect(queryStringGt).toContain("$filter");
     expect(queryStringGt).toContain("static-value");
 
-    const queryStringGte = db
-      .from(testTable)
-      .list()
-      .where(gte(testTable.transform, "anything"))
-      .getQueryString();
+    const queryStringGte = db.from(testTable).list().where(gte(testTable.transform, "anything")).getQueryString();
     expect(queryStringGte).toContain("$filter");
     expect(queryStringGte).toContain("static-value");
 
-    const queryStringLt = db
-      .from(testTable)
-      .list()
-      .where(lt(testTable.transform, "anything"))
-      .getQueryString();
+    const queryStringLt = db.from(testTable).list().where(lt(testTable.transform, "anything")).getQueryString();
     expect(queryStringLt).toContain("$filter");
     expect(queryStringLt).toContain("static-value");
 
-    const queryStringLte = db
-      .from(testTable)
-      .list()
-      .where(lte(testTable.transform, "anything"))
-      .getQueryString();
+    const queryStringLte = db.from(testTable).list().where(lte(testTable.transform, "anything")).getQueryString();
     expect(queryStringLte).toContain("$filter");
     expect(queryStringLte).toContain("static-value");
 

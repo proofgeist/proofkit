@@ -1,6 +1,6 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
-import { type RouteLink } from "index.js";
+import type { RouteLink } from "index.js";
 import { SyntaxKind } from "ts-morph";
 
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
@@ -16,14 +16,14 @@ export async function addRouteToNav({
   const navFilePath = path.join(projectDir, "src/app/navigation.tsx");
 
   // If the navigation file doesn't exist (e.g., WebViewer apps), skip adding to nav
-  if (!fs.existsSync(navFilePath)) return;
+  if (!fs.existsSync(navFilePath)) {
+    return;
+  }
 
   const project = getNewProject(projectDir);
   const sourceFile = project.addSourceFileAtPath(navFilePath);
   sourceFile
-    .getVariableDeclaration(
-      navType === "primary" ? "primaryRoutes" : "secondaryRoutes"
-    )
+    .getVariableDeclaration(navType === "primary" ? "primaryRoutes" : "secondaryRoutes")
     ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression)
     ?.addElement((writer) =>
       writer
@@ -33,7 +33,7 @@ export async function addRouteToNav({
           type: "link",
           href: "${route.href}",`);
         })
-        .write(",")
+        .write(","),
     );
 
   await formatAndSaveSourceFiles(project);

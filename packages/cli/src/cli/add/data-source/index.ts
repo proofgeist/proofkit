@@ -14,12 +14,13 @@ export const runAddDataSourceCommand = async () => {
         { label: "FileMaker", value: "fm" },
         { label: "Supabase", value: "supabase" },
       ],
-    })
+    }),
   );
 
   if (dataSource === "supabase") {
     throw new Error("Not implemented");
-  } else if (dataSource === "fm") {
+  }
+  if (dataSource === "fm") {
     await promptForFileMakerDataSource({ projectDir: process.cwd() });
   } else {
     throw new Error("Invalid data source");

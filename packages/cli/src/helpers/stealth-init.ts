@@ -1,10 +1,6 @@
 import fs from "fs-extra";
 
-import {
-  defaultSettings,
-  setSettings,
-  validateAndSetEnvFile,
-} from "~/utils/parseSettings.js";
+import { defaultSettings, setSettings, validateAndSetEnvFile } from "~/utils/parseSettings.js";
 
 /**
  * Used to add a proofkit.json file to an existing project

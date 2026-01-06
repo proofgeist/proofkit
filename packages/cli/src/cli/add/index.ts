@@ -1,4 +1,4 @@
-import * as p from "@clack/prompts";
+import { select } from "@clack/prompts";
 import { Command } from "commander";
 import { capitalize, groupBy, uniq } from "es-toolkit";
 import ora from "ora";
@@ -6,26 +6,23 @@ import ora from "ora";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
-import { getSettings, Settings } from "~/utils/parseSettings.js";
+import { getSettings, type Settings } from "~/utils/parseSettings.js";
 import { runAddReactEmailCommand } from "../react-email.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
-import {
-  makeAddDataSourceCommand,
-  runAddDataSourceCommand,
-} from "./data-source/index.js";
+import { makeAddDataSourceCommand, runAddDataSourceCommand } from "./data-source/index.js";
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
 import { makeAddPageCommand, runAddPageAction } from "./page/index.js";
 import { installFromRegistry } from "./registry/install.js";
 import { listItems } from "./registry/listItems.js";
 import { preflightAddCommand } from "./registry/preflight.js";
 
-const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
+const runAddFromRegistry = async (_options?: { noInstall?: boolean }) => {
   const settings = getSettings();
 
   const spinner = ora("Loading available components...").start();
-  let items;
+  let items: RegistryIndex;
   try {
     items = await listItems();
   } catch (error) {
@@ -34,9 +31,7 @@ const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
     return;
   }
 
-  const itemsNotInstalled = items.filter(
-    (item) => !settings.registryTemplates.includes(item.name)
-  );
+  const itemsNotInstalled = items.filter((item) => !settings.registryTemplates.includes(item.name));
 
   const groupedByCategory = groupBy(itemsNotInstalled, (item) => item.category);
   const categories = uniq(itemsNotInstalled.map((item) => item.category));
@@ -44,13 +39,11 @@ const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
   spinner.succeed();
 
   const addType = abortIfCancel(
-    await p.select({
+    await select({
       message: "What do you want to add to your project?",
       options: [
         // if there are pages available to install, show them first
-        ...(categories.includes("page")
-          ? [{ label: "Page", value: "page" }]
-          : []),
+        ...(categories.includes("page") ? [{ label: "Page", value: "page" }] : []),
 
         // only show schema option if there is at least one data source
         ...(settings.dataSources.length > 0
@@ -77,44 +70,39 @@ const runAddFromRegistry = async (options?: { noInstall?: boolean }) => {
             value: category,
           })),
       ],
-    })
+    }),
   );
 
   if (addType === "schema") {
     await runAddSchemaAction();
   } else if (addType === "data") {
     await runAddDataSourceCommand();
-  } else if (categories.includes(addType as any)) {
+  } else if (categories.includes(addType)) {
     // one of the categories
-    const itemsFromCategory =
-      groupedByCategory[addType as keyof typeof groupedByCategory];
+    const itemsFromCategory = groupedByCategory[addType as keyof typeof groupedByCategory];
 
     const itemName = abortIfCancel(
-      await p.select({
+      await select({
         message: `Select a ${addType} to add to your project`,
         options: itemsFromCategory.map((item) => ({
           label: item.title,
           hint: item.description,
           value: item.name,
         })),
-      })
+      }),
     );
 
     await installFromRegistry(itemName);
   } else {
-    logger.error(
-      `Could not find any available components in the category "${addType}"`
-    );
+    logger.error(`Could not find any available components in the category "${addType}"`);
   }
 };
 
-export const runAdd = async (
-  name: string | undefined,
-  options?: { noInstall?: boolean }
-) => {
+export const runAdd = async (name: string | undefined, options?: { noInstall?: boolean }) => {
   if (name === "tanstack-query") {
     return await runAddTanstackQueryCommand();
-  } else if (name !== undefined) {
+  }
+  if (name !== undefined) {
     // an arbitrary name was provided, so we'll try to install from the registry
     return await installFromRegistry(name);
   }
@@ -133,7 +121,7 @@ export const runAdd = async (
   ensureProofKitProject({ commandName: "add" });
 
   const addType = abortIfCancel(
-    await p.select({
+    await select({
       message: "What do you want to add to your project?",
       options: [
         { label: "Page", value: "page" },
@@ -153,11 +141,9 @@ export const runAdd = async (
           value: "data",
           hint: "to connect to a new database or FileMaker file",
         },
-        ...(settings.auth.type === "none" && settings.appType === "browser"
-          ? [{ label: "Auth", value: "auth" }]
-          : []),
+        ...(settings.auth.type === "none" && settings.appType === "browser" ? [{ label: "Auth", value: "auth" }] : []),
       ],
-    })
+    }),
   );
 
   if (addType === "auth") {
@@ -179,11 +165,7 @@ export const makeAddCommand = () => {
     .argument("[name]", "Type of component to add")
     .addOption(ciOption)
     .addOption(debugOption)
-    .option(
-      "--noInstall",
-      "Do not run your package manager install command",
-      false
-    )
+    .option("--noInstall", "Do not run your package manager install command", false)
     .action(async (name, options) => {
       await runAdd(name, options);
     });

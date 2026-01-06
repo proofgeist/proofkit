@@ -1,56 +1,56 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 
 export default function Component() {
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-center gap-4">
-        <Badge variant="primary" shape="circle">
+        <Badge shape="circle" variant="primary">
           Primary
         </Badge>
-        <Badge variant="success" shape="circle">
+        <Badge shape="circle" variant="success">
           Success
         </Badge>
-        <Badge variant="warning" shape="circle">
+        <Badge shape="circle" variant="warning">
           Warning
         </Badge>
-        <Badge variant="info" shape="circle">
+        <Badge shape="circle" variant="info">
           Info
         </Badge>
-        <Badge variant="destructive" shape="circle">
+        <Badge shape="circle" variant="destructive">
           Destructive
         </Badge>
       </div>
       <div className="flex items-center gap-4">
-        <Badge variant="primary" appearance="light" shape="circle">
+        <Badge appearance="light" shape="circle" variant="primary">
           Primary
         </Badge>
-        <Badge variant="success" appearance="light" shape="circle">
+        <Badge appearance="light" shape="circle" variant="success">
           Success
         </Badge>
-        <Badge variant="warning" appearance="light" shape="circle">
+        <Badge appearance="light" shape="circle" variant="warning">
           Warning
         </Badge>
-        <Badge variant="info" appearance="light" shape="circle">
+        <Badge appearance="light" shape="circle" variant="info">
           Info
         </Badge>
-        <Badge variant="destructive" appearance="light" shape="circle">
+        <Badge appearance="light" shape="circle" variant="destructive">
           Destructive
         </Badge>
       </div>
       <div className="flex items-center gap-4">
-        <Badge variant="primary" appearance="outline" shape="circle">
+        <Badge appearance="outline" shape="circle" variant="primary">
           Primary
         </Badge>
-        <Badge variant="success" appearance="outline" shape="circle">
+        <Badge appearance="outline" shape="circle" variant="success">
           Success
         </Badge>
-        <Badge variant="warning" appearance="outline" shape="circle">
+        <Badge appearance="outline" shape="circle" variant="warning">
           Warning
         </Badge>
-        <Badge variant="info" appearance="outline" shape="circle">
+        <Badge appearance="outline" shape="circle" variant="info">
           Info
         </Badge>
-        <Badge variant="destructive" appearance="outline" shape="circle">
+        <Badge appearance="outline" shape="circle" variant="destructive">
           Destructive
         </Badge>
       </div>

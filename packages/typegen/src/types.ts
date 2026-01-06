@@ -15,8 +15,7 @@ const layoutConfig = z.object({
       "If set to 'strict', the value lists will be validated to ensure that the values are correct. If set to 'allowEmpty', the value lists will be validated to ensure that the values are correct, but empty value lists will be allowed. If set to 'ignore', the value lists will not be validated and typed as `string`.",
   }),
   generateClient: z.boolean().optional().meta({
-    description:
-      "If true, a layout-specific client will be generated (unless set to `false` at the top level)",
+    description: "If true, a layout-specific client will be generated (unless set to `false` at the top level)",
   }),
   strictNumbers: z.boolean().optional().meta({
     description:
@@ -46,7 +45,9 @@ export const envNamesBase = z
 // Runtime schema with transforms (used for actual typegen processing)
 const envNames = envNamesBase
   .transform((val) => {
-    if (!val) return undefined;
+    if (!val) {
+      return undefined;
+    }
 
     // Transform empty strings to undefined
     const transformed: typeof val = {
@@ -62,10 +63,7 @@ const envNames = envNamesBase
     };
 
     // Remove auth if all values are undefined
-    if (
-      transformed.auth &&
-      Object.values(transformed.auth).every((v) => v === undefined)
-    ) {
+    if (transformed.auth && Object.values(transformed.auth).every((v) => v === undefined)) {
       transformed.auth = undefined;
     }
 
@@ -180,33 +178,23 @@ const reduceMetadataField = z.boolean().optional().meta({
     "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
 });
 
-const alwaysOverrideFieldNamesField = z
-  .boolean()
-  .default(true)
-  .optional()
-  .meta({
-    description:
-      "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
-  });
+const alwaysOverrideFieldNamesField = z.boolean().default(true).optional().meta({
+  description:
+    "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
+});
 
 const tablesField = z.array(tableConfig).default([]).meta({
   description:
     "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
 });
 
-const includeAllFieldsByDefaultField = z
-  .boolean()
-  .default(true)
-  .optional()
-  .meta({
-    description:
-      "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
-  });
+const includeAllFieldsByDefaultField = z.boolean().default(true).optional().meta({
+  description:
+    "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
+});
 
 // Helper function to create config objects with different envNames schemas
-const createFmdapiConfig = (
-  envNamesSchema: typeof envNames | typeof envNamesBase,
-) =>
+const createFmdapiConfig = (envNamesSchema: typeof envNames | typeof envNamesBase) =>
   z.object({
     type: z.literal("fmdapi"),
     configName: z.string().optional(),
@@ -220,9 +208,7 @@ const createFmdapiConfig = (
     webviewerScriptName: webviewerScriptNameField,
   });
 
-const createFmodataConfig = (
-  envNamesSchema: typeof envNames | typeof envNamesBase,
-) =>
+const createFmodataConfig = (envNamesSchema: typeof envNames | typeof envNamesBase) =>
   z.object({
     type: z.literal("fmodata"),
     configName: z.string().optional(),
@@ -262,33 +248,27 @@ export const typegenConfig = z.object({
 
 // Validation version for JSON Schema generation (no transforms, no preprocess)
 export const typegenConfigForValidation = z.object({
-  config: z.union([
-    z.array(typegenConfigSingleForValidation),
-    typegenConfigSingleForValidation,
-  ]),
+  config: z.union([z.array(typegenConfigSingleForValidation), typegenConfigSingleForValidation]),
 });
 
 export type TypegenConfig = z.infer<typeof typegenConfig>;
 
-export type FmodataConfig = Extract<
-  z.infer<typeof typegenConfigSingle>,
-  { type: "fmodata" }
->;
+export type FmodataConfig = Extract<z.infer<typeof typegenConfigSingle>, { type: "fmodata" }>;
 
-export type TSchema = {
+export interface TSchema {
   name: string;
   type: "string" | "fmnumber" | "valueList";
   values?: string[];
-};
+}
 
-export type BuildSchemaArgs = {
+export interface BuildSchemaArgs {
   schemaName: string;
-  schema: Array<TSchema>;
+  schema: TSchema[];
   type: "zod" | "zod/v4" | "zod/v3" | "ts";
-  portalSchema?: { schemaName: string; schema: Array<TSchema> }[];
+  portalSchema?: { schemaName: string; schema: TSchema[] }[];
   valueLists?: { name: string; values: string[] }[];
   envNames: NonNullable<z.infer<typeof envNames>>;
   layoutName: string;
   strictNumbers?: boolean;
   webviewerScriptName?: string;
-};
+}

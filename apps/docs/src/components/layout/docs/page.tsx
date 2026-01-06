@@ -71,13 +71,8 @@ import {
   PageFooter as PageFooterImport,
   PageLastUpdate as PageLastUpdateImport,
   PageTOC as PageTOCImport,
-<<<<<<< Updated upstream
-  PageTOCPopover as PageTOCPopoverImport,
-  PageTOCPopoverContent as PageTOCPopoverContentImport,
-=======
   PageTOCPopoverContent as PageTOCPopoverContentImport,
   PageTOCPopover as PageTOCPopoverImport,
->>>>>>> Stashed changes
   PageTOCPopoverTrigger as PageTOCPopoverTriggerImport,
 } from "./page-client";
 

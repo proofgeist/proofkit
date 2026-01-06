@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useWatch, useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { client } from "../lib/api";
 import type { SingleConfig } from "../lib/config-utils";
 
@@ -41,7 +41,7 @@ export function useListTables(configIndex: number, enabled?: boolean) {
       return result as { tables: string[] };
     },
     enabled: !!shouldQuery,
-    staleTime: Infinity, // Never consider data stale while page is open
+    staleTime: Number.POSITIVE_INFINITY, // Never consider data stale while page is open
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -56,4 +56,3 @@ export function useListTables(configIndex: number, enabled?: boolean) {
     refetch,
   };
 }
-

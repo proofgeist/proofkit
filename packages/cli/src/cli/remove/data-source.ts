@@ -1,27 +1,15 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
 import { Command } from "commander";
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import { z } from "zod/v4";
 
-import {
-  removeFromFmschemaConfig,
-  runCodegenCommand,
-} from "~/generators/fmdapi.js";
+import { removeFromFmschemaConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
-import {
-  getSettings,
-  setSettings,
-  type DataSource,
-} from "~/utils/parseSettings.js";
-import { getNewProject } from "~/utils/ts-morph.js";
-import {
-  abortIfCancel,
-  ensureProofKitProject,
-  UserAbortedError,
-} from "../utils.js";
+import { type DataSource, getSettings, setSettings } from "~/utils/parseSettings.js";
+import { abortIfCancel, ensureProofKitProject, UserAbortedError } from "../utils.js";
 
 function getDataSourceInfo(source: DataSource) {
   if (source.type !== "fm") {
@@ -60,7 +48,13 @@ export const runRemoveDataSourceCommand = async (name?: string) => {
   let dataSourceName = name;
 
   // If no name provided, prompt for selection
-  if (!dataSourceName) {
+  if (dataSourceName) {
+    // Validate that the provided name exists
+    const dataSourceExists = settings.dataSources.some((source) => source.name === dataSourceName);
+    if (!dataSourceExists) {
+      throw new Error(`Data source "${dataSourceName}" not found in your project.`);
+    }
+  } else {
     dataSourceName = abortIfCancel(
       await p.select({
         message: "Which data source do you want to remove?",
@@ -79,18 +73,8 @@ export const runRemoveDataSourceCommand = async (name?: string) => {
             value: source.name,
           };
         }),
-      })
+      }),
     );
-  } else {
-    // Validate that the provided name exists
-    const dataSourceExists = settings.dataSources.some(
-      (source) => source.name === dataSourceName
-    );
-    if (!dataSourceExists) {
-      throw new Error(
-        `Data source "${dataSourceName}" not found in your project.`
-      );
-    }
   }
 
   let confirmed = true;
@@ -98,21 +82,19 @@ export const runRemoveDataSourceCommand = async (name?: string) => {
     confirmed = abortIfCancel(
       await p.confirm({
         message: `Are you sure you want to remove the data source "${dataSourceName}"? This will only remove it from your configuration, not replace any possible usage, which may cause TypeScript errors.`,
-      })
+      }),
     );
 
-    if (!confirmed) throw new UserAbortedError();
+    if (!confirmed) {
+      throw new UserAbortedError();
+    }
   }
 
   // Get the data source before removing it
-  const dataSource = settings.dataSources.find(
-    (source) => source.name === dataSourceName
-  );
+  const dataSource = settings.dataSources.find((source) => source.name === dataSourceName);
 
   // Remove the data source from settings
-  settings.dataSources = settings.dataSources.filter(
-    (source) => source.name !== dataSourceName
-  );
+  settings.dataSources = settings.dataSources.filter((source) => source.name !== dataSourceName);
 
   // Save the updated settings
   setSettings(settings);
@@ -124,17 +106,11 @@ export const runRemoveDataSourceCommand = async (name?: string) => {
     });
 
     if (state.debug) {
-      p.note(`Removed schemas from fmschema.config.mjs`);
+      p.note("Removed schemas from fmschema.config.mjs");
     }
 
     // Remove the schema folder for this data source
-    const schemaFolderPath = path.join(
-      state.projectDir,
-      "src",
-      "config",
-      "schemas",
-      dataSourceName
-    );
+    const schemaFolderPath = path.join(state.projectDir, "src", "config", "schemas", dataSourceName);
     if (fs.existsSync(schemaFolderPath)) {
       fs.removeSync(schemaFolderPath);
       if (state.debug) {

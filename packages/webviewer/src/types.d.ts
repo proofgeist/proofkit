@@ -1,3 +1,3 @@
 interface Window {
-  handleFmWVFetchCallback: (data: any, fetchId: string) => boolean;
+  handleFmWVFetchCallback: (data: unknown, fetchId: string) => boolean;
 }

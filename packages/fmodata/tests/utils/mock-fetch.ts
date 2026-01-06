@@ -40,13 +40,13 @@ import { MOCK_SERVER_URL } from "./mock-server-url";
 /**
  * Recursively removes @id and @editLink fields from an object or array
  */
-function stripODataAnnotations(data: any): any {
+function stripODataAnnotations(data: unknown): unknown {
   if (Array.isArray(data)) {
     return data.map(stripODataAnnotations);
   }
   if (data && typeof data === "object") {
-    const { "@id": _id, "@editLink": _editLink, ...rest } = data;
-    const result: any = {};
+    const { "@id": _id, "@editLink": _editLink, ...rest } = data as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(rest)) {
       result[key] = stripODataAnnotations(value);
     }
@@ -55,11 +55,8 @@ function stripODataAnnotations(data: any): any {
   return data;
 }
 
-export function createMockFetch(response: MockResponse | any[]): typeof fetch {
-  return async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
+export function createMockFetch(response: MockResponse | unknown[]): typeof fetch {
+  return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // Extract Accept header from request - handle different formats
     let acceptHeader = "";
 
@@ -70,13 +67,11 @@ export function createMockFetch(response: MockResponse | any[]): typeof fetch {
       if (init.headers instanceof Headers) {
         acceptHeader = init.headers.get("Accept") || "";
       } else if (Array.isArray(init.headers)) {
-        const acceptEntry = init.headers.find(
-          ([key]) => key.toLowerCase() === "accept",
-        );
+        const acceptEntry = init.headers.find(([key]) => key.toLowerCase() === "accept");
         acceptHeader = acceptEntry ? acceptEntry[1] : "";
       } else {
         // Record<string, string>
-        acceptHeader = init.headers["Accept"] || init.headers["accept"] || "";
+        acceptHeader = init.headers.Accept || init.headers.accept || "";
       }
     }
 
@@ -87,23 +82,21 @@ export function createMockFetch(response: MockResponse | any[]): typeof fetch {
 
     // Handle simple array input (legacy mockFetch behavior)
     if (Array.isArray(response)) {
-      const data = shouldStripAnnotations
-        ? stripODataAnnotations({ value: response })
-        : { value: response };
-      return new Response(JSON.stringify(data), {
-        status: 200,
-        statusText: "OK",
-        headers: {
-          "content-type": "application/json",
-        },
-      });
+      const data = shouldStripAnnotations ? stripODataAnnotations({ value: response }) : { value: response };
+      return Promise.resolve(
+        new Response(JSON.stringify(data), {
+          status: 200,
+          statusText: "OK",
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+      );
     }
 
     // Handle full MockResponse object
     const mockResponse = response as MockResponse;
-    const contentType =
-      mockResponse.headers?.["content-type"] ||
-      "application/json;charset=utf-8";
+    const contentType = mockResponse.headers?.["content-type"] || "application/json;charset=utf-8";
     const isJson = contentType.includes("application/json");
 
     // Build headers including any custom headers from mockResponse
@@ -113,40 +106,37 @@ export function createMockFetch(response: MockResponse | any[]): typeof fetch {
 
     // Add any additional headers from the mock response
     if (mockResponse.headers) {
-      Object.entries(mockResponse.headers).forEach(([key, value]) => {
+      for (const [key, value] of Object.entries(mockResponse.headers)) {
         if (key !== "content-type" && value) {
           headers.set(key, value);
         }
-      });
+      }
     }
 
     // Status 204 (No Content) cannot have a body
     if (mockResponse.status === 204) {
-      return new Response(null, {
-        status: mockResponse.status,
-        statusText: "No Content",
-        headers,
-      });
+      return Promise.resolve(
+        new Response(null, {
+          status: mockResponse.status,
+          statusText: "No Content",
+          headers,
+        }),
+      );
     }
 
     // Strip annotations if Accept header requests it
-    const responseData = shouldStripAnnotations
-      ? stripODataAnnotations(mockResponse.response)
-      : mockResponse.response;
+    const responseData = shouldStripAnnotations ? stripODataAnnotations(mockResponse.response) : mockResponse.response;
 
     // Format response body based on content type
-    const responseBody = isJson
-      ? JSON.stringify(responseData)
-      : String(responseData);
+    const responseBody = isJson ? JSON.stringify(responseData) : String(responseData);
 
-    return new Response(responseBody, {
-      status: mockResponse.status,
-      statusText:
-        mockResponse.status >= 200 && mockResponse.status < 300
-          ? "OK"
-          : "Error",
-      headers,
-    });
+    return Promise.resolve(
+      new Response(responseBody, {
+        status: mockResponse.status,
+        statusText: mockResponse.status >= 200 && mockResponse.status < 300 ? "OK" : "Error",
+        headers,
+      }),
+    );
   };
 }
 
@@ -156,7 +146,7 @@ export function createMockFetch(response: MockResponse | any[]): typeof fetch {
  */
 export interface SimpleMockConfig {
   status: number;
-  body?: any;
+  body?: unknown;
   headers?: Record<string, string>;
 }
 

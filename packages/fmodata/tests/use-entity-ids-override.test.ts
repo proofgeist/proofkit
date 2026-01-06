@@ -6,13 +6,8 @@
  * when the database is configured to use them by default.
  */
 
-import { describe, it, expect } from "vitest";
-import { z } from "zod/v4";
-import {
-  FMServerConnection,
-  fmTableOccurrence,
-  textField,
-} from "@proofkit/fmodata";
+import { FMServerConnection, fmTableOccurrence, textField } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
 import { simpleMock } from "./utils/mock-fetch";
 
 // Create database with entity IDs
@@ -43,10 +38,7 @@ describe("Per-request useEntityIds override", () => {
       .list()
       .execute({
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBe("fmodata.entity-ids");
           return simpleMock({ body: { value: [] }, status: 200 })(input, init);
         },
@@ -59,10 +51,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: false,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBeUndefined();
           return simpleMock({ body: { value: [] }, status: 200 })(input, init);
         },
@@ -75,10 +64,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: true,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBe("fmodata.entity-ids");
           return simpleMock({ body: { value: [] }, status: 200 })(input, init);
         },
@@ -102,10 +88,7 @@ describe("Per-request useEntityIds override", () => {
       .list()
       .execute({
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBeUndefined();
           return simpleMock({ body: { value: [] }, status: 200 })(input, init);
         },
@@ -118,10 +101,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: true,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBe("fmodata.entity-ids");
           return simpleMock({ body: { value: [] }, status: 200 })(input, init);
         },
@@ -133,10 +113,7 @@ describe("Per-request useEntityIds override", () => {
       .list()
       .execute({
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBeUndefined();
           return simpleMock({ body: { value: [] }, status: 200 })(input, init);
         },
@@ -168,15 +145,9 @@ describe("Per-request useEntityIds override", () => {
       .insert({ name: "Test" })
       .execute({
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toContain("fmodata.entity-ids");
-          return simpleMock({ body: { id: "1", name: "Test" }, status: 200 })(
-            input,
-            init,
-          );
+          return simpleMock({ body: { id: "1", name: "Test" }, status: 200 })(input, init);
         },
       });
 
@@ -187,15 +158,9 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: false,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).not.toContain("fmodata.entity-ids");
-          return simpleMock({ body: { id: "1", name: "Test" }, status: 200 })(
-            input,
-            init,
-          );
+          return simpleMock({ body: { id: "1", name: "Test" }, status: 200 })(input, init);
         },
       });
   });
@@ -227,10 +192,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: false,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBeUndefined();
           return simpleMock({
             body: "1",
@@ -248,10 +210,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: true,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBe("fmodata.entity-ids");
           return simpleMock({
             body: "1",
@@ -289,10 +248,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: true,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBe("fmodata.entity-ids");
           return simpleMock({
             body: "1",
@@ -310,10 +266,7 @@ describe("Per-request useEntityIds override", () => {
       .execute({
         useEntityIds: false,
         fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
-          const headers = (init as RequestInit)?.headers as Record<
-            string,
-            string
-          >;
+          const headers = (init as RequestInit)?.headers as Record<string, string>;
           expect(headers?.Prefer).toBeUndefined();
           return simpleMock({
             body: "1",

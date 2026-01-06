@@ -1,7 +1,7 @@
-import { FmodataConfig } from "../types";
+import type { FmodataConfig } from "../types";
 import { downloadTableMetadata } from "./downloadMetadata";
-import { parseMetadata, type ParsedMetadata } from "./parseMetadata";
 import { generateODataTypes } from "./generateODataTypes";
+import { type ParsedMetadata, parseMetadata } from "./parseMetadata";
 
 export async function generateODataTablesSingle(config: FmodataConfig) {
   const { tables, reduceMetadata = false } = config;
@@ -11,14 +11,8 @@ export async function generateODataTablesSingle(config: FmodataConfig) {
   }
 
   // Download and parse metadata for each table
-  const allEntityTypes = new Map<
-    string,
-    ParsedMetadata["entityTypes"] extends Map<infer K, infer V> ? V : never
-  >();
-  const allEntitySets = new Map<
-    string,
-    ParsedMetadata["entitySets"] extends Map<infer K, infer V> ? V : never
-  >();
+  const allEntityTypes = new Map<string, ParsedMetadata["entityTypes"] extends Map<string, infer V> ? V : never>();
+  const allEntitySets = new Map<string, ParsedMetadata["entitySets"] extends Map<string, infer V> ? V : never>();
   let namespace = "";
 
   for (const tableConfig of tables) {
@@ -35,18 +29,12 @@ export async function generateODataTablesSingle(config: FmodataConfig) {
     const parsedMetadata = await parseMetadata(tableMetadataXml);
 
     // Merge entity types
-    for (const [
-      entityTypeName,
-      entityType,
-    ] of parsedMetadata.entityTypes.entries()) {
+    for (const [entityTypeName, entityType] of parsedMetadata.entityTypes.entries()) {
       allEntityTypes.set(entityTypeName, entityType);
     }
 
     // Merge entity sets
-    for (const [
-      entitySetName,
-      entitySet,
-    ] of parsedMetadata.entitySets.entries()) {
+    for (const [entitySetName, entitySet] of parsedMetadata.entitySets.entries()) {
       allEntitySets.set(entitySetName, entitySet);
     }
 

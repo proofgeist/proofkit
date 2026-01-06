@@ -1,4 +1,4 @@
-import { type FFetchOptions } from "@fetchkit/ffetch";
+import type { FFetchOptions } from "@fetchkit/ffetch";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { InternalLogger } from "./logger";
 
@@ -6,6 +6,7 @@ export type Auth = { username: string; password: string } | { apiKey: string };
 
 export interface ExecutableBuilder<T> {
   execute(): Promise<Result<T>>;
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any };
 
   /**
@@ -23,10 +24,7 @@ export interface ExecutableBuilder<T> {
    * @param options - Optional execution options (e.g., skipValidation, includeODataAnnotations)
    * @returns A typed Result with the builder's expected return type
    */
-  processResponse(
-    response: Response,
-    options?: ExecuteOptions,
-  ): Promise<Result<T>>;
+  processResponse(response: Response, options?: ExecuteOptions): Promise<Result<T>>;
 }
 
 export interface ExecutionContext {
@@ -47,12 +45,12 @@ export interface ExecutionContext {
 }
 
 export type InferSchemaType<Schema extends Record<string, StandardSchemaV1>> = {
-  [K in keyof Schema]: Schema[K] extends StandardSchemaV1<any, infer Output>
-    ? Output
-    : never;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+  [K in keyof Schema]: Schema[K] extends StandardSchemaV1<any, infer Output> ? Output : never;
 };
 
 export type WithSpecialColumns<T> =
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
   T extends Record<string, any>
     ? T & {
         ROWID: number;
@@ -61,22 +59,20 @@ export type WithSpecialColumns<T> =
     : never;
 
 // Helper type to exclude special columns from a union of keys
-export type ExcludeSystemFields<T extends keyof any> = Exclude<
-  T,
-  "ROWID" | "ROWMODID"
->;
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any key type
+export type ExcludeSystemFields<T extends keyof any> = Exclude<T, "ROWID" | "ROWMODID">;
 
 // OData record metadata fields (present on each record)
-export type ODataRecordMetadata = {
+export interface ODataRecordMetadata {
   "@id": string;
   "@editLink": string;
-};
+}
 
 // OData response wrapper (top-level, internal use only)
-export type ODataListResponse<T> = {
+export interface ODataListResponse<T> {
   "@context": string;
   value: (T & ODataRecordMetadata)[];
-};
+}
 
 export type ODataSingleResponse<T> = T &
   ODataRecordMetadata & {
@@ -84,10 +80,10 @@ export type ODataSingleResponse<T> = T &
   };
 
 // OData response for single field values
-export type ODataFieldResponse<T> = {
+export interface ODataFieldResponse<T> {
   "@context": string;
   value: T;
-};
+}
 
 // Result pattern for execute responses
 export type Result<T, E = import("./errors").FMODataErrorType> =
@@ -95,55 +91,51 @@ export type Result<T, E = import("./errors").FMODataErrorType> =
   | { data: undefined; error: E };
 
 // Batch operation result types
-export type BatchItemResult<T> = {
+export interface BatchItemResult<T> {
   data: T | undefined;
   error: import("./errors").FMODataErrorType | undefined;
   status: number; // HTTP status code (0 for truncated)
-};
+}
 
-export type BatchResult<T extends readonly any[]> = {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any tuple type
+export interface BatchResult<T extends readonly any[]> {
   results: { [K in keyof T]: BatchItemResult<T[K]> };
   successCount: number;
   errorCount: number;
   truncated: boolean;
   firstErrorIndex: number | null;
-};
+}
 
 // Make specific keys required, rest optional
-export type MakeFieldsRequired<T, Keys extends keyof T> = Partial<T> &
-  Required<Pick<T, Keys>>;
+export type MakeFieldsRequired<T, Keys extends keyof T> = Partial<T> & Required<Pick<T, Keys>>;
 
 // Extract keys from schema where validator doesn't allow null/undefined (auto-required fields)
-export type AutoRequiredKeys<Schema extends Record<string, StandardSchemaV1>> =
-  {
-    [K in keyof Schema]: Extract<
-      StandardSchemaV1.InferOutput<Schema[K]>,
-      null | undefined
-    > extends never
-      ? K
-      : never;
-  }[keyof Schema];
+export type AutoRequiredKeys<Schema extends Record<string, StandardSchemaV1>> = {
+  [K in keyof Schema]: Extract<StandardSchemaV1.InferOutput<Schema[K]>, null | undefined> extends never ? K : never;
+}[keyof Schema];
 
 // Helper type to compute excluded fields (readOnly fields + idField)
 export type ExcludedFields<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any key type
   IdField extends keyof any | undefined,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any array type
   ReadOnly extends readonly any[],
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any key type
 > = IdField extends keyof any ? IdField | ReadOnly[number] : ReadOnly[number];
 
 // Helper type for InsertData computation
-type ComputeInsertData<
+type _ComputeInsertData<
   Schema extends Record<string, StandardSchemaV1>,
   IdField extends keyof Schema | undefined,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any array type
   Required extends readonly any[],
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any array type
   ReadOnly extends readonly any[],
 > = [Required[number]] extends [keyof InferSchemaType<Schema>]
   ? Required extends readonly (keyof InferSchemaType<Schema>)[]
     ? MakeFieldsRequired<
         Omit<InferSchemaType<Schema>, ExcludedFields<IdField, ReadOnly>>,
-        Exclude<
-          AutoRequiredKeys<Schema> | Required[number],
-          ExcludedFields<IdField, ReadOnly>
-        >
+        Exclude<AutoRequiredKeys<Schema> | Required[number], ExcludedFields<IdField, ReadOnly>>
       >
     : MakeFieldsRequired<
         Omit<InferSchemaType<Schema>, ExcludedFields<IdField, ReadOnly>>,
@@ -154,7 +146,7 @@ type ComputeInsertData<
       Exclude<AutoRequiredKeys<Schema>, ExcludedFields<IdField, ReadOnly>>
     >;
 
-export type ExecuteOptions = {
+export interface ExecuteOptions {
   includeODataAnnotations?: boolean;
   skipValidation?: boolean;
   /**
@@ -166,7 +158,7 @@ export type ExecuteOptions = {
    * Note: Special columns are only included when there is no $select query.
    */
   includeSpecialColumns?: boolean;
-};
+}
 
 /**
  * Type for the fetchHandler callback function.
@@ -186,10 +178,7 @@ export type ExecuteOptions = {
  * });
  * ```
  */
-export type FetchHandler = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => Promise<Response>;
+export type FetchHandler = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 /**
  * Combined type for execute() method options.
@@ -197,8 +186,10 @@ export type FetchHandler = (
  * Uses FFetchOptions from @fetchkit/ffetch to ensure proper type inference.
  * FFetchOptions is re-exported in the package to ensure type availability in consuming packages.
  */
-export type ExecuteMethodOptions<EO extends ExecuteOptions = ExecuteOptions> =
-  RequestInit & FFetchOptions & ExecuteOptions & EO;
+export type ExecuteMethodOptions<EO extends ExecuteOptions = ExecuteOptions> = RequestInit &
+  FFetchOptions &
+  ExecuteOptions &
+  EO;
 
 /**
  * Get the Accept header value based on includeODataAnnotations option
@@ -206,9 +197,7 @@ export type ExecuteMethodOptions<EO extends ExecuteOptions = ExecuteOptions> =
  * @returns Accept header value
  */
 export function getAcceptHeader(includeODataAnnotations?: boolean): string {
-  return includeODataAnnotations === true
-    ? "application/json"
-    : "application/json;odata.metadata=none";
+  return includeODataAnnotations === true ? "application/json" : "application/json;odata.metadata=none";
 }
 
 export type ConditionallyWithODataAnnotations<
@@ -230,11 +219,7 @@ export type ConditionallyWithODataAnnotations<
 export type NormalizeIncludeSpecialColumns<
   IncludeSpecialColumns extends boolean | undefined,
   DatabaseDefault extends boolean = false,
-> = [IncludeSpecialColumns] extends [true]
-  ? true
-  : [IncludeSpecialColumns] extends [false]
-    ? false
-    : DatabaseDefault; // When undefined, use database-level default
+> = [IncludeSpecialColumns] extends [true] ? true : [IncludeSpecialColumns] extends [false] ? false : DatabaseDefault; // When undefined, use database-level default
 
 /**
  * Conditionally adds ROWID and ROWMODID special columns to a type.
@@ -253,13 +238,15 @@ export type ConditionallyWithSpecialColumns<
   ? HasSelect extends false
     ? // Handle array types
       T extends readonly (infer U)[]
-      ? U extends Record<string, any>
+      ? // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
+        U extends Record<string, any>
         ? (U & {
             ROWID: number;
             ROWMODID: number;
           })[]
         : T
       : // Handle single object types
+        // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
         T extends Record<string, any>
         ? T & {
             ROWID: number;
@@ -278,14 +265,14 @@ export type ExtractSchemaFromOccurrence<Occ> = Occ extends {
     : Record<string, StandardSchemaV1>
   : Record<string, StandardSchemaV1>;
 
-export type GenericFieldMetadata = {
+export interface GenericFieldMetadata {
   $Nullable?: boolean;
   "@Index"?: boolean;
   "@Calculation"?: boolean;
   "@Summary"?: boolean;
   "@Global"?: boolean;
   "@Org.OData.Core.V1.Permissions"?: "Org.OData.Core.V1.Permission@Read";
-};
+}
 
 export type StringFieldMetadata = GenericFieldMetadata & {
   $Type: "Edm.String";
@@ -314,13 +301,13 @@ export type DateTimeOffsetFieldMetadata = GenericFieldMetadata & {
   "@VersionId"?: boolean;
 };
 
-export type StreamFieldMetadata = {
+export interface StreamFieldMetadata {
   $Type: "Edm.Stream";
   $Nullable?: boolean;
   "@EnclosedPath": string;
   "@ExternalOpenPath": string;
   "@ExternalSecurePath"?: string;
-};
+}
 
 export type FieldMetadata =
   | StringFieldMetadata
@@ -335,9 +322,9 @@ export type EntityType = {
   $Key: string[];
 } & Record<string, FieldMetadata>;
 
-export type EntitySet = {
+export interface EntitySet {
   $Kind: "EntitySet";
   $Type: string;
-};
+}
 
 export type Metadata = Record<string, EntityType | EntitySet>;

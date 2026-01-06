@@ -5,7 +5,9 @@ export function useEnvValue(envName: string | undefined) {
   return useQuery({
     queryKey: ["envValue", envName],
     queryFn: async () => {
-      if (!envName) return undefined;
+      if (!envName) {
+        return undefined;
+      }
       const res = await client.api["env-names"].$get({
         query: { envName },
       });

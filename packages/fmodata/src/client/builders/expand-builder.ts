@@ -1,17 +1,13 @@
-import { QueryOptions } from "odata-query";
-import buildQuery from "odata-query";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { FMTable } from "../../orm/table";
-import {
-  getBaseTableConfig,
-  getTableName,
-  getNavigationPaths,
-} from "../../orm/table";
+import buildQuery, { type QueryOptions } from "odata-query";
+import type { InternalLogger } from "../../logger";
+import { FMTable, getBaseTableConfig, getNavigationPaths, getTableName } from "../../orm/table";
 import type { ExpandValidationConfig } from "../../validation";
-import type { ExpandConfig } from "./shared-types";
-import { formatSelectFields } from "./select-utils";
 import { getDefaultSelectFields } from "./default-select";
-import { InternalLogger } from "../../logger";
+import { formatSelectFields } from "./select-utils";
+import type { ExpandConfig } from "./shared-types";
+
+const FILTER_QUERY_REGEX = /\$filter=([^&]+)/;
 
 /**
  * Builds OData expand query strings and validation configs.
@@ -19,16 +15,21 @@ import { InternalLogger } from "../../logger";
  * when using entity IDs.
  */
 export class ExpandBuilder {
-  constructor(
-    private useEntityIds: boolean,
-    private logger: InternalLogger,
-  ) {}
+  private readonly useEntityIds: boolean;
+  private readonly logger: InternalLogger;
+
+  constructor(useEntityIds: boolean, logger: InternalLogger) {
+    this.useEntityIds = useEntityIds;
+    this.logger = logger;
+  }
 
   /**
    * Builds OData $expand query string from expand configurations.
    */
   buildExpandString(configs: ExpandConfig[]): string {
-    if (configs.length === 0) return "";
+    if (configs.length === 0) {
+      return "";
+    }
 
     return configs.map((config) => this.buildSingleExpand(config)).join(",");
   }
@@ -54,11 +55,12 @@ export class ExpandBuilder {
         targetSchema = schema;
       }
 
-      const selectedFields = config.options?.select
-        ? Array.isArray(config.options.select)
+      let selectedFields: string[] | undefined;
+      if (config.options?.select) {
+        selectedFields = Array.isArray(config.options.select)
           ? config.options.select.map(String)
-          : [String(config.options.select)]
-        : undefined;
+          : [String(config.options.select)];
+      }
 
       // Recursively build validation configs for nested expands
       const nestedExpands = config.nestedExpandConfigs
@@ -86,8 +88,10 @@ export class ExpandBuilder {
    * @param builderFactory - Function that creates a QueryBuilder for the target table
    * @returns ExpandConfig to add to the builder's expandConfigs array
    */
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration, generic Builder type
   processExpand<TargetTable extends FMTable<any, any>, Builder = any>(
     targetTable: TargetTable,
+    // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
     sourceTable: FMTable<any, any> | undefined,
     callback?: (builder: Builder) => Builder,
     builderFactory?: () => Builder,
@@ -113,7 +117,9 @@ export class ExpandBuilder {
       const configuredBuilder = callback(targetBuilder);
 
       // Extract the builder's query options
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryOptions configuration
       const expandOptions: Partial<QueryOptions<any>> = {
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal builder property access
         ...(configuredBuilder as any).queryOptions,
       };
 
@@ -126,12 +132,14 @@ export class ExpandBuilder {
       }
 
       // If the configured builder has nested expands, we need to include them
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for internal builder property access
       const nestedExpandConfigs = (configuredBuilder as any).expandConfigs;
       if (nestedExpandConfigs?.length > 0) {
         // Build nested expand string from the configured builder's expand configs
         const nestedExpandString = this.buildExpandString(nestedExpandConfigs);
         if (nestedExpandString) {
           // Add nested expand to options
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for expand string
           expandOptions.expand = nestedExpandString as any;
         }
       }
@@ -142,22 +150,20 @@ export class ExpandBuilder {
         targetTable,
         nestedExpandConfigs: nestedExpandConfigs?.length > 0 ? nestedExpandConfigs : undefined,
       };
-    } else {
-      // Simple expand without callback - apply defaultSelect if available
-      const defaultFields = getDefaultSelectFields(targetTable);
-      if (defaultFields) {
-        return {
-          relation: relationName,
-          options: { select: defaultFields },
-          targetTable,
-        };
-      } else {
-        return {
-          relation: relationName,
-          targetTable,
-        };
-      }
     }
+    // Simple expand without callback - apply defaultSelect if available
+    const defaultFields = getDefaultSelectFields(targetTable);
+    if (defaultFields) {
+      return {
+        relation: relationName,
+        options: { select: defaultFields },
+        targetTable,
+      };
+    }
+    return {
+      relation: relationName,
+      targetTable,
+    };
   }
 
   /**
@@ -184,9 +190,8 @@ export class ExpandBuilder {
 
     const targetTable = config.targetTable;
     if (targetTable && FMTable.Symbol.EntityId in targetTable) {
-      const tableId = (targetTable as any)[FMTable.Symbol.EntityId] as
-        | `FMTID:${string}`
-        | undefined;
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for Symbol property access
+      const tableId = (targetTable as any)[FMTable.Symbol.EntityId] as `FMTID:${string}` | undefined;
       if (tableId) {
         return tableId;
       }
@@ -207,37 +212,33 @@ export class ExpandBuilder {
     const opts = config.options;
 
     if (opts.select) {
-      const selectArray = Array.isArray(opts.select)
-        ? opts.select.map(String)
-        : [String(opts.select)];
-      const selectFields = formatSelectFields(
-        selectArray,
-        config.targetTable,
-        this.useEntityIds,
-      );
+      const selectArray = Array.isArray(opts.select) ? opts.select.map(String) : [String(opts.select)];
+      const selectFields = formatSelectFields(selectArray, config.targetTable, this.useEntityIds);
       parts.push(`$select=${selectFields}`);
     }
 
     if (opts.filter) {
       const filterQuery = buildQuery({ filter: opts.filter });
-      const match = filterQuery.match(/\$filter=([^&]+)/);
-      if (match) parts.push(`$filter=${match[1]}`);
+      const match = filterQuery.match(FILTER_QUERY_REGEX);
+      if (match) {
+        parts.push(`$filter=${match[1]}`);
+      }
     }
 
     if (opts.orderBy) {
-      const orderByValue = Array.isArray(opts.orderBy)
-        ? opts.orderBy.join(",")
-        : String(opts.orderBy);
+      const orderByValue = Array.isArray(opts.orderBy) ? opts.orderBy.join(",") : String(opts.orderBy);
       parts.push(`$orderby=${orderByValue}`);
     }
 
-    if (opts.top !== undefined) parts.push(`$top=${opts.top}`);
-    if (opts.skip !== undefined) parts.push(`$skip=${opts.skip}`);
+    if (opts.top !== undefined) {
+      parts.push(`$top=${opts.top}`);
+    }
+    if (opts.skip !== undefined) {
+      parts.push(`$skip=${opts.skip}`);
+    }
 
-    if (opts.expand) {
-      if (typeof opts.expand === "string") {
-        parts.push(`$expand=${opts.expand}`);
-      }
+    if (opts.expand && typeof opts.expand === "string") {
+      parts.push(`$expand=${opts.expand}`);
     }
 
     return parts;

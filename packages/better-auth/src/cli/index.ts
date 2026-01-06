@@ -1,18 +1,13 @@
 #!/usr/bin/env node --no-warnings
 import { Command } from "@commander-js/extra-typings";
-import fs from "fs-extra";
-
-import {
-  executeMigration,
-  planMigration,
-  prettyPrintMigrationPlan,
-} from "../migrate";
-import { getAdapter, getAuthTables } from "better-auth/db";
-import { getConfig } from "../better-auth-cli/utils/get-config";
 import { logger } from "better-auth";
-import prompts from "prompts";
+import { getAdapter, getAuthTables } from "better-auth/db";
 import chalk from "chalk";
-import { AdapterOptions } from "../adapter";
+import fs from "fs-extra";
+import prompts from "prompts";
+import type { AdapterOptions } from "../adapter";
+import { getConfig } from "../better-auth-cli/utils/get-config";
+import { executeMigration, planMigration, prettyPrintMigrationPlan } from "../migrate";
 import { createRawFetch } from "../odata";
 import "dotenv/config";
 
@@ -21,11 +16,7 @@ async function main() {
 
   program
     .command("migrate", { isDefault: true })
-    .option(
-      "--cwd <path>",
-      "Path to the current working directory",
-      process.cwd(),
-    )
+    .option("--cwd <path>", "Path to the current working directory", process.cwd())
     .option("--config <path>", "Path to the config file")
     .option("-u, --username <username>", "Full Access Username")
     .option("-p, --password <password>", "Full Access Password")
@@ -55,9 +46,7 @@ async function main() {
       });
 
       if (adapter.id !== "filemaker") {
-        logger.error(
-          "This generator is only compatible with the FileMaker adapter.",
-        );
+        logger.error("This generator is only compatible with the FileMaker adapter.");
         return;
       }
 
@@ -77,11 +66,7 @@ async function main() {
         logging: "verbose", // Enable logging for CLI operations
       });
 
-      const migrationPlan = await planMigration(
-        fetch,
-        betterAuthSchema,
-        adapterConfig.odata.database,
-      );
+      const migrationPlan = await planMigration(fetch, betterAuthSchema, adapterConfig.odata.database);
 
       if (migrationPlan.length === 0) {
         logger.info("No changes to apply. Database is up to date.");
@@ -92,11 +77,7 @@ async function main() {
         prettyPrintMigrationPlan(migrationPlan);
 
         if (migrationPlan.length > 0) {
-          console.log(
-            chalk.gray(
-              "💡 Tip: You can use the --yes flag to skip this confirmation.",
-            ),
-          );
+          console.log(chalk.gray("💡 Tip: You can use the --yes flag to skip this confirmation."));
         }
 
         const { confirm } = await prompts({

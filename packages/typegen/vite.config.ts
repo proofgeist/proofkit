@@ -1,5 +1,5 @@
-import { defineConfig, mergeConfig } from "vite";
 import { tanstackViteConfig } from "@tanstack/vite-config";
+import { defineConfig, mergeConfig } from "vite";
 
 const config = defineConfig({
   plugins: [],
@@ -8,14 +8,10 @@ const config = defineConfig({
 export default mergeConfig(
   config,
   tanstackViteConfig({
-    entry: [
-      "./src/index.ts",
-      "./src/cli.ts",
-      "./src/types.ts",
-      "./src/server/app.ts",
-    ],
+    entry: ["./src/index.ts", "./src/cli.ts", "./src/types.ts", "./src/server/app.ts"],
     srcDir: "./src",
     cjs: false,
     outDir: "./dist",
+    externalDeps: ["prettier"],
   }),
 );

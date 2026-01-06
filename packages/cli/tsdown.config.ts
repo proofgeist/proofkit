@@ -1,5 +1,5 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import replacePlugin from "@rollup/plugin-replace";
 import fsExtra from "fs-extra";
 import { defineConfig } from "tsdown";
@@ -13,12 +13,7 @@ const isDev = process.env.npm_lifecycle_event === "dev";
 
 // Read package versions at build time
 const readPackageVersion = (packagePath: string) => {
-  const packageJsonPath = path.join(
-    __dirname,
-    "..",
-    packagePath,
-    "package.json"
-  );
+  const packageJsonPath = path.join(__dirname, "..", packagePath, "package.json");
   const packageJson = readJSONSync(packageJsonPath);
   if (!packageJson.version) {
     throw new Error(`No version found in ${packageJsonPath}`);
@@ -47,9 +42,7 @@ export default defineConfig({
       values: {
         __FMDAPI_VERSION__: JSON.stringify(FMDAPI_VERSION),
         __BETTER_AUTH_VERSION__: JSON.stringify(BETTER_AUTH_VERSION),
-        __REGISTRY_URL__: JSON.stringify(
-          isDev ? "http://localhost:3005" : "https://proofkit.dev"
-        ),
+        __REGISTRY_URL__: JSON.stringify(isDev ? "http://localhost:3005" : "https://proofkit.dev"),
       },
     }),
   ],

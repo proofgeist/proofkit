@@ -10,14 +10,10 @@
  * 3. User experience remains unchanged (uses field names throughout)
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import {
-  createMockClient,
-  contactsTOWithIds,
-  usersTOWithIds,
-} from "./utils/test-setup";
-import { simpleMock } from "./utils/mock-fetch";
 import { eq } from "@proofkit/fmodata";
+import { beforeEach, describe, expect, it } from "vitest";
+import { simpleMock } from "./utils/mock-fetch";
+import { contactsTOWithIds, createMockClient, usersTOWithIds } from "./utils/test-setup";
 
 describe("Field ID Transformation", () => {
   let capturedRequests: Array<{ url: string; options: any }> = [];
@@ -37,8 +33,7 @@ describe("Field ID Transformation", () => {
         "@context": "https://api.example.com/$metadata#users",
         value: [
           {
-            "@id":
-              "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
+            "@id": "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
             "@editLink": "users('550e8400-e29b-41d4-a716-446655440001')",
             "FMFID:1": "550e8400-e29b-41d4-a716-446655440001",
             "FMFID:6": "Alice",
@@ -65,7 +60,10 @@ describe("Field ID Transformation", () => {
 
       // Verify the request used FMTIDs for table and FMFIDs for fields
       expect(capturedRequests).toHaveLength(1);
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       expect(request.url).toContain("FMTID:1065093"); // Table ID
       // FMFIDs are URL-encoded in the query string
       expect(decodeURIComponent(request.url)).toContain("FMFID:1"); // id field
@@ -81,16 +79,14 @@ describe("Field ID Transformation", () => {
         "@context": "https://api.example.com/$metadata#users",
         value: [
           {
-            "@id":
-              "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
+            "@id": "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
             "@editLink": "users('550e8400-e29b-41d4-a716-446655440001')",
             "FMFID:1": "550e8400-e29b-41d4-a716-446655440001",
             "FMFID:6": "Alice",
             "FMFID:7": true,
           },
           {
-            "@id":
-              "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440002')",
+            "@id": "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440002')",
             "@editLink": "users('550e8400-e29b-41d4-a716-446655440002')",
             "FMFID:1": "550e8400-e29b-41d4-a716-446655440002",
             "FMFID:6": "Bob",
@@ -117,12 +113,15 @@ describe("Field ID Transformation", () => {
 
       // User should receive data with field names, not FMFIDs
       expect(result.data).toHaveLength(2);
-      expect(result.data![0]).toMatchObject({
+      if (!result.data) {
+        throw new Error("Expected result.data to be defined");
+      }
+      expect(result.data[0]).toMatchObject({
         id: "550e8400-e29b-41d4-a716-446655440001",
         name: "Alice",
         active: true,
       });
-      expect(result.data![1]).toMatchObject({
+      expect(result.data[1]).toMatchObject({
         id: "550e8400-e29b-41d4-a716-446655440002",
         name: "Bob",
         active: false,
@@ -153,7 +152,10 @@ describe("Field ID Transformation", () => {
         });
 
       // Verify filter uses FMFID for the field name
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       expect(decodeURIComponent(request.url)).toContain("FMFID:7"); // active field in filter
       expect(request.url).toContain("eq%201");
     });
@@ -182,7 +184,10 @@ describe("Field ID Transformation", () => {
         });
 
       // Verify orderBy uses FMFID
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       expect(decodeURIComponent(request.url)).toContain("FMFID:6"); // name field in orderBy
     });
   });
@@ -195,8 +200,7 @@ describe("Field ID Transformation", () => {
       });
 
       const mockResponse = {
-        "@id":
-          "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
+        "@id": "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
         "@editLink": "users('550e8400-e29b-41d4-a716-446655440001')",
         "FMFID:1": "550e8400-e29b-41d4-a716-446655440001",
         "FMFID:6": "Alice",
@@ -213,11 +217,12 @@ describe("Field ID Transformation", () => {
           },
         });
 
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       // For GET operations, the table name should NOT be FMTID (it's in the path, not the entity key)
-      expect(request.url).toContain(
-        "FMTID:1065093('550e8400-e29b-41d4-a716-446655440001')",
-      );
+      expect(request.url).toContain("FMTID:1065093('550e8400-e29b-41d4-a716-446655440001')");
     });
 
     it("should transform response field IDs back to names", async () => {
@@ -227,8 +232,7 @@ describe("Field ID Transformation", () => {
       });
 
       const mockResponse = {
-        "@id":
-          "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
+        "@id": "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440001')",
         "@editLink": "users('550e8400-e29b-41d4-a716-446655440001')",
         "FMFID:1": "550e8400-e29b-41d4-a716-446655440001",
         "FMFID:2": "2024-01-01T00:00:00Z",
@@ -283,7 +287,7 @@ describe("Field ID Transformation", () => {
       };
 
       let capturedBody: any;
-      const result = await db
+      const _result = await db
         .from(usersTOWithIds)
         .insert({
           name: "Charlie",
@@ -292,7 +296,7 @@ describe("Field ID Transformation", () => {
         })
         .execute({
           fetchHandler: async (input, init) => {
-            let url = input instanceof Request ? input.url : input.toString();
+            const url = input instanceof Request ? input.url : input.toString();
             // Capture body - it might be in the Request object itself
             let bodyText: string | null = null;
             if (input instanceof Request && input.body) {
@@ -307,7 +311,10 @@ describe("Field ID Transformation", () => {
         });
 
       expect(capturedRequests).toHaveLength(1);
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       expect(request.url).toContain("FMTID:1065093"); // Table ID
 
       // Check that the body has FMFIDs (not field names)
@@ -325,8 +332,7 @@ describe("Field ID Transformation", () => {
       });
 
       const mockResponse = {
-        "@id":
-          "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440003')",
+        "@id": "https://api.example.com/users('550e8400-e29b-41d4-a716-446655440003')",
         "@editLink": "users('550e8400-e29b-41d4-a716-446655440003')",
         "FMFID:1": "550e8400-e29b-41d4-a716-446655440003",
         "FMFID:2": "2024-01-01T00:00:00Z",
@@ -347,7 +353,7 @@ describe("Field ID Transformation", () => {
           fake_field: "test",
         })
         .execute({
-          fetchHandler: async (input, init) => {
+          fetchHandler: (input, init) => {
             const url = input instanceof Request ? input.url : input.toString();
             capturedRequests.push({ url, options: init || {} });
             return simpleMock({ body: mockResponse, status: 201 })(input, init);
@@ -379,7 +385,7 @@ describe("Field ID Transformation", () => {
         .byId("550e8400-e29b-41d4-a716-446655440001")
         .execute({
           fetchHandler: async (input, init) => {
-            let url = input instanceof Request ? input.url : input.toString();
+            const url = input instanceof Request ? input.url : input.toString();
             // Capture body - it might be in the Request object itself
             let bodyText: string | null = null;
             if (input instanceof Request && input.body) {
@@ -394,7 +400,10 @@ describe("Field ID Transformation", () => {
         });
 
       expect(capturedRequests).toHaveLength(1);
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       expect(request.url).toContain("FMTID:1065093"); // Table ID
 
       // Check that the body has FMFIDs (not field names)
@@ -417,9 +426,7 @@ describe("Field ID Transformation", () => {
       await db
         .from(contactsTOWithIds)
         .list()
-        .expand(usersTOWithIds, (b: any) =>
-          b.select({ id: usersTOWithIds.id, name: usersTOWithIds.name }),
-        )
+        .expand(usersTOWithIds, (b: any) => b.select({ id: usersTOWithIds.id, name: usersTOWithIds.name }))
         .execute({
           fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
@@ -428,7 +435,10 @@ describe("Field ID Transformation", () => {
           },
         });
 
-      const request = capturedRequests[0]!;
+      const request = capturedRequests[0];
+      if (!request) {
+        throw new Error("Expected request to be defined");
+      }
       expect(request.url).toContain("FMTID:200"); // contacts table
       expect(request.url).toContain("$expand=FMTID:1065093"); // relation name preserved
       expect(decodeURIComponent(request.url)).toContain("FMFID:1"); // id field in expand
@@ -457,8 +467,7 @@ describe("Field ID Transformation", () => {
             "FMFID:17": "550e8400-e29b-41d4-a716-446655440001",
             "FMTID:1065093": [
               {
-                "@id":
-                  "https://api.example.com/FMTID:1065093('550e8400-e29b-41d4-a716-446655440001')",
+                "@id": "https://api.example.com/FMTID:1065093('550e8400-e29b-41d4-a716-446655440001')",
                 "@editLink": "users('550e8400-e29b-41d4-a716-446655440001')",
                 "FMFID:1": "550e8400-e29b-41d4-a716-446655440001",
                 "FMFID:2": "2024-01-01T00:00:00Z",
@@ -478,9 +487,7 @@ describe("Field ID Transformation", () => {
       const result = await db
         .from(contactsTOWithIds)
         .list()
-        .expand(usersTOWithIds, (b: any) =>
-          b.select({ id: usersTOWithIds.id, name: usersTOWithIds.name }),
-        )
+        .expand(usersTOWithIds, (b: any) => b.select({ id: usersTOWithIds.id, name: usersTOWithIds.name }))
         .execute({
           fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
@@ -493,13 +500,11 @@ describe("Field ID Transformation", () => {
       // add dynamic fields not in the schema. Just verify the transformation happened.
       if (result.error) {
         // If validation failed, check raw response to ensure transformation occurred
-        console.log(
-          "Note: Validation failed for expanded data (expected - dynamic fields)",
-        );
+        console.log("Note: Validation failed for expanded data (expected - dynamic fields)");
       } else {
         expect(result.data).toBeDefined();
         expect(result.data).toHaveLength(1);
-        if (result.data && result.data[0]) {
+        if (result.data?.[0]) {
           const contact = result.data[0];
           expect(contact).toMatchObject({
             PrimaryKey: "contact-1",
@@ -533,10 +538,7 @@ describe("Field ID Transformation", () => {
         .execute({
           fetchHandler: (input: RequestInfo | URL, init?: RequestInit) => {
             const url = input instanceof Request ? input.url : input.toString();
-            const headers = (init as RequestInit)?.headers as Record<
-              string,
-              string
-            >;
+            const headers = (init as RequestInit)?.headers as Record<string, string>;
             capturedRequests.push({ url, options: { ...init, headers } });
 
             // Verify the Prefer header is present

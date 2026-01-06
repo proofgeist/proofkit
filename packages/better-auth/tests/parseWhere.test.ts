@@ -1,6 +1,6 @@
-import { expect, test, describe } from "vitest";
+import type { CleanedWhere } from "better-auth/adapters";
+import { describe, expect, test } from "vitest";
 import { parseWhere } from "../src/adapter";
-import { type CleanedWhere } from "better-auth/adapters";
 import { validateUrl } from "../src/odata";
 
 describe("parseWhere", () => {
@@ -15,9 +15,7 @@ describe("parseWhere", () => {
   });
 
   test("should parse simple equality condition", () => {
-    const where: CleanedWhere[] = [
-      { field: "name", operator: "eq", value: "John", connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "name", operator: "eq", value: "John", connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("name eq 'John'");
   });
@@ -41,42 +39,32 @@ describe("parseWhere", () => {
   });
 
   test("should handle field names with spaces", () => {
-    const where: CleanedWhere[] = [
-      { field: "user name", operator: "eq", value: "John", connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "user name", operator: "eq", value: "John", connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("\"user name\" eq 'John'");
   });
 
   test("should handle field names with underscores", () => {
-    const where: CleanedWhere[] = [
-      { field: "user_name", operator: "eq", value: "John", connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "user_name", operator: "eq", value: "John", connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("\"user_name\" eq 'John'");
   });
 
   test("should handle null values", () => {
-    const where: CleanedWhere[] = [
-      { field: "deleted_at", operator: "eq", value: null, connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "deleted_at", operator: "eq", value: null, connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("deleted_at eq null");
   });
 
   test("should handle boolean values", () => {
-    const where: CleanedWhere[] = [
-      { field: "active", operator: "eq", value: true, connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "active", operator: "eq", value: true, connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("active eq true");
   });
 
   test("should handle date values", () => {
     const date = new Date("2023-01-01T00:00:00.000Z");
-    const where: CleanedWhere[] = [
-      { field: "created_at", operator: "eq", value: date, connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "created_at", operator: "eq", value: date, connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("created_at eq 2023-01-01T00:00:00.000Z");
   });
@@ -134,25 +122,19 @@ describe("parseWhere", () => {
   });
 
   test("should escape single quotes in string values", () => {
-    const where: CleanedWhere[] = [
-      { field: "name", operator: "eq", value: "O'Connor", connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "name", operator: "eq", value: "O'Connor", connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("name eq 'O''Connor'");
   });
 
   test("should handle numeric values", () => {
-    const where: CleanedWhere[] = [
-      { field: "age", operator: "gte", value: 18, connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "age", operator: "gte", value: 18, connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe("age ge 18");
   });
 
   test("should quote special field names", () => {
-    const where: CleanedWhere[] = [
-      { field: "id", operator: "eq", value: "123", connector: "AND" },
-    ];
+    const where: CleanedWhere[] = [{ field: "id", operator: "eq", value: "123", connector: "AND" }];
     const result = parseWhere(where);
     expect(result).toBe(`"id" eq '123'`);
   });
@@ -205,13 +187,11 @@ describe("parseWhere", () => {
       { value: "not-a-date", expected: "field eq 'not-a-date'" }, // Regular string should get quotes
     ];
 
-    testCases.forEach(({ value, expected }) => {
-      const where: CleanedWhere[] = [
-        { field: "field", operator: "eq", value, connector: "AND" },
-      ];
+    for (const { value, expected } of testCases) {
+      const where: CleanedWhere[] = [{ field: "field", operator: "eq", value, connector: "AND" }];
       const result = parseWhere(where);
       expect(result).toBe(expected);
-    });
+    }
   });
 
   test("should handle date-only strings (without time)", () => {
@@ -221,13 +201,11 @@ describe("parseWhere", () => {
       { value: "2023-01-01T", expected: "field eq '2023-01-01T'" }, // Invalid format should be treated as string
     ];
 
-    testCases.forEach(({ value, expected }) => {
-      const where: CleanedWhere[] = [
-        { field: "field", operator: "eq", value, connector: "AND" },
-      ];
+    for (const { value, expected } of testCases) {
+      const where: CleanedWhere[] = [{ field: "field", operator: "eq", value, connector: "AND" }];
       const result = parseWhere(where);
       expect(result).toBe(expected);
-    });
+    }
   });
 });
 

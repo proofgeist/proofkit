@@ -1,7 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { FieldBuilder, type ContainerDbType } from "./field-builders";
-import type { FieldBuilder as FieldBuilderType } from "./field-builders";
-import { Column, createColumn } from "./column";
+import { Column } from "./column";
+import type { ContainerDbType, FieldBuilder, FieldBuilder as FieldBuilderType } from "./field-builders";
 // import { z } from "zod/v4";
 
 /**
@@ -11,8 +10,8 @@ import { Column, createColumn } from "./column";
  * This type extracts the TOutput type parameter, which is set by readValidator()
  * and represents the transformed/validated output type.
  */
-export type InferFieldOutput<F> =
-  F extends FieldBuilder<infer TOutput, any, any, any> ? TOutput : never;
+// biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+export type InferFieldOutput<F> = F extends FieldBuilder<infer TOutput, any, any, any> ? TOutput : never;
 
 /**
  * Extract the input type from a FieldBuilder.
@@ -21,15 +20,14 @@ export type InferFieldOutput<F> =
  * This type extracts the TInput type parameter, which is set by writeValidator()
  * and represents the transformed/validated input type.
  */
-type InferFieldInput<F> =
-  F extends FieldBuilder<any, infer TInput, any, any> ? TInput : never;
+// biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+type InferFieldInput<F> = F extends FieldBuilder<any, infer TInput, any, any> ? TInput : never;
 
 /**
  * Build a schema type from field builders (output/read types).
  */
-type InferSchemaFromFields<
-  TFields extends Record<string, FieldBuilder<any, any, any, any>>,
-> = {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
+type InferSchemaFromFields<TFields extends Record<string, FieldBuilder<any, any, any, any>>> = {
   [K in keyof TFields]: InferFieldOutput<TFields[K]>;
 };
 
@@ -37,9 +35,8 @@ type InferSchemaFromFields<
  * Build an input schema type from field builders (input/write types).
  * Used for insert and update operations.
  */
-type InferInputSchemaFromFields<
-  TFields extends Record<string, FieldBuilder<any, any, any, any>>,
-> = {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
+type InferInputSchemaFromFields<TFields extends Record<string, FieldBuilder<any, any, any, any>>> = {
   [K in keyof TFields]: InferFieldInput<TFields[K]>;
 };
 
@@ -48,6 +45,7 @@ type InferInputSchemaFromFields<
  * Container fields have a branded TDbType that extends ContainerDbType.
  */
 type IsContainerField<F> =
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   F extends FieldBuilder<any, any, infer TDbType, any>
     ? NonNullable<TDbType> extends ContainerDbType
       ? true
@@ -58,9 +56,8 @@ type IsContainerField<F> =
  * Extract only selectable (non-container) field keys from a fields record.
  * Container fields are excluded because they cannot be selected via $select in FileMaker OData.
  */
-type SelectableFieldKeys<
-  TFields extends Record<string, FieldBuilder<any, any, any, any>>,
-> = {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
+type SelectableFieldKeys<TFields extends Record<string, FieldBuilder<any, any, any, any>>> = {
   [K in keyof TFields]: IsContainerField<TFields[K]> extends true ? never : K;
 }[keyof TFields];
 
@@ -69,9 +66,8 @@ type SelectableFieldKeys<
  * This is used to ensure container fields don't appear in the return type
  * when using defaultSelect: "schema" or "all".
  */
-type InferSelectableSchemaFromFields<
-  TFields extends Record<string, FieldBuilder<any, any, any, any>>,
-> = {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
+type _InferSelectableSchemaFromFields<TFields extends Record<string, FieldBuilder<any, any, any, any>>> = {
   [K in SelectableFieldKeys<TFields>]: InferFieldOutput<TFields[K]>;
 };
 
@@ -97,6 +93,7 @@ const FMTableComment = Symbol.for("fmodata:FMTableComment");
  * is stored via Symbols, keeping it hidden from IDE autocomplete.
  */
 export class FMTable<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration, default allows untyped tables
   TFields extends Record<string, FieldBuilder<any, any, any, any>> = any,
   TName extends string = string,
   TNavigationPaths extends readonly string[] = readonly string[],
@@ -139,10 +136,8 @@ export class FMTable<
   [FMTableNavigationPaths]: TNavigationPaths;
 
   /** @internal */
-  [FMTableDefaultSelect]:
-    | "all"
-    | "schema"
-    | Record<string, Column<any, any, TName>>;
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  [FMTableDefaultSelect]: "all" | "schema" | Record<string, Column<any, any, TName>>;
 
   /** @internal */
   [FMTableBaseTableConfig]: {
@@ -163,6 +158,7 @@ export class FMTable<
     schema: Partial<Record<keyof TFields, StandardSchemaV1>>;
     fields: TFields;
     navigationPaths: TNavigationPaths;
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     defaultSelect: "all" | "schema" | Record<string, Column<any, any, TName>>;
     baseTableConfig: {
       schema: Partial<Record<keyof TFields, StandardSchemaV1>>;
@@ -192,10 +188,8 @@ export class FMTable<
  * Container fields are marked with IsContainer=true.
  * Columns include both output type (for reading) and input type (for writing/filtering).
  */
-export type ColumnMap<
-  TFields extends Record<string, FieldBuilder<any, any, any, any>>,
-  TName extends string,
-> = {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
+export type ColumnMap<TFields extends Record<string, FieldBuilder<any, any, any, any>>, TName extends string> = {
   [K in keyof TFields]: Column<
     InferFieldOutput<TFields[K]>,
     InferFieldInput<TFields[K]>,
@@ -209,30 +203,25 @@ export type ColumnMap<
  * This is used to prevent selecting container fields in queries.
  */
 export type SelectableColumnMap<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
   TFields extends Record<string, FieldBuilder<any, any, any, any>>,
   TName extends string,
 > = {
-  [K in SelectableFieldKeys<TFields>]: Column<
-    InferFieldOutput<TFields[K]>,
-    InferFieldInput<TFields[K]>,
-    TName,
-    false
-  >;
+  [K in SelectableFieldKeys<TFields>]: Column<InferFieldOutput<TFields[K]>, InferFieldInput<TFields[K]>, TName, false>;
 };
 
 /**
  * Validates that a select object doesn't contain container field columns.
  * Returns never if any container fields are found, otherwise returns the original type.
  */
-export type ValidateNoContainerFields<
-  TSelect extends Record<string, Column<any, any, any, any>>,
-> = {
-  [K in keyof TSelect]: TSelect[K] extends Column<any, any, any, true>
-    ? never
-    : TSelect[K];
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+export type ValidateNoContainerFields<TSelect extends Record<string, Column<any, any, any, any>>> = {
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  [K in keyof TSelect]: TSelect[K] extends Column<any, any, any, true> ? never : TSelect[K];
 } extends TSelect
   ? TSelect
   : {
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
       [K in keyof TSelect]: TSelect[K] extends Column<any, any, any, true>
         ? "❌ Container fields cannot be selected. Use .getSingleField() instead."
         : TSelect[K];
@@ -242,8 +231,9 @@ export type ValidateNoContainerFields<
  * Extract the keys from a defaultSelect function's return type.
  * Used to infer which fields are selected by default for type narrowing.
  */
-type ExtractDefaultSelectKeys<
+type _ExtractDefaultSelectKeys<
   TDefaultSelect,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
   TFields extends Record<string, FieldBuilder<any, any, any, any>>,
   TName extends string,
 > = TDefaultSelect extends (columns: ColumnMap<TFields, TName>) => infer R
@@ -258,6 +248,7 @@ type ExtractDefaultSelectKeys<
  * but internal config is hidden via Symbols.
  */
 export type FMTableWithColumns<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
   TFields extends Record<string, FieldBuilder<any, any, any, any>>,
   TName extends string,
   TNavigationPaths extends readonly string[] = readonly string[],
@@ -268,6 +259,7 @@ export type FMTableWithColumns<
  * Provides autocomplete-friendly typing while preserving inference for navigationPaths.
  */
 export interface FMTableOccurrenceOptions<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
   TFields extends Record<string, FieldBuilder<any, any, any, any>>,
   TName extends string,
 > {
@@ -283,12 +275,8 @@ export interface FMTableOccurrenceOptions<
    * - "schema": Select only schema-defined fields (default)
    * - function: Custom selection from columns
    */
-  defaultSelect?:
-    | "all"
-    | "schema"
-    | ((
-        columns: ColumnMap<TFields, TName>,
-      ) => Record<string, Column<any, any, TName>>);
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  defaultSelect?: "all" | "schema" | ((columns: ColumnMap<TFields, TName>) => Record<string, Column<any, any, TName>>);
 
   /** Navigation paths available from this table (for expand operations) */
   navigationPaths?: readonly string[];
@@ -324,6 +312,7 @@ export interface FMTableOccurrenceOptions<
  */
 export function fmTableOccurrence<
   const TName extends string,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
   const TFields extends Record<string, FieldBuilder<any, any, any, any>>,
   const TNavPaths extends readonly string[] = readonly [],
 >(
@@ -337,6 +326,7 @@ export function fmTableOccurrence<
   // Extract configuration from field builders
   const fieldConfigs = Object.entries(fields).map(([fieldName, builder]) => ({
     fieldName,
+    // biome-ignore lint/suspicious/noExplicitAny: Internal property access for builder pattern
     config: (builder as any)._getConfig(),
   }));
 
@@ -345,19 +335,13 @@ export function fmTableOccurrence<
   const idField = primaryKeyField?.fieldName;
 
   // Collect required fields (notNull fields)
-  const required = fieldConfigs
-    .filter((f) => f.config.notNull)
-    .map((f) => f.fieldName);
+  const required = fieldConfigs.filter((f) => f.config.notNull).map((f) => f.fieldName);
 
   // Collect read-only fields
-  const readOnly = fieldConfigs
-    .filter((f) => f.config.readOnly)
-    .map((f) => f.fieldName);
+  const readOnly = fieldConfigs.filter((f) => f.config.readOnly).map((f) => f.fieldName);
 
   // Collect container fields (cannot be selected via $select)
-  const containerFields = fieldConfigs
-    .filter((f) => f.config.fieldType === "container")
-    .map((f) => f.fieldName);
+  const containerFields = fieldConfigs.filter((f) => f.config.fieldType === "container").map((f) => f.fieldName);
 
   // Collect entity IDs
   const fmfIds: Record<string, `FMFID:${string}`> = {};
@@ -403,7 +387,9 @@ export function fmTableOccurrence<
   // Create column instances
   const columns = {} as ColumnMap<TFields, TName>;
   for (const [fieldName, builder] of Object.entries(fields)) {
+    // biome-ignore lint/suspicious/noExplicitAny: Internal property access for builder pattern
     const config = (builder as any)._getConfig();
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (columns as any)[fieldName] = new Column({
       fieldName: String(fieldName),
       entityId: config.entityId,
@@ -415,10 +401,8 @@ export function fmTableOccurrence<
 
   // Resolve defaultSelect: if it's a function, call it with columns; otherwise use as-is
   const defaultSelectOption = options?.defaultSelect ?? "schema";
-  const resolvedDefaultSelect:
-    | "all"
-    | "schema"
-    | Record<string, Column<any, any, TName>> =
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  const resolvedDefaultSelect: "all" | "schema" | Record<string, Column<any, any, TName>> =
     typeof defaultSelectOption === "function"
       ? defaultSelectOption(columns as ColumnMap<TFields, TName>)
       : defaultSelectOption;
@@ -472,34 +456,33 @@ export function fmTableOccurrence<
 /**
  * Helper to extract the schema type from a TableOccurrence or FMTable.
  */
-export type InferTableSchema<T> =
-  T extends FMTable<infer TFields, any>
-    ? InferSchemaFromFields<TFields>
-    : never;
+// biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+export type InferTableSchema<T> = T extends FMTable<infer TFields, any> ? InferSchemaFromFields<TFields> : never;
 
 /**
  * Extract the schema type from an FMTable instance.
  * This is used to infer the schema from table objects passed to db.from(), expand(), etc.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export type InferSchemaOutputFromFMTable<T extends FMTable<any, any>> =
-  T extends FMTable<infer TFields, any>
-    ? InferSchemaFromFields<TFields>
-    : never;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+  T extends FMTable<infer TFields, any> ? InferSchemaFromFields<TFields> : never;
 
 /**
  * Extract the input schema type from an FMTable instance.
  * This is used for insert and update operations where we need write types.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export type InferInputSchemaFromFMTable<T extends FMTable<any, any>> =
-  T extends FMTable<infer TFields, any>
-    ? InferInputSchemaFromFields<TFields>
-    : never;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+  T extends FMTable<infer TFields, any> ? InferInputSchemaFromFields<TFields> : never;
 
 /**
  * Helper type to check if a FieldBuilder's input type excludes null and undefined.
  * This checks the TInput type parameter, which preserves nullability from notNull().
  */
 type FieldInputExcludesNullish<F> =
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   F extends FieldBuilder<any, infer TInput, any>
     ? null extends TInput
       ? false
@@ -512,11 +495,8 @@ type FieldInputExcludesNullish<F> =
  * Check if a FieldBuilder is readOnly at the type level
  */
 type IsFieldReadOnly<F> =
-  F extends FieldBuilderType<any, any, any, infer ReadOnly>
-    ? ReadOnly extends true
-      ? true
-      : false
-    : false;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+  F extends FieldBuilderType<any, any, any, infer ReadOnly> ? (ReadOnly extends true ? true : false) : false;
 
 /**
  * Compute insert data type from FMTable, making notNull fields required.
@@ -524,7 +504,9 @@ type IsFieldReadOnly<F> =
  * All other fields are optional (can be omitted).
  * readOnly fields are excluded (including primaryKey/idField since they're automatically readOnly).
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export type InsertDataFromFMTable<T extends FMTable<any, any>> =
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   T extends FMTable<infer TFields, any>
     ? {
         [K in keyof TFields as IsFieldReadOnly<TFields[K]> extends true
@@ -545,12 +527,12 @@ export type InsertDataFromFMTable<T extends FMTable<any, any>> =
  * Compute update data type from FMTable.
  * All fields are optional, but readOnly fields are excluded (including primaryKey/idField).
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export type UpdateDataFromFMTable<T extends FMTable<any, any>> =
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   T extends FMTable<infer TFields, any>
     ? {
-        [K in keyof TFields as IsFieldReadOnly<TFields[K]> extends true
-          ? never
-          : K]?: InferFieldInput<TFields[K]>;
+        [K in keyof TFields as IsFieldReadOnly<TFields[K]> extends true ? never : K]?: InferFieldInput<TFields[K]>;
       }
     : never;
 
@@ -558,22 +540,24 @@ export type UpdateDataFromFMTable<T extends FMTable<any, any>> =
  * Extract the table name type from an FMTable.
  * This is a workaround since we can't directly index Symbols in types.
  */
-export type ExtractTableName<T extends FMTable<any, any>> =
-  T extends FMTable<any, infer Name> ? Name : never;
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration, required for type inference with infer
+export type ExtractTableName<T extends FMTable<any, any>> = T extends FMTable<any, infer Name> ? Name : never;
 
 /**
  * Validates that a target table's name matches one of the source table's navigationPaths.
  * Used to ensure type-safe expand/navigate operations.
  */
 export type ValidExpandTarget<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   SourceTable extends FMTable<any, any, any> | undefined,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   TargetTable extends FMTable<any, any, any>,
-> =
-  SourceTable extends FMTable<any, any, infer SourceNavPaths>
-    ? ExtractTableName<TargetTable> extends SourceNavPaths[number]
-      ? TargetTable
-      : never
-    : TargetTable;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+> = SourceTable extends FMTable<any, any, infer SourceNavPaths>
+  ? ExtractTableName<TargetTable> extends SourceNavPaths[number]
+    ? TargetTable
+    : never
+  : TargetTable;
 
 // ============================================================================
 // Helper Functions for Accessing FMTable Internal Properties
@@ -584,6 +568,7 @@ export type ValidExpandTarget<
  * @param table - FMTable instance
  * @returns The table name
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getTableName<T extends FMTable<any, any>>(table: T): string {
   return table[FMTableName];
 }
@@ -593,9 +578,8 @@ export function getTableName<T extends FMTable<any, any>>(table: T): string {
  * @param table - FMTable instance
  * @returns The entity ID or undefined if not using entity IDs
  */
-export function getTableEntityId<T extends FMTable<any, any>>(
-  table: T,
-): string | undefined {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function getTableEntityId<T extends FMTable<any, any>>(table: T): string | undefined {
   return table[FMTableEntityId];
 }
 
@@ -604,6 +588,7 @@ export function getTableEntityId<T extends FMTable<any, any>>(
  * @param table - FMTable instance
  * @returns The StandardSchemaV1 validator record (partial - only fields with validators)
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getTableSchema<T extends FMTable<any, any>>(
   table: T,
 ): Partial<Record<keyof T[typeof FMTableFields], StandardSchemaV1>> {
@@ -615,6 +600,7 @@ export function getTableSchema<T extends FMTable<any, any>>(
  * @param table - FMTable instance
  * @returns The fields record
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getTableFields<T extends FMTable<any, any>>(table: T) {
   return table[FMTableFields];
 }
@@ -624,9 +610,8 @@ export function getTableFields<T extends FMTable<any, any>>(table: T) {
  * @param table - FMTable instance
  * @returns Array of navigation path names
  */
-export function getNavigationPaths<T extends FMTable<any, any>>(
-  table: T,
-): readonly string[] {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function getNavigationPaths<T extends FMTable<any, any>>(table: T): readonly string[] {
   return table[FMTableNavigationPaths];
 }
 
@@ -635,6 +620,7 @@ export function getNavigationPaths<T extends FMTable<any, any>>(
  * @param table - FMTable instance
  * @returns Default select configuration
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getDefaultSelect<T extends FMTable<any, any>>(table: T) {
   return table[FMTableDefaultSelect];
 }
@@ -645,6 +631,7 @@ export function getDefaultSelect<T extends FMTable<any, any>>(table: T) {
  * @param table - FMTable instance
  * @returns Base table configuration object
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getBaseTableConfig<T extends FMTable<any, any>>(table: T) {
   return table[FMTableBaseTableConfig];
 }
@@ -654,13 +641,9 @@ export function getBaseTableConfig<T extends FMTable<any, any>>(table: T) {
  * @param table - FMTable instance
  * @returns True if using entity IDs, false otherwise
  */
-export function isUsingEntityIds<T extends FMTable<any, any>>(
-  table: T,
-): boolean {
-  return (
-    table[FMTableEntityId] !== undefined &&
-    table[FMTableBaseTableConfig].fmfIds !== undefined
-  );
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function isUsingEntityIds<T extends FMTable<any, any>>(table: T): boolean {
+  return table[FMTableEntityId] !== undefined && table[FMTableBaseTableConfig].fmfIds !== undefined;
 }
 
 /**
@@ -669,10 +652,8 @@ export function isUsingEntityIds<T extends FMTable<any, any>>(
  * @param fieldName - Field name to get the ID for
  * @returns The FMFID string or the original field name
  */
-export function getFieldId<T extends FMTable<any, any>>(
-  table: T,
-  fieldName: string,
-): string {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function getFieldId<T extends FMTable<any, any>>(table: T, fieldName: string): string {
   const config = table[FMTableBaseTableConfig];
   if (config.fmfIds && fieldName in config.fmfIds) {
     const fieldId = config.fmfIds[fieldName];
@@ -689,10 +670,8 @@ export function getFieldId<T extends FMTable<any, any>>(
  * @param fieldId - The FMFID to get the field name for
  * @returns The field name or the original ID
  */
-export function getFieldName<T extends FMTable<any, any>>(
-  table: T,
-  fieldId: string,
-): string {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function getFieldName<T extends FMTable<any, any>>(table: T, fieldId: string): string {
   const config = table[FMTableBaseTableConfig];
   if (config.fmfIds) {
     for (const [fieldName, fmfId] of Object.entries(config.fmfIds)) {
@@ -709,6 +688,7 @@ export function getFieldName<T extends FMTable<any, any>>(
  * @param table - FMTable instance
  * @returns The FMTID string or the table name
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getTableId<T extends FMTable<any, any>>(table: T): string {
   return table[FMTableEntityId] ?? table[FMTableName];
 }
@@ -718,9 +698,8 @@ export function getTableId<T extends FMTable<any, any>>(table: T): string {
  * @param table - FMTable instance
  * @returns The comment string or undefined if not set
  */
-export function getTableComment<T extends FMTable<any, any>>(
-  table: T,
-): string | undefined {
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export function getTableComment<T extends FMTable<any, any>>(table: T): string | undefined {
   return table[FMTableComment];
 }
 
@@ -735,6 +714,7 @@ export function getTableComment<T extends FMTable<any, any>>(
  * @param table - FMTable instance
  * @returns Object with all columns from the table
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export function getTableColumns<T extends FMTable<any, any>>(
   table: T,
 ): ColumnMap<T[typeof FMTableFields], ExtractTableName<T>> {
@@ -745,12 +725,14 @@ export function getTableColumns<T extends FMTable<any, any>>(
 
   const columns = {} as ColumnMap<T[typeof FMTableFields], ExtractTableName<T>>;
   for (const [fieldName, builder] of Object.entries(fields)) {
+    // biome-ignore lint/suspicious/noExplicitAny: Internal property access for builder pattern
     const config = (builder as any)._getConfig();
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (columns as any)[fieldName] = new Column({
       fieldName: String(fieldName),
       entityId: baseConfig.fmfIds?.[fieldName],
-      tableName: tableName,
-      tableEntityId: tableEntityId,
+      tableName,
+      tableEntityId,
       inputValidator: config.inputValidator,
     });
   }

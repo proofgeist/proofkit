@@ -5,16 +5,8 @@ export const meta: TemplateMetadata = {
   description: "A better auth library for Next.js",
   category: "utility",
   registryType: "registry:block",
-  dependencies: [
-    "better-auth",
-    "@daveyplate/better-auth-ui",
-    "@proofkit/better-auth",
-  ],
-  registryDependencies: [
-    "{proofkit}/r/utils/t3-env",
-    "{proofkit}/r/react-email",
-    "{proofkit}/r/email/generic",
-  ],
+  dependencies: ["better-auth", "@daveyplate/better-auth-ui", "@proofkit/better-auth"],
+  registryDependencies: ["{proofkit}/r/utils/t3-env", "{proofkit}/r/react-email", "{proofkit}/r/email/generic"],
   css: { '@source "../../node_modules/@daveyplate/better-auth-ui"': {} },
   files: [
     {

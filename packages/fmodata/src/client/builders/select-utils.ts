@@ -1,6 +1,8 @@
 import type { FMTable } from "../../orm/table";
 import { transformFieldNamesArray } from "../../transform";
 
+const VALID_FIELD_NAME_REGEX = /^[a-zA-Z][a-zA-Z0-9]*$/;
+
 /**
  * Determines if a field name needs to be quoted in OData queries.
  * Per FileMaker docs: field names with special characters (spaces, underscores, etc.) must be quoted.
@@ -16,13 +18,11 @@ export function needsFieldQuoting(fieldName: string): boolean {
     return false;
   }
   // Always quote "id" as it's an OData reserved word
-  if (fieldName === "id") return true;
+  if (fieldName === "id") {
+    return true;
+  }
   // Quote if field name contains spaces, underscores, or other special characters
-  return (
-    fieldName.includes(" ") ||
-    fieldName.includes("_") ||
-    !/^[a-zA-Z][a-zA-Z0-9]*$/.test(fieldName)
-  );
+  return fieldName.includes(" ") || fieldName.includes("_") || !VALID_FIELD_NAME_REGEX.test(fieldName);
 }
 
 /**
@@ -33,22 +33,25 @@ export function needsFieldQuoting(fieldName: string): boolean {
  */
 export function formatSelectFields(
   select: string[] | readonly string[] | undefined,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table?: FMTable<any, any>,
   useEntityIds?: boolean,
 ): string {
-  if (!select || select.length === 0) return "";
+  if (!select || select.length === 0) {
+    return "";
+  }
 
   const selectArray = Array.isArray(select) ? select : [select];
 
   // Transform to field IDs if using entity IDs
   const transformedFields =
-    table && useEntityIds
-      ? transformFieldNamesArray(selectArray.map(String), table)
-      : selectArray.map(String);
+    table && useEntityIds ? transformFieldNamesArray(selectArray.map(String), table) : selectArray.map(String);
 
   return transformedFields
     .map((field) => {
-      if (needsFieldQuoting(field)) return `"${field}"`;
+      if (needsFieldQuoting(field)) {
+        return `"${field}"`;
+      }
       const encoded = encodeURIComponent(field);
       return encoded.replace(/%20/g, " ");
     })

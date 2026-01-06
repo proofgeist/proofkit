@@ -1,19 +1,10 @@
-import { CodeBlockWriter, SourceFile, VariableDeclarationKind } from "ts-morph";
-import { type BuildSchemaArgs } from "./types";
+import { type CodeBlockWriter, type SourceFile, VariableDeclarationKind } from "ts-morph";
 import { defaultEnvNames } from "./constants";
+import type { BuildSchemaArgs } from "./types";
 
-export function buildLayoutClient(
-  sourceFile: SourceFile,
-  args: BuildSchemaArgs,
-) {
-  const {
-    schemaName,
-    portalSchema,
-    envNames,
-    type,
-    webviewerScriptName,
-    layoutName,
-  } = args;
+export function buildLayoutClient(sourceFile: SourceFile, args: BuildSchemaArgs) {
+  const { schemaName, portalSchema, envNames, type, webviewerScriptName, layoutName } = args;
+
   const fmdapiImport = sourceFile.addImportDeclaration({
     moduleSpecifier: "@proofkit/fmdapi",
     namedImports: ["DataApi"],
@@ -21,15 +12,12 @@ export function buildLayoutClient(
   const hasPortals = (portalSchema ?? []).length > 0;
   if (webviewerScriptName) {
     sourceFile.addImportDeclaration({
-      moduleSpecifier: `@proofkit/webviewer/adapter`,
+      moduleSpecifier: "@proofkit/webviewer/adapter",
       namedImports: ["WebViewerAdapter"],
     });
-  } else if (typeof envNames.auth === "object" && "apiKey" in envNames.auth) {
+  } else if (typeof envNames.auth === "object" && "apiKey" in envNames.auth && envNames.auth.apiKey !== undefined) {
     // if otto, add the OttoAdapter and OttoAPIKey imports
-    fmdapiImport.addNamedImports([
-      { name: "OttoAdapter" },
-      { name: "OttoAPIKey", isTypeOnly: true },
-    ]);
+    fmdapiImport.addNamedImports([{ name: "OttoAdapter" }, { name: "OttoAPIKey", isTypeOnly: true }]);
   } else {
     fmdapiImport.addNamedImport({ name: "FetchAdapter" });
   }
@@ -65,15 +53,18 @@ export function buildLayoutClient(
       envVarName: envNames.server ?? defaultEnvNames.server,
     });
     if (typeof envNames.auth === "object") {
-      addTypeGuardStatements(sourceFile, {
-        envVarName: envNames.auth.apiKey ?? defaultEnvNames.apiKey,
-      });
-      addTypeGuardStatements(sourceFile, {
-        envVarName: envNames.auth.username ?? defaultEnvNames.username,
-      });
-      addTypeGuardStatements(sourceFile, {
-        envVarName: envNames.auth.password ?? defaultEnvNames.password,
-      });
+      if (envNames.auth.apiKey !== undefined) {
+        addTypeGuardStatements(sourceFile, {
+          envVarName: envNames.auth.apiKey,
+        });
+      } else if (envNames.auth.username !== undefined && envNames.auth.password !== undefined) {
+        addTypeGuardStatements(sourceFile, {
+          envVarName: envNames.auth.username,
+        });
+        addTypeGuardStatements(sourceFile, {
+          envVarName: envNames.auth.password,
+        });
+      }
     }
   }
 
@@ -84,24 +75,22 @@ export function buildLayoutClient(
       {
         name: "client",
         initializer: (writer) => {
+          let dataApiType: string;
+          if (type === "ts") {
+            dataApiType = hasPortals ? `DataApi<T${schemaName}, T${schemaName}Portals>(` : `DataApi<T${schemaName}>(`;
+          } else {
+            dataApiType = "DataApi(";
+          }
           writer
-            .write(
-              type === "ts"
-                ? hasPortals
-                  ? `DataApi<T${schemaName}, T${schemaName}Portals>(`
-                  : `DataApi<T${schemaName}>(`
-                : `DataApi(`,
-            )
+            .write(dataApiType)
             .inlineBlock(() => {
-              writer.write(`adapter: `);
+              writer.write("adapter: ");
               buildAdapter(writer, args);
               writer.write(",").newLine();
-              writer.write(`layout: `).quote(layoutName).write(`,`).newLine();
+              writer.write("layout: ").quote(layoutName).write(",").newLine();
               if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
                 writer.writeLine(
-                  `schema: { fieldData: Z${schemaName}${
-                    hasPortals ? `, portalData: Z${schemaName}Portals` : ""
-                  } },`,
+                  `schema: { fieldData: Z${schemaName}${hasPortals ? `, portalData: Z${schemaName}Portals` : ""} },`,
                 );
               }
             })
@@ -114,14 +103,9 @@ export function buildLayoutClient(
   //   sourceFile.addExportAssignment({ isExportEquals: true, expression: "" });
 }
 
-function addTypeGuardStatements(
-  sourceFile: SourceFile,
-  { envVarName }: { envVarName: string },
-) {
+function addTypeGuardStatements(sourceFile: SourceFile, { envVarName }: { envVarName: string }) {
   sourceFile.addStatements((writer) => {
-    writer.writeLine(
-      `if (!process.env.${envVarName}) throw new Error("Missing env var: ${envVarName}")`,
-    );
+    writer.writeLine(`if (!process.env.${envVarName}) throw new Error("Missing env var: ${envVarName}")`);
   });
 }
 
@@ -129,46 +113,43 @@ function buildAdapter(writer: CodeBlockWriter, args: BuildSchemaArgs): string {
   const { envNames, webviewerScriptName } = args;
 
   if (webviewerScriptName) {
-    writer.write(`new WebViewerAdapter({scriptName: `);
+    writer.write("new WebViewerAdapter({scriptName: ");
     writer.quote(webviewerScriptName);
     writer.write("})");
-  } else if (typeof envNames.auth === "object" && "apiKey" in envNames.auth) {
+  } else if (typeof envNames.auth === "object" && "apiKey" in envNames.auth && envNames.auth.apiKey !== undefined) {
     writer
-      .write(`new OttoAdapter(`)
+      .write("new OttoAdapter(")
       .inlineBlock(() => {
-        if (typeof envNames.auth !== "object" || !("apiKey" in envNames.auth))
+        if (typeof envNames.auth !== "object" || !("apiKey" in envNames.auth) || envNames.auth.apiKey === undefined) {
           return;
-        writer
-          .write(
-            `auth: { apiKey: process.env.${envNames.auth.apiKey} as OttoAPIKey }`,
-          )
-          .write(",")
-          .newLine();
+        }
+        writer.write(`auth: { apiKey: process.env.${envNames.auth.apiKey} as OttoAPIKey }`).write(",").newLine();
         writer.write(`db: process.env.${envNames.db}`).write(",").newLine();
-        writer
-          .write(`server: process.env.${envNames.server}`)
-          .write(",")
-          .newLine();
+        writer.write(`server: process.env.${envNames.server}`).write(",").newLine();
       })
-      .write(`)`);
+      .write(")");
   } else {
     writer
-      .write(`new FetchAdapter(`)
+      .write("new FetchAdapter(")
       .inlineBlock(() => {
-        if (typeof envNames.auth !== "object" || !("apiKey" in envNames.auth))
+        if (
+          typeof envNames.auth !== "object" ||
+          !("username" in envNames.auth) ||
+          envNames.auth.username === undefined
+        ) {
           return;
+        }
         writer
-          .writeLine(`auth:`)
+          .writeLine("auth:")
           .inlineBlock(() => {
             if (
               typeof envNames.auth !== "object" ||
-              !("username" in envNames.auth)
-            )
+              !("username" in envNames.auth) ||
+              envNames.auth.username === undefined
+            ) {
               return;
-            writer
-              .write(`username: process.env.${envNames.auth.username}`)
-              .write(",")
-              .newLine();
+            }
+            writer.write(`username: process.env.${envNames.auth.username}`).write(",").newLine();
             writer.write(`password: process.env.${envNames.auth.password}`);
           })
           .write(",")

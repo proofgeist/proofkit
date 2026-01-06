@@ -1,8 +1,8 @@
+import type { InternalLogger } from "../../logger";
 import type { FMTable } from "../../orm/table";
 import { ExpandBuilder } from "./expand-builder";
-import type { ExpandConfig } from "./shared-types";
 import { formatSelectFields } from "./select-utils";
-import { InternalLogger } from "../../logger";
+import type { ExpandConfig } from "./shared-types";
 
 /**
  * Builds OData query string for $select and $expand parameters.
@@ -14,6 +14,7 @@ import { InternalLogger } from "../../logger";
 export function buildSelectExpandQueryString(config: {
   selectedFields?: string[];
   expandConfigs: ExpandConfig[];
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table?: FMTable<any, any>;
   useEntityIds: boolean;
   logger: InternalLogger;
@@ -29,11 +30,7 @@ export function buildSelectExpandQueryString(config: {
     //   mutate/expand an explicit `$select` (e.g. when the user calls `.select({ ... })`).
     // - If system columns are desired with `.select()`, they must be explicitly included via
     //   the `systemColumns` argument, which will already have added them to `selectedFields`.
-    const selectString = formatSelectFields(
-      config.selectedFields,
-      config.table,
-      config.useEntityIds,
-    );
+    const selectString = formatSelectFields(config.selectedFields, config.table, config.useEntityIds);
     if (selectString) {
       parts.push(`$select=${selectString}`);
     }

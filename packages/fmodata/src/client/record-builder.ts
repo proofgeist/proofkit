@@ -1,51 +1,42 @@
+/** biome-ignore-all lint/complexity/noBannedTypes: Empty object type represents no expands by default */
+import type { FFetchOptions } from "@fetchkit/ffetch";
+import { createLogger, type InternalLogger } from "../logger";
+import type { Column } from "../orm/column";
+import type { ExtractTableName, FMTable, InferSchemaOutputFromFMTable, ValidExpandTarget } from "../orm/table";
+import { getNavigationPaths, getTableName } from "../orm/table";
 import type {
-  ExecutionContext,
-  ExecutableBuilder,
-  Result,
-  ODataFieldResponse,
-  ExecuteOptions,
   ConditionallyWithODataAnnotations,
   ConditionallyWithSpecialColumns,
-  NormalizeIncludeSpecialColumns,
+  ExecutableBuilder,
   ExecuteMethodOptions,
+  ExecuteOptions,
+  ExecutionContext,
+  NormalizeIncludeSpecialColumns,
+  ODataFieldResponse,
+  Result,
 } from "../types";
-import type {
-  FMTable,
-  InferSchemaOutputFromFMTable,
-  ValidExpandTarget,
-  ExtractTableName,
-  ValidateNoContainerFields,
-} from "../orm/table";
-import { getTableName, getNavigationPaths } from "../orm/table";
-import { safeJsonParse } from "./sanitize-json";
-import { parseErrorResponse } from "./error-parser";
-import { QueryBuilder } from "./query-builder";
-import { type FFetchOptions } from "@fetchkit/ffetch";
-import { isColumn, type Column } from "../orm/column";
 import {
-  type ExpandConfig,
-  type ExpandedRelations,
-  ExpandBuilder,
-  resolveTableId,
-  mergeExecuteOptions,
-  processODataResponse,
-  getSchemaFromTable,
-  processSelectWithRenames,
   buildSelectExpandQueryString,
   createODataRequest,
+  ExpandBuilder,
+  type ExpandConfig,
+  type ExpandedRelations,
+  getSchemaFromTable,
+  mergeExecuteOptions,
+  processODataResponse,
+  processSelectWithRenames,
+  resolveTableId,
 } from "./builders/index";
-import {
-  type ResolveExpandedRelations,
-  type ResolveExpandType,
-  type SystemColumnsOption,
-  type SystemColumnsFromOption,
-} from "./query/types";
-import { createLogger, InternalLogger, Logger } from "../logger";
+import { parseErrorResponse } from "./error-parser";
+import type { ResolveExpandedRelations, SystemColumnsFromOption, SystemColumnsOption } from "./query/types";
+import { QueryBuilder } from "./query-builder";
+import { safeJsonParse } from "./sanitize-json";
 
 /**
  * Extract the value type from a Column.
  * This uses the phantom type stored in Column to get the actual value type.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
 type ExtractColumnType<C> = C extends Column<infer T, any> ? T : never;
 
 /**
@@ -53,48 +44,51 @@ type ExtractColumnType<C> = C extends Column<infer T, any> ? T : never;
  * For each key in the select object, extract the type from the corresponding Column.
  */
 type MapSelectToReturnType<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
   TSelect extends Record<string, Column<any, any, any, any>>,
-  TSchema extends Record<string, any>,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any schema shape
+  _TSchema extends Record<string, any>,
 > = {
   [K in keyof TSelect]: ExtractColumnType<TSelect[K]>;
 };
 
 // Return type for RecordBuilder execute
 export type RecordReturnType<
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any schema shape
   Schema extends Record<string, any>,
   IsSingleField extends boolean,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
   FieldColumn extends Column<any, any, any, any> | undefined,
-  Selected extends
-    | keyof Schema
-    | Record<string, Column<any, any, ExtractTableName<FMTable<any, any>>>>,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration, accepts any FMTable
+  Selected extends keyof Schema | Record<string, Column<any, any, ExtractTableName<FMTable<any, any>>>>,
   Expands extends ExpandedRelations,
   SystemCols extends SystemColumnsOption | undefined = undefined,
 > = IsSingleField extends true
-  ? FieldColumn extends Column<infer TOutput, any, any, any>
+  ? // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
+    FieldColumn extends Column<infer TOutput, any, any, any>
     ? TOutput
     : never
   : // Use tuple wrapping [Selected] extends [...] to prevent distribution over unions
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     [Selected] extends [Record<string, Column<any, any, any, any>>]
-    ? MapSelectToReturnType<Selected, Schema> &
-        ResolveExpandedRelations<Expands> &
-        SystemColumnsFromOption<SystemCols>
+    ? MapSelectToReturnType<Selected, Schema> & ResolveExpandedRelations<Expands> & SystemColumnsFromOption<SystemCols>
     : // Use tuple wrapping to prevent distribution over union of keys
       [Selected] extends [keyof Schema]
-      ? Pick<Schema, Selected> &
-          ResolveExpandedRelations<Expands> &
-          SystemColumnsFromOption<SystemCols>
+      ? Pick<Schema, Selected> & ResolveExpandedRelations<Expands> & SystemColumnsFromOption<SystemCols>
       : never;
 
 export class RecordBuilder<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration, default allows untyped tables
   Occ extends FMTable<any, any> = FMTable<any, any>,
   IsSingleField extends boolean = false,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
   FieldColumn extends Column<any, any, any, any> | undefined = undefined,
   Selected extends
     | keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>
-    | Record<
-        string,
-        Column<any, any, ExtractTableName<NonNullable<Occ>>>
-      > = keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+    | Record<string, Column<any, any, ExtractTableName<NonNullable<Occ>>>> = keyof InferSchemaOutputFromFMTable<
+    NonNullable<Occ>
+  >,
   Expands extends ExpandedRelations = {},
   DatabaseIncludeSpecialColumns extends boolean = false,
   SystemCols extends SystemColumnsOption | undefined = undefined,
@@ -110,29 +104,30 @@ export class RecordBuilder<
       >
     >
 {
-  private table: Occ;
-  private databaseName: string;
-  private context: ExecutionContext;
-  private recordId: string | number;
-  private operation?: "getSingleField" | "navigate";
-  private operationParam?: string;
-  private operationColumn?: Column<any, any, any, any>;
-  private isNavigateFromEntitySet?: boolean;
-  private navigateRelation?: string;
-  private navigateSourceTableName?: string;
+  private readonly table: Occ;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly recordId: string | number;
+  private readonly operation?: "getSingleField" | "navigate";
+  private readonly operationParam?: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  private readonly operationColumn?: Column<any, any, any, any>;
+  private readonly isNavigateFromEntitySet?: boolean;
+  private readonly navigateRelation?: string;
+  private readonly navigateSourceTableName?: string;
 
-  private databaseUseEntityIds: boolean;
-  private databaseIncludeSpecialColumns: boolean;
+  private readonly databaseUseEntityIds: boolean;
+  private readonly databaseIncludeSpecialColumns: boolean;
 
   // Properties for select/expand support
-  private selectedFields?: string[];
-  private expandConfigs: ExpandConfig[] = [];
+  private readonly selectedFields?: string[];
+  private readonly expandConfigs: ExpandConfig[] = [];
   // Mapping from field names to output keys (for renamed fields in select)
-  private fieldMapping?: Record<string, string>;
+  private readonly fieldMapping?: Record<string, string>;
   // System columns requested via select() second argument
-  private systemColumns?: SystemColumnsOption;
+  private readonly systemColumns?: SystemColumnsOption;
 
-  private logger: InternalLogger;
+  private readonly logger: InternalLogger;
 
   constructor(config: {
     occurrence: Occ;
@@ -147,17 +142,14 @@ export class RecordBuilder<
     this.context = config.context;
     this.recordId = config.recordId;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns =
-      config.databaseIncludeSpecialColumns ?? false;
+    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
     this.logger = config.context?._getLogger?.() ?? createLogger();
   }
 
   /**
    * Helper to merge database-level useEntityIds and includeSpecialColumns with per-request options
    */
-  private mergeExecuteOptions(
-    options?: RequestInit & FFetchOptions & ExecuteOptions,
-  ): RequestInit &
+  private mergeExecuteOptions(options?: RequestInit & FFetchOptions & ExecuteOptions): RequestInit &
     FFetchOptions & {
       useEntityIds?: boolean;
       includeSpecialColumns?: boolean;
@@ -165,8 +157,7 @@ export class RecordBuilder<
     const merged = mergeExecuteOptions(options, this.databaseUseEntityIds);
     return {
       ...merged,
-      includeSpecialColumns:
-        options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
+      includeSpecialColumns: options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
     };
   }
 
@@ -178,12 +169,7 @@ export class RecordBuilder<
     if (!this.table) {
       throw new Error("Table occurrence is required");
     }
-    return resolveTableId(
-      this.table,
-      getTableName(this.table),
-      this.context,
-      useEntityIds,
-    );
+    return resolveTableId(this.table, getTableName(this.table), this.context, useEntityIds);
   }
 
   /**
@@ -193,24 +179,14 @@ export class RecordBuilder<
   private cloneWithChanges<
     NewSelected extends
       | keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>
-      | Record<
-          string,
-          Column<any, any, ExtractTableName<NonNullable<Occ>>>
-        > = Selected,
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+      | Record<string, Column<any, any, ExtractTableName<NonNullable<Occ>>>> = Selected,
     NewSystemCols extends SystemColumnsOption | undefined = SystemCols,
   >(changes: {
     selectedFields?: string[];
     fieldMapping?: Record<string, string>;
     systemColumns?: NewSystemCols;
-  }): RecordBuilder<
-    Occ,
-    false,
-    FieldColumn,
-    NewSelected,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    NewSystemCols
-  > {
+  }): RecordBuilder<Occ, false, FieldColumn, NewSelected, Expands, DatabaseIncludeSpecialColumns, NewSystemCols> {
     const newBuilder = new RecordBuilder<
       Occ,
       false,
@@ -227,24 +203,24 @@ export class RecordBuilder<
       databaseUseEntityIds: this.databaseUseEntityIds,
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
-    newBuilder.selectedFields = changes.selectedFields ?? this.selectedFields;
-    newBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
-    newBuilder.systemColumns =
-      changes.systemColumns !== undefined
-        ? changes.systemColumns
-        : this.systemColumns;
-    newBuilder.expandConfigs = [...this.expandConfigs];
+    // Use type assertion to allow assignment to readonly properties on new instance
+
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+    const mutableBuilder = newBuilder as any;
+    mutableBuilder.selectedFields = changes.selectedFields ?? this.selectedFields;
+    mutableBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
+    mutableBuilder.systemColumns = changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns;
+    mutableBuilder.expandConfigs = [...this.expandConfigs];
     // Preserve navigation context
-    newBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
-    newBuilder.navigateRelation = this.navigateRelation;
-    newBuilder.navigateSourceTableName = this.navigateSourceTableName;
-    newBuilder.operationColumn = this.operationColumn;
+    mutableBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
+    mutableBuilder.navigateRelation = this.navigateRelation;
+    mutableBuilder.navigateSourceTableName = this.navigateSourceTableName;
+    mutableBuilder.operationColumn = this.operationColumn;
     return newBuilder;
   }
 
-  getSingleField<
-    TColumn extends Column<any, any, ExtractTableName<NonNullable<Occ>>, any>,
-  >(
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  getSingleField<TColumn extends Column<any, any, ExtractTableName<NonNullable<Occ>>, any>>(
     column: TColumn,
   ): RecordBuilder<
     Occ,
@@ -257,9 +233,7 @@ export class RecordBuilder<
     // Runtime validation: ensure column is from the correct table
     const tableName = getTableName(this.table);
     if (!column.isFromTable(tableName)) {
-      throw new Error(
-        `Column ${column.toString()} is not from table ${tableName}`,
-      );
+      throw new Error(`Column ${column.toString()} is not from table ${tableName}`);
     }
 
     const newBuilder = new RecordBuilder<
@@ -277,15 +251,17 @@ export class RecordBuilder<
       databaseUseEntityIds: this.databaseUseEntityIds,
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
-    newBuilder.operation = "getSingleField";
-    newBuilder.operationColumn = column;
-    newBuilder.operationParam = column.getFieldIdentifier(
-      this.databaseUseEntityIds,
-    );
+    // Use type assertion to allow assignment to readonly properties on new instance
+
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+    const mutableBuilder = newBuilder as any;
+    mutableBuilder.operation = "getSingleField";
+    mutableBuilder.operationColumn = column;
+    mutableBuilder.operationParam = column.getFieldIdentifier(this.databaseUseEntityIds);
     // Preserve navigation context
-    newBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
-    newBuilder.navigateRelation = this.navigateRelation;
-    newBuilder.navigateSourceTableName = this.navigateSourceTableName;
+    mutableBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
+    mutableBuilder.navigateRelation = this.navigateRelation;
+    mutableBuilder.navigateSourceTableName = this.navigateSourceTableName;
     return newBuilder;
   }
 
@@ -312,29 +288,15 @@ export class RecordBuilder<
    * @returns RecordBuilder with updated selected fields
    */
   select<
-    TSelect extends Record<
-      string,
-      Column<any, any, ExtractTableName<Occ>, false>
-    >,
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+    TSelect extends Record<string, Column<any, any, ExtractTableName<Occ>, false>>,
     TSystemCols extends SystemColumnsOption = {},
   >(
     fields: TSelect,
     systemColumns?: TSystemCols,
-  ): RecordBuilder<
-    Occ,
-    false,
-    FieldColumn,
-    TSelect,
-    Expands,
-    DatabaseIncludeSpecialColumns,
-    TSystemCols
-  > {
+  ): RecordBuilder<Occ, false, FieldColumn, TSelect, Expands, DatabaseIncludeSpecialColumns, TSystemCols> {
     const tableName = getTableName(this.table);
-    const { selectedFields, fieldMapping } = processSelectWithRenames(
-      fields,
-      tableName,
-      this.logger,
-    );
+    const { selectedFields, fieldMapping } = processSelectWithRenames(fields, tableName, this.logger);
 
     // Add system columns to selectedFields if requested
     const finalSelectedFields = [...selectedFields];
@@ -347,9 +309,10 @@ export class RecordBuilder<
 
     return this.cloneWithChanges({
       selectedFields: finalSelectedFields,
-      fieldMapping:
-        Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
+      fieldMapping: Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       systemColumns: systemColumns as any,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
     }) as any;
   }
 
@@ -369,24 +332,21 @@ export class RecordBuilder<
    * ```
    */
   expand<
+    // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
     TargetTable extends FMTable<any, any>,
     TSelected extends
       | keyof InferSchemaOutputFromFMTable<TargetTable>
       | Record<
           string,
+          // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
           Column<any, any, ExtractTableName<TargetTable>>
         > = keyof InferSchemaOutputFromFMTable<TargetTable>,
     TNestedExpands extends ExpandedRelations = {},
   >(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
     callback?: (
-      builder: QueryBuilder<
-        TargetTable,
-        keyof InferSchemaOutputFromFMTable<TargetTable>,
-        false,
-        false,
-        {}
-      >,
+      builder: QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>,
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
     ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands>,
   ): RecordBuilder<
     Occ,
@@ -404,14 +364,8 @@ export class RecordBuilder<
     SystemCols
   > {
     // Create new builder with updated types
-    const newBuilder = new RecordBuilder<
-      Occ,
-      false,
-      FieldColumn,
-      Selected,
-      any,
-      DatabaseIncludeSpecialColumns
-    >({
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any ExpandedRelations
+    const newBuilder = new RecordBuilder<Occ, false, FieldColumn, Selected, any, DatabaseIncludeSpecialColumns>({
       occurrence: this.table,
       databaseName: this.databaseName,
       context: this.context,
@@ -420,45 +374,29 @@ export class RecordBuilder<
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
+    // Use type assertion to allow assignment to readonly properties on new instance
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+    const mutableBuilder = newBuilder as any;
     // Copy existing state
-    newBuilder.selectedFields = this.selectedFields;
-    newBuilder.fieldMapping = this.fieldMapping;
-    newBuilder.systemColumns = this.systemColumns;
-    newBuilder.expandConfigs = [...this.expandConfigs];
-    newBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
-    newBuilder.navigateRelation = this.navigateRelation;
-    newBuilder.navigateSourceTableName = this.navigateSourceTableName;
-    newBuilder.operationColumn = this.operationColumn;
+    mutableBuilder.selectedFields = this.selectedFields;
+    mutableBuilder.fieldMapping = this.fieldMapping;
+    mutableBuilder.systemColumns = this.systemColumns;
+    mutableBuilder.expandConfigs = [...this.expandConfigs];
+    mutableBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
+    mutableBuilder.navigateRelation = this.navigateRelation;
+    mutableBuilder.navigateSourceTableName = this.navigateSourceTableName;
+    mutableBuilder.operationColumn = this.operationColumn;
 
     // Use ExpandBuilder.processExpand to handle the expand logic
-    const expandBuilder = new ExpandBuilder(
-      this.databaseUseEntityIds,
-      this.logger,
-    );
-    type TargetBuilder = QueryBuilder<
-      TargetTable,
-      keyof InferSchemaOutputFromFMTable<TargetTable>,
-      false,
-      false,
-      {}
-    >;
-    const expandConfig = expandBuilder.processExpand<
-      TargetTable,
-      TargetBuilder
-    >(
+    const expandBuilder = new ExpandBuilder(this.databaseUseEntityIds, this.logger);
+    type TargetBuilder = QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>;
+    const expandConfig = expandBuilder.processExpand<TargetTable, TargetBuilder>(
       targetTable,
       this.table ?? undefined,
       callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
-        new QueryBuilder<
-          TargetTable,
-          any,
-          any,
-          any,
-          any,
-          DatabaseIncludeSpecialColumns,
-          undefined
-        >({
+        // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
+        new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
           occurrence: targetTable,
           databaseName: this.databaseName,
           context: this.context,
@@ -467,10 +405,12 @@ export class RecordBuilder<
         }),
     );
 
-    newBuilder.expandConfigs.push(expandConfig);
+    mutableBuilder.expandConfigs.push(expandConfig);
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed as expand changes generic parameters in complex way that TypeScript cannot infer
     return newBuilder as any;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   navigate<TargetTable extends FMTable<any, any>>(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
   ): QueryBuilder<
@@ -496,15 +436,8 @@ export class RecordBuilder<
     }
 
     // Create QueryBuilder with target table
-    const builder = new QueryBuilder<
-      TargetTable,
-      any,
-      any,
-      any,
-      any,
-      DatabaseIncludeSpecialColumns,
-      undefined
-    >({
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
+    const builder = new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
       occurrence: targetTable,
       databaseName: this.databaseName,
       context: this.context,
@@ -519,11 +452,7 @@ export class RecordBuilder<
     // If this RecordBuilder came from a navigated EntitySet, we need to preserve that base path
     let sourceTableName: string;
     let baseRelation: string | undefined;
-    if (
-      this.isNavigateFromEntitySet &&
-      this.navigateSourceTableName &&
-      this.navigateRelation
-    ) {
+    if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
       // Build the base path: /sourceTable/relation('recordId')/newRelation
       sourceTableName = this.navigateSourceTableName;
       baseRelation = this.navigateRelation;
@@ -533,14 +462,17 @@ export class RecordBuilder<
       if (!this.table) {
         throw new Error("Table occurrence is required for navigation");
       }
-      sourceTableName = resolveTableId(
-        this.table,
-        getTableName(this.table),
-        this.context,
-        this.databaseUseEntityIds,
-      );
+      sourceTableName = resolveTableId(this.table, getTableName(this.table), this.context, this.databaseUseEntityIds);
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+    (builder as any).navigation = {
+      recordId: this.recordId,
+      relation: relationId,
+      sourceTableName,
+      baseRelation,
+    };
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (builder as any).navigation = {
       recordId: this.recordId,
       relation: relationId,
@@ -554,13 +486,9 @@ export class RecordBuilder<
   /**
    * Builds the complete query string including $select and $expand parameters.
    */
-  private buildQueryString(
-    includeSpecialColumns?: boolean,
-    useEntityIds?: boolean,
-  ): string {
+  private buildQueryString(includeSpecialColumns?: boolean, useEntityIds?: boolean): string {
     // Use merged includeSpecialColumns if provided, otherwise use database-level default
-    const finalIncludeSpecialColumns =
-      includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
+    const finalIncludeSpecialColumns = includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
     // Use merged useEntityIds if provided, otherwise use database-level default
     const finalUseEntityIds = useEntityIds ?? this.databaseUseEntityIds;
 
@@ -589,18 +517,14 @@ export class RecordBuilder<
             SystemCols
           >,
           // Use the merged value: if explicitly provided in options, use that; otherwise use database default
-          NormalizeIncludeSpecialColumns<
-            EO["includeSpecialColumns"],
-            DatabaseIncludeSpecialColumns
-          >,
+          NormalizeIncludeSpecialColumns<EO["includeSpecialColumns"], DatabaseIncludeSpecialColumns>,
           // Check if select was applied: if Selected is Record (object select) or a subset of keys, select was applied
           IsSingleField extends true
             ? false // Single field operations don't include special columns
-            : Selected extends Record<string, Column<any, any, any>>
+            : // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+              Selected extends Record<string, Column<any, any, any>>
               ? true
-              : Selected extends keyof InferSchemaOutputFromFMTable<
-                    NonNullable<Occ>
-                  >
+              : Selected extends keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>
                 ? false
                 : true
         >,
@@ -611,18 +535,12 @@ export class RecordBuilder<
     let url: string;
 
     // Build the base URL depending on whether this came from a navigated EntitySet
-    if (
-      this.isNavigateFromEntitySet &&
-      this.navigateSourceTableName &&
-      this.navigateRelation
-    ) {
+    if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
       // From navigated EntitySet: /sourceTable/relation('recordId')
       url = `/${this.databaseName}/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
     } else {
       // Normal record: /tableName('recordId') - use FMTID if configured
-      const tableId = this.getTableId(
-        options?.useEntityIds ?? this.databaseUseEntityIds,
-      );
+      const tableId = this.getTableId(options?.useEntityIds ?? this.databaseUseEntityIds);
       url = `/${this.databaseName}/${tableId}('${this.recordId}')`;
     }
 
@@ -632,10 +550,7 @@ export class RecordBuilder<
       url += `/${this.operationParam}`;
     } else {
       // Add query string for select/expand (only when not getting a single field)
-      const queryString = this.buildQueryString(
-        mergedOptions.includeSpecialColumns,
-        mergedOptions.useEntityIds,
-      );
+      const queryString = this.buildQueryString(mergedOptions.includeSpecialColumns, mergedOptions.useEntityIds);
       url += queryString;
     }
     const result = await this.context._makeRequest(url, mergedOptions);
@@ -644,24 +559,21 @@ export class RecordBuilder<
       return { data: undefined, error: result.error };
     }
 
-    let response = result.data;
+    const response = result.data;
 
     // Handle single field operation
     if (this.operation === "getSingleField") {
       // Single field returns a JSON object with @context and value
       // The type is extracted from the Column stored in FieldColumn generic
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
       const fieldResponse = response as ODataFieldResponse<any>;
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type extraction
       return { data: fieldResponse.value as any, error: undefined };
     }
 
     // Use shared response processor
-    const expandBuilder = new ExpandBuilder(
-      mergedOptions.useEntityIds ?? false,
-      this.logger,
-    );
-    const expandValidationConfigs = expandBuilder.buildValidationConfigs(
-      this.expandConfigs,
-    );
+    const expandBuilder = new ExpandBuilder(mergedOptions.useEntityIds ?? false, this.logger);
+    const expandValidationConfigs = expandBuilder.buildValidationConfigs(this.expandConfigs);
 
     return processODataResponse(response, {
       table: this.table,
@@ -676,15 +588,12 @@ export class RecordBuilder<
     });
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
     let url: string;
 
     // Build the base URL depending on whether this came from a navigated EntitySet
-    if (
-      this.isNavigateFromEntitySet &&
-      this.navigateSourceTableName &&
-      this.navigateRelation
-    ) {
+    if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
       // From navigated EntitySet: /sourceTable/relation('recordId')
       url = `/${this.databaseName}/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
     } else {
@@ -695,9 +604,7 @@ export class RecordBuilder<
 
     if (this.operation === "getSingleField" && this.operationColumn) {
       // Use the column's getFieldIdentifier to support entity IDs
-      url += `/${this.operationColumn.getFieldIdentifier(
-        this.databaseUseEntityIds,
-      )}`;
+      url += `/${this.operationColumn.getFieldIdentifier(this.databaseUseEntityIds)}`;
     } else if (this.operation === "getSingleField" && this.operationParam) {
       // Fallback for backwards compatibility (shouldn't happen in normal flow)
       url += `/${this.operationParam}`;
@@ -721,11 +628,7 @@ export class RecordBuilder<
     let path: string;
 
     // Build the path depending on navigation context
-    if (
-      this.isNavigateFromEntitySet &&
-      this.navigateSourceTableName &&
-      this.navigateRelation
-    ) {
+    if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
       path = `/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
     } else {
       // Use getTableId to respect entity ID settings (same as getRequestConfig)
@@ -735,7 +638,8 @@ export class RecordBuilder<
 
     if (this.operation === "getSingleField" && this.operationColumn) {
       return `${path}/${this.operationColumn.getFieldIdentifier(useEntityIds)}`;
-    } else if (this.operation === "getSingleField" && this.operationParam) {
+    }
+    if (this.operation === "getSingleField" && this.operationParam) {
       // Fallback for backwards compatibility (shouldn't happen in normal flow)
       return `${path}/${this.operationParam}`;
     }
@@ -767,10 +671,7 @@ export class RecordBuilder<
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const tableName = this.table ? getTableName(this.table) : "unknown";
-      const error = await parseErrorResponse(
-        response,
-        response.url || `/${this.databaseName}/${tableName}`,
-      );
+      const error = await parseErrorResponse(response, response.url || `/${this.databaseName}/${tableName}`);
       return { data: undefined, error };
     }
 
@@ -781,19 +682,16 @@ export class RecordBuilder<
     if (this.operation === "getSingleField") {
       // Single field returns a JSON object with @context and value
       // The type is extracted from the Column stored in FieldColumn generic
+      // biome-ignore lint/suspicious/noExplicitAny: Type parameter inferred from FieldColumn generic
       const fieldResponse = rawResponse as ODataFieldResponse<any>;
+      // biome-ignore lint/suspicious/noExplicitAny: Type parameter inferred from FieldColumn generic
       return { data: fieldResponse.value as any, error: undefined };
     }
 
     // Use shared response processor
     const mergedOptions = this.mergeExecuteOptions(options);
-    const expandBuilder = new ExpandBuilder(
-      mergedOptions.useEntityIds ?? false,
-      this.logger,
-    );
-    const expandValidationConfigs = expandBuilder.buildValidationConfigs(
-      this.expandConfigs,
-    );
+    const expandBuilder = new ExpandBuilder(mergedOptions.useEntityIds ?? false, this.logger);
+    const expandValidationConfigs = expandBuilder.buildValidationConfigs(this.expandConfigs);
 
     return processODataResponse(rawResponse, {
       table: this.table,

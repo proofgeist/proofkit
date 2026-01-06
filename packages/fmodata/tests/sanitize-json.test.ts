@@ -5,12 +5,9 @@
  * invalid JSON responses containing unquoted `?` characters as field values.
  */
 
-import { describe, it, expect } from "vitest";
-import {
-  sanitizeFileMakerJson,
-  safeJsonParse,
-} from "@proofkit/fmodata/client/sanitize-json";
+import { safeJsonParse, sanitizeFileMakerJson } from "@proofkit/fmodata/client/sanitize-json";
 import { ResponseParseError } from "@proofkit/fmodata/errors";
+import { describe, expect, it } from "vitest";
 
 describe("sanitizeFileMakerJson", () => {
   describe("basic sanitization", () => {
@@ -103,10 +100,8 @@ describe("sanitizeFileMakerJson", () => {
     });
 
     it("should handle complex nested structures", () => {
-      const input =
-        '{"users": [{"name": "John", "age": ?}, {"name": ?, "age": 30}]}';
-      const expected =
-        '{"users": [{"name": "John", "age": null}, {"name": null, "age": 30}]}';
+      const input = '{"users": [{"name": "John", "age": ?}, {"name": ?, "age": 30}]}';
+      const expected = '{"users": [{"name": "John", "age": null}, {"name": null, "age": 30}]}';
       expect(sanitizeFileMakerJson(input)).toBe(expected);
     });
   });
@@ -151,8 +146,7 @@ describe("sanitizeFileMakerJson", () => {
     });
 
     it("should sanitize response with all fields as ?", () => {
-      const input =
-        '{"@odata.context":"$metadata#Test","value":[{"field1":?,"field2":?,"field3":?}]}';
+      const input = '{"@odata.context":"$metadata#Test","value":[{"field1":?,"field2":?,"field3":?}]}';
 
       const result = sanitizeFileMakerJson(input);
 
@@ -171,7 +165,7 @@ describe("sanitizeFileMakerJson", () => {
 describe("safeJsonParse", () => {
   it("should parse valid JSON from Response", async () => {
     const data = { field: "value" };
-    const response = new Response(JSON.stringify(data));
+    const response = Response.json(data);
     const result = await safeJsonParse(response);
     expect(result).toEqual(data);
   });
@@ -184,8 +178,7 @@ describe("safeJsonParse", () => {
   });
 
   it("should handle complex nested invalid JSON", async () => {
-    const invalidJson =
-      '{"users":[{"name":"John","age":?},{"name":?,"age":30}]}';
+    const invalidJson = '{"users":[{"name":"John","age":?},{"name":?,"age":30}]}';
     const response = new Response(invalidJson);
     const result = await safeJsonParse(response);
     expect(result).toEqual({

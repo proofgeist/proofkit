@@ -1,4 +1,5 @@
 import type { TemplateMetadata } from "@proofkit/registry";
+import type { LucideProps } from "lucide-react";
 import { Anchor, File, Mail, Package, Wrench } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -7,7 +8,7 @@ type Category = TemplateMetadata["category"];
 export interface CategoryConfig {
   category: Category;
   name: string;
-  icon: ComponentType<Record<string, never>>;
+  icon: ComponentType<LucideProps>;
 }
 
 export const categoryConfigs: CategoryConfig[] = [

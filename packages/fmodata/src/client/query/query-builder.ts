@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/useReadonlyClassProperties: properties are reassigned in cloneWithChanges() */
 import type { FFetchOptions } from "@fetchkit/ffetch";
 import buildQuery, { type QueryOptions } from "odata-query";
 import { RecordCountMismatchError } from "../../errors";
@@ -31,32 +32,33 @@ import {
   mergeExecuteOptions,
   processQueryResponse,
   processSelectWithRenames,
-  resolveTableId,
 } from "../builders/index";
 import { parseErrorResponse } from "../error-parser";
 import { safeJsonParse } from "../sanitize-json";
 import type { QueryReturnType, SystemColumnsOption, TypeSafeOrderBy } from "./types";
 import { type NavigationConfig, QueryUrlBuilder } from "./url-builder";
 
-// Re-export QueryReturnType for backward compatibility
-export type { QueryReturnType };
+export type { ExpandedRelations } from "../builders/index";
+// Re-export types for backward compatibility
+export type { QueryReturnType, SystemColumnsOption, TypeSafeOrderBy } from "./types";
 
 /**
  * Default maximum number of records to return in a list query.
  * This prevents stack overflow issues with large datasets while still
  * allowing substantial data retrieval. Users can override with .top().
  */
-const DEFAULT_TOP = 1000;
-
-export type { TypeSafeOrderBy, ExpandedRelations };
+const _DEFAULT_TOP = 1000;
 
 export class QueryBuilder<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   Occ extends FMTable<any, any>,
   Selected extends
     | keyof InferSchemaOutputFromFMTable<Occ>
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     | Record<string, Column<any, any, ExtractTableName<Occ>>> = keyof InferSchemaOutputFromFMTable<Occ>,
   SingleMode extends "exact" | "maybe" | false = false,
   IsCount extends boolean = false,
+  // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
   Expands extends ExpandedRelations = {},
   DatabaseIncludeSpecialColumns extends boolean = false,
   SystemCols extends SystemColumnsOption | undefined = undefined,
@@ -65,23 +67,24 @@ export class QueryBuilder<
       QueryReturnType<InferSchemaOutputFromFMTable<Occ>, Selected, SingleMode, IsCount, Expands, SystemCols>
     >
 {
-  private queryOptions: Partial<QueryOptions<InferSchemaOutputFromFMTable<Occ>>> = {};
-  private expandConfigs: ExpandConfig[] = [];
-  private singleMode: SingleMode = false as SingleMode;
-  private isCountMode = false as IsCount;
-  private occurrence: Occ;
-  private databaseName: string;
-  private context: ExecutionContext;
+  // These properties are reassigned in cloneWithChanges() on new instances, not on this
+  private queryOptions: Partial<QueryOptions<InferSchemaOutputFromFMTable<Occ>>>;
+  private expandConfigs: ExpandConfig[];
+  private singleMode: SingleMode;
+  private isCountMode: IsCount;
+  private readonly occurrence: Occ;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
   private navigation?: NavigationConfig;
-  private databaseUseEntityIds: boolean;
-  private databaseIncludeSpecialColumns: boolean;
-  private expandBuilder: ExpandBuilder;
+  private readonly databaseUseEntityIds: boolean;
+  private readonly databaseIncludeSpecialColumns: boolean;
+  private readonly expandBuilder: ExpandBuilder;
   private urlBuilder: QueryUrlBuilder;
   // Mapping from field names to output keys (for renamed fields in select)
   private fieldMapping?: Record<string, string>;
   // System columns requested via select() second argument
   private systemColumns?: SystemColumnsOption;
-  private logger: InternalLogger;
+  private readonly logger: InternalLogger;
 
   constructor(config: {
     occurrence: Occ;
@@ -98,6 +101,10 @@ export class QueryBuilder<
     this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
     this.expandBuilder = new ExpandBuilder(this.databaseUseEntityIds, this.logger);
     this.urlBuilder = new QueryUrlBuilder(this.databaseName, this.occurrence, this.context);
+    this.queryOptions = {};
+    this.expandConfigs = [];
+    this.singleMode = false as SingleMode;
+    this.isCountMode = false as IsCount;
   }
 
   /**
@@ -116,27 +123,13 @@ export class QueryBuilder<
   }
 
   /**
-   * Gets the FMTable instance
-   */
-  private getTable(): FMTable<any, any> | undefined {
-    return this.occurrence;
-  }
-
-  /**
-   * Gets the table ID (FMTID) if using entity IDs, otherwise returns the table name
-   * @param useEntityIds - Optional override for entity ID usage
-   */
-  private getTableIdOrName(useEntityIds?: boolean): string {
-    return resolveTableId(this.occurrence, getTableName(this.occurrence), this.context, useEntityIds);
-  }
-
-  /**
    * Creates a new QueryBuilder with modified configuration.
    * Used by single(), maybeSingle(), count(), and select() to create new instances.
    */
   private cloneWithChanges<
     NewSelected extends
       | keyof InferSchemaOutputFromFMTable<Occ>
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
       | Record<string, Column<any, any, ExtractTableName<Occ>>> = Selected,
     NewSingle extends "exact" | "maybe" | false = SingleMode,
     NewCount extends boolean = IsCount,
@@ -169,7 +162,9 @@ export class QueryBuilder<
       ...changes.queryOptions,
     };
     newBuilder.expandConfigs = [...this.expandConfigs];
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
     newBuilder.singleMode = (changes.singleMode ?? this.singleMode) as any;
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
     newBuilder.isCountMode = (changes.isCountMode ?? this.isCountMode) as any;
     newBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
     newBuilder.systemColumns = changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns;
@@ -202,7 +197,9 @@ export class QueryBuilder<
    * @returns QueryBuilder with updated selected fields
    */
   select<
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     TSelect extends Record<string, Column<any, any, ExtractTableName<Occ>, false>>,
+    // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no system columns by default
     TSystemCols extends SystemColumnsOption = {},
   >(
     fields: TSelect,
@@ -221,11 +218,13 @@ export class QueryBuilder<
     }
 
     return this.cloneWithChanges({
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       selectedFields: fields as any,
       queryOptions: {
         select: finalSelectedFields,
       },
       fieldMapping: Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       systemColumns: systemColumns as any,
     });
   }
@@ -282,11 +281,14 @@ export class QueryBuilder<
     ...orderByArgs:
       | [
           | TypeSafeOrderBy<InferSchemaOutputFromFMTable<Occ>>
+          // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
           | Column<any, any, ExtractTableName<Occ>>
           | OrderByExpression<ExtractTableName<Occ>>,
         ]
       | [
+          // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
           Column<any, any, ExtractTableName<Occ>>,
+          // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
           ...Array<Column<any, any, ExtractTableName<Occ>> | OrderByExpression<ExtractTableName<Occ>>>,
         ]
   ): QueryBuilder<Occ, Selected, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, SystemCols> {
@@ -368,9 +370,10 @@ export class QueryBuilder<
           this.queryOptions.orderBy = `${transformOrderByField(field, this.occurrence)} ${direction}`;
         } else {
           // Array of tuples: [[field, dir], [field, dir], ...]
-          this.queryOptions.orderBy = (orderBy as Array<[any, "asc" | "desc"]>).map(([fieldOrCol, direction]) => {
+          // biome-ignore lint/suspicious/noExplicitAny: Dynamic orderBy tuple type from user input
+          this.queryOptions.orderBy = (orderBy as [any, "asc" | "desc"][]).map(([fieldOrCol, direction]) => {
             const field = isColumn(fieldOrCol) ? fieldOrCol.fieldName : String(fieldOrCol);
-            const transformedField = transformOrderByField(field, this.occurrence!);
+            const transformedField = this.occurrence ? transformOrderByField(field, this.occurrence) : field;
             return `${transformedField} ${direction}`;
           });
         }
@@ -378,28 +381,26 @@ export class QueryBuilder<
         // Single field name (string)
         this.queryOptions.orderBy = transformOrderByField(String(orderBy), this.occurrence);
       }
-    } else {
-      // No occurrence/baseTable - pass through as-is
-      if (Array.isArray(orderBy)) {
-        if (
-          orderBy.length === 2 &&
-          (typeof orderBy[0] === "string" || isColumn(orderBy[0])) &&
-          (orderBy[1] === "asc" || orderBy[1] === "desc")
-        ) {
-          // Single tuple: [field, direction] or [column, direction]
-          const field = isColumn(orderBy[0]) ? orderBy[0].fieldName : orderBy[0];
-          const direction = orderBy[1] as "asc" | "desc";
-          this.queryOptions.orderBy = `${field} ${direction}`;
-        } else {
-          // Array of tuples
-          this.queryOptions.orderBy = (orderBy as Array<[any, "asc" | "desc"]>).map(([fieldOrCol, direction]) => {
-            const field = isColumn(fieldOrCol) ? fieldOrCol.fieldName : String(fieldOrCol);
-            return `${field} ${direction}`;
-          });
-        }
+    } else if (Array.isArray(orderBy)) {
+      if (
+        orderBy.length === 2 &&
+        (typeof orderBy[0] === "string" || isColumn(orderBy[0])) &&
+        (orderBy[1] === "asc" || orderBy[1] === "desc")
+      ) {
+        // Single tuple: [field, direction] or [column, direction]
+        const field = isColumn(orderBy[0]) ? orderBy[0].fieldName : orderBy[0];
+        const direction = orderBy[1] as "asc" | "desc";
+        this.queryOptions.orderBy = `${field} ${direction}`;
       } else {
-        this.queryOptions.orderBy = orderBy;
+        // Array of tuples
+        // biome-ignore lint/suspicious/noExplicitAny: Dynamic orderBy tuple type from user input
+        this.queryOptions.orderBy = (orderBy as [any, "asc" | "desc"][]).map(([fieldOrCol, direction]) => {
+          const field = isColumn(fieldOrCol) ? fieldOrCol.fieldName : String(fieldOrCol);
+          return `${field} ${direction}`;
+        });
       }
+    } else {
+      this.queryOptions.orderBy = orderBy;
     }
     return this;
   }
@@ -419,18 +420,23 @@ export class QueryBuilder<
   }
 
   expand<
+    // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
     TargetTable extends FMTable<any, any>,
     TSelected extends
       | keyof InferSchemaOutputFromFMTable<TargetTable>
       | Record<
           string,
+          // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
           Column<any, any, ExtractTableName<TargetTable>>
         > = keyof InferSchemaOutputFromFMTable<TargetTable>,
+    // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no nested expands by default
     TNestedExpands extends ExpandedRelations = {},
   >(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
     callback?: (
+      // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands in initial builder
       builder: QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>,
+      // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
     ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands>,
   ): QueryBuilder<
     Occ,
@@ -453,6 +459,7 @@ export class QueryBuilder<
       keyof InferSchemaOutputFromFMTable<TargetTable>,
       false,
       false,
+      // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands in new builder
       {},
       DatabaseIncludeSpecialColumns
     >;
@@ -461,6 +468,7 @@ export class QueryBuilder<
       this.occurrence,
       callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
+        // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
         new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
           occurrence: targetTable,
           databaseName: this.databaseName,
@@ -471,6 +479,7 @@ export class QueryBuilder<
     );
 
     this.expandConfigs.push(expandConfig);
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
     return this as any;
   }
 
@@ -496,17 +505,16 @@ export class QueryBuilder<
     // Build query without expand and select (we'll add them manually if using entity IDs)
     const queryOptionsWithoutExpandAndSelect = { ...this.queryOptions };
     const originalSelect = queryOptionsWithoutExpandAndSelect.select;
-    delete queryOptionsWithoutExpandAndSelect.expand;
-    delete queryOptionsWithoutExpandAndSelect.select;
+    queryOptionsWithoutExpandAndSelect.expand = undefined;
+    queryOptionsWithoutExpandAndSelect.select = undefined;
 
     let queryString = buildQuery(queryOptionsWithoutExpandAndSelect);
 
     // Use shared helper for select/expand portion
-    const selectArray = originalSelect
-      ? Array.isArray(originalSelect)
-        ? originalSelect.map(String)
-        : [String(originalSelect)]
-      : undefined;
+    let selectArray: string[] | undefined;
+    if (originalSelect) {
+      selectArray = Array.isArray(originalSelect) ? originalSelect.map(String) : [String(originalSelect)];
+    }
 
     // Use merged includeSpecialColumns if provided, otherwise use database-level default
     const finalIncludeSpecialColumns = includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
@@ -544,6 +552,7 @@ export class QueryBuilder<
           // Use the merged value: if explicitly provided in options, use that; otherwise use database default
           NormalizeIncludeSpecialColumns<EO["includeSpecialColumns"], DatabaseIncludeSpecialColumns>,
           // Check if select was applied: if Selected is Record (object select) or a subset of keys, select was applied
+          // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
           Selected extends Record<string, Column<any, any, any>>
             ? true
             : Selected extends keyof InferSchemaOutputFromFMTable<Occ>
@@ -572,6 +581,7 @@ export class QueryBuilder<
 
       // OData returns count as a string, convert to number
       const count = typeof result.data === "string" ? Number(result.data) : result.data;
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
       return { data: count as number, error: undefined } as any;
     }
 
@@ -588,11 +598,12 @@ export class QueryBuilder<
     }
 
     // Check if select was applied (runtime check)
-    const hasSelect = this.queryOptions.select !== undefined;
+    const _hasSelect = this.queryOptions.select !== undefined;
 
     return processQueryResponse(result.data, {
       occurrence: this.occurrence,
       singleMode: this.singleMode,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       queryOptions: this.queryOptions as any,
       expandConfigs: this.expandConfigs,
       skipValidation: options?.skipValidation,
@@ -612,6 +623,7 @@ export class QueryBuilder<
     });
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
     const queryString = this.buildQueryString();
     const url = this.urlBuilder.build(queryString, {
@@ -651,6 +663,7 @@ export class QueryBuilder<
       // Return empty list for list queries, null for single queries
       if (this.singleMode !== false) {
         if (this.singleMode === "maybe") {
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
           return { data: null as any, error: undefined };
         }
         return {
@@ -658,17 +671,19 @@ export class QueryBuilder<
           error: new RecordCountMismatchError("one", 0),
         };
       }
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
       return { data: [] as any, error: undefined };
     }
 
     // Parse the response body (using safeJsonParse to handle FileMaker's invalid JSON with unquoted ? values)
-    let rawData;
+    let rawData: unknown;
     try {
       rawData = await safeJsonParse(response);
     } catch (err) {
       // Check if it's an empty body error (common with 204 responses)
       if (err instanceof SyntaxError && response.status === 204) {
         // Handled above, but just in case
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         return { data: [] as any, error: undefined };
       }
       return {
@@ -677,6 +692,7 @@ export class QueryBuilder<
           name: "ResponseParseError",
           message: `Failed to parse response JSON: ${err instanceof Error ? err.message : "Unknown error"}`,
           timestamp: new Date(),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
         } as any,
       };
     }
@@ -688,17 +704,19 @@ export class QueryBuilder<
           name: "ResponseError",
           message: "Response body was empty or null",
           timestamp: new Date(),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
         } as any,
       };
     }
 
     const mergedOptions = this.mergeExecuteOptions(options);
     // Check if select was applied (runtime check)
-    const hasSelect = this.queryOptions.select !== undefined;
+    const _hasSelect = this.queryOptions.select !== undefined;
 
     return processQueryResponse(rawData, {
       occurrence: this.occurrence,
       singleMode: this.singleMode,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       queryOptions: this.queryOptions as any,
       expandConfigs: this.expandConfigs,
       skipValidation: options?.skipValidation,

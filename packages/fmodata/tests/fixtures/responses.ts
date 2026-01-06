@@ -21,7 +21,7 @@
  * You MUST NOT manually edit this file. Any changes will be overwritten by the capture script.
  */
 
-export type MockResponse = {
+export interface MockResponse {
   url: string;
   method: string;
   status: number;
@@ -29,8 +29,8 @@ export type MockResponse = {
     "content-type"?: string;
     location?: string;
   };
-  response: any;
-};
+  response: unknown;
+}
 
 export type MockResponses = Record<string, MockResponse>;
 
@@ -64,8 +64,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        'https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts("name","PrimaryKey")',
+      "@context": 'https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts("name","PrimaryKey")',
       value: [
         {
           "@id":
@@ -159,8 +158,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
       value: [
         {
           "@id":
@@ -249,8 +247,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
       value: [
         {
           "@id":
@@ -292,8 +289,7 @@ export const mockResponses = {
     status: 204,
     headers: {
       "content-type": "application/json;charset=utf-8",
-      location:
-        "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts(ROWID=11167)",
+      location: "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts(ROWID=11167)",
     },
     response: null,
   },
@@ -308,10 +304,8 @@ export const mockResponses = {
         "https://acme-dev.ottomatic.cloud/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
-      "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
+      "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
       "@editLink":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D')",
       PrimaryKey: "A51EAF8A-68DF-426D-9683-AFF5AAB3CD6D",
@@ -334,10 +328,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
-      "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
+      "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
       "@editLink":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
       PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
@@ -362,8 +354,7 @@ export const mockResponses = {
     response: {
       error: {
         code: "8309",
-        message:
-          "The field named 'InvalidFieldName' does not exist in a specified table (9)",
+        message: "The field named 'InvalidFieldName' does not exist in a specified table (9)",
       },
     },
   },
@@ -378,8 +369,7 @@ export const mockResponses = {
     response: {
       error: {
         code: "8309",
-        message:
-          "The field named 'InvalidFieldName' does not exist in a specified table (9)",
+        message: "The field named 'InvalidFieldName' does not exist in a specified table (9)",
       },
     },
   },
@@ -392,10 +382,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
-      "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
+      "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
       "@editLink":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('00000000-0000-0000-0000-000000000000')",
       PrimaryKey: "00000000-0000-0000-0000-000000000000",
@@ -432,12 +420,10 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#users",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#users",
       value: [
         {
-          "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
+          "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
           "@editLink":
             "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
           id: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
@@ -460,8 +446,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
       value: [
         {
           "@id":
@@ -481,8 +466,7 @@ export const mockResponses = {
             {
               error: {
                 code: "8309",
-                message:
-                  'FQL0009/(1:20): The column named "not_real_field" does not exist in table "users".',
+                message: 'FQL0009/(1:20): The column named "not_real_field" does not exist in table "users".',
               },
             },
           ],
@@ -499,10 +483,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
-      "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
+      "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
       "@editLink":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
       PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
@@ -516,8 +498,7 @@ export const mockResponses = {
       my_calc: "you betcha",
       users: [
         {
-          "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
+          "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
           "@editLink":
             "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
           id: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
@@ -540,10 +521,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
-      "@id":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts/$entity",
+      "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
       "@editLink":
         "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')",
       PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
@@ -557,8 +536,7 @@ export const mockResponses = {
       my_calc: "you betcha",
       users: [
         {
-          "@id":
-            "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
+          "@id": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
           "@editLink":
             "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/users('1A269FA3-82E6-465A-94FA-39EE3F2F9B5D')",
           id: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
@@ -590,8 +568,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
       value: [
         {
           "@id":
@@ -675,8 +652,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook Processor",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook Processor",
       Status: "ACTIVE",
       WebHook: [
         {
@@ -791,8 +767,7 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      "@context":
-        "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook",
+      "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook",
       webHookID: 1,
       tableName: "contacts",
       url: "https://example.com/webhook",

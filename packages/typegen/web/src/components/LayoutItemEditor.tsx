@@ -1,25 +1,13 @@
-import { useFormContext } from "react-hook-form";
-import { Button } from "./ui/button";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
-import { Input } from "./ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { SwitchField } from "./ui/switch-field";
-import { SingleConfig } from "../lib/config-utils";
-import { LayoutSelector } from "./LayoutSelector";
-import { InfoTooltip } from "./InfoTooltip";
 import { CircleMinus } from "lucide-react";
+import { useFormContext } from "react-hook-form";
+import type { SingleConfig } from "../lib/config-utils";
+import { InfoTooltip } from "./InfoTooltip";
+import { LayoutSelector } from "./LayoutSelector";
+import { Button } from "./ui/button";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { SwitchField } from "./ui/switch-field";
 
 interface LayoutItemEditorProps {
   configIndex: number;
@@ -27,41 +15,22 @@ interface LayoutItemEditorProps {
   onRemove: () => void;
 }
 
-export function LayoutItemEditor({
-  configIndex,
-  layoutIndex,
-  onRemove,
-}: LayoutItemEditorProps) {
+export function LayoutItemEditor({ configIndex, layoutIndex, onRemove }: LayoutItemEditorProps) {
   const { control, watch } = useFormContext<{ config: SingleConfig[] }>();
-  const schemaName = watch(
-    `config.${configIndex}.layouts.${layoutIndex}.schemaName`,
-  );
-  const layoutName = watch(
-    `config.${configIndex}.layouts.${layoutIndex}.layoutName`,
-  );
+  const schemaName = watch(`config.${configIndex}.layouts.${layoutIndex}.schemaName`);
+  const layoutName = watch(`config.${configIndex}.layouts.${layoutIndex}.layoutName`);
 
   return (
-    <div className="rounded-lg border p-4 space-y-4">
+    <div className="space-y-4 rounded-lg border p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-base font-medium">
-            {schemaName || `Layout ${layoutIndex + 1}`}
-          </h4>
-          <div className="text-sm text-muted-foreground">
-            {layoutName ? (
-              layoutName
-            ) : (
-              <span className="italic">No layout selected</span>
-            )}
+          <h4 className="font-medium text-base">{schemaName || `Layout ${layoutIndex + 1}`}</h4>
+          <div className="text-muted-foreground text-sm">
+            {layoutName ? layoutName : <span className="italic">No layout selected</span>}
           </div>
         </div>
-        <Button
-          type="button"
-          variant="destructive"
-          appearance="ghost"
-          onClick={onRemove}
-        >
-          <CircleMinus className="w-4 h-4" />
+        <Button appearance="ghost" onClick={onRemove} type="button" variant="destructive">
+          <CircleMinus className="h-4 w-4" />
           Remove Layout
         </Button>
       </div>
@@ -70,21 +39,16 @@ export function LayoutItemEditor({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <LayoutSelector
             configIndex={configIndex}
-            path={
-              `config.${configIndex}.layouts.${layoutIndex}.layoutName` as const
-            }
+            path={`config.${configIndex}.layouts.${layoutIndex}.layoutName` as const}
           />
 
           <FormField
             control={control}
-            name={
-              `config.${configIndex}.layouts.${layoutIndex}.schemaName` as const
-            }
+            name={`config.${configIndex}.layouts.${layoutIndex}.schemaName` as const}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Schema Name{" "}
-                  <InfoTooltip label="The name of the type or client in your codebase." />
+                  Schema Name <InfoTooltip label="The name of the type or client in your codebase." />
                 </FormLabel>
                 <FormControl>
                   <Input placeholder="Schema name" {...field} />
@@ -98,9 +62,7 @@ export function LayoutItemEditor({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <FormField
             control={control}
-            name={
-              `config.${configIndex}.layouts.${layoutIndex}.valueLists` as const
-            }
+            name={`config.${configIndex}.layouts.${layoutIndex}.valueLists` as const}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
@@ -109,10 +71,8 @@ export function LayoutItemEditor({
                 </FormLabel>
                 <FormControl>
                   <Select
+                    onValueChange={(val) => field.onChange(val === "__default__" ? undefined : val)}
                     value={field.value ?? "__default__"}
-                    onValueChange={(val) =>
-                      field.onChange(val === "__default__" ? undefined : val)
-                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select value lists" />
@@ -132,17 +92,15 @@ export function LayoutItemEditor({
 
           <FormField
             control={control}
-            name={
-              `config.${configIndex}.layouts.${layoutIndex}.strictNumbers` as const
-            }
+            name={`config.${configIndex}.layouts.${layoutIndex}.strictNumbers` as const}
             render={({ field }) => (
               <FormItem>
                 <FormControl>
                   <SwitchField
-                    label="Strict Numbers"
-                    checked={field.value || false}
-                    onCheckedChange={field.onChange}
+                    checked={field.value ?? false}
                     infoTooltip="If true, number fields will be typed as `number | null`. It's false by default because sometimes very large number will be returned as scientific notation via the Data API and therefore the type will be `number | string`."
+                    label="Strict Numbers"
+                    onCheckedChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />
@@ -152,9 +110,7 @@ export function LayoutItemEditor({
 
           <FormField
             control={control}
-            name={
-              `config.${configIndex}.layouts.${layoutIndex}.generateClient` as const
-            }
+            name={`config.${configIndex}.layouts.${layoutIndex}.generateClient` as const}
             render={({ field }) => {
               const isDefault = field.value === undefined;
               return (
@@ -162,13 +118,6 @@ export function LayoutItemEditor({
                   <FormLabel>Generate Client</FormLabel>
                   <FormControl>
                     <Select
-                      value={
-                        field.value === undefined
-                          ? "__default__"
-                          : field.value === true
-                            ? "true"
-                            : "false"
-                      }
                       onValueChange={(val) => {
                         if (val === "__default__") {
                           field.onChange(undefined);
@@ -176,21 +125,18 @@ export function LayoutItemEditor({
                           field.onChange(val === "true");
                         }
                       }}
-                    >
-                      <SelectTrigger
-                        className={
-                          isDefault
-                            ? "[&>span]:italic [&>span]:text-muted-foreground"
-                            : ""
+                      value={(() => {
+                        if (field.value === undefined) {
+                          return "__default__";
                         }
-                      >
+                        return field.value === true ? "true" : "false";
+                      })()}
+                    >
+                      <SelectTrigger className={isDefault ? "[&>span]:text-muted-foreground [&>span]:italic" : ""}>
                         <SelectValue placeholder="Select generate option" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem
-                          value="__default__"
-                          className="italic text-muted-foreground"
-                        >
+                        <SelectItem className="text-muted-foreground italic" value="__default__">
                           Use Top-Level Setting
                         </SelectItem>
                         <SelectItem value="true">Generate Client</SelectItem>

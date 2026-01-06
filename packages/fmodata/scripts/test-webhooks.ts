@@ -8,14 +8,10 @@
  *   bun run scripts/test-webhooks.ts
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { FMServerConnection, fmTableOccurrence, textField } from "@proofkit/fmodata";
 import { config } from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-import {
-  FMServerConnection,
-  fmTableOccurrence,
-  textField,
-} from "@proofkit/fmodata";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -39,11 +35,12 @@ if (!database) {
 }
 
 // Use API key if available, otherwise username/password
-const auth = apiKey
-  ? { apiKey }
-  : username && password
-    ? { username, password }
-    : null;
+let auth: { apiKey: string } | { username: string; password: string } | null = null;
+if (apiKey) {
+  auth = { apiKey };
+} else if (username && password) {
+  auth = { username, password };
+}
 
 if (!auth) {
   throw new Error(
@@ -61,12 +58,23 @@ async function testWebhookMethods() {
   console.log("FileMaker OData Webhook API Test");
   console.log("=================================\n");
 
+  if (!serverUrl) {
+    throw new Error("serverUrl is required");
+  }
+
+  if (!auth) {
+    throw new Error("auth is required");
+  }
+
   const connection = new FMServerConnection({
     serverUrl,
     auth,
   });
 
-  const db = connection.database(database!);
+  if (!database) {
+    throw new Error("database is required");
+  }
+  const db = connection.database(database);
 
   try {
     // Test 1: List all webhooks
@@ -81,8 +89,8 @@ async function testWebhookMethods() {
       console.log("\nTypeScript type should be:");
       console.log("  { Status: string; WebHook: Array<{ webHookID: number; tableName: string; url: string; ... }> }");
       console.log("\n");
-    } catch (error: any) {
-      console.log("❌ list() failed:", error.message);
+    } catch (error: unknown) {
+      console.log("❌ list() failed:", error instanceof Error ? error.message : String(error));
       console.log("Error:", error);
       console.log("\n");
     }
@@ -103,26 +111,27 @@ async function testWebhookMethods() {
       console.log(JSON.stringify(addResult, null, 2));
       console.log("\nTypeScript type should be:");
       console.log("  { webHookResult: { webHookID: number } }");
-      
+
       // Try to extract webhook ID from nested structure
       if (typeof addResult === "object" && addResult !== null) {
-        if ("webHookResult" in addResult) {
-          const webHookResult = (addResult as any).webHookResult;
+        const result = addResult as Record<string, unknown>;
+        if ("webHookResult" in result) {
+          const webHookResult = result.webHookResult as Record<string, unknown>;
           if (webHookResult && "webHookID" in webHookResult) {
-            webhookId = webHookResult.webHookID;
+            webhookId = webHookResult.webHookID as number;
           }
-        } else if ("id" in addResult) {
-          webhookId = (addResult as any).id;
-        } else if ("ID" in addResult) {
-          webhookId = (addResult as any).ID;
-        } else if ("webhookId" in addResult) {
-          webhookId = (addResult as any).webhookId;
+        } else if ("id" in result) {
+          webhookId = result.id as number;
+        } else if ("ID" in result) {
+          webhookId = result.ID as number;
+        } else if ("webhookId" in result) {
+          webhookId = result.webhookId as number;
         }
       }
       console.log("Extracted webhook ID:", webhookId);
       console.log("\n");
-    } catch (error: any) {
-      console.log("❌ add() failed:", error.message);
+    } catch (error: unknown) {
+      console.log("❌ add() failed:", error instanceof Error ? error.message : String(error));
       console.log("Error:", error);
       console.log("\n");
     }
@@ -138,10 +147,12 @@ async function testWebhookMethods() {
         console.log("Result structure:");
         console.log(JSON.stringify(getResult, null, 2));
         console.log("\nTypeScript type should be:");
-        console.log("  { webHookID: number; tableName: string; url: string; headers?: Record<string, string>; notifySchemaChanges: boolean; select: string; filter: string; pendingOperations: unknown[] }");
+        console.log(
+          "  { webHookID: number; tableName: string; url: string; headers?: Record<string, string>; notifySchemaChanges: boolean; select: string; filter: string; pendingOperations: unknown[] }",
+        );
         console.log("\n");
-      } catch (error: any) {
-        console.log("❌ get() failed:", error.message);
+      } catch (error: unknown) {
+        console.log("❌ get() failed:", error instanceof Error ? error.message : String(error));
         console.log("Error:", error);
         console.log("\n");
       }
@@ -161,8 +172,8 @@ async function testWebhookMethods() {
         console.log("Is Array:", Array.isArray(invokeResult));
         console.log("Result:", JSON.stringify(invokeResult, null, 2));
         console.log("\n");
-      } catch (error: any) {
-        console.log("❌ invoke() failed:", error.message);
+      } catch (error: unknown) {
+        console.log("❌ invoke() failed:", error instanceof Error ? error.message : String(error));
         console.log("Error:", error);
         console.log("\n");
       }
@@ -177,8 +188,8 @@ async function testWebhookMethods() {
         console.log("Is Array:", Array.isArray(invokeResult));
         console.log("Result:", JSON.stringify(invokeResult, null, 2));
         console.log("\n");
-      } catch (error: any) {
-        console.log("❌ invoke() failed:", error.message);
+      } catch (error: unknown) {
+        console.log("❌ invoke() failed:", error instanceof Error ? error.message : String(error));
         console.log("Error:", error);
         console.log("\n");
       }
@@ -196,8 +207,8 @@ async function testWebhookMethods() {
         console.log("✅ remove() succeeded");
         console.log("(remove returns void, no data)");
         console.log("\n");
-      } catch (error: any) {
-        console.log("❌ remove() failed:", error.message);
+      } catch (error: unknown) {
+        console.log("❌ remove() failed:", error instanceof Error ? error.message : String(error));
         console.log("Error:", error);
         console.log("\n");
       }
@@ -210,18 +221,17 @@ async function testWebhookMethods() {
     // Test 7: Try to get a webhook that doesn't exist (error case)
     console.log("=== Test 7: Get Non-Existent Webhook (Error Case) ===\n");
     try {
-      await db.webhook.get(99999);
+      await db.webhook.get(99_999);
       console.log("⚠️  get() succeeded (unexpected - webhook should not exist)");
       console.log("\n");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("✅ get() failed as expected");
-      console.log("Error type:", error.constructor.name);
+      console.log("Error type:", error?.constructor?.name ?? typeof error);
       console.log("Error message:", error.message);
       console.log("Error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       console.log("\n");
     }
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("\n❌ Test script failed:", error);
     throw error;
   }
@@ -234,4 +244,3 @@ testWebhookMethods().catch((error) => {
   console.error("Test script failed:", error);
   process.exit(1);
 });
-

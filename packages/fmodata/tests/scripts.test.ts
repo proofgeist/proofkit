@@ -4,7 +4,7 @@
  * Tests for running FileMaker scripts via the OData API.
  */
 
-import { describe, it, expectTypeOf } from "vitest";
+import { describe, expectTypeOf, it } from "vitest";
 import { z } from "zod/v4";
 import { jsonCodec } from "./utils/helpers";
 import { createMockClient } from "./utils/test-setup";
@@ -20,7 +20,9 @@ describe("scripts", () => {
 
     const resp = db.runScript("script name");
     // Catch the promise to prevent unhandled rejection (this is a type-only test)
-    resp.catch(() => {});
+    resp.catch(() => {
+      // Ignore errors in type-only test
+    });
     expectTypeOf(resp).resolves.toEqualTypeOf<{
       resultCode: number;
       result?: string;

@@ -1,67 +1,61 @@
-import type { ExecutionContext } from "../types";
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { QueryBuilder } from "./query/index";
-import { RecordBuilder } from "./record-builder";
-import { InsertBuilder } from "./insert-builder";
-import { DeleteBuilder } from "./delete-builder";
-import { UpdateBuilder } from "./update-builder";
-import { Database } from "./database";
+import { createLogger, type InternalLogger } from "../logger";
+import type { FieldBuilder } from "../orm/field-builders";
 import type {
+  ColumnMap,
   FMTable,
   InferSchemaOutputFromFMTable,
   InsertDataFromFMTable,
   UpdateDataFromFMTable,
   ValidExpandTarget,
-  ColumnMap,
 } from "../orm/table";
-import {
-  FMTable as FMTableClass,
-  getDefaultSelect,
-  getTableName,
-  getTableColumns,
-  getTableSchema,
-} from "../orm/table";
-import type { FieldBuilder } from "../orm/field-builders";
-import { createLogger, InternalLogger } from "../logger";
+import { FMTable as FMTableClass, getDefaultSelect, getTableColumns, getTableName, getTableSchema } from "../orm/table";
+import type { ExecutionContext } from "../types";
+import type { Database } from "./database";
+import { DeleteBuilder } from "./delete-builder";
+import { InsertBuilder } from "./insert-builder";
+import { QueryBuilder } from "./query/index";
+import { RecordBuilder } from "./record-builder";
+import { UpdateBuilder } from "./update-builder";
 
 // Helper type to extract defaultSelect from an FMTable
 // Since TypeScript can't extract Symbol-indexed properties at the type level,
 // we simplify to return keyof InferSchemaFromFMTable<O> when O is an FMTable.
 // The actual defaultSelect logic is handled at runtime.
-type ExtractDefaultSelect<O> =
-  O extends FMTable<any, any> ? keyof InferSchemaOutputFromFMTable<O> : never;
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+type _ExtractDefaultSelect<O> = O extends FMTable<any, any> ? keyof InferSchemaOutputFromFMTable<O> : never;
 
 /**
  * Helper type to extract properly-typed columns from an FMTable.
  * This preserves the specific column types instead of widening to `any`.
  */
 type ExtractColumnsFromOcc<T> =
+  // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   T extends FMTable<infer TFields, infer TName, any>
-    ? TFields extends Record<string, FieldBuilder<any, any, any, any>>
+    ? // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FieldBuilder configuration
+      TFields extends Record<string, FieldBuilder<any, any, any, any>>
       ? ColumnMap<TFields, TName>
       : never
     : never;
 
-export class EntitySet<
-  Occ extends FMTable<any, any>,
-  DatabaseIncludeSpecialColumns extends boolean = false,
-> {
-  private occurrence: Occ;
-  private databaseName: string;
-  private context: ExecutionContext;
-  private database: Database<DatabaseIncludeSpecialColumns>; // Database instance for accessing occurrences
-  private isNavigateFromEntitySet?: boolean;
-  private navigateRelation?: string;
-  private navigateSourceTableName?: string;
-  private navigateBasePath?: string; // Full base path for chained navigations
-  private databaseUseEntityIds: boolean;
-  private databaseIncludeSpecialColumns: DatabaseIncludeSpecialColumns;
-  private logger: InternalLogger;
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColumns extends boolean = false> {
+  private readonly occurrence: Occ;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly database: Database<DatabaseIncludeSpecialColumns>; // Database instance for accessing occurrences
+  private readonly isNavigateFromEntitySet?: boolean;
+  private readonly navigateRelation?: string;
+  private readonly navigateSourceTableName?: string;
+  private readonly navigateBasePath?: string; // Full base path for chained navigations
+  private readonly databaseUseEntityIds: boolean;
+  private readonly databaseIncludeSpecialColumns: DatabaseIncludeSpecialColumns;
+  private readonly logger: InternalLogger;
 
   constructor(config: {
     occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
+    // biome-ignore lint/suspicious/noExplicitAny: Database type is optional and can be any Database instance
     database?: any;
   }) {
     this.occurrence = config.occurrence;
@@ -69,19 +63,16 @@ export class EntitySet<
     this.context = config.context;
     this.database = config.database;
     // Get useEntityIds from database if available, otherwise default to false
-    this.databaseUseEntityIds =
-      (config.database as any)?._useEntityIds ?? false;
+    this.databaseUseEntityIds = config.database?._getUseEntityIds ?? false;
     // Get includeSpecialColumns from database if available, otherwise default to false
-    this.databaseIncludeSpecialColumns =
-      (config.database as any)?._includeSpecialColumns ?? false;
+    this.databaseIncludeSpecialColumns = (config.database?._getIncludeSpecialColumns ??
+      false) as DatabaseIncludeSpecialColumns;
     this.logger = config.context?._getLogger?.() ?? createLogger();
   }
 
   // Type-only method to help TypeScript infer the schema from table
-  static create<
-    Occ extends FMTable<any, any>,
-    DatabaseIncludeSpecialColumns extends boolean = false,
-  >(config: {
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  static create<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColumns extends boolean = false>(config: {
     occurrence: Occ;
     databaseName: string;
     context: ExecutionContext;
@@ -95,19 +86,14 @@ export class EntitySet<
     });
   }
 
-  list(): QueryBuilder<
-    Occ,
-    keyof InferSchemaOutputFromFMTable<Occ>,
-    false,
-    false,
-    {},
-    DatabaseIncludeSpecialColumns
-  > {
+  // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
+  list(): QueryBuilder<Occ, keyof InferSchemaOutputFromFMTable<Occ>, false, false, {}, DatabaseIncludeSpecialColumns> {
     const builder = new QueryBuilder<
       Occ,
       keyof InferSchemaOutputFromFMTable<Occ>,
       false,
       false,
+      // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
       {},
       DatabaseIncludeSpecialColumns
     >({
@@ -123,42 +109,37 @@ export class EntitySet<
       // FMTable - access via helper functions
       const defaultSelectValue = getDefaultSelect(this.occurrence);
       // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
-      const schema = getTableSchema(this.occurrence);
+      const _schema = getTableSchema(this.occurrence);
 
       if (defaultSelectValue === "schema") {
         // Use getTableColumns to get all columns and select them
         // This is equivalent to select(getTableColumns(occurrence))
         // Cast to the declared return type - runtime behavior handles the actual selection
-        const allColumns = getTableColumns(
-          this.occurrence,
-        ) as ExtractColumnsFromOcc<Occ>;
+        const allColumns = getTableColumns(this.occurrence) as ExtractColumnsFromOcc<Occ>;
 
         // Include special columns if enabled at database level
-        const systemColumns = this.databaseIncludeSpecialColumns
-          ? { ROWID: true, ROWMODID: true }
-          : undefined;
+        const systemColumns = this.databaseIncludeSpecialColumns ? { ROWID: true, ROWMODID: true } : undefined;
 
-        return builder
-          .select(allColumns, systemColumns)
-          .top(1000) as QueryBuilder<
+        return builder.select(allColumns, systemColumns).top(1000) as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
           false,
           false,
+          // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
           {},
           DatabaseIncludeSpecialColumns,
           typeof systemColumns
         >;
-      } else if (typeof defaultSelectValue === "object") {
+      }
+      if (typeof defaultSelectValue === "object") {
         // defaultSelectValue is a select object (Record<string, Column>)
         // Cast to the declared return type - runtime behavior handles the actual selection
-        return builder
-          .select(defaultSelectValue as ExtractColumnsFromOcc<Occ>)
-          .top(1000) as QueryBuilder<
+        return builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>).top(1000) as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
           false,
           false,
+          // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
           {},
           DatabaseIncludeSpecialColumns
         >;
@@ -167,11 +148,8 @@ export class EntitySet<
     }
 
     // Propagate navigation context if present
-    if (
-      this.isNavigateFromEntitySet &&
-      this.navigateRelation &&
-      this.navigateSourceTableName
-    ) {
+    if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (builder as any).navigation = {
         relation: this.navigateRelation,
         sourceTableName: this.navigateSourceTableName,
@@ -187,19 +165,14 @@ export class EntitySet<
 
   get(
     id: string | number,
-  ): RecordBuilder<
-    Occ,
-    false,
-    undefined,
-    keyof InferSchemaOutputFromFMTable<Occ>,
-    {},
-    DatabaseIncludeSpecialColumns
-  > {
+    // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
+  ): RecordBuilder<Occ, false, undefined, keyof InferSchemaOutputFromFMTable<Occ>, {}, DatabaseIncludeSpecialColumns> {
     const builder = new RecordBuilder<
       Occ,
       false,
       undefined,
       keyof InferSchemaOutputFromFMTable<Occ>,
+      // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
       {},
       DatabaseIncludeSpecialColumns
     >({
@@ -216,103 +189,84 @@ export class EntitySet<
       // FMTable - access via helper functions
       const defaultSelectValue = getDefaultSelect(this.occurrence);
       // Schema is stored directly as Partial<Record<keyof TFields, StandardSchemaV1>>
-      const schema = getTableSchema(this.occurrence);
+      const _schema = getTableSchema(this.occurrence);
 
       if (defaultSelectValue === "schema") {
         // Use getTableColumns to get all columns and select them
         // This is equivalent to select(getTableColumns(occurrence))
         // Use ExtractColumnsFromOcc to preserve the properly-typed column types
-        const allColumns = getTableColumns(
-          this.occurrence as any,
-        ) as ExtractColumnsFromOcc<Occ>;
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
+        const allColumns = getTableColumns(this.occurrence as any) as ExtractColumnsFromOcc<Occ>;
 
         // Include special columns if enabled at database level
-        const systemColumns = this.databaseIncludeSpecialColumns
-          ? { ROWID: true, ROWMODID: true }
-          : undefined;
+        const systemColumns = this.databaseIncludeSpecialColumns ? { ROWID: true, ROWMODID: true } : undefined;
 
         const selectedBuilder = builder.select(allColumns, systemColumns);
         // Propagate navigation context if present
-        if (
-          this.isNavigateFromEntitySet &&
-          this.navigateRelation &&
-          this.navigateSourceTableName
-        ) {
+        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
           (selectedBuilder as any).navigation = {
             relation: this.navigateRelation,
             sourceTableName: this.navigateSourceTableName,
             basePath: this.navigateBasePath,
           };
         }
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         return selectedBuilder as any;
-      } else if (
-        typeof defaultSelectValue === "object" &&
-        defaultSelectValue !== null &&
-        !Array.isArray(defaultSelectValue)
-      ) {
+      }
+      if (typeof defaultSelectValue === "object" && defaultSelectValue !== null && !Array.isArray(defaultSelectValue)) {
         // defaultSelectValue is a select object (Record<string, Column>)
         // Use it directly with select()
         // Use ExtractColumnsFromOcc to preserve the properly-typed column types
-        const selectedBuilder = builder.select(
-          defaultSelectValue as ExtractColumnsFromOcc<Occ>,
-        );
+        const selectedBuilder = builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>);
         // Propagate navigation context if present
-        if (
-          this.isNavigateFromEntitySet &&
-          this.navigateRelation &&
-          this.navigateSourceTableName
-        ) {
+        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
           (selectedBuilder as any).navigation = {
             relation: this.navigateRelation,
             sourceTableName: this.navigateSourceTableName,
             basePath: this.navigateBasePath,
           };
         }
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         return selectedBuilder as any;
       }
       // If defaultSelect is "all", no changes needed (current behavior)
     }
 
     // Propagate navigation context if present
-    if (
-      this.isNavigateFromEntitySet &&
-      this.navigateRelation &&
-      this.navigateSourceTableName
-    ) {
+    if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (builder as any).navigation = {
         relation: this.navigateRelation,
         sourceTableName: this.navigateSourceTableName,
         basePath: this.navigateBasePath,
       };
     }
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
     return builder as any;
   }
 
   // Overload: when returnFullRecord is false
-  insert(
-    data: InsertDataFromFMTable<Occ>,
-    options: { returnFullRecord: false },
-  ): InsertBuilder<Occ, "minimal">;
+  insert(data: InsertDataFromFMTable<Occ>, options: { returnFullRecord: false }): InsertBuilder<Occ, "minimal">;
 
   // Overload: when returnFullRecord is true or omitted (default)
-  insert(
-    data: InsertDataFromFMTable<Occ>,
-    options?: { returnFullRecord?: true },
-  ): InsertBuilder<Occ, "representation">;
+  insert(data: InsertDataFromFMTable<Occ>, options?: { returnFullRecord?: true }): InsertBuilder<Occ, "representation">;
 
   // Implementation
   insert(
     data: InsertDataFromFMTable<Occ>,
     options?: { returnFullRecord?: boolean },
   ): InsertBuilder<Occ, "minimal" | "representation"> {
-    const returnPreference =
-      options?.returnFullRecord === false ? "minimal" : "representation";
+    const returnPreference = options?.returnFullRecord === false ? "minimal" : "representation";
 
     return new InsertBuilder<Occ, typeof returnPreference>({
       occurrence: this.occurrence,
       databaseName: this.databaseName,
       context: this.context,
-      data: data as any, // Input type is validated/transformed at runtime
+      // biome-ignore lint/suspicious/noExplicitAny: Input type is validated/transformed at runtime
+      data: data as any,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       returnPreference: returnPreference as any,
       databaseUseEntityIds: this.databaseUseEntityIds,
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
@@ -320,30 +274,25 @@ export class EntitySet<
   }
 
   // Overload: when returnFullRecord is explicitly true
-  update(
-    data: UpdateDataFromFMTable<Occ>,
-    options: { returnFullRecord: true },
-  ): UpdateBuilder<Occ, "representation">;
+  update(data: UpdateDataFromFMTable<Occ>, options: { returnFullRecord: true }): UpdateBuilder<Occ, "representation">;
 
   // Overload: when returnFullRecord is false or omitted (default)
-  update(
-    data: UpdateDataFromFMTable<Occ>,
-    options?: { returnFullRecord?: false },
-  ): UpdateBuilder<Occ, "minimal">;
+  update(data: UpdateDataFromFMTable<Occ>, options?: { returnFullRecord?: false }): UpdateBuilder<Occ, "minimal">;
 
   // Implementation
   update(
     data: UpdateDataFromFMTable<Occ>,
     options?: { returnFullRecord?: boolean },
   ): UpdateBuilder<Occ, "minimal" | "representation"> {
-    const returnPreference =
-      options?.returnFullRecord === true ? "representation" : "minimal";
+    const returnPreference = options?.returnFullRecord === true ? "representation" : "minimal";
 
     return new UpdateBuilder<Occ, typeof returnPreference>({
       occurrence: this.occurrence,
       databaseName: this.databaseName,
       context: this.context,
-      data: data as any, // Input type is validated/transformed at runtime
+      // biome-ignore lint/suspicious/noExplicitAny: Input type is validated/transformed at runtime
+      data: data as any,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       returnPreference: returnPreference as any,
       databaseUseEntityIds: this.databaseUseEntityIds,
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
@@ -357,16 +306,16 @@ export class EntitySet<
       context: this.context,
       databaseUseEntityIds: this.databaseUseEntityIds,
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
     }) as any;
   }
 
   // Implementation
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   navigate<TargetTable extends FMTable<any, any>>(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
-  ): EntitySet<
-    TargetTable extends FMTable<any, any> ? TargetTable : never,
-    DatabaseIncludeSpecialColumns
-  > {
+    // biome-ignore lint/suspicious/noExplicitAny: Required for conditional type inference
+  ): EntitySet<TargetTable extends FMTable<any, any> ? TargetTable : never, DatabaseIncludeSpecialColumns> {
     // Check if it's an FMTable object or a string
     let relationName: string;
 
@@ -374,13 +323,9 @@ export class EntitySet<
     relationName = getTableName(targetTable);
 
     // Runtime validation: Check if relation name is in navigationPaths
-    if (
-      this.occurrence &&
-      FMTableClass.Symbol.NavigationPaths in this.occurrence
-    ) {
-      const navigationPaths = (this.occurrence as any)[
-        FMTableClass.Symbol.NavigationPaths
-      ] as readonly string[];
+    if (this.occurrence && FMTableClass.Symbol.NavigationPaths in this.occurrence) {
+      // biome-ignore lint/suspicious/noExplicitAny: Symbol property access for internal property
+      const navigationPaths = (this.occurrence as any)[FMTableClass.Symbol.NavigationPaths] as readonly string[];
       if (navigationPaths && !navigationPaths.includes(relationName)) {
         this.logger.warn(
           `Cannot navigate to "${relationName}". Valid navigation paths: ${navigationPaths.length > 0 ? navigationPaths.join(", ") : "none"}`,
@@ -389,6 +334,7 @@ export class EntitySet<
     }
 
     // Create EntitySet with target table
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FMTable configuration
     const entitySet = new EntitySet<any, DatabaseIncludeSpecialColumns>({
       occurrence: targetTable,
       databaseName: this.databaseName,
@@ -396,25 +342,28 @@ export class EntitySet<
       database: this.database,
     });
     // Store the navigation info in the EntitySet
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (entitySet as any).isNavigateFromEntitySet = true;
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (entitySet as any).navigateRelation = relationName;
 
     // Build the full base path for chained navigations
     if (this.isNavigateFromEntitySet && this.navigateBasePath) {
       // Already have a base path from previous navigation - extend it with current relation
-      (entitySet as any).navigateBasePath =
-        `${this.navigateBasePath}/${this.navigateRelation}`;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateBasePath = `${this.navigateBasePath}/${this.navigateRelation}`;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateSourceTableName = this.navigateSourceTableName;
     } else if (this.isNavigateFromEntitySet && this.navigateRelation) {
       // First chained navigation - create base path from source/relation
-      (entitySet as any).navigateBasePath =
-        `${this.navigateSourceTableName}/${this.navigateRelation}`;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateBasePath = `${this.navigateSourceTableName}/${this.navigateRelation}`;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateSourceTableName = this.navigateSourceTableName;
     } else {
       // Initial navigation - source is just the table name
-      (entitySet as any).navigateSourceTableName = getTableName(
-        this.occurrence,
-      );
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateSourceTableName = getTableName(this.occurrence);
     }
     return entitySet;
   }

@@ -5,6 +5,7 @@ import { rehypeCodeDefaultOptions } from "fumadocs-core/mdx-plugins";
 import { remarkInstall } from "fumadocs-docgen";
 import { defineConfig, defineDocs } from "fumadocs-mdx/config";
 import { transformerTwoslash } from "fumadocs-twoslash";
+import type { LanguageRegistration } from "shiki";
 
 import FileMakerLang from "./src/lib/FileMaker-tmLanguage.json";
 
@@ -22,7 +23,7 @@ export default defineConfig({
         light: "github-light",
         dark: "github-dark",
       },
-      langs: ["ts", "tsx", "js", "javascript", "json", FileMakerLang as unknown as string],
+      langs: ["ts", "tsx", "js", "javascript", "json", FileMakerLang as LanguageRegistration],
       transformers: [
         ...(rehypeCodeDefaultOptions.transformers ?? []),
         (() => {

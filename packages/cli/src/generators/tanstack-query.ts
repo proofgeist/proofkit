@@ -1,6 +1,6 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
-import { SyntaxKind, type Project } from "ts-morph";
+import { type Project, SyntaxKind } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { state } from "~/state.js";
@@ -11,8 +11,12 @@ import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 export async function injectTanstackQuery(args?: { project?: Project }) {
   const projectDir = state.projectDir;
   const settings = getSettings();
-  if (settings.ui === "shadcn") return false;
-  if (settings.tanstackQuery) return false;
+  if (settings.ui === "shadcn") {
+    return false;
+  }
+  if (settings.tanstackQuery) {
+    return false;
+  }
 
   addPackageDependency({
     projectDir,
@@ -21,10 +25,7 @@ export async function injectTanstackQuery(args?: { project?: Project }) {
   });
   addPackageDependency({
     projectDir,
-    dependencies: [
-      "@tanstack/react-query-devtools",
-      "@tanstack/eslint-plugin-query",
-    ],
+    dependencies: ["@tanstack/react-query-devtools"],
     devMode: true,
   });
   const extrasDir = path.join(PKG_ROOT, "template", "extras");
@@ -32,26 +33,23 @@ export async function injectTanstackQuery(args?: { project?: Project }) {
   if (state.appType === "browser") {
     fs.copySync(
       path.join(extrasDir, "config", "get-query-client.ts"),
-      path.join(projectDir, "src/config/get-query-client.ts")
+      path.join(projectDir, "src/config/get-query-client.ts"),
     );
     fs.copySync(
       path.join(extrasDir, "config", "query-provider.tsx"),
-      path.join(projectDir, "src/config/query-provider.tsx")
+      path.join(projectDir, "src/config/query-provider.tsx"),
     );
   } else if (state.appType === "webviewer") {
     fs.copySync(
       path.join(extrasDir, "config", "query-provider-vite.tsx"),
-      path.join(projectDir, "src/config/query-provider.tsx")
+      path.join(projectDir, "src/config/query-provider.tsx"),
     );
   }
 
   // inject query provider into the root layout
   const project = args?.project ?? getNewProject(projectDir);
   const rootLayout = project.addSourceFileAtPath(
-    path.join(
-      projectDir,
-      state.appType === "browser" ? "src/app/layout.tsx" : "src/main.tsx"
-    )
+    path.join(projectDir, state.appType === "browser" ? "src/app/layout.tsx" : "src/main.tsx"),
   );
   rootLayout.addImportDeclaration({
     moduleSpecifier: "@/config/query-provider",
@@ -59,16 +57,12 @@ export async function injectTanstackQuery(args?: { project?: Project }) {
   });
 
   if (state.appType === "browser") {
-    const exportDefault = rootLayout.getFunction((dec) =>
-      dec.isDefaultExport()
-    );
+    const exportDefault = rootLayout.getFunction((dec) => dec.isDefaultExport());
     const bodyElement = exportDefault
       ?.getBody()
       ?.getFirstDescendantByKind(SyntaxKind.ReturnStatement)
       ?.getDescendantsOfKind(SyntaxKind.JsxOpeningElement)
-      .find(
-        (openingElement) => openingElement.getTagNameNode().getText() === "body"
-      )
+      .find((openingElement) => openingElement.getTagNameNode().getText() === "body")
       ?.getParentIfKind(SyntaxKind.JsxElement);
 
     const childrenText = bodyElement
@@ -80,21 +74,17 @@ export async function injectTanstackQuery(args?: { project?: Project }) {
     bodyElement?.getChildSyntaxList()?.replaceWithText(
       `<QueryProvider>
       ${childrenText}
-    </QueryProvider>`
+    </QueryProvider>`,
     );
   } else if (state.appType === "webviewer") {
     const mantineProvider = rootLayout
       .getDescendantsOfKind(SyntaxKind.JsxElement)
-      .find(
-        (element) =>
-          element.getOpeningElement().getTagNameNode().getText() ===
-          "MantineProvider"
-      );
+      .find((element) => element.getOpeningElement().getTagNameNode().getText() === "MantineProvider");
 
     mantineProvider?.replaceWithText(
       `<QueryProvider>
       ${mantineProvider.getText()}
-    </QueryProvider>`
+    </QueryProvider>`,
     );
   }
 

@@ -414,7 +414,6 @@ export function SidebarPageTree(props: { components?: Partial<SidebarComponents>
     const { Separator, Item, Folder } = props.components ?? {};
 
     function renderSidebarList(items: PageTree.Node[], level: number): ReactNode[] {
-      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex recursive rendering logic required for sidebar tree
       return items.map((item, i) => {
         if (item.type === "separator") {
           if (Separator) {

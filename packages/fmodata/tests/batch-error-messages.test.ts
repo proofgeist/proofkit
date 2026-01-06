@@ -8,40 +8,28 @@
  * AFTER: "OData error: Table 'Purchase_Orders' not defined in database" with code "-1020"
  */
 
-import { describe, it, expect } from "vitest";
-import { z } from "zod/v4";
-import {
-  fmTableOccurrence,
-  textField,
-  isODataError,
-  isResponseStructureError,
-} from "@proofkit/fmodata";
+import { fmTableOccurrence, isODataError, isResponseStructureError, textField } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
 import { createMockClient } from "./utils/test-setup";
 
 /**
  * Creates a mock fetch handler that returns a multipart batch response
  */
 function createBatchMockFetch(batchResponseBody: string): typeof fetch {
-  return async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
+  return (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
     // Extract boundary from the batch response body (first line starts with --)
-    const firstLine =
-      batchResponseBody.split("\r\n")[0] ||
-      batchResponseBody.split("\n")[0] ||
-      "";
-    const boundary = firstLine.startsWith("--")
-      ? firstLine.substring(2)
-      : "batch_test";
+    const firstLine = batchResponseBody.split("\r\n")[0] || batchResponseBody.split("\n")[0] || "";
+    const boundary = firstLine.startsWith("--") ? firstLine.substring(2) : "batch_test";
 
-    return new Response(batchResponseBody, {
-      status: 200,
-      statusText: "OK",
-      headers: {
-        "Content-Type": `multipart/mixed; boundary=${boundary}`,
-      },
-    });
+    return Promise.resolve(
+      new Response(batchResponseBody, {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "Content-Type": `multipart/mixed; boundary=${boundary}`,
+        },
+      }),
+    );
   };
 }
 
@@ -183,9 +171,7 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
     if (isODataError(r1.error)) {
       // Verify we get the actual FileMaker error code and message
       expect(r1.error.code).toBe("-1020");
-      expect(r1.error.message).toBe(
-        "OData error: Table 'Purchase_Orders' not defined in database",
-      );
+      expect(r1.error.message).toBe("OData error: Table 'Purchase_Orders' not defined in database");
 
       // This is much more helpful than:
       // "Invalid response structure: expected 'value' property to be an array"

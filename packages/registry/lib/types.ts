@@ -1,8 +1,5 @@
+import { registryItemSchema, type RegistryItem as ShadcnRegistryItem } from "shadcn/registry";
 import { z } from "zod/v3";
-import {
-  type RegistryItem as ShadcnRegistryItem,
-  registryItemSchema,
-} from "shadcn/registry";
 
 const registryTypeSchema = z
   .enum([
@@ -41,13 +38,7 @@ export const templateFileSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-const buildPostInstallStepsSchema = <
-  T extends z.AnyZodObject,
-  A extends string,
->(
-  action: A,
-  dataSchema: T,
-) => {
+const buildPostInstallStepsSchema = <T extends z.AnyZodObject, A extends string>(action: A, dataSchema: T) => {
   return z.object({
     action: z.literal(action),
     data: dataSchema,
@@ -79,14 +70,9 @@ export const postInstallStepsSchema = z.discriminatedUnion("action", [
           defaultValue: z
             .string()
             .optional()
-            .describe(
-              "This value will be added to the .env file, unless `addToRuntimeEnv` is set to `false`.",
-            ),
+            .describe("This value will be added to the .env file, unless `addToRuntimeEnv` is set to `false`."),
           type: z.enum(["server", "client"]),
-          addToRuntimeEnv: z
-            .boolean()
-            .optional()
-            .describe("Whether to add the env to the runtime env."),
+          addToRuntimeEnv: z.boolean().optional().describe("Whether to add the env to the runtime env."),
         })
         .array(),
     }),
@@ -99,27 +85,16 @@ export const postInstallStepsSchema = z.discriminatedUnion("action", [
         .describe(
           "The opening tag to use for the provider. This is used to wrap the provider in the correct location.",
         ),
-      providerCloseTag: z
-        .string()
-        .describe("The closing tag to use for the provider."),
+      providerCloseTag: z.string().describe("The closing tag to use for the provider."),
       imports: z
         .array(
           z.object({
-            moduleSpecifier: z
-              .string()
-              .describe(
-                "The module to import from (e.g., '@/config/query-provider')",
-              ),
-            defaultImport: z
-              .string()
-              .optional()
-              .describe("The default import name (e.g., 'QueryProvider')"),
+            moduleSpecifier: z.string().describe("The module to import from (e.g., '@/config/query-provider')"),
+            defaultImport: z.string().optional().describe("The default import name (e.g., 'QueryProvider')"),
             namedImports: z
               .array(z.string())
               .optional()
-              .describe(
-                "Array of named imports (e.g., ['QueryProvider', 'useQuery'])",
-              ),
+              .describe("Array of named imports (e.g., ['QueryProvider', 'useQuery'])"),
           }),
         )
         .describe(
@@ -137,13 +112,7 @@ export const postInstallStepsSchema = z.discriminatedUnion("action", [
 
 export type PostInstallStep = z.infer<typeof postInstallStepsSchema>;
 
-const categorySchema = z.enum([
-  "component",
-  "page",
-  "utility",
-  "hook",
-  "email",
-]);
+const categorySchema = z.enum(["component", "page", "utility", "hook", "email"]);
 
 export const frameworkSchema = z.enum(["next-pages", "next-app", "manual"]);
 
@@ -171,20 +140,13 @@ export const templateMetadataSchema: z.ZodType<TemplateMetadata> = registryItemS
     postInstall: z
       .array(postInstallStepsSchema)
       .optional()
-      .describe(
-        "Steps that should be run by the ProofKit CLI after shadcn CLI is done",
-      ),
+      .describe("Steps that should be run by the ProofKit CLI after shadcn CLI is done"),
     minimumProofKitVersion: z
       .string()
       .describe("The minimum version of ProofKit required to use this template")
       .optional(),
     allowedFrameworks: z.array(frameworkSchema).optional(),
-    schemaRequired: z
-      .boolean()
-      .optional()
-      .describe(
-        "Whether this template requires a database schema to be selected",
-      ),
+    schemaRequired: z.boolean().optional().describe("Whether this template requires a database schema to be selected"),
   });
 
 export type TemplateFile = z.infer<typeof templateFileSchema>;

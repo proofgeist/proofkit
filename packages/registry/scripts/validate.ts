@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { fileURLToPath } from "url";
-import path from "path";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import createJiti from "jiti";
 
 // Run validation before build starts
@@ -10,7 +10,7 @@ try {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const validatorPath = path.resolve(__dirname, "../lib/validator.ts");
-  
+
   const jiti = createJiti(__filename, {
     interopDefault: true,
     requireCache: false,
@@ -24,4 +24,3 @@ try {
   console.error(error);
   process.exit(1);
 }
-

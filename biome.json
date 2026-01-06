@@ -7,7 +7,8 @@
     "defaultBranch": "main"
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["!**/stubs", "!**/template"]
   },
   "formatter": {
     "enabled": true,
@@ -21,6 +22,7 @@
     "rules": {
       "recommended": false,
       "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
         "noUselessTypeConstraint": "error",
         "useLiteralKeys": "error",
         "useOptionalChain": "error"
@@ -36,7 +38,7 @@
         "useAsConstAssertion": "error",
         "useConsistentArrayType": "error",
         "useConsistentTypeDefinitions": "error",
-        "useFilenamingConvention": "warn",
+        "useFilenamingConvention": "off",
         "useForOf": "error",
         "useShorthandFunctionType": "error"
       },
@@ -59,7 +61,8 @@
       "semicolons": "always",
       "arrowParentheses": "always",
       "quoteStyle": "double"
-    }
+    },
+    "globals": ["__FMDAPI_VERSION__", "__BETTER_AUTH_VERSION__"]
   },
   "json": {
     "formatter": {
@@ -68,6 +71,53 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["**/stubs/**/*.jsonc"],
+      "linter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["packages/typegen/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/fmdapi/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/registry/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/cli/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noNamespaceImport": "off",
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["cli/template/**/*.{ts,tsx}"]
     },

@@ -10,28 +10,27 @@
  * - Type guards and error detection
  */
 
-import { describe, it, expect, assert } from "vitest";
-import { z, ZodError } from "zod/v4";
 import {
   fmTableOccurrence,
-  textField,
-  numberField,
   HTTPError,
-  ODataError,
-  SchemaLockedError,
-  ValidationError,
-  ResponseStructureError,
-  RecordCountMismatchError,
   isHTTPError,
-  isValidationError,
   isODataError,
-  isSchemaLockedError,
-  isResponseStructureError,
   isRecordCountMismatchError,
+  isResponseStructureError,
+  isSchemaLockedError,
+  isValidationError,
+  numberField,
+  ODataError,
+  RecordCountMismatchError,
+  ResponseStructureError,
+  SchemaLockedError,
+  textField,
+  ValidationError,
 } from "@proofkit/fmodata";
+import { assert, describe, expect, it } from "vitest";
+import { z } from "zod/v4";
+import { createMockFetch, simpleMock } from "./utils/mock-fetch";
 import { createMockClient } from "./utils/test-setup";
-import { simpleMock, createMockFetch } from "./utils/mock-fetch";
-import { validateHeaderValue } from "http";
 
 describe("Error Handling", () => {
   const client = createMockClient();

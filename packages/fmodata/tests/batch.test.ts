@@ -5,44 +5,28 @@
  * These tests don't require a live server connection.
  */
 
-import { describe, it, expect } from "vitest";
-import { z } from "zod/v4";
-import {
-  fmTableOccurrence,
-  textField,
-  BatchTruncatedError,
-  isBatchTruncatedError,
-  isODataError,
-  ODataError,
-  eq,
-  isNotNull,
-} from "@proofkit/fmodata";
+import { eq, fmTableOccurrence, isBatchTruncatedError, isNotNull, isODataError, textField } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
 import { createMockClient } from "./utils/test-setup";
 
 /**
  * Creates a mock fetch handler that returns a multipart batch response
  */
 function createBatchMockFetch(batchResponseBody: string): typeof fetch {
-  return async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
+  return (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
     // Extract boundary from the batch response body (first line starts with --)
-    const firstLine =
-      batchResponseBody.split("\r\n")[0] ||
-      batchResponseBody.split("\n")[0] ||
-      "";
-    const boundary = firstLine.startsWith("--")
-      ? firstLine.substring(2)
-      : "batch_test";
+    const firstLine = batchResponseBody.split("\r\n")[0] || batchResponseBody.split("\n")[0] || "";
+    const boundary = firstLine.startsWith("--") ? firstLine.substring(2) : "batch_test";
 
-    return new Response(batchResponseBody, {
-      status: 200,
-      statusText: "OK",
-      headers: {
-        "content-type": `multipart/mixed; boundary=${boundary}`,
-      },
-    });
+    return Promise.resolve(
+      new Response(batchResponseBody, {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "content-type": `multipart/mixed; boundary=${boundary}`,
+        },
+      }),
+    );
   };
 }
 
@@ -105,18 +89,9 @@ describe("Batch Operations - Mock Tests", () => {
       ].join("\r\n");
 
       // Create three queries
-      const query1 = db
-        .from(contactsTO)
-        .list()
-        .where(eq(contactsTO.hobby, "Testing"));
-      const query2 = db
-        .from(usersTO)
-        .list()
-        .where(eq(usersTO.name, "NonExistent"));
-      const query3 = db
-        .from(contactsTO)
-        .list()
-        .where(isNotNull(contactsTO.name));
+      const query1 = db.from(contactsTO).list().where(eq(contactsTO.hobby, "Testing"));
+      const query2 = db.from(usersTO).list().where(eq(usersTO.name, "NonExistent"));
+      const query3 = db.from(contactsTO).list().where(isNotNull(contactsTO.name));
 
       // Execute batch with mock
       const result = await db.batch([query1, query2, query3]).execute({
@@ -146,9 +121,7 @@ describe("Batch Operations - Mock Tests", () => {
       expect(isODataError(r2.error)).toBe(true);
       if (isODataError(r2.error)) {
         expect(r2.error.code).toBe("-1020");
-        expect(r2.error.message).toContain(
-          "Table 'Purchase_Orders' not defined",
-        );
+        expect(r2.error.message).toContain("Table 'Purchase_Orders' not defined");
         expect(r2.error.kind).toBe("ODataError");
       }
 
@@ -210,15 +183,9 @@ describe("Batch Operations - Mock Tests", () => {
         "--b_success_boundary--",
       ].join("\r\n");
 
-      const query1 = db
-        .from(contactsTO)
-        .list()
-        .where(eq(contactsTO.hobby, "Reading"));
+      const query1 = db.from(contactsTO).list().where(eq(contactsTO.hobby, "Reading"));
       const query2 = db.from(usersTO).list().top(1);
-      const query3 = db
-        .from(contactsTO)
-        .list()
-        .where(eq(contactsTO.hobby, "Gaming"));
+      const query3 = db.from(contactsTO).list().where(eq(contactsTO.hobby, "Gaming"));
 
       const result = await db.batch([query1, query2, query3]).execute({
         fetchHandler: createBatchMockFetch(mockBatchResponse),
@@ -294,10 +261,7 @@ describe("Batch Operations - Mock Tests", () => {
       ].join("\r\n");
 
       const query1 = db.from(contactsTO).list().top(1);
-      const query2 = db
-        .from(usersTO)
-        .list()
-        .where(eq(usersTO.name, "NonExistent"));
+      const query2 = db.from(usersTO).list().where(eq(usersTO.name, "NonExistent"));
       const query3 = db.from(contactsTO).list().top(1);
 
       const result = await db.batch([query1, query2, query3]).execute({

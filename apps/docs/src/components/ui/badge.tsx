@@ -1,8 +1,7 @@
 import { mergeProps } from "@base-ui-components/react/merge-props";
 import { useRender } from "@base-ui-components/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-// biome-ignore lint/performance/noNamespaceImport: React namespace import needed for type checking
-import * as React from "react";
+import React, { isValidElement, type JSXElementConstructor, type ReactElement } from "react";
 import { cn } from "@/lib/utils";
 
 export interface BadgeProps extends useRender.ComponentProps<"span">, VariantProps<typeof badgeVariants> {
@@ -198,13 +197,13 @@ function Badge({
 
   // Determine render element based on asChild prop
   const renderElement =
-    asChild && React.isValidElement(children)
-      ? (children as React.ReactElement<Record<string, unknown>, string | React.JSXElementConstructor<unknown>>)
+    asChild && isValidElement(children)
+      ? (children as ReactElement<Record<string, unknown>, string | JSXElementConstructor<unknown>>)
       : render || <span />;
 
   // When using asChild, children becomes the element props, otherwise use children normally
   const finalProps =
-    asChild && React.isValidElement(children)
+    asChild && isValidElement(children)
       ? mergeProps(defaultProps, props)
       : mergeProps(defaultProps, { ...props, children });
 
@@ -226,13 +225,13 @@ function BadgeButton({ render, asChild = false, children, className, variant, ..
 
   // Determine render element based on asChild prop
   const renderElement =
-    asChild && React.isValidElement(children)
+    asChild && isValidElement(children)
       ? (children as React.ReactElement<Record<string, unknown>, string | React.JSXElementConstructor<unknown>>)
       : render || <button type="button" />;
 
   // When using asChild, children becomes the element props, otherwise use children normally
   const finalProps =
-    asChild && React.isValidElement(children)
+    asChild && isValidElement(children)
       ? mergeProps(defaultProps, props)
       : mergeProps(defaultProps, { ...props, children });
 

@@ -1,15 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  validateTemplateMetadata,
-  isValidRegistryTemplate,
-  type ValidationContext,
-} from "./validator.js";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { isValidRegistryTemplate, type ValidationContext, validateTemplateMetadata } from "./validator.js";
 
 // Mock fs module
 vi.mock("fs");
 const mockedFs = vi.mocked(fs);
+
+// Regex patterns for error matching (defined at top level for performance)
+const INVALID_METADATA_STRUCTURE_REGEX = /Invalid metadata structure/;
+const DECLARED_FILE_MISSING_REGEX = /Declared file 'missing.tsx' does not exist/;
+const DECLARED_FILE_COMPONENT_REGEX = /Declared file 'component.tsx' does not exist/;
+const INVALID_REGISTRY_DEPS_NONEXISTENT_REGEX =
+  /Invalid registryDependencies reference '{proofkit}\/r\/nonexistent-template'/;
+const INVALID_REGISTRY_DEPS_EMAIL_REGEX = /Invalid registryDependencies reference '{proofkit}\/r\/email\/nonexistent'/;
 
 describe("validator", () => {
   let mockContext: ValidationContext;
@@ -27,15 +31,10 @@ describe("validator", () => {
     it("should return true when template meta file exists", () => {
       mockedFs.existsSync.mockReturnValue(true);
 
-      const result = isValidRegistryTemplate(
-        "email/generic",
-        "/mock/templates",
-      );
+      const result = isValidRegistryTemplate("email/generic", "/mock/templates");
 
       expect(result).toBe(true);
-      expect(mockedFs.existsSync).toHaveBeenCalledWith(
-        "/mock/templates/email/generic/_meta.ts",
-      );
+      expect(mockedFs.existsSync).toHaveBeenCalledWith("/mock/templates/email/generic/_meta.ts");
     });
 
     it("should return false when template meta file does not exist", () => {
@@ -44,9 +43,7 @@ describe("validator", () => {
       const result = isValidRegistryTemplate("nonexistent", "/mock/templates");
 
       expect(result).toBe(false);
-      expect(mockedFs.existsSync).toHaveBeenCalledWith(
-        "/mock/templates/nonexistent/_meta.ts",
-      );
+      expect(mockedFs.existsSync).toHaveBeenCalledWith("/mock/templates/nonexistent/_meta.ts");
     });
   });
 
@@ -66,9 +63,7 @@ describe("validator", () => {
         files: [],
       };
 
-      expect(() =>
-        validateTemplateMetadata(validMeta, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(validMeta, mockContext)).not.toThrow();
     });
 
     it("should throw error for invalid metadata structure", () => {
@@ -77,9 +72,7 @@ describe("validator", () => {
         title: "Test",
       };
 
-      expect(() => validateTemplateMetadata(invalidMeta, mockContext)).toThrow(
-        /Invalid metadata structure/,
-      );
+      expect(() => validateTemplateMetadata(invalidMeta, mockContext)).toThrow(INVALID_METADATA_STRUCTURE_REGEX);
     });
 
     it("should throw error for missing required fields", () => {
@@ -89,9 +82,7 @@ describe("validator", () => {
         // missing description, category, registryType
       };
 
-      expect(() =>
-        validateTemplateMetadata(incompleteMeta, mockContext),
-      ).toThrow(/Invalid metadata structure/);
+      expect(() => validateTemplateMetadata(incompleteMeta, mockContext)).toThrow(INVALID_METADATA_STRUCTURE_REGEX);
     });
 
     it("should validate files exist when declared", () => {
@@ -112,14 +103,9 @@ describe("validator", () => {
 
       // Mock that the file exists (existsSync is used for file check)
       mockedFs.existsSync.mockReturnValue(true);
-      mockedFs.readdirSync.mockReturnValue([
-        "component.tsx",
-        "_meta.ts",
-      ] as any);
+      mockedFs.readdirSync.mockReturnValue(["component.tsx", "_meta.ts"] as any);
 
-      expect(() =>
-        validateTemplateMetadata(metaWithFiles, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(metaWithFiles, mockContext)).not.toThrow();
     });
 
     it("should throw error when declared file does not exist", () => {
@@ -143,9 +129,7 @@ describe("validator", () => {
       // Mock readdirSync to return the _meta.ts and some other files (so it passes "has content" check)
       mockedFs.readdirSync.mockReturnValue(["_meta.ts", "other-file.ts"] as any);
 
-      expect(() =>
-        validateTemplateMetadata(metaWithMissingFile, mockContext),
-      ).toThrow(/Declared file 'missing.tsx' does not exist/);
+      expect(() => validateTemplateMetadata(metaWithMissingFile, mockContext)).toThrow(DECLARED_FILE_MISSING_REGEX);
     });
 
     it("should throw error when declared file does not exist (caught first)", () => {
@@ -169,9 +153,7 @@ describe("validator", () => {
       // Mock readdirSync to return _meta.ts and some other files (so it passes "has content" check)
       mockedFs.readdirSync.mockReturnValue(["_meta.ts", "other-file.ts"] as any);
 
-      expect(() =>
-        validateTemplateMetadata(metaWithFiles, mockContext),
-      ).toThrow(/Declared file 'component.tsx' does not exist/);
+      expect(() => validateTemplateMetadata(metaWithFiles, mockContext)).toThrow(DECLARED_FILE_COMPONENT_REGEX);
     });
 
     it("should allow templates with no files (dependency-only templates)", () => {
@@ -188,9 +170,7 @@ describe("validator", () => {
       // Mock empty directory
       mockedFs.readdirSync.mockReturnValue(["_meta.ts"] as any);
 
-      expect(() =>
-        validateTemplateMetadata(dependencyOnlyMeta, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(dependencyOnlyMeta, mockContext)).not.toThrow();
     });
 
     it("should validate proofkitDependencies exist", () => {
@@ -209,9 +189,7 @@ describe("validator", () => {
         return filePath === "/mock/templates/react-email/_meta.ts";
       });
 
-      expect(() =>
-        validateTemplateMetadata(metaWithProofkitDeps, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(metaWithProofkitDeps, mockContext)).not.toThrow();
     });
 
     it("should throw error for invalid proofkitDependencies", () => {
@@ -228,10 +206,8 @@ describe("validator", () => {
       // Mock that template doesn't exist
       mockedFs.existsSync.mockReturnValue(false);
 
-      expect(() =>
-        validateTemplateMetadata(metaWithInvalidDeps, mockContext),
-      ).toThrow(
-        /Invalid registryDependencies reference '{proofkit}\/r\/nonexistent-template'/,
+      expect(() => validateTemplateMetadata(metaWithInvalidDeps, mockContext)).toThrow(
+        INVALID_REGISTRY_DEPS_NONEXISTENT_REGEX,
       );
     });
 
@@ -254,9 +230,7 @@ describe("validator", () => {
         return filePath === "/mock/templates/email/generic/_meta.ts";
       });
 
-      expect(() =>
-        validateTemplateMetadata(metaWithRegistryDeps, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(metaWithRegistryDeps, mockContext)).not.toThrow();
     });
 
     it("should throw error for invalid proofkit registryDependencies", () => {
@@ -273,10 +247,8 @@ describe("validator", () => {
       // Mock that template doesn't exist
       mockedFs.existsSync.mockReturnValue(false);
 
-      expect(() =>
-        validateTemplateMetadata(metaWithInvalidRegistryDeps, mockContext),
-      ).toThrow(
-        /Invalid registryDependencies reference '{proofkit}\/r\/email\/nonexistent'/,
+      expect(() => validateTemplateMetadata(metaWithInvalidRegistryDeps, mockContext)).toThrow(
+        INVALID_REGISTRY_DEPS_EMAIL_REGEX,
       );
     });
 
@@ -294,9 +266,7 @@ describe("validator", () => {
         ],
       };
 
-      expect(() =>
-        validateTemplateMetadata(metaWithMixedDeps, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(metaWithMixedDeps, mockContext)).not.toThrow();
     });
 
     it("should validate dynamic templates", () => {
@@ -315,15 +285,13 @@ describe("validator", () => {
         },
       };
 
-      expect(() =>
-        validateTemplateMetadata(dynamicMeta, mockContext),
-      ).not.toThrow();
+      expect(() => validateTemplateMetadata(dynamicMeta, mockContext)).not.toThrow();
     });
 
     it("should validate all category types", () => {
       const categories = ["component", "page", "utility", "hook", "email"];
 
-      categories.forEach((category) => {
+      for (const category of categories) {
         const meta = {
           type: "static",
           title: "Test Template",
@@ -334,7 +302,7 @@ describe("validator", () => {
         };
 
         expect(() => validateTemplateMetadata(meta, mockContext)).not.toThrow();
-      });
+      }
     });
 
     it("should validate all registryType values", () => {
@@ -347,7 +315,7 @@ describe("validator", () => {
         "registry:page",
       ];
 
-      registryTypes.forEach((registryType) => {
+      for (const registryType of registryTypes) {
         const meta = {
           type: "static",
           title: "Test Template",
@@ -358,7 +326,7 @@ describe("validator", () => {
         };
 
         expect(() => validateTemplateMetadata(meta, mockContext)).not.toThrow();
-      });
+      }
     });
   });
 });

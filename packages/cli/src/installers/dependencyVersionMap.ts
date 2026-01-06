@@ -25,7 +25,6 @@ export const dependencyVersionMap = {
   // Drizzle
   "drizzle-orm": "^0.30.10",
   "drizzle-kit": "^0.21.4",
-  "eslint-plugin-drizzle": "^0.2.3",
   mysql2: "^3.9.7",
   "@planetscale/database": "^1.18.0",
   postgres: "^3.4.4",
@@ -34,8 +33,6 @@ export const dependencyVersionMap = {
   // TailwindCSS
   tailwindcss: "^4.1.10",
   postcss: "^8.4.41",
-  prettier: "^3.5.3",
-  "prettier-plugin-tailwindcss": "^0.6.12",
   "@tailwindcss/postcss": "^4.1.10",
   "class-variance-authority": "^0.7.1",
   clsx: "^2.1.1",
@@ -63,7 +60,6 @@ export const dependencyVersionMap = {
   // Tanstack Query
   "@tanstack/react-query": "^5.59.0",
   "@tanstack/react-query-devtools": "^5.59.0",
-  "@tanstack/eslint-plugin-query": "^5.59.1",
 
   // ProofKit Auth
   "@node-rs/argon2": "^2.0.2",
@@ -108,6 +104,6 @@ export const dependencyVersionMap = {
   "next-themes": "^0.4.6",
 
   // Zod
-  "zod": "^4",
+  zod: "^4",
 } as const;
 export type AvailableDependencies = keyof typeof dependencyVersionMap;

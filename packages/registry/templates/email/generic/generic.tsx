@@ -1,16 +1,4 @@
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Img,
-  Section,
-  Text,
-} from "@react-email/components";
-import * as React from "react";
+import { Body, Button, Container, Head, Heading, Hr, Html, Img, Section, Text } from "@react-email/components";
 
 export interface GenericEmailProps {
   title?: string;
@@ -20,30 +8,16 @@ export interface GenericEmailProps {
   footer?: string;
 }
 
-export const GenericEmail = ({
-  title,
-  description,
-  ctaText,
-  ctaHref,
-  footer,
-}: GenericEmailProps) => (
+export const GenericEmail = ({ title, description, ctaText, ctaHref, footer }: GenericEmailProps) => (
   <Html>
     <Head />
     <Body style={styles.main}>
       <Container style={styles.container}>
-        <Img
-          src="https://proofkit.dev/proofkit.png"
-          width="238"
-          height="175"
-          alt="ProofKit"
-          style={styles.logo}
-        />
+        <Img alt="ProofKit" height="175" src="https://proofkit.dev/proofkit.png" style={styles.logo} width="238" />
 
         {title ? <Heading style={styles.title}>{title}</Heading> : null}
 
-        {description ? (
-          <Text style={styles.description}>{description}</Text>
-        ) : null}
+        {description ? <Text style={styles.description}>{description}</Text> : null}
 
         {ctaText && ctaHref ? (
           <Section style={styles.ctaSection}>
@@ -53,9 +27,7 @@ export const GenericEmail = ({
           </Section>
         ) : null}
 
-        {(title || description || (ctaText && ctaHref)) && (
-          <Hr style={styles.hr} />
-        )}
+        {(title || description || (ctaText && ctaHref)) && <Hr style={styles.hr} />}
 
         {footer ? <Text style={styles.footer}>{footer}</Text> : null}
       </Container>
@@ -65,8 +37,7 @@ export const GenericEmail = ({
 
 GenericEmail.PreviewProps = {
   title: "Welcome to ProofKit",
-  description:
-    "Thanks for trying ProofKit. This is a sample email template you can customize.",
+  description: "Thanks for trying ProofKit. This is a sample email template you can customize.",
   ctaText: "Get Started",
   ctaHref: "https://proofkit.dev",
   footer: "You received this email because you signed up for updates.",

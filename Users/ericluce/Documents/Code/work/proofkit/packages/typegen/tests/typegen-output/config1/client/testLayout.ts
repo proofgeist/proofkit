@@ -8,12 +8,10 @@ import { ZtestLayout, ZtestLayoutPortals } from "../testLayout";
 
 // @generated
 // prettier-ignore
-/* eslint-disable */
-if (!process.env.DIFFERENT_FM_DATABASE) throw new Error("Missing env var: DIFFERENT_FM_DATABASE")
-if (!process.env.DIFFERENT_FM_SERVER)
-  throw new Error("Missing env var: DIFFERENT_FM_SERVER");
-if (!process.env.DIFFERENT_OTTO_API_KEY)
-  throw new Error("Missing env var: DIFFERENT_OTTO_API_KEY");
+
+if (!process.env.DIFFERENT_FM_DATABASE) throw new Error("Missing env var: DIFFERENT_FM_DATABASE");
+if (!process.env.DIFFERENT_FM_SERVER) throw new Error("Missing env var: DIFFERENT_FM_SERVER");
+if (!process.env.DIFFERENT_OTTO_API_KEY) throw new Error("Missing env var: DIFFERENT_OTTO_API_KEY");
 
 export const client = DataApi({
   adapter: new OttoAdapter({

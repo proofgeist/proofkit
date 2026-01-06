@@ -1,27 +1,27 @@
-import { Button } from '@/components/ui/button';
-import { Input, InputWrapper } from '@/components/ui/input';
-import { Euro, TicketPercent, User, X } from 'lucide-react';
+import { Euro, TicketPercent, User, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input, InputWrapper } from "@/components/ui/input";
 
 export default function InputDemo() {
   return (
-    <div className="space-y-5 w-80">
+    <div className="w-80 space-y-5">
       <InputWrapper>
         <Euro />
-        <Input type="email" placeholder="Start icon" />
+        <Input placeholder="Start icon" type="email" />
       </InputWrapper>
       <InputWrapper>
-        <Input type="email" placeholder="End icon" />
+        <Input placeholder="End icon" type="email" />
         <TicketPercent />
       </InputWrapper>
       <InputWrapper>
-        <Button size="sm" variant="dim" mode="icon" className="size-5 -ms-0.5">
+        <Button className="-ms-0.5 size-5" mode="icon" size="sm" variant="dim">
           <User />
         </Button>
-        <Input type="email" placeholder="Start clickble icon" />
+        <Input placeholder="Start clickble icon" type="email" />
       </InputWrapper>
       <InputWrapper>
-        <Input type="email" placeholder="End clickble icon" />
-        <Button size="sm" variant="dim" mode="icon" className="size-5 -me-0.5">
+        <Input placeholder="End clickble icon" type="email" />
+        <Button className="-me-0.5 size-5" mode="icon" size="sm" variant="dim">
           <X />
         </Button>
       </InputWrapper>

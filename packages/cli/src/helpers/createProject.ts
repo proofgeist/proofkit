@@ -1,14 +1,13 @@
-import path from "path";
+import path from "node:path";
 
 import { installPackages } from "~/helpers/installPackages.js";
 import { scaffoldProject } from "~/helpers/scaffoldProject.js";
-import { type AvailableDependencies } from "~/installers/dependencyVersionMap.js";
-import { type PkgInstallerMap } from "~/installers/index.js";
+import type { AvailableDependencies } from "~/installers/dependencyVersionMap.js";
+import type { PkgInstallerMap } from "~/installers/index.js";
 import { state } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { replaceTextInFiles } from "./replaceText.js";
-import { shadcnInstall } from "./shadcn-cli.js";
 
 interface CreateProjectOptions {
   projectName: string;
@@ -18,12 +17,7 @@ interface CreateProjectOptions {
   appRouter: boolean;
 }
 
-export const createBareProject = async ({
-  projectName,
-  scopedAppName,
-  packages,
-  noInstall,
-}: CreateProjectOptions) => {
+export const createBareProject = async ({ projectName, scopedAppName, packages, noInstall }: CreateProjectOptions) => {
   const pkgManager = getUserPkgManager();
   state.projectDir = path.resolve(process.cwd(), projectName);
 
@@ -53,10 +47,7 @@ export const createBareProject = async ({
     "tw-animate-css",
     "next-themes",
   ] as AvailableDependencies[];
-  const SHADCN_BASE_DEV_DEPS = [
-    "prettier",
-    "prettier-plugin-tailwindcss",
-  ] as AvailableDependencies[];
+  const SHADCN_BASE_DEV_DEPS = [] as AvailableDependencies[];
 
   const MANTINE_DEPS = [
     "@mantine/core",
@@ -66,11 +57,7 @@ export const createBareProject = async ({
     "@mantine/notifications",
     "mantine-react-table",
   ] as AvailableDependencies[];
-  const MANTINE_DEV_DEPS = [
-    "postcss",
-    "postcss-preset-mantine",
-    "postcss-simple-vars",
-  ] as AvailableDependencies[];
+  const MANTINE_DEV_DEPS = ["postcss", "postcss-preset-mantine", "postcss-simple-vars"] as AvailableDependencies[];
 
   if (state.ui === "mantine") {
     addPackageDependency({
@@ -107,17 +94,18 @@ export const createBareProject = async ({
     noInstall,
   });
 
-  replaceTextInFiles(
-    state.projectDir,
-    "__PNPM_COMMAND__",
-    pkgManager === "pnpm"
-      ? "pnpm"
-      : pkgManager === "bun"
-        ? "bun"
-        : pkgManager === "yarn"
-          ? "yarn"
-          : "npm run"
-  );
+  let pkgManagerCommand: string;
+  if (pkgManager === "pnpm") {
+    pkgManagerCommand = "pnpm";
+  } else if (pkgManager === "bun") {
+    pkgManagerCommand = "bun";
+  } else if (pkgManager === "yarn") {
+    pkgManagerCommand = "yarn";
+  } else {
+    pkgManagerCommand = "npm run";
+  }
+
+  replaceTextInFiles(state.projectDir, "__PNPM_COMMAND__", pkgManagerCommand);
 
   return state.projectDir;
 };

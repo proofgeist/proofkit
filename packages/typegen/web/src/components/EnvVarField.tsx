@@ -1,23 +1,19 @@
-import { useMemo } from "react";
-import { useFormContext, useWatch, Path, PathValue } from "react-hook-form";
-import { z } from "zod";
-import { CircleCheck, CircleSlash, Loader } from "lucide-react";
-import { configSchema } from "../lib/schema";
-import { Input, InputWrapper } from "./ui/input";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
-import { useEnvValue } from "../lib/envValues";
 import { useDebounce } from "@uidotdev/usehooks";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { CircleCheck, CircleSlash, Loader } from "lucide-react";
+import { useMemo } from "react";
+import { type Path, type PathValue, useFormContext, useWatch } from "react-hook-form";
+import type { z } from "zod";
 import { cn } from "@/lib/utils";
+import { useEnvValue } from "../lib/envValues";
+import type { configSchema } from "../lib/schema";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Input, InputWrapper } from "./ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 type FormData = z.infer<typeof configSchema>;
-type FormConfig = { config: FormData[] };
+interface FormConfig {
+  config: FormData[];
+}
 
 interface EnvVarFieldProps<TFieldName extends Path<FormConfig>> {
   fieldName: TFieldName extends Path<FormConfig>
@@ -56,14 +52,15 @@ export function EnvVarField<TFieldName extends Path<FormConfig>>({
     }
     return undefined;
   })();
-  const { data: envValue, isLoading } = useEnvValue(
-    envNameForQuery ?? defaultValue,
-  );
+  const { data: envValue, isLoading } = useEnvValue(envNameForQuery ?? defaultValue);
 
   const valueState: "loading" | "not-set" | "set" = useMemo(() => {
-    if (isLoading) return "loading";
-    if (envValue === undefined || envValue === null || envValue === "")
+    if (isLoading) {
+      return "loading";
+    }
+    if (envValue === undefined || envValue === null || envValue === "") {
       return "not-set";
+    }
     return "set";
   }, [isLoading, envValue]);
 
@@ -74,38 +71,36 @@ export function EnvVarField<TFieldName extends Path<FormConfig>>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>
-            {label}{" "}
-            {dimField ? (
-              <span className="text-xs text-muted-foreground"> (not used)</span>
-            ) : (
-              ""
-            )}
+            {label} {dimField ? <span className="text-muted-foreground text-xs"> (not used)</span> : ""}
           </FormLabel>
           <FormControl>
             <InputWrapper className={dimField ? "!bg-muted" : ""}>
-              <Input type="text" placeholder={placeholder} {...field} />
-              {valueState === "set" ? (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <CircleCheck
-                      className={cn(
-                        "size-4",
-                        dimField ? "!text-muted-foreground" : "!text-green-500",
-                      )}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>{envValue}</TooltipContent>
-                </Tooltip>
-              ) : valueState === "loading" ? (
-                <Loader className="size-4 animate-spin" />
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <CircleSlash className="size-4 !text-destructive" />
-                  </TooltipTrigger>
-                  <TooltipContent>Not set</TooltipContent>
-                </Tooltip>
-              )}
+              <Input placeholder={placeholder} type="text" {...field} />
+              {(() => {
+                if (valueState === "set") {
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <CircleCheck
+                          className={cn("size-4", dimField ? "!text-muted-foreground" : "!text-green-500")}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>{envValue}</TooltipContent>
+                    </Tooltip>
+                  );
+                }
+                if (valueState === "loading") {
+                  return <Loader className="size-4 animate-spin" />;
+                }
+                return (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <CircleSlash className="!text-destructive size-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>Not set</TooltipContent>
+                  </Tooltip>
+                );
+              })()}
             </InputWrapper>
           </FormControl>
           <FormMessage />

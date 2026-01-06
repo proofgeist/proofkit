@@ -1,5 +1,5 @@
-import { defineConfig, mergeConfig } from "vite";
 import { tanstackViteConfig } from "@tanstack/vite-config";
+import { defineConfig, mergeConfig } from "vite";
 
 const config = defineConfig({
   plugins: [],

@@ -1,5 +1,5 @@
-import { hc } from "hono/client";
 import type { ApiApp } from "@proofkit/typegen/webui-server";
+import { hc } from "hono/client";
 import type { SingleConfig } from "./config-utils";
 
 // Create typed client using the server app type
@@ -30,8 +30,7 @@ export async function saveConfig(config: SingleConfig[]) {
         (errorData.issues && errorData.issues.length > 0
           ? errorData.issues
               .map(
-                (issue: { path: (string | number)[]; message: string }) =>
-                  `${issue.path.join(".")}: ${issue.message}`,
+                (issue: { path: (string | number)[]; message: string }) => `${issue.path.join(".")}: ${issue.message}`,
               )
               .join("; ")
           : "Failed to save config"),

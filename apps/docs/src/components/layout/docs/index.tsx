@@ -10,11 +10,7 @@ import { cn } from "../../../lib/cn";
 import { LanguageToggle, LanguageToggleText } from "../../language-toggle";
 import { type Option, RootToggle } from "../../root-toggle";
 import { LargeSearchToggle, SearchToggle } from "../../search-toggle";
-<<<<<<< Updated upstream
-=======
-// Import and re-export to avoid barrel file pattern
-// Import and re-export to avoid barrel file pattern
->>>>>>> Stashed changes
+
 import {
   Sidebar,
   SidebarCollapseTrigger,
@@ -35,15 +31,7 @@ import {
 } from "../../sidebar";
 import { ThemeToggle } from "../../theme-toggle";
 import { buttonVariants } from "../../ui/button";
-<<<<<<< Updated upstream
-import type { IconItemType, LinkItemType } from "../shared/index";
-import { type BaseLayoutProps, BaseLinkItem, getLinks } from "../shared/index";
-import { CollapsibleControl, LayoutBody, Navbar } from "./client";
 
-export { SidebarTrigger } from "../../sidebar";
-export type { IconItemType, LinkItemType } from "../shared/index";
-export { CollapsibleControl, LayoutBody, Navbar } from "./client";
-=======
 import type { IconItemType as IconItemTypeImport, LinkItemType as LinkItemTypeImport } from "../shared/index";
 import { type BaseLayoutProps, BaseLinkItem, getLinks } from "../shared/index";
 import {
@@ -57,7 +45,6 @@ export type LinkItemType = LinkItemTypeImport;
 export const CollapsibleControl = CollapsibleControlImport;
 export const LayoutBody = LayoutBodyImport;
 export const Navbar = NavbarImport;
->>>>>>> Stashed changes
 
 export interface DocsLayoutProps extends BaseLayoutProps {
   tree: PageTree.Root;
@@ -174,11 +161,7 @@ export function DocsLayout({
             ) : null}
             {themeSwitch.enabled !== false &&
               (themeSwitch.component ?? <ThemeToggle className="p-0" mode={themeSwitch.mode} />)}
-<<<<<<< Updated upstream
-            <SidebarTrigger
-=======
             <SidebarTriggerForExport
->>>>>>> Stashed changes
               className={cn(
                 buttonVariants({
                   color: "ghost",

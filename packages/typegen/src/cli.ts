@@ -1,38 +1,31 @@
 #!/usr/bin/env node
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { confirm } from "@clack/prompts";
 import { program } from "@commander-js/extra-typings";
 import chalk from "chalk";
-import fs from "fs-extra";
-import path from "path";
-import { confirm } from "@clack/prompts";
-import { parse } from "jsonc-parser";
 import { config } from "dotenv";
-import { fileURLToPath } from "url";
-import { typegenConfig } from "./types";
-import { generateTypedClients } from "./typegen";
+import fs from "fs-extra";
+import { parse } from "jsonc-parser";
 import { startServer } from "./server";
+import { generateTypedClients } from "./typegen";
+import { typegenConfig } from "./types";
 
-const defaultConfigPaths = [
-  "proofkit-typegen.config.jsonc",
-  "proofkit-typegen.config.json",
-];
+const defaultConfigPaths = ["proofkit-typegen.config.jsonc", "proofkit-typegen.config.json"];
 const oldConfigPaths = ["fmschema.config.mjs", "fmschema.config.js"];
-type ConfigArgs = {
+interface ConfigArgs {
   configLocation: string;
   resetOverrides?: boolean;
-};
+}
 
 function init({ configLocation }: ConfigArgs) {
   console.log();
   if (fs.existsSync(configLocation)) {
-    console.log(
-      chalk.yellow(`⚠️ ${path.basename(configLocation)} already exists`),
-    );
+    console.log(chalk.yellow(`⚠️ ${path.basename(configLocation)} already exists`));
   } else {
     const stubFile = fs.readFileSync(
       path.resolve(
-        typeof __dirname !== "undefined"
-          ? __dirname
-          : path.dirname(fileURLToPath(import.meta.url)),
+        typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url)),
         "../../stubs/proofkit-typegen.config.jsonc",
       ),
       "utf8",
@@ -42,10 +35,7 @@ function init({ configLocation }: ConfigArgs) {
   }
 }
 
-async function runCodegen({
-  configLocation,
-  resetOverrides = false,
-}: ConfigArgs) {
+async function runCodegen({ configLocation, resetOverrides = false }: ConfigArgs) {
   if (!fs.existsSync(configLocation)) {
     // but check if they have the old config and just need to upgrade...
     let hasOldConfig = false;
@@ -63,13 +53,7 @@ async function runCodegen({
       );
       process.exit(1);
     } else {
-      console.error(
-        chalk.red(
-          `Could not find ${path.basename(
-            configLocation,
-          )} at the root of your project.`,
-        ),
-      );
+      console.error(chalk.red(`Could not find ${path.basename(configLocation)} at the root of your project.`));
       console.log();
 
       const runInitNow = await confirm({
@@ -87,11 +71,7 @@ async function runCodegen({
   }
   await fs.access(configLocation, fs.constants.R_OK).catch(() => {
     console.error(
-      chalk.red(
-        `You do not have read access to ${path.basename(
-          configLocation,
-        )} at the root of your project.`,
-      ),
+      chalk.red(`You do not have read access to ${path.basename(configLocation)} at the root of your project.`),
     );
     return process.exit(1);
   });
@@ -102,13 +82,7 @@ async function runCodegen({
   const configParsed = typegenConfig.safeParse(parse(configRaw));
 
   if (!configParsed.success) {
-    console.error(
-      chalk.red(
-        `Error reading the config object from ${path.basename(
-          configLocation,
-        )}.`,
-      ),
-    );
+    console.error(chalk.red(`Error reading the config object from ${path.basename(configLocation)}.`));
     console.error(configParsed.error);
     return process.exit(1);
   }
@@ -121,16 +95,13 @@ async function runCodegen({
   });
   if (result) {
     if (result.totalCount === 0) {
+      console.log("⚠️ No layouts found to generate types for");
     } else if (result.totalCount === result.successCount) {
-      console.log(
-        `✅ Generated ${result.successCount} layout${result.successCount === 1 ? "" : "s"}`,
-      );
+      console.log(`✅ Generated ${result.successCount} layout${result.successCount === 1 ? "" : "s"}`);
     } else if (result.errorCount === result.totalCount) {
-      console.log(`❌ Failed to generate any layouts`);
+      console.log("❌ Failed to generate any layouts");
     } else {
-      console.log(
-        `⚠️ Generated ${result.successCount} of ${result.totalCount} layouts`,
-      );
+      console.log(`⚠️ Generated ${result.successCount} of ${result.totalCount} layouts`);
     }
   }
 }
@@ -144,24 +115,13 @@ program
     "Recreate the overrides file(s), even if they already exist. Most useful when upgrading from @proofgeist/fmdapi",
     false,
   )
-  .option(
-    "--skip-env-check",
-    "(deprecated) Ignore loading environment variables from a file.",
-    false,
-  )
+  .option("--skip-env-check", "(deprecated) Ignore loading environment variables from a file.", false)
   .action(async (options) => {
-    // check if options.config resolves to a file
-    {
-    }
     const configPath = getConfigPath(options.config);
-    const configLocation = path.toNamespacedPath(
-      path.resolve(configPath ?? defaultConfigPaths[0] ?? ""),
-    );
+    const configLocation = path.toNamespacedPath(path.resolve(configPath ?? defaultConfigPaths[0] ?? ""));
 
     if (options.skipEnvCheck) {
-      console.log(
-        chalk.yellow("⚠️ You no longer need to use --skip-env-check"),
-      );
+      console.log(chalk.yellow("⚠️ You no longer need to use --skip-env-check"));
     }
     parseEnvs(options.envPath);
 
@@ -175,10 +135,8 @@ program
 program
   .command("init")
   .option("--config <filename>", "optional config file name")
-  .action(async (options) => {
-    const configLocation = path.toNamespacedPath(
-      path.resolve(options.config ?? defaultConfigPaths[0] ?? ""),
-    );
+  .action((options) => {
+    const configLocation = path.toNamespacedPath(path.resolve(options.config ?? defaultConfigPaths[0] ?? ""));
     console.log(configLocation);
     init({ configLocation });
   });
@@ -200,7 +158,7 @@ program
     let port: number | null = null;
     if (options.port) {
       port = Number.parseInt(options.port, 10);
-      if (Number.isNaN(port) || port < 1 || port > 65535) {
+      if (Number.isNaN(port) || port < 1 || port > 65_535) {
         console.error(chalk.red("Invalid port number"));
         return process.exit(1);
       }
@@ -223,7 +181,7 @@ program
         try {
           const { default: open } = await import("open");
           await open(url);
-        } catch (err) {
+        } catch (_err) {
           // Ignore errors opening browser
         }
       }
@@ -251,7 +209,7 @@ program.parse();
 
 function parseEnvs(envPath?: string | undefined) {
   let actualEnvPath = envPath;
-  if (!actualEnvPath || !fs.existsSync(actualEnvPath)) {
+  if (!(actualEnvPath && fs.existsSync(actualEnvPath))) {
     const possiblePaths = [".env.local", ".env"];
     for (const path of possiblePaths) {
       if (fs.existsSync(path)) {
@@ -263,7 +221,7 @@ function parseEnvs(envPath?: string | undefined) {
 
   // this should fail silently.
   // if we can't resolve the right env vars, they will be logged as errors later
-  const envRes = config({ path: actualEnvPath });
+  const _envRes = config({ path: actualEnvPath });
   // if (envRes.error) {
   //   console.log(
   //     chalk.red(
@@ -279,7 +237,7 @@ function getConfigPath(configPath?: string): string | null {
     try {
       fs.accessSync(configPath, fs.constants.F_OK);
       return configPath;
-    } catch (e) {
+    } catch (_e) {
       // If it doesn't exist, continue to default paths
     }
   }
@@ -289,7 +247,7 @@ function getConfigPath(configPath?: string): string | null {
     try {
       fs.accessSync(path, fs.constants.F_OK);
       return path;
-    } catch (e) {
+    } catch (_e) {
       // If path doesn't exist, try the next one
     }
   }

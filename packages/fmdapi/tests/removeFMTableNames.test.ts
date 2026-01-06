@@ -20,11 +20,11 @@ describe("removeFMTableNames", () => {
   });
 
   it("produces a type with stripped keys", () => {
-    type Input = {
+    interface Input {
       "Customer::first_name": string;
       last_name: string;
       "Portal::recordId": number;
-    };
+    }
 
     const input: Input = {
       "Customer::first_name": "Bob",

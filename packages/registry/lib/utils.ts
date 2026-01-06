@@ -1,20 +1,16 @@
-import { promises as fs } from "fs";
-import fsSync from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fsSync, { promises as fs } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import createJiti from "jiti";
-import type {
-  RegistryIndex,
-  RegistryItem,  
-  TemplateMetadata,
-} from "./types.js";
+import type { RegistryIndex, RegistryItem, TemplateMetadata } from "./types.js";
 
 // Find the templates path relative to this module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const defaultTemplatesPath = path.resolve(__dirname, "../templates");
 
-
+// Regex to match file extension for handlebars replacement
+const FILE_EXTENSION_REGEX = /\.[^/.]+$/;
 
 /**
  * Scans the templates directory and returns all template directories with _meta.ts files
@@ -23,7 +19,9 @@ function getTemplateDirs(root: string, prefix = ""): string[] {
   const entries = fsSync.readdirSync(root, { withFileTypes: true });
   const result: string[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory()) {
+      continue;
+    }
     const dirPath = path.join(root, entry.name);
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     const files = fsSync.readdirSync(dirPath);
@@ -54,13 +52,10 @@ function loadTemplateMeta(templatePath: string, templatesPath: string = defaultT
   const metaPath = path.join(templateDir, metaFile);
 
   const metaModule = jiti(metaPath);
-  const meta: TemplateMetadata =
-    metaModule.meta || metaModule.default?.meta || metaModule.default;
+  const meta: TemplateMetadata = metaModule.meta || metaModule.default?.meta || metaModule.default;
 
   if (!meta) {
-    throw new Error(
-      `Template ${templatePath}: ${metaFile} must export a 'meta' object`,
-    );
+    throw new Error(`Template ${templatePath}: ${metaFile} must export a 'meta' object`);
   }
 
   return {
@@ -69,7 +64,7 @@ function loadTemplateMeta(templatePath: string, templatesPath: string = defaultT
   };
 }
 
-export async function getRegistryIndex(templatesPath: string = defaultTemplatesPath): Promise<RegistryIndex> {
+export function getRegistryIndex(templatesPath: string = defaultTemplatesPath): RegistryIndex {
   const templateDirs = getTemplateDirs(templatesPath);
 
   const index = templateDirs.map((templatePath) => {
@@ -153,7 +148,7 @@ async function getComponentMetaInternal(
   };
 }
 
-export async function getComponentMeta(
+export function getComponentMeta(
   namePath: string,
   templatesPath: string = defaultTemplatesPath,
 ): Promise<TemplateMetadata> {
@@ -171,17 +166,14 @@ export async function getStaticComponent(
   const files: RegistryItem["files"] = await Promise.all(
     meta.files.map(async (file) => {
       const sourceFile = file.handlebars
-        ? file.sourceFileName.replace(/\.[^/.]+$/, ".hbs")
+        ? file.sourceFileName.replace(FILE_EXTENSION_REGEX, ".hbs")
         : file.sourceFileName;
 
       const contentPath = path.join(templatesPath, normalized, sourceFile);
       const content = await fs.readFile(contentPath, "utf-8");
 
       const routeName = options?.routeName ?? namePath;
-      const destinationPath = file.destinationPath? file.destinationPath?.replace(
-        "__PATH__",
-        routeName,
-      ) : undefined;
+      const destinationPath = file.destinationPath ? file.destinationPath?.replace("__PATH__", routeName) : undefined;
 
       const shadcnFile =
         file.type === "registry:file" || file.type === "registry:page"
@@ -218,9 +210,9 @@ export async function getStaticComponent(
  * Mapping of handlebars expressions to TypeScript-safe placeholder tokens
  */
 const HANDLEBARS_PLACEHOLDERS = {
-  '{{schema.schemaName}}': '__HB_SCHEMA_NAME__',
-  '{{schema.sourceName}}': '__HB_SOURCE_NAME__',
-  '{{schema.clientSuffix}}': '__HB_CLIENT_SUFFIX__',
+  "{{schema.schemaName}}": "__HB_SCHEMA_NAME__",
+  "{{schema.sourceName}}": "__HB_SOURCE_NAME__",
+  "{{schema.clientSuffix}}": "__HB_CLIENT_SUFFIX__",
   // Add more mappings as needed
 } as const;
 
@@ -230,12 +222,12 @@ const HANDLEBARS_PLACEHOLDERS = {
  */
 export function encodeHandlebarsForShadcn(content: string): string {
   let result = content;
-  
+
   // Replace specific handlebars expressions with placeholder tokens
   for (const [handlebars, placeholder] of Object.entries(HANDLEBARS_PLACEHOLDERS)) {
-    result = result.replace(new RegExp(escapeRegExp(handlebars), 'g'), placeholder);
+    result = result.replace(new RegExp(escapeRegExp(handlebars), "g"), placeholder);
   }
-  
+
   return result;
 }
 
@@ -245,12 +237,12 @@ export function encodeHandlebarsForShadcn(content: string): string {
  */
 export function decodeHandlebarsFromShadcn(content: string): string {
   let result = content;
-  
+
   // Replace placeholder tokens back to handlebars expressions
   for (const [handlebars, placeholder] of Object.entries(HANDLEBARS_PLACEHOLDERS)) {
-    result = result.replace(new RegExp(escapeRegExp(placeholder), 'g'), handlebars);
+    result = result.replace(new RegExp(escapeRegExp(placeholder), "g"), handlebars);
   }
-  
+
   return result;
 }
 
@@ -258,7 +250,7 @@ export function decodeHandlebarsFromShadcn(content: string): string {
  * Escapes special regex characters in a string
  */
 function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
@@ -269,11 +261,11 @@ export async function getStaticComponentForShadcn(
   options?: { routeName?: string; templatesPath?: string },
 ): Promise<RegistryItem> {
   const component = await getStaticComponent(namePath, options);
-  
+
   // Apply handlebars encoding to files that need it
-  const encodedFiles = component.files?.map(file => {
+  const encodedFiles = component.files?.map((file) => {
     // Only encode handlebars files that might contain problematic expressions
-    if (file.path.endsWith('.hbs') || file.path.endsWith('.tsx') || file.path.endsWith('.ts')) {
+    if (file.path.endsWith(".hbs") || file.path.endsWith(".tsx") || file.path.endsWith(".ts")) {
       return {
         ...file,
         content: encodeHandlebarsForShadcn(file.content ?? ""),
@@ -281,7 +273,7 @@ export async function getStaticComponentForShadcn(
     }
     return file;
   });
-  
+
   return {
     ...component,
     files: encodedFiles,

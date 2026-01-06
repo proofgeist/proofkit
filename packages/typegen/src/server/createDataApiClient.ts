@@ -1,17 +1,18 @@
-import fs from "fs-extra";
-import path from "path";
-import { parse } from "jsonc-parser";
-import { typegenConfig, typegenConfigSingle } from "../types";
-import type { z } from "zod/v4";
-import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
+import path from "node:path";
 import DataApi from "@proofkit/fmdapi";
 import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
+import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
 import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
+import { type Database, FMServerConnection } from "@proofkit/fmodata";
+import fs from "fs-extra";
+import { parse } from "jsonc-parser";
+import type { z } from "zod/v4";
 import { defaultEnvNames } from "../constants";
+import { typegenConfig, type typegenConfigSingle } from "../types";
 import type { ApiContext } from "./app";
-import { Database, FMServerConnection } from "@proofkit/fmodata";
 
 export interface CreateClientResult {
+  // biome-ignore lint/suspicious/noExplicitAny: DataApi is a generic type
   client: ReturnType<typeof DataApi<any, any, any, OttoAdapter>>;
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>;
   server: string;
@@ -44,16 +45,13 @@ type EnvVarsResult =
       auth: { apiKey: OttoAPIKey } | { username: string; password: string };
     };
 
-function getEnvVarsFromConfig(
-  envNames: SingleConfig["envNames"],
-): EnvVarsResult {
+function getEnvVarsFromConfig(envNames: SingleConfig["envNames"]): EnvVarsResult {
   // Helper to get env name, treating empty strings as undefined
   const getEnvName = (customName: string | undefined, defaultName: string) =>
     customName && customName.trim() !== "" ? customName : defaultName;
 
   // Resolve environment variables
-  const server =
-    process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
+  const server = process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
   const db = process.env[getEnvName(envNames?.db, defaultEnvNames.db)];
 
   // Always attempt to read all auth methods from environment variables,
@@ -76,7 +74,7 @@ function getEnvVarsFromConfig(
   const password = process.env[passwordEnvName];
 
   // Validate required env vars
-  if (!server || !db || (!apiKey && !username)) {
+  if (!(server && db && (apiKey || username))) {
     console.error("Missing required environment variables", {
       server,
       db,
@@ -93,7 +91,7 @@ function getEnvVarsFromConfig(
     } = {
       server: !server,
       db: !db,
-      auth: !apiKey && !username,
+      auth: !(apiKey || username),
     };
 
     // Only report password as missing if server and db are both present,
@@ -111,18 +109,27 @@ function getEnvVarsFromConfig(
       details: {
         missing: missingDetails,
       },
-      suspectedField: (!server
-        ? "server"
-        : !db
-          ? "db"
-          : !apiKey && !username
-            ? "auth"
-            : undefined) as "server" | "db" | "auth" | undefined,
-      message: !server
-        ? "Server URL environment variable is missing"
-        : !db
-          ? "Database name environment variable is missing"
-          : "Authentication credentials environment variable is missing",
+      suspectedField: (() => {
+        if (!server) {
+          return "server";
+        }
+        if (!db) {
+          return "db";
+        }
+        if (!(apiKey || username)) {
+          return "auth";
+        }
+        return undefined;
+      })() as "server" | "db" | "auth" | undefined,
+      message: (() => {
+        if (!server) {
+          return "Server URL environment variable is missing";
+        }
+        if (!db) {
+          return "Database name environment variable is missing";
+        }
+        return "Authentication credentials environment variable is missing";
+      })(),
     };
   }
 
@@ -146,9 +153,7 @@ function getEnvVarsFromConfig(
     server,
     db,
     authType: (apiKey ? "apiKey" : "username") as "apiKey" | "username",
-    auth: apiKey
-      ? { apiKey: apiKey as OttoAPIKey }
-      : { username: username ?? "", password: password ?? "" },
+    auth: apiKey ? { apiKey: apiKey as OttoAPIKey } : { username: username ?? "", password: password ?? "" },
   };
 }
 
@@ -167,9 +172,7 @@ export interface OdataClientError {
   suspectedField?: "server" | "db" | "auth";
 }
 
-export function createOdataClientFromConfig(
-  config: FmodataConfig,
-): OdataClientResult | OdataClientError {
+export function createOdataClientFromConfig(config: FmodataConfig): OdataClientResult | OdataClientError {
   const result = getEnvVarsFromConfig(config.envNames);
   if ("error" in result) {
     return result;
@@ -191,9 +194,7 @@ export function createOdataClientFromConfig(
  * @param config The fmdapi config object
  * @returns The client, server, and db, or an error object
  */
-export function createClientFromConfig(
-  config: FmdapiConfig,
-): Omit<CreateClientResult, "config"> | CreateClientError {
+export function createClientFromConfig(config: FmdapiConfig): Omit<CreateClientResult, "config"> | CreateClientError {
   const result = getEnvVarsFromConfig(config.envNames);
   if ("error" in result) {
     return result;
@@ -203,6 +204,7 @@ export function createClientFromConfig(
   // Determine which auth method will be used (prefer API key if available)
 
   // Create DataApi client with error handling for adapter construction
+  // biome-ignore lint/suspicious/noExplicitAny: DataApi is a generic type
   let client: ReturnType<typeof DataApi<any, any, any, OttoAdapter>>;
   try {
     client =
@@ -213,7 +215,7 @@ export function createClientFromConfig(
           })
         : DataApi({
             adapter: new FetchAdapter({
-              auth: auth as any,
+              auth,
               server,
               db,
               tokenStore: memoryStore(),
@@ -222,8 +224,7 @@ export function createClientFromConfig(
           });
   } catch (err) {
     // Handle adapter construction errors (e.g., invalid API key format, empty username/password)
-    const errorMessage =
-      err instanceof Error ? err.message : "Failed to create adapter";
+    const errorMessage = err instanceof Error ? err.message : "Failed to create adapter";
     return {
       error: errorMessage,
       statusCode: 400,
@@ -247,10 +248,7 @@ export function createClientFromConfig(
  * @param configIndex The index of the config to use
  * @returns The client, config, server, and db, or an error object
  */
-export function createDataApiClient(
-  context: ApiContext,
-  configIndex: number,
-): CreateClientResult | CreateClientError {
+export function createDataApiClient(context: ApiContext, configIndex: number): CreateClientResult | CreateClientError {
   // Read and parse config file
   const fullPath = path.resolve(context.cwd, context.configPath);
 
@@ -261,7 +259,7 @@ export function createDataApiClient(
     };
   }
 
-  let parsed;
+  let parsed: z.infer<typeof typegenConfig>;
   try {
     const raw = fs.readFileSync(fullPath, "utf8");
     const rawJson = parse(raw);
@@ -274,9 +272,7 @@ export function createDataApiClient(
   }
 
   // Get config at index
-  const configArray = Array.isArray(parsed.config)
-    ? parsed.config
-    : [parsed.config];
+  const configArray = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
   const config = configArray[configIndex];
 
   if (!config) {

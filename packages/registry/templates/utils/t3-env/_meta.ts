@@ -1,4 +1,4 @@
-import { TemplateMetadata } from "@/lib/types";
+import type { TemplateMetadata } from "@/lib/types";
 
 export const meta: TemplateMetadata = {
   category: "utility",
@@ -16,8 +16,7 @@ export const meta: TemplateMetadata = {
     {
       action: "next-steps",
       data: {
-        message:
-          "Be sure to import the env.ts file into your next.config.ts to validate at build time.",
+        message: "Be sure to import the env.ts file into your next.config.ts to validate at build time.",
       },
     },
   ],

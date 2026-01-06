@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { glob } from "glob";
 
 import { installDependencies } from "~/helpers/installDependencies.js";
@@ -31,20 +31,12 @@ export async function addAuth({
   }
   if (settings.auth.type !== "none") {
     throw new Error("Auth already exists");
-  } else if (
-    !settings.dataSources.some((o) => o.type === "fm") &&
-    options.type === "fmaddon"
-  ) {
-    throw new Error(
-      "A FileMaker data source is required to use the FM Add-on Auth"
-    );
-  } else if (
-    !settings.dataSources.some((o) => o.type === "fm") &&
-    options.type === "better-auth"
-  ) {
-    throw new Error(
-      "A FileMaker data source is required to use the Better-Auth"
-    );
+  }
+  if (!settings.dataSources.some((o) => o.type === "fm") && options.type === "fmaddon") {
+    throw new Error("A FileMaker data source is required to use the FM Add-on Auth");
+  }
+  if (!settings.dataSources.some((o) => o.type === "fm") && options.type === "better-auth") {
+    throw new Error("A FileMaker data source is required to use the Better-Auth");
   }
 
   if (options.type === "clerk") {
@@ -61,11 +53,7 @@ export async function addAuth({
   }
 }
 
-async function addClerkAuth({
-  projectDir = process.cwd(),
-}: {
-  projectDir?: string;
-}) {
+async function addClerkAuth({ projectDir = process.cwd() }: { projectDir?: string }) {
   await clerkInstaller({ projectDir });
   mergeSettings({ auth: { type: "clerk" } });
 }
@@ -84,15 +72,12 @@ async function replaceActionClientWithAuthed() {
   for (const file of actionFiles) {
     const fullPath = path.join(projectDir, file);
     const content = readFileSync(fullPath, "utf-8");
-    const updatedContent = content.replace(
-      /actionClient/g,
-      "authedActionClient"
-    );
+    const updatedContent = content.replace(/actionClient/g, "authedActionClient");
     writeFileSync(fullPath, updatedContent);
   }
 }
 
-async function addBetterAuth() {
+async function _addBetterAuth() {
   await betterAuthInstaller();
   mergeSettings({ auth: { type: "better-auth" } });
 }

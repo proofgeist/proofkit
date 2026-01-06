@@ -1,22 +1,16 @@
-import {
-  CleanedWhere,
-  createAdapter,
-  type AdapterDebugLogs,
-} from "better-auth/adapters";
-import { createRawFetch, type FmOdataConfig } from "./odata";
-import { prettifyError, z } from "zod/v4";
+/** biome-ignore-all lint/suspicious/noExplicitAny: library code */
 import { logger } from "better-auth";
+import { type AdapterDebugLogs, type CleanedWhere, createAdapter } from "better-auth/adapters";
 import buildQuery from "odata-query";
+import { prettifyError, z } from "zod/v4";
+import { createRawFetch, type FmOdataConfig } from "./odata";
 
 const configSchema = z.object({
   debugLogs: z.unknown().optional(),
   usePlural: z.boolean().optional(),
   odata: z.object({
     serverUrl: z.url(),
-    auth: z.union([
-      z.object({ username: z.string(), password: z.string() }),
-      z.object({ apiKey: z.string() }),
-    ]),
+    auth: z.union([z.object({ username: z.string(), password: z.string() }), z.object({ apiKey: z.string() })]),
     database: z.string().endsWith(".fmp12"),
   }),
 });
@@ -37,9 +31,9 @@ interface FileMakerAdapterConfig {
   odata: FmOdataConfig;
 }
 
-export type AdapterOptions = {
+export interface AdapterOptions {
   config: FileMakerAdapterConfig;
-};
+}
 
 const defaultConfig: Required<FileMakerAdapterConfig> = {
   debugLogs: false,
@@ -51,6 +45,10 @@ const defaultConfig: Required<FileMakerAdapterConfig> = {
   },
 };
 
+// Regex patterns for field validation and ISO date detection
+const FIELD_SPECIAL_CHARS_REGEX = /[\s_]/;
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+
 /**
  * Parse the where clause to an OData filter string.
  * @param where - The where clause to parse.
@@ -58,29 +56,42 @@ const defaultConfig: Required<FileMakerAdapterConfig> = {
  * @internal
  */
 export function parseWhere(where?: CleanedWhere[]): string {
-  if (!where || where.length === 0) return "";
+  if (!where || where.length === 0) {
+    return "";
+  }
 
   // Helper to quote field names with special chars or if field is 'id'
   function quoteField(field: string, value?: any) {
     // Never quote for null or date values (per test expectations)
-    if (value === null || value instanceof Date) return field;
+    if (value === null || value instanceof Date) {
+      return field;
+    }
     // Always quote if field is 'id' or has space or underscore
-    if (field === "id" || /[\s_]/.test(field)) return `"${field}"`;
+    if (field === "id" || FIELD_SPECIAL_CHARS_REGEX.test(field)) {
+      return `"${field}"`;
+    }
     return field;
   }
 
   // Helper to format values for OData
   function formatValue(value: any): string {
-    if (value === null) return "null";
-    if (typeof value === "boolean") return value ? "true" : "false";
-    if (value instanceof Date) return value.toISOString();
-    if (Array.isArray(value)) return `(${value.map(formatValue).join(",")})`;
+    if (value === null) {
+      return "null";
+    }
+    if (typeof value === "boolean") {
+      return value ? "true" : "false";
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (Array.isArray(value)) {
+      return `(${value.map(formatValue).join(",")})`;
+    }
 
     // Handle strings - check if it's an ISO date string first
     if (typeof value === "string") {
       // Check if it's an ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ format)
-      const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
-      if (isoDateRegex.test(value)) {
+      if (ISO_DATE_REGEX.test(value)) {
         return value; // Return ISO date strings without quotes
       }
       return `'${value.replace(/'/g, "''")}'`; // Regular strings get quotes
@@ -103,7 +114,9 @@ export function parseWhere(where?: CleanedWhere[]): string {
   const clauses: string[] = [];
   for (let i = 0; i < where.length; i++) {
     const cond = where[i];
-    if (!cond) continue;
+    if (!cond) {
+      continue;
+    }
     const field = quoteField(cond.field, cond.value);
     let clause = "";
     switch (cond.operator) {
@@ -113,13 +126,11 @@ export function parseWhere(where?: CleanedWhere[]): string {
       case "lte":
       case "gt":
       case "gte":
-        clause = `${field} ${opMap[cond.operator!]} ${formatValue(cond.value)}`;
+        clause = `${field} ${opMap[cond.operator]} ${formatValue(cond.value)}`;
         break;
       case "in":
         if (Array.isArray(cond.value)) {
-          clause = cond.value
-            .map((v) => `${field} eq ${formatValue(v)}`)
-            .join(" or ");
+          clause = cond.value.map((v) => `${field} eq ${formatValue(v)}`).join(" or ");
           clause = `(${clause})`;
         }
         break;
@@ -144,9 +155,7 @@ export function parseWhere(where?: CleanedWhere[]): string {
   return clauses.join(" ");
 }
 
-export const FileMakerAdapter = (
-  _config: FileMakerAdapterConfig = defaultConfig,
-) => {
+export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig) => {
   const parsed = configSchema.loose().safeParse(_config);
 
   if (!parsed.success) {
@@ -154,7 +163,7 @@ export const FileMakerAdapter = (
   }
   const config = parsed.data;
 
-  const { fetch, baseURL } = createRawFetch({
+  const { fetch } = createRawFetch({
     ...config.odata,
     logging: config.debugLogs ? "verbose" : "none",
   });
@@ -170,10 +179,9 @@ export const FileMakerAdapter = (
       supportsBooleans: false, // Whether the database supports booleans. (Default: true)
       supportsNumericIds: false, // Whether the database supports auto-incrementing numeric IDs. (Default: true)
     },
-    adapter: ({ options }) => {
+    adapter: () => {
       return {
-        options: { config },
-        create: async ({ data, model, select }) => {
+        create: async ({ data, model }) => {
           if (model === "session") {
             console.log("session", data);
           }
@@ -232,9 +240,7 @@ export const FileMakerAdapter = (
           const query = buildQuery({
             top: limit,
             skip: offset,
-            orderBy: sortBy
-              ? `${sortBy.field} ${sortBy.direction ?? "asc"}`
-              : undefined,
+            orderBy: sortBy ? `${sortBy.field} ${sortBy.direction ?? "asc"}` : undefined,
             filter: filter.length > 0 ? filter : undefined,
           });
           logger.debug("QUERY", query);
@@ -303,7 +309,9 @@ export const FileMakerAdapter = (
             const res = await fetch(`/${model}('${id}')`, {
               method: "DELETE",
             });
-            if (!res.error) deleted++;
+            if (!res.error) {
+              deleted++;
+            }
           }
           return deleted;
         },
@@ -324,14 +332,18 @@ export const FileMakerAdapter = (
           logger.debug("EXISTING", existing.data);
 
           const id = existing.data?.value?.[0]?.id;
-          if (!id) return null;
+          if (!id) {
+            return null;
+          }
 
           const patchRes = await fetch(`/${model}('${id}')`, {
             method: "PATCH",
             body: update,
           });
           logger.debug("PATCH RES", patchRes.data);
-          if (patchRes.error) return null;
+          if (patchRes.error) {
+            return null;
+          }
 
           // Read back the updated record
           const readBack = await fetch(`/${model}('${id}')`, {
@@ -361,7 +373,9 @@ export const FileMakerAdapter = (
               method: "PATCH",
               body: update,
             });
-            if (!res.error) updated++;
+            if (!res.error) {
+              updated++;
+            }
           }
           return updated as any;
         },

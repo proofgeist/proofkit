@@ -1,5 +1,5 @@
-import { execSync } from "child_process";
-import path, { join } from "path";
+import { execSync } from "node:child_process";
+import path, { join } from "node:path";
 import dotenv from "dotenv";
 import { beforeAll } from "vitest";
 

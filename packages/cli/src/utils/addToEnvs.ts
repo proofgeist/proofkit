@@ -1,7 +1,7 @@
-import { execSync } from "child_process";
-import path from "path";
+import { execSync } from "node:child_process";
+import path from "node:path";
 import fs from "fs-extra";
-import { SyntaxKind, type Project } from "ts-morph";
+import { type Project, SyntaxKind } from "ts-morph";
 
 import { findT3EnvFile } from "~/installers/envVars.js";
 import { state } from "~/state.js";
@@ -32,7 +32,9 @@ export async function addToEnv({
   const project = args.project ?? getNewProject(projectDir);
   const schemaFile = project.addSourceFileAtPath(envSchemaFile);
 
-  if (!schemaFile) throw new Error("Schema file not found");
+  if (!schemaFile) {
+    throw new Error("Schema file not found");
+  }
 
   // Find the createEnv call expression
   const createEnvCall = schemaFile
@@ -41,7 +43,7 @@ export async function addToEnv({
 
   if (!createEnvCall) {
     throw new Error(
-      "Could not find createEnv call in schema file. Make sure you have a valid env.ts file with createEnv setup."
+      "Could not find createEnv call in schema file. Make sure you have a valid env.ts file with createEnv setup.",
     );
   }
 
@@ -110,7 +112,7 @@ export async function addToEnv({
       if (!gitIgnoreContent.includes(".env")) {
         execSync(`echo ".env" >> "${gitIgnoreFile}"`, { cwd: projectDir });
       }
-    } catch (error) {
+    } catch (_error) {
       // Silently ignore gitignore errors
     }
 

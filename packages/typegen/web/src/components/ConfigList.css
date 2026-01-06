@@ -44,6 +44,10 @@
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 .config-list-item:hover {
@@ -76,16 +80,3 @@
 .config-list-empty p {
   margin: 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

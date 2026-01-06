@@ -1,8 +1,8 @@
-import { OttoAPIKey } from "../src/index.js";
+import dotenv from "dotenv";
+import type { OttoAPIKey } from "../src/index.js";
 import { generateTypedClients } from "../src/utils/typegen/index.js";
 import type { GenerateSchemaOptions } from "../src/utils/typegen/types.js";
 
-import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
 export const config: GenerateSchemaOptions = {

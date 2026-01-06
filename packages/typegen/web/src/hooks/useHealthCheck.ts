@@ -1,5 +1,5 @@
-import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRef } from "react";
 import { client } from "../lib/api";
 
 /**
@@ -10,7 +10,7 @@ async function checkHealth(): Promise<boolean> {
   try {
     const res = await client.api.config.$get();
     return res.ok;
-  } catch (error) {
+  } catch (_error) {
     // Connection errors indicate server is down
     return false;
   }
@@ -48,7 +48,7 @@ export function useHealthCheck(options?: {
   } else if (data === false) {
     // Only report unhealthy if we've connected before
     // This prevents false positives on initial page load
-    isHealthy = hasConnectedRef.current ? false : true;
+    isHealthy = !hasConnectedRef.current;
   } else {
     // Still loading or no data yet - default to healthy
     isHealthy = true;

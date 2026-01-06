@@ -1,29 +1,26 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
 import { SyntaxKind } from "ts-morph";
 
-import {
-  getClientSuffix,
-  getFieldNamesForSchema,
-} from "~/generators/fmdapi.js";
+import { getClientSuffix, getFieldNamesForSchema } from "~/generators/fmdapi.js";
 import { injectTanstackQuery } from "~/generators/tanstack-query.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
-import { type TPostInstallFn } from "../types.js";
+import type { TPostInstallFn } from "../types.js";
 
-export const postInstallTable: TPostInstallFn = async ({
-  projectDir,
-  pageDir,
-  dataSource,
-  schemaName,
-}) => {
+// Regex to validate JavaScript identifiers
+const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
+export const postInstallTable: TPostInstallFn = async ({ projectDir, pageDir, dataSource, schemaName }) => {
   if (!dataSource) {
     throw new Error("DataSource is required for table page");
-  } else if (!schemaName) {
+  }
+  if (!schemaName) {
     throw new Error("SchemaName is required for table page");
-  } else if (dataSource.type !== "fm") {
+  }
+  if (dataSource.type !== "fm") {
     throw new Error("FileMaker DataSource is required for table page");
   }
 
@@ -49,8 +46,7 @@ export const postInstallTable: TPostInstallFn = async ({
     __ZOD_TYPE_NAME__: `Z${schemaName}`,
     __CLIENT_NAME__: `${schemaName}${clientSuffix}`,
     __SCHEMA_NAME__: schemaName,
-    __ACTION_CLIENT__:
-      auth.type === "none" ? "actionClient" : "authedActionClient",
+    __ACTION_CLIENT__: auth.type === "none" ? "actionClient" : "authedActionClient",
     __FIRST_FIELD_NAME__: allFieldNames[0] ?? "NO_FIELDS_ON_YOUR_LAYOUT",
   };
 
@@ -60,9 +56,9 @@ export const postInstallTable: TPostInstallFn = async ({
     const filePath = path.join(pageDir, file);
     let fileContent = await fs.readFile(filePath, "utf8");
 
-    Object.entries(substitutions).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(substitutions)) {
       fileContent = fileContent.replace(new RegExp(key, "g"), value);
-    });
+    }
 
     await fs.writeFile(filePath, fileContent, "utf8");
   }
@@ -70,15 +66,11 @@ export const postInstallTable: TPostInstallFn = async ({
   // add the schemas to the columns array
   const project = getNewProject(projectDir);
   const sourceFile = project.addSourceFileAtPath(
-    path.join(pageDir, state.appType === "browser" ? "table.tsx" : "index.tsx")
+    path.join(pageDir, state.appType === "browser" ? "table.tsx" : "index.tsx"),
   );
-  const columns = sourceFile
-    .getVariableDeclaration("columns")
-    ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
+  const columns = sourceFile.getVariableDeclaration("columns")?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
 
-  const fieldNames = filterOutCommonFieldNames(
-    allFieldNames.filter(Boolean) as string[]
-  );
+  const fieldNames = filterOutCommonFieldNames(allFieldNames.filter(Boolean) as string[]);
 
   for await (const fieldName of fieldNames) {
     columns?.addElement((writer) =>
@@ -92,13 +84,15 @@ export const postInstallTable: TPostInstallFn = async ({
           writer.write(`header: "${fieldName}",`);
         })
         .write(",")
-        .newLine()
+        .newLine(),
     );
   }
 
   if (state.appType === "webviewer") {
     const didInject = await injectTanstackQuery({ project });
-    if (didInject) await installDependencies();
+    if (didInject) {
+      await installDependencies();
+    }
   }
 
   await formatAndSaveSourceFiles(project);
@@ -107,7 +101,7 @@ export const postInstallTable: TPostInstallFn = async ({
 // Function to check if a field name needs bracket notation
 function needsBracketNotation(fieldName: string): boolean {
   // Check if it's a valid JavaScript identifier
-  return !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(fieldName);
+  return !VALID_JS_IDENTIFIER.test(fieldName);
 }
 
 const commonFieldNamesToExclude = [
@@ -124,8 +118,6 @@ const commonFieldNamesToExclude = [
 
 function filterOutCommonFieldNames(fieldNames: string[]): string[] {
   return fieldNames.filter(
-    (fieldName) =>
-      !commonFieldNamesToExclude.includes(fieldName.toLowerCase()) ||
-      fieldName.startsWith("_")
+    (fieldName) => !commonFieldNamesToExclude.includes(fieldName.toLowerCase()) || fieldName.startsWith("_"),
   );
 }

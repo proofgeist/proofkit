@@ -1,9 +1,9 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { type Project } from "ts-morph";
-import { type PackageJson } from "type-fest";
+import type { Project } from "ts-morph";
+import type { PackageJson } from "type-fest";
 
 import { abortIfCancel } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";
@@ -26,8 +26,12 @@ export async function installReactEmail({
 
   // Exit early if already installed
   const settings = getSettings();
-  if (settings.ui === "shadcn") return false;
-  if (settings.reactEmail) return false;
+  if (settings.ui === "shadcn") {
+    return false;
+  }
+  if (settings.reactEmail) {
+    return false;
+  }
 
   // Ensure emails directory exists
   fs.ensureDirSync(path.join(projectDir, "src/emails"));
@@ -43,10 +47,11 @@ export async function installReactEmail({
   });
 
   // add a script to package.json
-  const pkgJson = fs.readJSONSync(
-    path.join(projectDir, "package.json")
-  ) as PackageJson;
-  pkgJson.scripts!["email:preview"] = "email dev --port 3010 --dir=src/emails";
+  const pkgJson = fs.readJSONSync(path.join(projectDir, "package.json")) as PackageJson;
+  if (!pkgJson.scripts) {
+    pkgJson.scripts = {};
+  }
+  pkgJson.scripts["email:preview"] = "email dev --port 3010 --dir=src/emails";
   fs.writeJSONSync(path.join(projectDir, "package.json"), pkgJson, {
     spaces: 2,
   });
@@ -62,7 +67,7 @@ export async function installReactEmail({
     } else {
       await fs.copy(
         path.join(PKG_ROOT, "template/extras/emailProviders/none/email.tsx"),
-        path.join(projectDir, "src/server/auth/email.tsx")
+        path.join(projectDir, "src/server/auth/email.tsx"),
       );
     }
   }
@@ -70,12 +75,12 @@ export async function installReactEmail({
   // Copy base email template(s) into src/emails for preview and reuse
   await fs.copy(
     path.join(PKG_ROOT, "template/extras/emailTemplates/generic.tsx"),
-    path.join(projectDir, "src/emails/generic.tsx")
+    path.join(projectDir, "src/emails/generic.tsx"),
   );
   if (args.installServerFiles) {
     await fs.copy(
       path.join(PKG_ROOT, "template/extras/emailTemplates/auth-code.tsx"),
-      path.join(projectDir, "src/emails/auth-code.tsx")
+      path.join(projectDir, "src/emails/auth-code.tsx"),
     );
   }
 
@@ -87,8 +92,7 @@ export async function installReactEmail({
   setSettings({
     ...settings,
     reactEmail: true,
-    reactEmailServer:
-      Boolean(args.installServerFiles) || settings.reactEmailServer,
+    reactEmailServer: Boolean(args.installServerFiles) || settings.reactEmailServer,
   });
 
   // Install dependencies unless explicitly skipped
@@ -106,24 +110,24 @@ export async function installPlunk({ project }: { project?: Project }) {
     projectDir,
   });
 
-  const apiKey =
-    typeof state.apiKey === "string"
-      ? state.apiKey
-      : state.ci
-        ? ""
-        : abortIfCancel(
-            await p.text({
-              message: `Enter your Plunk API key\n${chalk.dim(
-                `Enter your Secret API Key from https://app.useplunk.com/settings/api`
-              )}`,
-              placeholder: "...or leave blank to do this later",
-            })
-          );
+  let apiKey: string;
+  if (typeof state.apiKey === "string") {
+    apiKey = state.apiKey;
+  } else if (state.ci) {
+    apiKey = "";
+  } else {
+    apiKey = abortIfCancel(
+      await p.text({
+        message: `Enter your Plunk API key\n${chalk.dim(
+          "Enter your Secret API Key from https://app.useplunk.com/settings/api",
+        )}`,
+        placeholder: "...or leave blank to do this later",
+      }),
+    );
+  }
 
   if (!apiKey) {
-    logger.warn(
-      "You will need to add your Plunk API key to the .env file manually for your app to run."
-    );
+    logger.warn("You will need to add your Plunk API key to the .env file manually for your app to run.");
   }
 
   console.log("");
@@ -143,12 +147,12 @@ export async function installPlunk({ project }: { project?: Project }) {
 
   await fs.copy(
     path.join(PKG_ROOT, "template/extras/emailProviders/plunk/service.ts"),
-    path.join(projectDir, "src/server/services/plunk.ts")
+    path.join(projectDir, "src/server/services/plunk.ts"),
   );
 
   await fs.copy(
     path.join(PKG_ROOT, "template/extras/emailProviders/plunk/email.tsx"),
-    path.join(projectDir, "src/server/auth/email.tsx")
+    path.join(projectDir, "src/server/auth/email.tsx"),
   );
 }
 
@@ -160,24 +164,24 @@ export async function installResend({ project }: { project?: Project }) {
     projectDir,
   });
 
-  const apiKey =
-    typeof state.apiKey === "string"
-      ? state.apiKey
-      : state.ci
-        ? ""
-        : abortIfCancel(
-            await p.text({
-              message: `Enter your Resend API key\n${chalk.dim(
-                `Only "Sending Access" permission required: https://resend.com/api-keys`
-              )}`,
-              placeholder: "...or leave blank to do this later",
-            })
-          );
+  let apiKey: string;
+  if (typeof state.apiKey === "string") {
+    apiKey = state.apiKey;
+  } else if (state.ci) {
+    apiKey = "";
+  } else {
+    apiKey = abortIfCancel(
+      await p.text({
+        message: `Enter your Resend API key\n${chalk.dim(
+          `Only "Sending Access" permission required: https://resend.com/api-keys`,
+        )}`,
+        placeholder: "...or leave blank to do this later",
+      }),
+    );
+  }
 
   if (!apiKey) {
-    logger.warn(
-      "You will need to add your Resend API key to the .env file manually for your app to run."
-    );
+    logger.warn("You will need to add your Resend API key to the .env file manually for your app to run.");
   }
 
   console.log("");
@@ -197,11 +201,11 @@ export async function installResend({ project }: { project?: Project }) {
 
   await fs.copy(
     path.join(PKG_ROOT, "template/extras/emailProviders/resend/service.ts"),
-    path.join(projectDir, "src/server/services/resend.ts")
+    path.join(projectDir, "src/server/services/resend.ts"),
   );
 
   await fs.copy(
     path.join(PKG_ROOT, "template/extras/emailProviders/resend/email.tsx"),
-    path.join(projectDir, "src/server/auth/email.tsx")
+    path.join(projectDir, "src/server/auth/email.tsx"),
   );
 }

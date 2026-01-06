@@ -1,8 +1,4 @@
-import DataApi, {
-  OttoAdapter,
-  type clientTypes,
-  type OttoAPIKey,
-} from "@proofkit/fmdapi";
+import DataApi, { type clientTypes, OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi";
 
 export async function getLayouts({
   dataApiKey,
@@ -38,20 +34,14 @@ function getAllLayoutNames(layout: clientTypes.LayoutOrFolder): string[] {
 
 export const commonFileMakerLayoutPrefixes = ["API_", "API ", "dapi_", "dapi"];
 
-export function transformLayoutList(
-  layouts: clientTypes.LayoutOrFolder[]
-): string[] {
+export function transformLayoutList(layouts: clientTypes.LayoutOrFolder[]): string[] {
   const flatList = layouts.flatMap(getAllLayoutNames);
 
   // sort the list so that any values that begin with one of the prefixes are at the top
 
   const sortedList = flatList.sort((a, b) => {
-    const aPrefix = commonFileMakerLayoutPrefixes.find((prefix) =>
-      a.startsWith(prefix)
-    );
-    const bPrefix = commonFileMakerLayoutPrefixes.find((prefix) =>
-      b.startsWith(prefix)
-    );
+    const aPrefix = commonFileMakerLayoutPrefixes.find((prefix) => a.startsWith(prefix));
+    const bPrefix = commonFileMakerLayoutPrefixes.find((prefix) => b.startsWith(prefix));
     if (aPrefix && bPrefix) {
       return a.localeCompare(b);
     }

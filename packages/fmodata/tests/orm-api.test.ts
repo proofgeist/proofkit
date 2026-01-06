@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
 import {
-  fmTableOccurrence,
-  textField,
-  numberField,
-  timestampField,
-  eq,
-  gt,
   and,
-  or,
-  contains,
-  isColumn,
   type Column,
+  contains,
+  eq,
   FMTable,
+  fmTableOccurrence,
+  gt,
+  isColumn,
+  numberField,
+  or,
+  textField,
+  timestampField,
 } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 
 describe("ORM API", () => {
@@ -57,9 +57,7 @@ describe("ORM API", () => {
     it("should support both read and write validators", () => {
       const readValidator = z.coerce.boolean();
       const writeValidator = z.boolean().transform((v) => (v ? 1 : 0));
-      const field = numberField()
-        .readValidator(readValidator)
-        .writeValidator(writeValidator);
+      const field = numberField().readValidator(readValidator).writeValidator(writeValidator);
       const config = field._getConfig();
       expect(config.outputValidator).toBe(readValidator);
       expect(config.inputValidator).toBe(writeValidator);
@@ -84,9 +82,7 @@ describe("ORM API", () => {
 
       expect((users as any)[FMTable.Symbol.Name]).toBe("users");
       expect((users as any)[FMTable.Symbol.EntityId]).toBe("FMTID:100");
-      expect((users as any)[FMTable.Symbol.NavigationPaths]).toEqual([
-        "contacts",
-      ]);
+      expect((users as any)[FMTable.Symbol.NavigationPaths]).toEqual(["contacts"]);
     });
 
     it("should create column references", () => {
@@ -166,11 +162,7 @@ describe("ORM API", () => {
 
   describe("Column References", () => {
     it("should identify columns", () => {
-      const users = fmTableOccurrence(
-        "users",
-        { id: textField(), name: textField() },
-        {},
-      );
+      const users = fmTableOccurrence("users", { id: textField(), name: textField() }, {});
 
       expect(isColumn(users.id)).toBe(true);
       expect(isColumn(users.name)).toBe(true);
@@ -178,11 +170,7 @@ describe("ORM API", () => {
     });
 
     it("should get field identifier", () => {
-      const users = fmTableOccurrence(
-        "users",
-        { id: textField().entityId("FMFID:1") },
-        {},
-      );
+      const users = fmTableOccurrence("users", { id: textField().entityId("FMFID:1") }, {});
 
       expect(users.id.getFieldIdentifier(false)).toBe("id");
       expect(users.id.getFieldIdentifier(true)).toBe("FMFID:1");
@@ -226,11 +214,7 @@ describe("ORM API", () => {
     });
 
     it("should support column-to-column comparison", () => {
-      const contacts = fmTableOccurrence(
-        "contacts",
-        { id_user: textField() },
-        {},
-      );
+      const contacts = fmTableOccurrence("contacts", { id_user: textField() }, {});
       const expr = eq(users.id, contacts.id_user);
       expect(expr.toODataFilter(false)).toBe('"id" eq "id_user"');
     });
@@ -249,19 +233,12 @@ describe("ORM API", () => {
     it("should create or operator", () => {
       const expr = or(eq(users.name, "John"), eq(users.name, "Jane"));
       expect(expr.operator).toBe("or");
-      expect(expr.toODataFilter(false)).toBe(
-        "name eq 'John' or name eq 'Jane'",
-      );
+      expect(expr.toODataFilter(false)).toBe("name eq 'John' or name eq 'Jane'");
     });
 
     it("should handle nested logical operators", () => {
-      const expr = and(
-        eq(users.name, "John"),
-        or(gt(users.age, 18), eq(users.age, 18)),
-      );
-      expect(expr.toODataFilter(false)).toBe(
-        "name eq 'John' and (age gt 18 or age eq 18)",
-      );
+      const expr = and(eq(users.name, "John"), or(gt(users.age, 18), eq(users.age, 18)));
+      expect(expr.toODataFilter(false)).toBe("name eq 'John' and (age gt 18 or age eq 18)");
     });
 
     it("should escape single quotes in strings", () => {
@@ -275,17 +252,14 @@ describe("ORM API", () => {
       const users = fmTableOccurrence(
         "users",
         {
-          status: textField().readValidator(
-            z.enum(["active", "pending", "inactive"]),
-          ),
+          status: textField().readValidator(z.enum(["active", "pending", "inactive"])),
         },
         {},
       );
 
       // Type test - the column type matches the validator output type
       // Since the field is nullable by default, the type includes null
-      const col: Column<"active" | "pending" | "inactive" | null, "status"> =
-        users.status as any; // Type assertion needed due to nullable field inference
+      const col: Column<"active" | "pending" | "inactive" | null, "status"> = users.status as any; // Type assertion needed due to nullable field inference
       expect(col.fieldName).toBe("status");
     });
 
@@ -300,10 +274,8 @@ describe("ORM API", () => {
       );
 
       // Type test
-      const emailCol: Column<string | null, string | null, "users", false> =
-        users.email;
-      const nameCol: Column<string | null, string | null, "users", false> =
-        users.name;
+      const emailCol: Column<string | null, string | null, "users", false> = users.email;
+      const nameCol: Column<string | null, string | null, "users", false> = users.name;
 
       expect(emailCol.fieldName).toBe("email");
       expect(nameCol.fieldName).toBe("name");

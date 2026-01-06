@@ -1,8 +1,8 @@
 import type { DataApi } from "@proofkit/fmdapi";
-import type { F } from "ts-toolbelt";
+import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
 import chalk from "chalk";
-import { TSchema, ValueListsOptions } from "./types";
-import { FileMakerError, type clientTypes } from "@proofkit/fmdapi";
+import type { F } from "ts-toolbelt";
+import type { TSchema, ValueListsOptions } from "./types";
 
 /**
  * Calls the FileMaker Data API to get the layout metadata and returns a schema
@@ -11,35 +11,26 @@ export const getLayoutMetadata = async (args: {
   client: ReturnType<typeof DataApi>;
   valueLists?: ValueListsOptions;
 }) => {
-  const schemaReducer: F.Function<[clientTypes.FieldMetaData[]], TSchema[]> = (
-    schema,
-  ) =>
+  const schemaReducer: F.Function<[clientTypes.FieldMetaData[]], TSchema[]> = (schema) =>
     schema.reduce((acc, field) => {
-      if (acc.find((o) => o.name === field.name)) return acc; // skip duplicates
-      if (
-        meta &&
-        field.valueList &&
-        meta.valueLists &&
-        valueLists !== "ignore"
-      ) {
+      if (acc.find((o) => o.name === field.name)) {
+        return acc; // skip duplicates
+      }
+      if (meta && field.valueList && meta.valueLists && valueLists !== "ignore") {
         const list = meta.valueLists.find((o) => o.name === field.valueList);
         const values = list?.values.map((o) => o.value) ?? [];
-        return [
-          ...acc,
-          {
-            name: field.name,
-            type: "valueList",
-            values: valueLists === "allowEmpty" ? [...values, ""] : values,
-          },
-        ];
-      }
-      return [
-        ...acc,
-        {
+        acc.push({
           name: field.name,
-          type: field.result === "number" ? "fmnumber" : "string",
-        },
-      ];
+          type: "valueList",
+          values: valueLists === "allowEmpty" ? [...values, ""] : values,
+        });
+        return acc;
+      }
+      acc.push({
+        name: field.name,
+        type: field.result === "number" ? "fmnumber" : "string",
+      });
+      return acc;
     }, [] as TSchema[]);
 
   const { client, valueLists = "ignore" } = args;
@@ -55,7 +46,9 @@ export const getLayoutMetadata = async (args: {
     }
     throw err;
   });
-  if (!meta) return;
+  if (!meta) {
+    return;
+  }
   const schema = schemaReducer(meta.fieldMetaData);
   const portalSchema = Object.keys(meta.portalMetaData).map((schemaName) => {
     const schema = schemaReducer(meta.portalMetaData[schemaName] ?? []);
@@ -69,8 +62,11 @@ export const getLayoutMetadata = async (args: {
   // remove duplicates from valueListValues
   const valueListValuesUnique = valueListValues.reduce(
     (acc, vl) => {
-      if (acc.find((o) => o.name === vl.name)) return acc;
-      return [...acc, vl];
+      if (acc.find((o) => o.name === vl.name)) {
+        return acc;
+      }
+      acc.push(vl);
+      return acc;
     },
     [] as typeof valueListValues,
   );

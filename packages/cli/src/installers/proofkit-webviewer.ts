@@ -1,6 +1,6 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
-import { type OttoAPIKey } from "@proofkit/fmdapi";
+import type { OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
 
@@ -23,15 +23,21 @@ export async function checkForWebViewerLayouts(): Promise<boolean> {
       }
     | undefined;
 
-  if (!dataSource) return false;
+  if (!dataSource) {
+    return false;
+  }
   if (settings.envFile) {
     dotenv.config({
       path: path.join(state.projectDir, settings.envFile),
     });
   }
-  const dataApiKey = process.env[dataSource.envNames.apiKey]! as OttoAPIKey;
-  const fmFile = process.env[dataSource.envNames.database]!;
-  const server = process.env[dataSource.envNames.server]!;
+  const dataApiKey = process.env[dataSource.envNames.apiKey] as OttoAPIKey | undefined;
+  const fmFile = process.env[dataSource.envNames.database];
+  const server = process.env[dataSource.envNames.server];
+
+  if (!(dataApiKey && fmFile && server)) {
+    return false;
+  }
 
   const existingLayouts = await getLayouts({
     dataApiKey,
@@ -41,14 +47,12 @@ export async function checkForWebViewerLayouts(): Promise<boolean> {
   const webviewerLayouts = ["ProofKitWV"];
 
   const allWebViewerLayoutsExist = webviewerLayouts.every((layout) =>
-    existingLayouts.some((l: string) => l === layout)
+    existingLayouts.some((l: string) => l === layout),
   );
 
   if (allWebViewerLayoutsExist) {
     console.log(
-      chalk.green(
-        "Successfully detected all required layouts for ProofKit WebViewer in your FileMaker file."
-      )
+      chalk.green("Successfully detected all required layouts for ProofKit WebViewer in your FileMaker file."),
     );
     return true;
   }
@@ -66,15 +70,16 @@ export async function ensureWebViewerAddonInstalled() {
     if (!hasWebViewerLayouts) {
       const shouldContinue = abortIfCancel<boolean>(
         await p.confirm({
-          message:
-            "I have followed the above instructions, continue installing",
+          message: "I have followed the above instructions, continue installing",
           initialValue: true,
           active: "Continue",
           inactive: "Abort",
-        })
+        }),
       );
 
-      if (!shouldContinue) throw new UserAbortedError();
+      if (!shouldContinue) {
+        throw new UserAbortedError();
+      }
     }
   }
 }

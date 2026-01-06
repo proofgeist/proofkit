@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { LoaderCircleIcon } from 'lucide-react';
+import { LoaderCircleIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function ButtonDemo() {
   const [isDisabled, setIsDisabled] = useState(false);
@@ -19,9 +19,9 @@ export default function ButtonDemo() {
 
   return (
     <div className="flex items-center gap-4">
-      <Button variant="primary" disabled={isDisabled}>
-        {isDisabled ? <LoaderCircleIcon className="animate-spin size-4" /> : null}
-        {isDisabled ? 'Submitting...' : 'Submit'}
+      <Button disabled={isDisabled} variant="primary">
+        {isDisabled ? <LoaderCircleIcon className="size-4 animate-spin" /> : null}
+        {isDisabled ? "Submitting..." : "Submit"}
       </Button>
     </div>
   );

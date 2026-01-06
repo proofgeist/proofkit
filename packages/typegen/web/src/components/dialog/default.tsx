@@ -1,6 +1,12 @@
-import { useState } from 'react';
-import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDirection } from "@radix-ui/react-direction";
+import { RiCheckboxCircleFill } from "@remixicon/react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Alert, AlertIcon, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogBody,
@@ -11,33 +17,27 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useDirection } from '@radix-ui/react-direction';
-import { RiCheckboxCircleFill } from '@remixicon/react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { z } from 'zod';
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function DialogDemo() {
   const [open, setOpen] = useState(false);
   const direction = useDirection();
 
   const FormSchema = z.object({
-    feedback: z.string().min(1, 'Feedback is required').max(200, 'Feedback cannot exceed 200 characters'),
+    feedback: z.string().min(1, "Feedback is required").max(200, "Feedback cannot exceed 200 characters"),
   });
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: { feedback: '' },
-    mode: 'onSubmit',
+    defaultValues: { feedback: "" },
+    mode: "onSubmit",
   });
 
   function onSubmit() {
     toast.custom((t) => (
-      <Alert variant="mono" icon="primary" onClose={() => toast.dismiss(t)}>
+      <Alert icon="primary" onClose={() => toast.dismiss(t)} variant="mono">
         <AlertIcon>
           <RiCheckboxCircleFill />
         </AlertIcon>
@@ -50,7 +50,7 @@ export default function DialogDemo() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
         <Button variant="outline">Show Dialog</Button>
       </DialogTrigger>

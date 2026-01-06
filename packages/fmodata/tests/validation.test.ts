@@ -13,17 +13,11 @@
  * 3. The mock fetch will automatically match the request URL to the stored response
  */
 
-import { describe, it, expect, expectTypeOf, assert } from "vitest";
-import { simpleMock } from "./utils/mock-fetch";
-import {
-  createMockClient,
-  hobbyEnum,
-  usersSimpleTO,
-  contacts,
-  users,
-} from "./utils/test-setup";
-import { z } from "zod/v4";
 import { fmTableOccurrence, textField } from "@proofkit/fmodata";
+import { assert, describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod/v4";
+import { simpleMock } from "./utils/mock-fetch";
+import { contacts, createMockClient, type hobbyEnum, users } from "./utils/test-setup";
 
 describe("Validation Tests", () => {
   const client = createMockClient();
@@ -40,8 +34,7 @@ describe("Validation Tests", () => {
           fetchHandler: simpleMock({
             status: 200,
             body: {
-              "@context":
-                "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+              "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
               value: [
                 {
                   hobby: "Invalid Hobby",
@@ -63,15 +56,12 @@ describe("Validation Tests", () => {
       const result = await db
         .from(contacts)
         .list()
-        .expand(users, (b: any) =>
-          b.select({ name: users.name, fake_field: users.fake_field }),
-        )
+        .expand(users, (b: any) => b.select({ name: users.name, fake_field: users.fake_field }))
         .execute({
           fetchHandler: simpleMock({
             status: 200,
             body: {
-              "@context":
-                "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+              "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
               value: [
                 {
                   PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
@@ -95,8 +85,13 @@ describe("Validation Tests", () => {
 
       assert(result.data, "Result data should be defined");
       expect(result.error).toBeUndefined();
-      if (!result.data) throw new Error("Expected result.data to be defined");
-      const firstRecord = result.data[0]!;
+      if (!result.data) {
+        throw new Error("Expected result.data to be defined");
+      }
+      const firstRecord = result.data[0];
+      if (!firstRecord) {
+        throw new Error("Expected firstRecord to be defined");
+      }
       assert(firstRecord, "First record should be defined");
 
       // Verify the contact record is validated
@@ -108,18 +103,19 @@ describe("Validation Tests", () => {
       expect(Array.isArray(firstRecord.users)).toBe(true);
       expect(firstRecord.users.length).toBe(1);
 
-      const expandedUser = firstRecord.users[0]!;
+      const expandedUser = firstRecord.users[0];
+      if (!expandedUser) {
+        throw new Error("Expected expandedUser to be defined");
+      }
 
       assert(expandedUser, "Expanded user should be defined");
 
       // Verify the expanded user fields are validated according to schema
       expect(expandedUser.name).toBe("Test User");
-      expect(expandedUser.fake_field).toBe(
-        "I only exist in the schema, not the database",
-      );
+      expect(expandedUser.fake_field).toBe("I only exist in the schema, not the database");
     });
   });
-  it("should automatically select only fields in the schema", async () => {
+  it("should automatically select only fields in the schema", () => {
     const simpleUsers = fmTableOccurrence("users", {
       id: textField().primaryKey().notNull(),
       name: textField().notNull(),
@@ -128,10 +124,10 @@ describe("Validation Tests", () => {
 
     const queryString = query.getQueryString();
 
-    expect(queryString).toContain(`$select=`);
-    expect(queryString).toContain(`name`);
+    expect(queryString).toContain("$select=");
+    expect(queryString).toContain("name");
     expect(queryString).toContain(`"id"`); // must quote the id field
-    expect(queryString).not.toContain(`$expand`);
+    expect(queryString).not.toContain("$expand");
   });
 
   it("should skip validation if requested", async () => {
@@ -143,8 +139,7 @@ describe("Validation Tests", () => {
         fetchHandler: simpleMock({
           status: 200,
           body: {
-            "@context":
-              "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+            "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
             value: [
               {
                 PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
@@ -158,14 +153,17 @@ describe("Validation Tests", () => {
     expect(result).toBeDefined();
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
-    if (!result.data) throw new Error("Expected result.data to be defined");
+    if (!result.data) {
+      throw new Error("Expected result.data to be defined");
+    }
     expect(Array.isArray(result.data)).toBe(true);
 
-    const firstRecord = result.data[0]!;
+    const firstRecord = result.data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
     // types should not change, even if skipValidation is true
-    expectTypeOf(firstRecord.hobby).toEqualTypeOf<z.infer<
-      typeof hobbyEnum
-    > | null>();
+    expectTypeOf(firstRecord.hobby).toEqualTypeOf<z.infer<typeof hobbyEnum> | null>();
 
     expect(firstRecord?.hobby).toBe("not a valid hobby");
   });
@@ -180,8 +178,7 @@ describe("Validation Tests", () => {
         fetchHandler: simpleMock({
           status: 200,
           body: {
-            "@context":
-              "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+            "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
             value: [
               {
                 "@id":
@@ -199,10 +196,15 @@ describe("Validation Tests", () => {
     expect(result).toBeDefined();
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
-    if (!result.data) throw new Error("Expected result.data to be defined");
+    if (!result.data) {
+      throw new Error("Expected result.data to be defined");
+    }
     expect(Array.isArray(result.data)).toBe(true);
 
-    const firstRecord = result.data[0]!;
+    const firstRecord = result.data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
     expect(firstRecord).toHaveProperty("@id");
     expect(firstRecord).toHaveProperty("@editLink");
   });

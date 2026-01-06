@@ -1,29 +1,39 @@
-import { describe, it, expect } from "vitest";
-import { createRawFetch } from "../src/odata";
+import { describe, expect, it } from "vitest";
 import { getMetadata } from "../src/migrate";
+import { createRawFetch } from "../src/odata";
 
-if (!process.env.FM_SERVER) {
-  throw new Error("FM_SERVER is not set");
+function getTestEnv() {
+  const fmServer = process.env.FM_SERVER;
+  const fmDatabase = process.env.FM_DATABASE;
+  const ottoApiKey = process.env.OTTO_API_KEY;
+
+  if (!fmServer) {
+    throw new Error("FM_SERVER is not set");
+  }
+  if (!fmDatabase) {
+    throw new Error("FM_DATABASE is not set");
+  }
+  if (!ottoApiKey) {
+    throw new Error("OTTO_API_KEY is not set");
+  }
+
+  return { fmServer, fmDatabase, ottoApiKey };
 }
-if (!process.env.FM_DATABASE) {
-  throw new Error("FM_DATABASE is not set");
-}
-if (!process.env.OTTO_API_KEY) {
-  throw new Error("OTTO_API_KEY is not set");
-}
+
+const { fmServer, fmDatabase, ottoApiKey } = getTestEnv();
 
 const { fetch } = createRawFetch({
-  serverUrl: process.env.FM_SERVER,
+  serverUrl: fmServer,
   auth: {
-    apiKey: process.env.OTTO_API_KEY,
+    apiKey: ottoApiKey,
   },
-  database: process.env.FM_DATABASE,
+  database: fmDatabase,
   logging: "verbose",
 });
 
 describe("migrate", () => {
   it("should get back metadata in JSON format", async () => {
-    const metadata = await getMetadata(fetch, process.env.FM_DATABASE!);
+    const metadata = await getMetadata(fetch, fmDatabase);
     expect(metadata).toBeDefined();
     expect(typeof metadata).toBe("object");
   });
@@ -32,7 +42,7 @@ describe("migrate", () => {
     const tableName = "test_table";
 
     // Delete table if it exists (cleanup)
-    const deleteResult = await fetch(`/FileMaker_Tables/${tableName}`, {
+    const _deleteResult = await fetch(`/FileMaker_Tables/${tableName}`, {
       method: "DELETE",
     });
     // Don't throw on delete errors as table might not exist
@@ -74,12 +84,9 @@ describe("migrate", () => {
     }
 
     // Delete field from table
-    const deleteFieldResult = await fetch(
-      `/FileMaker_Tables/${tableName}/Phone`,
-      {
-        method: "DELETE",
-      },
-    );
+    const deleteFieldResult = await fetch(`/FileMaker_Tables/${tableName}/Phone`, {
+      method: "DELETE",
+    });
 
     if (deleteFieldResult.error) {
       throw new Error(`Failed to delete field: ${deleteFieldResult.error}`);

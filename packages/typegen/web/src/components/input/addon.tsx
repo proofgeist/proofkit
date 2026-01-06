@@ -1,25 +1,25 @@
-import { Input, InputAddon, InputGroup } from '@/components/ui/input';
-import { Euro, TicketPercent } from 'lucide-react';
+import { Euro, TicketPercent } from "lucide-react";
+import { Input, InputAddon, InputGroup } from "@/components/ui/input";
 
 export default function InputDemo() {
   return (
-    <div className="space-y-5 w-80">
+    <div className="w-80 space-y-5">
       <InputGroup>
         <InputAddon>Addon</InputAddon>
-        <Input type="email" placeholder="Start addon" />
+        <Input placeholder="Start addon" type="email" />
       </InputGroup>
       <InputGroup>
-        <Input type="email" placeholder="End addon" />
+        <Input placeholder="End addon" type="email" />
         <InputAddon>Addon</InputAddon>
       </InputGroup>
       <InputGroup>
         <InputAddon mode="icon">
           <Euro />
         </InputAddon>
-        <Input type="email" placeholder="Start icon addon" />
+        <Input placeholder="Start icon addon" type="email" />
       </InputGroup>
       <InputGroup>
-        <Input type="email" placeholder="End icon addon" />
+        <Input placeholder="End icon addon" type="email" />
         <InputAddon mode="icon">
           <TicketPercent />
         </InputAddon>

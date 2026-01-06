@@ -1,29 +1,33 @@
-import { useFormContext, useWatch } from "react-hook-form";
-import { Button } from "./ui/button";
-import { SingleConfig } from "../lib/config-utils";
-import { AlertTriangle, Loader2, Search, RefreshCw } from "lucide-react";
-import { useListTables } from "../hooks/useListTables";
-import { useTestConnection } from "../hooks/useTestConnection";
-import { Switch } from "./ui/switch";
-import { Input, InputWrapper } from "./ui/input";
-import { useMemo, useState, useCallback, useRef, useEffect } from "react";
-import { MetadataFieldsDialog } from "./MetadataFieldsDialog";
-import { useTableMetadata } from "../hooks/useTableMetadata";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   type ColumnDef,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
 } from "@tanstack/react-table";
+import { AlertTriangle, Loader2, RefreshCw, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type Path, useFormContext, useWatch } from "react-hook-form";
+import { useListTables } from "../hooks/useListTables";
+import { useTableMetadata } from "../hooks/useTableMetadata";
+import { useTestConnection } from "../hooks/useTestConnection";
+import type { SingleConfig } from "../lib/config-utils";
+import { MetadataFieldsDialog } from "./MetadataFieldsDialog";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 import { DataGrid, DataGridContainer } from "./ui/data-grid";
-import { DataGridTable } from "./ui/data-grid-table";
 import { DataGridColumnHeader } from "./ui/data-grid-column-header";
+import { DataGridTable } from "./ui/data-grid-table";
+import { DropdownMenuItem } from "./ui/dropdown-menu";
+import { Input, InputWrapper } from "./ui/input";
 import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { Skeleton } from "./ui/skeleton";
-import { Badge } from "./ui/badge";
-import { DropdownMenuItem } from "./ui/dropdown-menu";
-import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
+import { Switch } from "./ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+interface FormValues {
+  config: SingleConfig[];
+}
 
 interface MetadataTablesEditorProps {
   configIndex: number;
@@ -77,50 +81,50 @@ function FieldCountCell({
 
   // Get the effective includeAllFieldsByDefault value (table-level override or top-level default)
   const effectiveIncludeAllFieldsByDefault =
-    tableConfig?.includeAllFieldsByDefault ??
-    topLevelIncludeAllFieldsByDefault ??
-    true;
+    tableConfig?.includeAllFieldsByDefault ?? topLevelIncludeAllFieldsByDefault ?? true;
 
   const fieldCount = useMemo(() => {
-    if (!parsedMetadata?.entitySets || !parsedMetadata?.entityTypes) {
+    if (!(parsedMetadata?.entitySets && parsedMetadata?.entityTypes)) {
       return undefined;
     }
 
-    const entitySet = Object.values(parsedMetadata.entitySets).find(
-      (es) => es.Name === tableName,
-    );
-    if (!entitySet) return undefined;
+    const entitySet = Object.values(parsedMetadata.entitySets).find((es) => es.Name === tableName);
+    if (!entitySet) {
+      return undefined;
+    }
 
     const entityType = parsedMetadata.entityTypes[entitySet.EntityType];
-    if (!entityType?.Properties) return undefined;
+    if (!entityType?.Properties) {
+      return undefined;
+    }
 
     const properties = entityType.Properties;
     // Handle both Map and object formats
     if (properties instanceof Map) {
       return properties.size;
-    } else if (typeof properties === "object") {
+    }
+    if (typeof properties === "object") {
       return Object.keys(properties).length;
     }
     return undefined;
   }, [parsedMetadata, tableName]);
 
   const includedFieldCount = useMemo(() => {
-    if (fieldCount === undefined) return undefined;
+    if (fieldCount === undefined) {
+      return undefined;
+    }
 
     if (effectiveIncludeAllFieldsByDefault) {
       // If includeAllFieldsByDefault is true, count all fields minus explicitly excluded ones
-      const excludedFields = fieldsConfig.filter(
-        (f) => f?.exclude === true,
-      ).length;
+      const excludedFields = fieldsConfig.filter((f) => f?.exclude === true).length;
       return fieldCount - excludedFields;
-    } else {
-      // If includeAllFieldsByDefault is false, only count fields explicitly in the array that are not excluded
-      return fieldsConfig.filter((f) => f?.exclude !== true).length;
     }
+    // If includeAllFieldsByDefault is false, only count fields explicitly in the array that are not excluded
+    return fieldsConfig.filter((f) => f?.exclude !== true).length;
   }, [fieldCount, fieldsConfig, effectiveIncludeAllFieldsByDefault]);
 
   if (isLoading) {
-    return <Skeleton className="w-12 h-5" />;
+    return <Skeleton className="h-5 w-12" />;
   }
 
   if (fieldCount === undefined) {
@@ -156,17 +160,19 @@ function RelationshipCountCell({
   );
 
   const relationships = useMemo(() => {
-    if (!parsedMetadata?.entitySets || !parsedMetadata?.entityTypes) {
+    if (!(parsedMetadata?.entitySets && parsedMetadata?.entityTypes)) {
       return [];
     }
 
-    const entitySet = Object.values(parsedMetadata.entitySets).find(
-      (es) => es.Name === tableName,
-    );
-    if (!entitySet) return [];
+    const entitySet = Object.values(parsedMetadata.entitySets).find((es) => es.Name === tableName);
+    if (!entitySet) {
+      return [];
+    }
 
     const entityType = parsedMetadata.entityTypes[entitySet.EntityType];
-    if (!entityType?.NavigationProperties) return [];
+    if (!entityType?.NavigationProperties) {
+      return [];
+    }
 
     const navProps = entityType.NavigationProperties;
     // Handle both Array and other formats
@@ -177,7 +183,7 @@ function RelationshipCountCell({
   }, [parsedMetadata, tableName]);
 
   if (isLoading) {
-    return <Skeleton className="w-12 h-5" />;
+    return <Skeleton className="h-5 w-12" />;
   }
 
   if (!isIncluded) {
@@ -195,19 +201,17 @@ function RelationshipCountCell({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="text-sm cursor-help">{count}</span>
+        <span className="cursor-help text-sm">{count}</span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">
-        <div className="font-medium mb-1">Relationships:</div>
+        <div className="mb-1 font-medium">Relationships:</div>
         <div className="text-xs">{relationshipNames}</div>
       </TooltipContent>
     </Tooltip>
   );
 }
 
-export function MetadataTablesEditor({
-  configIndex,
-}: MetadataTablesEditorProps) {
+export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps) {
   const { control, setValue } = useFormContext<{ config: SingleConfig[] }>();
   const config = useWatch({
     control,
@@ -250,9 +254,7 @@ export function MetadataTablesEditor({
     refetch: refetchTables,
   } = useListTables(configIndex, shouldLoadTables);
 
-  const [selectedTableName, setSelectedTableName] = useState<string | null>(
-    null,
-  );
+  const [selectedTableName, setSelectedTableName] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -264,46 +266,41 @@ export function MetadataTablesEditor({
   const toggleTableInclude = useCallback(
     (tableName: string, include: boolean) => {
       const currentConfig = configRef.current;
-      if (currentConfig?.type !== "fmodata") return;
+      if (currentConfig?.type !== "fmodata") {
+        return;
+      }
 
       const currentTables = currentConfig.tables ?? [];
-      const tableIndex = currentTables.findIndex(
-        (t) => t?.tableName === tableName,
-      );
+      const tableIndex = currentTables.findIndex((t) => t?.tableName === tableName);
 
       if (include) {
         // Add table if not already present
         if (tableIndex < 0) {
-          setValue(
-            `config.${configIndex}.tables` as any,
-            [...currentTables, { tableName }],
-            { shouldDirty: true },
-          );
+          setValue(`config.${configIndex}.tables` as Path<FormValues>, [...currentTables, { tableName }], {
+            shouldDirty: true,
+          });
         }
-      } else {
+      } else if (tableIndex >= 0) {
         // Remove table if present
-        if (tableIndex >= 0) {
-          const tableConfig = currentTables[tableIndex]!;
-          // If table has other config (like fields), we might want to keep it
-          // But for now, if it's just tableName, remove it
-          const { tableName: _, ...rest } = tableConfig;
-          if (Object.keys(rest).length === 0) {
-            // No other config, remove entirely
-            const newTables = currentTables.filter((_, i) => i !== tableIndex);
-            setValue(
-              `config.${configIndex}.tables` as any,
-              newTables.length > 0 ? newTables : undefined,
-              { shouldDirty: true },
-            );
-          } else {
-            // Has other config, but we're removing it anyway per user request
-            const newTables = currentTables.filter((_, i) => i !== tableIndex);
-            setValue(
-              `config.${configIndex}.tables` as any,
-              newTables.length > 0 ? newTables : undefined,
-              { shouldDirty: true },
-            );
-          }
+        const tableConfig = currentTables[tableIndex];
+        if (!tableConfig) {
+          return;
+        }
+        // If table has other config (like fields), we might want to keep it
+        // But for now, if it's just tableName, remove it
+        const { tableName: _, ...rest } = tableConfig;
+        if (Object.keys(rest).length === 0) {
+          // No other config, remove entirely
+          const newTables = currentTables.filter((_, i) => i !== tableIndex);
+          setValue(`config.${configIndex}.tables` as Path<FormValues>, newTables.length > 0 ? newTables : undefined, {
+            shouldDirty: true,
+          });
+        } else {
+          // Has other config, but we're removing it anyway per user request
+          const newTables = currentTables.filter((_, i) => i !== tableIndex);
+          setValue(`config.${configIndex}.tables` as Path<FormValues>, newTables.length > 0 ? newTables : undefined, {
+            shouldDirty: true,
+          });
         }
       }
     },
@@ -312,25 +309,22 @@ export function MetadataTablesEditor({
 
   // Helper to include all tables
   const includeAllTables = useCallback(() => {
-    if (!tables || tables.length === 0) return;
+    if (!tables || tables.length === 0) {
+      return;
+    }
     const currentConfig = configRef.current;
-    if (currentConfig?.type !== "fmodata") return;
+    if (currentConfig?.type !== "fmodata") {
+      return;
+    }
 
     const currentTables = currentConfig.tables ?? [];
-    const currentTableNames = new Set(
-      currentTables.map((t) => t?.tableName).filter(Boolean),
-    );
+    const currentTableNames = new Set(currentTables.map((t) => t?.tableName).filter(Boolean));
 
     // Add all tables that aren't already included
-    const tablesToAdd = tables.filter(
-      (tableName) => !currentTableNames.has(tableName),
-    );
+    const tablesToAdd = tables.filter((tableName) => !currentTableNames.has(tableName));
     if (tablesToAdd.length > 0) {
-      const newTables = [
-        ...currentTables,
-        ...tablesToAdd.map((tableName) => ({ tableName })),
-      ];
-      setValue(`config.${configIndex}.tables` as any, newTables, {
+      const newTables = [...currentTables, ...tablesToAdd.map((tableName) => ({ tableName }))];
+      setValue(`config.${configIndex}.tables` as Path<FormValues>, newTables, {
         shouldDirty: true,
       });
     }
@@ -339,31 +333,35 @@ export function MetadataTablesEditor({
   // Helper to exclude all tables
   const excludeAllTables = useCallback(() => {
     const currentConfig = configRef.current;
-    if (currentConfig?.type !== "fmodata") return;
+    if (currentConfig?.type !== "fmodata") {
+      return;
+    }
 
-    setValue(`config.${configIndex}.tables` as any, undefined, {
+    setValue(`config.${configIndex}.tables` as Path<FormValues>, undefined, {
       shouldDirty: true,
     });
   }, [configIndex, setValue]);
 
   // Calculate if all tables are included/excluded
   const allIncluded = useMemo(() => {
-    if (!tables || tables.length === 0) return false;
-    return tables.every((tableName) =>
-      tablesConfig.some((t) => t?.tableName === tableName),
-    );
+    if (!tables || tables.length === 0) {
+      return false;
+    }
+    return tables.every((tableName) => tablesConfig.some((t) => t?.tableName === tableName));
   }, [tables, tablesConfig]);
 
   const allExcluded = useMemo(() => {
-    if (!tables || tables.length === 0) return true;
-    return tables.every(
-      (tableName) => !tablesConfig.some((t) => t?.tableName === tableName),
-    );
+    if (!tables || tables.length === 0) {
+      return true;
+    }
+    return tables.every((tableName) => !tablesConfig.some((t) => t?.tableName === tableName));
   }, [tables, tablesConfig]);
 
   // Convert tables to table rows (filtering will be handled by DataGrid)
   const tableRows = useMemo<TableRow[]>(() => {
-    if (!tables) return [];
+    if (!tables) {
+      return [];
+    }
     return tables.map((tableName) => ({
       tableName,
       isIncluded: tablesConfig.some((t) => t?.tableName === tableName),
@@ -378,23 +376,17 @@ export function MetadataTablesEditor({
         header: ({ column }) => (
           <DataGridColumnHeader
             column={column}
-            title="Include"
             customActions={
               <>
-                <DropdownMenuItem
-                  onClick={includeAllTables}
-                  disabled={allIncluded || isLoadingTables}
-                >
+                <DropdownMenuItem disabled={allIncluded || isLoadingTables} onClick={includeAllTables}>
                   Include All
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={excludeAllTables}
-                  disabled={allExcluded || isLoadingTables}
-                >
+                <DropdownMenuItem disabled={allExcluded || isLoadingTables} onClick={excludeAllTables}>
                   Exclude All
                 </DropdownMenuItem>
               </>
             }
+            title="Include"
           />
         ),
         enableSorting: true,
@@ -415,15 +407,13 @@ export function MetadataTablesEditor({
           );
         },
         meta: {
-          skeleton: <Skeleton className="w-11 h-6" />,
+          skeleton: <Skeleton className="h-6 w-11" />,
           cellClassName: "!w-[45px] !min-w-[45px] !max-w-[45px]",
         },
       },
       {
         accessorKey: "tableName",
-        header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Table Occurrence Name" />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Table Occurrence Name" />,
         enableSorting: true,
         // Use a large size relative to other columns so it takes most space
         // In fixed layout, space is distributed proportionally
@@ -431,24 +421,18 @@ export function MetadataTablesEditor({
         cell: (info) => {
           const row = info.row.original;
           return (
-            <span
-              className={`font-medium ${
-                !row.isIncluded ? "italic text-muted-foreground" : ""
-              }`}
-            >
+            <span className={`font-medium ${row.isIncluded ? "" : "text-muted-foreground italic"}`}>
               {info.getValue() as string}
             </span>
           );
         },
         meta: {
-          skeleton: <Skeleton className="w-48 h-5" />,
+          skeleton: <Skeleton className="h-5 w-48" />,
         },
       },
       {
         id: "fieldCount",
-        header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Fields" />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Fields" />,
         enableSorting: false,
         size: 50,
         minSize: 50,
@@ -458,23 +442,15 @@ export function MetadataTablesEditor({
           if (!row.isIncluded) {
             return null;
           }
-          return (
-            <FieldCountCell
-              tableName={row.tableName}
-              isIncluded={row.isIncluded}
-              configIndex={configIndex}
-            />
-          );
+          return <FieldCountCell configIndex={configIndex} isIncluded={row.isIncluded} tableName={row.tableName} />;
         },
         meta: {
-          skeleton: <Skeleton className="w-12 h-5" />,
+          skeleton: <Skeleton className="h-5 w-12" />,
         },
       },
       {
         id: "relationships",
-        header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Relationships" />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Relationships" />,
         enableSorting: false,
         size: 50,
         minSize: 10,
@@ -485,15 +461,11 @@ export function MetadataTablesEditor({
             return null;
           }
           return (
-            <RelationshipCountCell
-              tableName={row.tableName}
-              isIncluded={row.isIncluded}
-              configIndex={configIndex}
-            />
+            <RelationshipCountCell configIndex={configIndex} isIncluded={row.isIncluded} tableName={row.tableName} />
           );
         },
         meta: {
-          skeleton: <Skeleton className="w-12 h-5" />,
+          skeleton: <Skeleton className="h-5 w-12" />,
         },
       },
       {
@@ -506,15 +478,15 @@ export function MetadataTablesEditor({
           return (
             <div className="flex justify-end">
               <Button
-                type="button"
-                variant="outline"
-                size="sm"
+                className={row.isIncluded ? "" : "invisible"}
                 disabled={!row.isIncluded}
                 onClick={() => {
                   setSelectedTableName(row.tableName);
                   setIsDialogOpen(true);
                 }}
-                className={!row.isIncluded ? "invisible" : ""}
+                size="sm"
+                type="button"
+                variant="outline"
               >
                 Configure
               </Button>
@@ -522,18 +494,11 @@ export function MetadataTablesEditor({
           );
         },
         meta: {
-          skeleton: <Skeleton className="w-32 h-9" />,
+          skeleton: <Skeleton className="h-9 w-32" />,
         },
       },
     ],
-    [
-      toggleTableInclude,
-      includeAllTables,
-      excludeAllTables,
-      allIncluded,
-      allExcluded,
-      isLoadingTables,
-    ],
+    [toggleTableInclude, includeAllTables, excludeAllTables, allIncluded, allExcluded, isLoadingTables],
   );
 
   // Create tables table instance
@@ -554,9 +519,9 @@ export function MetadataTablesEditor({
   if (isLoadingTables && shouldLoadTables) {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">OData Tables</h3>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
+        <h3 className="font-semibold text-lg">OData Tables</h3>
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
           <span>Loading tables...</span>
         </div>
       </div>
@@ -567,17 +532,13 @@ export function MetadataTablesEditor({
   if (isErrorTables && shouldLoadTables) {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">OData Tables</h3>
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <h3 className="font-semibold text-lg">OData Tables</h3>
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive text-sm">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <div className="flex-1">
               <div className="font-medium">Failed to load tables</div>
-              {errorTables instanceof Error && (
-                <div className="text-xs mt-1 opacity-90">
-                  {errorTables.message}
-                </div>
-              )}
+              {errorTables instanceof Error && <div className="mt-1 text-xs opacity-90">{errorTables.message}</div>}
             </div>
           </div>
         </div>
@@ -591,21 +552,16 @@ export function MetadataTablesEditor({
     if (hasConnectionError) {
       return (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">OData Tables</h3>
+          <h3 className="font-semibold text-lg">OData Tables</h3>
           <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-2 text-sm text-yellow-700 dark:text-yellow-400">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <div className="flex-1">
                 <div>
                   <div className="font-medium">Connection test failed</div>
-                  {errorDetails?.message && (
-                    <div className="text-xs mt-1 opacity-90">
-                      {errorDetails.message}
-                    </div>
-                  )}
-                  <div className="text-xs mt-1 opacity-75">
-                    Fix the connection issue in the "Server Connection Settings"
-                    dialog before loading tables.
+                  {errorDetails?.message && <div className="mt-1 text-xs opacity-90">{errorDetails.message}</div>}
+                  <div className="mt-1 text-xs opacity-75">
+                    Fix the connection issue in the "Server Connection Settings" dialog before loading tables.
                   </div>
                 </div>
               </div>
@@ -617,25 +573,24 @@ export function MetadataTablesEditor({
 
     // Show button to load tables if connection is good
     return (
-      <div className="space-y-4 w-full mx-auto">
+      <div className="mx-auto w-full space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">OData Tables</h3>
+          <h3 className="font-semibold text-lg">OData Tables</h3>
         </div>
-        <div className="rounded-md border border-border bg-muted/50 p-4 w-full mx-auto text-center ">
-          <p className="text-sm text-muted-foreground mb-4">
-            Your connection looks good! Click the button below to pick the
-            tables you want to generate types for.
+        <div className="mx-auto w-full rounded-md border border-border bg-muted/50 p-4 text-center">
+          <p className="mb-4 text-muted-foreground text-sm">
+            Your connection looks good! Click the button below to pick the tables you want to generate types for.
           </p>
           <Button
-            type="button"
+            disabled={isLoadingTables}
             onClick={() => {
               setShouldLoadTables(true);
             }}
-            disabled={isLoadingTables}
+            type="button"
           >
             {isLoadingTables ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Loading...
               </>
             ) : (
@@ -651,10 +606,8 @@ export function MetadataTablesEditor({
   if (!tables || tables.length === 0) {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">OData Tables</h3>
-        <p className="text-sm text-muted-foreground">
-          No tables found in database.
-        </p>
+        <h3 className="font-semibold text-lg">OData Tables</h3>
+        <p className="text-muted-foreground text-sm">No tables found in database.</p>
       </div>
     );
   }
@@ -663,22 +616,14 @@ export function MetadataTablesEditor({
     <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 className="flex items-center gap-2 font-semibold text-lg">
             OData Tables{" "}
             <Badge size="sm" variant="secondary">
               {tableRows.filter((t) => t.isIncluded).length} selected
             </Badge>
           </h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => refetchTables()}
-            disabled={isLoadingTables}
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${isLoadingTables ? "animate-spin" : ""}`}
-            />
+          <Button disabled={isLoadingTables} onClick={() => refetchTables()} size="sm" type="button" variant="outline">
+            <RefreshCw className={`h-4 w-4 ${isLoadingTables ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -687,17 +632,17 @@ export function MetadataTablesEditor({
           <InputWrapper>
             <Search className="size-4" />
             <Input
+              onChange={(e) => setSearchFilter(e.target.value)}
               placeholder="Search tables..."
               value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
             />
           </InputWrapper>
 
           <DataGrid
-            table={tablesTable}
-            recordCount={tablesTable.getFilteredRowModel().rows.length}
-            isLoading={isLoadingTables}
             emptyMessage="No tables found."
+            isLoading={isLoadingTables}
+            recordCount={tablesTable.getFilteredRowModel().rows.length}
+            table={tablesTable}
             tableLayout={{
               width: "auto",
               headerSticky: true,
@@ -715,10 +660,10 @@ export function MetadataTablesEditor({
       </div>
 
       <MetadataFieldsDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        tableName={selectedTableName}
         configIndex={configIndex}
+        onOpenChange={setIsDialogOpen}
+        open={isDialogOpen}
+        tableName={selectedTableName}
       />
     </>
   );

@@ -5,8 +5,8 @@
 import { z } from "zod/v4";
 import {
   Ztest as Ztest_generated,
-  ZVLYesNo as ZVLYesNo_generated,
   ZtestLayout as ZtestLayout_generated,
+  ZVLYesNo as ZVLYesNo_generated,
 } from "./generated/testLayout";
 
 export const Ztest = Ztest_generated;

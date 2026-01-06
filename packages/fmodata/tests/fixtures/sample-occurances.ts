@@ -1,12 +1,11 @@
 import {
-  fmTableOccurrence,
-  textField,
-  numberField,
-  dateField,
   containerField,
+  dateField,
+  fmTableOccurrence,
+  numberField,
+  textField,
   timestampField,
 } from "@proofkit/fmodata";
-import { z } from "zod/v4";
 
 // ============================================================================
 // Define all TableOccurrences with navigationPaths
@@ -35,14 +34,10 @@ export const Addresses = fmTableOccurrence(
 export const Builder_Contacts = fmTableOccurrence(
   "Builder_Contacts",
   {
-    __pk_builder_contacts_id: textField()
-      .primaryKey()
-      .entityId("FMFID:4296032403"), // Key field - never null
+    __pk_builder_contacts_id: textField().primaryKey().entityId("FMFID:4296032403"), // Key field - never null
     CreationTimestamp: timestampField().notNull().entityId("FMFID:8590999699"), // DateTimeOffset, not nullable
     CreatedBy: textField().notNull().entityId("FMFID:12885966995"), // Not nullable
-    ModificationTimestamp: timestampField()
-      .notNull()
-      .entityId("FMFID:17180934291"), // DateTimeOffset, not nullable
+    ModificationTimestamp: timestampField().notNull().entityId("FMFID:17180934291"), // DateTimeOffset, not nullable
     ModifiedBy: textField().notNull().entityId("FMFID:21475901587"), // Not nullable
     _fk_builder_id: textField().entityId("FMFID:25770868883"),
     First_name: textField().entityId("FMFID:30065836179"),

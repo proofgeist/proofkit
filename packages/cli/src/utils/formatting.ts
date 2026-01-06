@@ -1,36 +1,24 @@
-import * as prettier from "prettier";
-import { Project } from "ts-morph";
+import { execa } from "execa";
+import type { Project } from "ts-morph";
 
 import { state } from "~/state.js";
 
 /**
- * Formats all source files in a ts-morph Project using prettier and saves the changes.
+ * Formats all source files in a ts-morph Project using biome and saves the changes.
  * @param project The ts-morph Project containing the files to format
  */
 export async function formatAndSaveSourceFiles(project: Project) {
-  project.saveSync(); // save here in case formatting fails
+  await project.save(); // save files first
   try {
-    const files = project.getSourceFiles();
-    // run each file through the prettier formatter
-    for await (const file of files) {
-      const filePath = file.getFilePath();
-      const fileInfo = (await prettier.getFileInfo?.(filePath)) ?? {
-        ignored: false,
-      };
-
-      if (fileInfo.ignored) continue;
-
-      const formatted = await prettier.format(file.getFullText(), {
-        filepath: filePath,
-      });
-      file.replaceWithText(formatted);
-    }
+    // Run biome format on the project directory
+    await execa("npx", ["@biomejs/biome", "format", "--write", state.projectDir], {
+      cwd: state.projectDir,
+    });
   } catch (error) {
     if (state.debug) {
-      console.log("Error formatting files");
+      console.log("Error formatting files with biome");
       console.error(error);
     }
-  } finally {
-    await project.save();
+    // Continue even if formatting fails
   }
 }

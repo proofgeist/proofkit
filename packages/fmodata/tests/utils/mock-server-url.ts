@@ -6,4 +6,3 @@
  * to avoid storing actual test server names in the codebase.
  */
 export const MOCK_SERVER_URL = "api.example.com";
-

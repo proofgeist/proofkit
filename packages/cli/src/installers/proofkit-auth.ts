@@ -1,11 +1,10 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
-import { type OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import ora, { type Ora } from "ora";
-import { SyntaxKind, type SourceFile } from "ts-morph";
+import { type SourceFile, SyntaxKind } from "ts-morph";
 
 import { getLayouts } from "~/cli/fmdapi.js";
 import { abortIfCancel, UserAbortedError } from "~/cli/utils.js";
@@ -26,13 +25,7 @@ export const proofkitAuthInstaller = async () => {
   const projectDir = state.projectDir;
   addPackageDependency({
     projectDir,
-    dependencies: [
-      "@node-rs/argon2",
-      "@oslojs/binary",
-      "@oslojs/crypto",
-      "@oslojs/encoding",
-      "js-cookie",
-    ],
+    dependencies: ["@node-rs/argon2", "@oslojs/binary", "@oslojs/crypto", "@oslojs/encoding", "js-cookie"],
     devMode: false,
   });
 
@@ -43,10 +36,7 @@ export const proofkitAuthInstaller = async () => {
   });
 
   // copy all files from template/extras/fmaddon-auth to projectDir/src
-  await fs.copy(
-    path.join(PKG_ROOT, "template/extras/fmaddon-auth"),
-    path.join(projectDir, "src")
-  );
+  await fs.copy(path.join(PKG_ROOT, "template/extras/fmaddon-auth"), path.join(projectDir, "src"));
 
   const project = getNewProject(projectDir);
 
@@ -55,10 +45,8 @@ export const proofkitAuthInstaller = async () => {
 
   // inject signin/signout components to header slots
   addToHeaderSlot(
-    project.addSourceFileAtPath(
-      path.join(projectDir, "src/components/AppShell/slot-header-right.tsx")
-    ),
-    "@/components/auth/user-menu"
+    project.addSourceFileAtPath(path.join(projectDir, "src/components/AppShell/slot-header-right.tsx")),
+    "@/components/auth/user-menu",
   );
   // addToHeaderSlot(
   //   project.addSourceFileAtPath(
@@ -70,11 +58,7 @@ export const proofkitAuthInstaller = async () => {
   //   "@/components/clerk-auth/user-menu-mobile"
   // );
 
-  addToSafeActionClient(
-    project.addSourceFileAtPathIfExists(
-      path.join(projectDir, "src/server/safe-action.ts")
-    )
-  );
+  addToSafeActionClient(project.addSourceFileAtPathIfExists(path.join(projectDir, "src/server/safe-action.ts")));
 
   await addConfig({
     config: {
@@ -112,11 +96,7 @@ export const proofkitAuthInstaller = async () => {
   // install email files based on the email provider in state
   await installReactEmail({ project, installServerFiles: true });
 
-  protectMainLayout(
-    project.addSourceFileAtPath(
-      path.join(projectDir, "src/app/(main)/layout.tsx")
-    )
-  );
+  protectMainLayout(project.addSourceFileAtPath(path.join(projectDir, "src/app/(main)/layout.tsx")));
 
   await formatAndSaveSourceFiles(project);
 
@@ -124,21 +104,21 @@ export const proofkitAuthInstaller = async () => {
   while (!hasProofKitLayouts) {
     hasProofKitLayouts = await checkForProofKitLayouts(projectDir, spinner);
 
-    if (!hasProofKitLayouts) {
+    if (hasProofKitLayouts) {
+      spinner.text = "Successfully detected all required layouts in your FileMaker file.";
+    } else {
       const shouldContinue = abortIfCancel<boolean>(
         await p.confirm({
-          message:
-            "I have followed the above instructions, continue installing",
+          message: "I have followed the above instructions, continue installing",
           initialValue: true,
           active: "Continue",
           inactive: "Abort",
-        })
+        }),
       );
 
-      if (!shouldContinue) throw new UserAbortedError();
-    } else {
-      spinner.text =
-        "Successfully detected all required layouts in your FileMaker file.";
+      if (!shouldContinue) {
+        throw new UserAbortedError();
+      }
     }
   }
   await runCodegenCommand();
@@ -148,11 +128,7 @@ export const proofkitAuthInstaller = async () => {
 
 function addToSafeActionClient(sourceFile?: SourceFile) {
   if (!sourceFile) {
-    console.log(
-      chalk.yellow(
-        "Failed to inject into safe-action-client. Did you move the safe-action.ts file?"
-      )
-    );
+    console.log(chalk.yellow("Failed to inject into safe-action-client. Did you move the safe-action.ts file?"));
     return;
   }
 
@@ -171,7 +147,7 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
 
   return next({ ctx: { ...ctx, session, user } });
 });
-`)
+`),
   );
 }
 
@@ -192,32 +168,33 @@ function protectMainLayout(sourceFile: SourceFile) {
   bodyElement?.replaceWithText(
     `<Protect>
       ${bodyElement?.getText()}
-    </Protect>`
+    </Protect>`,
   );
 }
 
-async function checkForProofKitLayouts(
-  projectDir: string,
-  spinner: Ora
-): Promise<boolean> {
+async function checkForProofKitLayouts(projectDir: string, spinner: Ora): Promise<boolean> {
   const settings = getSettings();
 
-  const dataSource = settings.dataSources
-    .filter((s) => s.type === "fm")
-    .find((s) => s.name === "filemaker");
+  const dataSource = settings.dataSources.filter((s) => s.type === "fm").find((s) => s.name === "filemaker");
 
-  if (!dataSource) return false;
+  if (!dataSource) {
+    return false;
+  }
   if (settings.envFile) {
     dotenv.config({
       path: path.join(projectDir, settings.envFile),
     });
   }
-  const dataApiKey = process.env[dataSource.envNames.apiKey]! as OttoAPIKey;
-  const fmFile = process.env[dataSource.envNames.database]!;
-  const server = process.env[dataSource.envNames.server]!;
+  const dataApiKey = process.env[dataSource.envNames.apiKey];
+  const fmFile = process.env[dataSource.envNames.database];
+  const server = process.env[dataSource.envNames.server];
+
+  if (!(dataApiKey && fmFile && server)) {
+    return false;
+  }
 
   const existingLayouts = await getLayouts({
-    dataApiKey,
+    dataApiKey: dataApiKey as OttoAPIKey,
     fmFile,
     server,
   });
@@ -228,11 +205,11 @@ async function checkForProofKitLayouts(
     "proofkit_auth_password_reset",
   ];
 
-  const allProofkitAuthLayoutsExist = proofkitAuthLayouts.every((layout) =>
-    existingLayouts.some((l) => l === layout)
-  );
+  const allProofkitAuthLayoutsExist = proofkitAuthLayouts.every((layout) => existingLayouts.some((l) => l === layout));
 
-  if (allProofkitAuthLayoutsExist) return true;
+  if (allProofkitAuthLayoutsExist) {
+    return true;
+  }
 
   spinner.warn("Required layouts not found");
   await installFmAddon({ addonName: "auth" });

@@ -1,9 +1,8 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { ResponseStructureError, ValidationError } from "../errors";
 import type { FMTable } from "../orm/table";
-import type { ExecuteOptions } from "../types";
-import type { ExpandValidationConfig } from "../validation";
-import { ValidationError, ResponseStructureError } from "../errors";
 import { transformResponseFields } from "../transform";
+import type { ExpandValidationConfig } from "../validation";
 import { validateListResponse, validateRecord } from "../validation";
 
 // Type for raw OData responses
@@ -28,12 +27,11 @@ export type ODataRecordResponse<T = unknown> = ODataResponse<
  */
 export function applyFieldTransformation<T extends Record<string, unknown>>(
   response: ODataResponse<T> | ODataListResponse<T>,
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table: FMTable<any, any>,
   expandConfigs?: ExpandValidationConfig[],
 ): ODataResponse<T> | ODataListResponse<T> {
-  return transformResponseFields(response, table, expandConfigs) as
-    | ODataResponse<T>
-    | ODataListResponse<T>;
+  return transformResponseFields(response, table, expandConfigs) as ODataResponse<T> | ODataListResponse<T>;
 }
 
 /**
@@ -44,10 +42,7 @@ export async function applyValidation<T extends Record<string, unknown>>(
   schema?: Record<string, StandardSchemaV1>,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
-): Promise<
-  | { valid: true; data: T | T[] }
-  | { valid: false; error: ValidationError | ResponseStructureError }
-> {
+): Promise<{ valid: true; data: T | T[] } | { valid: false; error: ValidationError | ResponseStructureError }> {
   if (Array.isArray(data)) {
     // Validate as a list
     const validation = await validateListResponse<T>(
@@ -60,27 +55,19 @@ export async function applyValidation<T extends Record<string, unknown>>(
       return { valid: false, error: validation.error };
     }
     return { valid: true, data: validation.data };
-  } else {
-    // Validate as a single record
-    const validation = await validateRecord<T>(
-      data,
-      schema,
-      selectedFields,
-      expandConfigs,
-    );
-    if (!validation.valid) {
-      return { valid: false, error: validation.error };
-    }
-    return { valid: true, data: validation.data };
   }
+  // Validate as a single record
+  const validation = await validateRecord<T>(data, schema, selectedFields, expandConfigs);
+  if (!validation.valid) {
+    return { valid: false, error: validation.error };
+  }
+  return { valid: true, data: validation.data };
 }
 
 /**
  * Extract value array from OData list response, or wrap single record in array
  */
-export function extractListValue<T>(
-  response: ODataListResponse<T> | ODataRecordResponse<T>,
-): T[] {
+export function extractListValue<T>(response: ODataListResponse<T> | ODataRecordResponse<T>): T[] {
   if ("value" in response && Array.isArray(response.value)) {
     return response.value;
   }

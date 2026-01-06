@@ -1,4 +1,4 @@
-import pathModule from "path";
+import pathModule from "node:path";
 
 import { removeTrailingSlash } from "./removeTrailingSlash.js";
 
@@ -22,7 +22,7 @@ export const parseNameAndPath = (rawInput: string) => {
 
   const paths = input.split("/");
 
-  let appName = paths[paths.length - 1]!;
+  let appName = paths.at(-1) ?? "";
 
   // If the user ran `npx proofkit .` or similar, the appName should be the current directory
   if (appName === ".") {

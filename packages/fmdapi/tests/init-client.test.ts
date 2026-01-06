@@ -1,7 +1,7 @@
+import { describe, expect, test } from "vitest";
 import { DataApi, FetchAdapter, FileMakerError, OttoAdapter } from "../src";
 import memoryStore from "../src/tokenStore/memory";
 import { client, invalidLayoutClient } from "./setup";
-import { describe, expect, test } from "vitest";
 
 describe("try to init client", () => {
   test("without server", () => {

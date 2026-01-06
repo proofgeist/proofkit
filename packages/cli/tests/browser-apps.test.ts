@@ -1,6 +1,6 @@
-import { execSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync } from "fs";
-import { join } from "path";
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 
@@ -66,21 +66,17 @@ describe("Non-Interactive CLI Tests", () => {
     expect(existsSync(join(projectDir, ".env"))).toBe(true);
 
     // Verify package.json content
-    const pkgJson = JSON.parse(
-      readFileSync(join(projectDir, "package.json"), "utf-8")
-    );
+    const pkgJson = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf-8"));
     expect(pkgJson.name).toBe(projectName);
 
     // Verify proofkit.json content
-    const proofkitConfig = JSON.parse(
-      readFileSync(join(projectDir, "proofkit.json"), "utf-8")
-    );
+    const proofkitConfig = JSON.parse(readFileSync(join(projectDir, "proofkit.json"), "utf-8"));
     expect(proofkitConfig.appType).toBe("browser");
     expect(proofkitConfig.dataSources).toContainEqual(
       expect.objectContaining({
         type: "fm",
         name: "filemaker",
-      })
+      }),
     );
 
     // Verify the project can be built successfully

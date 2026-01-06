@@ -1,15 +1,9 @@
-import { useFormContext, useWatch, Path } from "react-hook-form";
-import { z } from "zod";
-import { configSchema } from "../lib/schema";
-import { Input } from "./ui/input";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
+import { type Path, useFormContext, useWatch } from "react-hook-form";
+import type { z } from "zod";
 import { useEnvValue } from "../lib/envValues";
+import type { configSchema } from "../lib/schema";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
 
 type FormData = z.infer<typeof configSchema>;
 
@@ -22,14 +16,7 @@ interface EnvVarFieldProps {
   type?: "text" | "password";
 }
 
-export function EnvVarField({
-  index,
-  fieldName,
-  label,
-  placeholder,
-  defaultValue,
-  type = "text",
-}: EnvVarFieldProps) {
+export function EnvVarField({ fieldName, label, placeholder, defaultValue, type = "text" }: EnvVarFieldProps) {
   const { control } = useFormContext<{ config: FormData[] }>();
 
   // Watch the env name value to get the resolved env var
@@ -38,8 +25,17 @@ export function EnvVarField({
     name: fieldName,
   });
 
+  // Ensure envName is a string or undefined before passing to useEnvValue
+  // Handle nested paths where watch might return objects or other types
+  const envNameForQuery: string | undefined = (() => {
+    if (typeof envName === "string") {
+      return envName.trim() !== "" ? envName : undefined;
+    }
+    return undefined;
+  })();
+
   // Get the resolved value from the server
-  const { data: envValue, isLoading } = useEnvValue(envName || defaultValue);
+  const { data: envValue, isLoading } = useEnvValue(envNameForQuery ?? defaultValue);
 
   return (
     <FormField
@@ -49,17 +45,24 @@ export function EnvVarField({
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input type={type} placeholder={placeholder} {...field} />
+            <Input
+              placeholder={placeholder}
+              type={type}
+              {...field}
+              value={typeof field.value === "string" ? field.value : ""}
+            />
           </FormControl>
-          {(envName || defaultValue) && (
-            <div className="text-xs text-muted-foreground mt-1">
-              {isLoading ? (
-                <span>Loading...</span>
-              ) : envValue ? (
-                <span>Resolved: {envValue}</span>
-              ) : (
-                <span className="text-destructive">Not set</span>
-              )}
+          {(envNameForQuery || defaultValue) && (
+            <div className="mt-1 text-muted-foreground text-xs">
+              {(() => {
+                if (isLoading) {
+                  return <span>Loading...</span>;
+                }
+                if (envValue) {
+                  return <span>Resolved: {envValue}</span>;
+                }
+                return <span className="text-destructive">Not set</span>;
+              })()}
             </div>
           )}
           <FormMessage />

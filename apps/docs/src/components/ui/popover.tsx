@@ -1,8 +1,7 @@
 "use client";
 // biome-ignore lint/performance/noNamespaceImport: Radix UI uses namespace exports
 import * as PopoverPrimitive from "@radix-ui/react-popover";
-// biome-ignore lint/performance/noNamespaceImport: React namespace import needed for type checking
-import * as React from "react";
+import React from "react";
 import { cn } from "../../lib/cn";
 
 const Popover = PopoverPrimitive.Root;

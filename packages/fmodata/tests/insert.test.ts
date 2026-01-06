@@ -4,10 +4,12 @@
  * Tests for the insert() and update() methods with returnFullRecord option.
  */
 
-import { describe, it, expect, expectTypeOf } from "vitest";
-import { createMockFetch } from "./utils/mock-fetch";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { mockResponses } from "./fixtures/responses";
-import { createMockClient, contacts, users } from "./utils/test-setup";
+import { createMockFetch } from "./utils/mock-fetch";
+import { contacts, createMockClient } from "./utils/test-setup";
+
+const UUID_REGEX = /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i;
 
 describe("insert and update operations with returnFullRecord", () => {
   const client = createMockClient();
@@ -21,7 +23,7 @@ describe("insert and update operations with returnFullRecord", () => {
         name: "Capture test",
       })
       .execute({
-        fetchHandler: createMockFetch(mockResponses["insert"]!),
+        fetchHandler: createMockFetch(mockResponses.insert ?? {}),
       });
 
     // Verify no errors
@@ -38,9 +40,7 @@ describe("insert and update operations with returnFullRecord", () => {
     // Verify the inserted record has expected structure (not specific values that change with captures)
     expect(result.data).toHaveProperty("PrimaryKey");
     expect(typeof result.data?.PrimaryKey).toBe("string");
-    expect(result.data?.PrimaryKey).toMatch(
-      /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,
-    );
+    expect(result.data?.PrimaryKey).toMatch(UUID_REGEX);
 
     // Check fields that should have stable values
     expect(result.data).toMatchObject({
@@ -64,7 +64,7 @@ describe("insert and update operations with returnFullRecord", () => {
         { returnFullRecord: false },
       )
       .execute({
-        fetchHandler: createMockFetch(mockResponses["insert-return-minimal"]!),
+        fetchHandler: createMockFetch(mockResponses["insert-return-minimal"] ?? {}),
       });
 
     // Type check: when returnFullRecord is false, result should only have ROWID
@@ -80,12 +80,10 @@ describe("insert and update operations with returnFullRecord", () => {
         { returnFullRecord: true },
       )
       .execute({
-        fetchHandler: createMockFetch(mockResponses["insert"]!),
+        fetchHandler: createMockFetch(mockResponses.insert ?? {}),
       });
 
-    expectTypeOf(fullResult.data).not.toEqualTypeOf<
-      { ROWID: number } | undefined
-    >();
+    expectTypeOf(fullResult.data).not.toEqualTypeOf<{ ROWID: number } | undefined>();
 
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
@@ -105,13 +103,11 @@ describe("insert and update operations with returnFullRecord", () => {
       .update({ name: "Updated name" }, { returnFullRecord: true })
       .byId("331F5862-2ABF-4FB6-AA24-A00F7359BDDA")
       .execute({
-        fetchHandler: createMockFetch(mockResponses["insert"]!), // Reuse insert mock, same structure
+        fetchHandler: createMockFetch(mockResponses.insert ?? {}), // Reuse insert mock, same structure
       });
 
     // Type check: when returnFullRecord is true, result should have full record
-    expectTypeOf(result.data).not.toEqualTypeOf<
-      { updatedCount: number } | undefined
-    >();
+    expectTypeOf(result.data).not.toEqualTypeOf<{ updatedCount: number } | undefined>();
 
     // Test without returnFullRecord (default - returns count)
     const countResult = await db
@@ -119,13 +115,11 @@ describe("insert and update operations with returnFullRecord", () => {
       .update({ name: "Updated name" })
       .byId("331F5862-2ABF-4FB6-AA24-A00F7359BDDA")
       .execute({
-        fetchHandler: createMockFetch(mockResponses["insert"]!),
+        fetchHandler: createMockFetch(mockResponses.insert ?? {}),
       });
 
     // Type check: default should return count
-    expectTypeOf(countResult.data).toEqualTypeOf<
-      { updatedCount: number } | undefined
-    >();
+    expectTypeOf(countResult.data).toEqualTypeOf<{ updatedCount: number } | undefined>();
 
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();

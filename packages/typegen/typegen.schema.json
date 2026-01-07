@@ -170,13 +170,12 @@
                           "type": "boolean"
                         },
                         "typeOverride": {
-                          "description": "Override the inferred field type from metadata. Options: text, number, boolean, fmBooleanNumber, date, timestamp, container",
+                          "description": "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container",
                           "type": "string",
                           "enum": [
                             "text",
                             "number",
                             "boolean",
-                            "fmBooleanNumber",
                             "date",
                             "timestamp",
                             "container"

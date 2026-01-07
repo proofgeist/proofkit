@@ -22,7 +22,7 @@ interface Schema {
 }
 
 // For a single data source configuration object
-type ImportedDataSourceConfig = z.infer<typeof typegenConfigSingle>;
+type ImportedDataSourceConfig = Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>;
 // For a single layout configuration object within a data source
 type ImportedLayoutConfig = ImportedDataSourceConfig["layouts"][number];
 
@@ -119,9 +119,11 @@ export async function addLayout({
     targetDataSource.layouts = targetDataSource.layouts || [];
   } else {
     targetDataSource = {
+      type: "fmdapi",
       layouts: [],
       path: `./src/config/schemas/${dataSourceName}`,
       // other default properties for a new DataSourceConfig can be added here if needed
+      envNames: undefined,
     };
     configArray.push(targetDataSource);
   }
@@ -268,8 +270,10 @@ export async function addToFmschemaConfig({
   let fileContent = await readJsonConfigFile(jsonConfigPath);
 
   const newDataSource: ImportedDataSourceConfig = {
+    type: "fmdapi",
     layouts: [],
     path: `./src/config/schemas/${dataSourceName}`,
+    envNames: undefined,
     clearOldFiles: true,
     clientSuffix: "Layout",
   };

@@ -182,7 +182,7 @@ async function pushEnvironmentVariables() {
 
   try {
     const settings = getSettings();
-    const envFile = path.join(process.cwd(), settings.envFile);
+    const envFile = path.join(process.cwd(), settings.envFile ?? ".env");
 
     if (!fs.existsSync(envFile)) {
       spinner.stop("No environment file found");

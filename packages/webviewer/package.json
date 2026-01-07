@@ -49,6 +49,7 @@
     "access": "public"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "prepublishOnly": "tsc",
     "build": "tsc && vite build && publint --strict",
     "build:watch": "tsc && vite build --watch",

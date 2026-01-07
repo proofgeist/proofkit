@@ -130,7 +130,6 @@ export function createFieldsColumns({
               <SelectItem value="text">Text</SelectItem>
               <SelectItem value="number">Number</SelectItem>
               <SelectItem value="boolean">Boolean</SelectItem>
-              <SelectItem value="fmBooleanNumber">FM Boolean</SelectItem>
               <SelectItem value="date">Date</SelectItem>
               <SelectItem value="timestamp">Timestamp</SelectItem>
               <SelectItem value="container">Container</SelectItem>

@@ -38,7 +38,7 @@ interface GeneratedTO {
  * Maps type override enum values to field builder functions from @proofkit/fmodata
  */
 function mapTypeOverrideToFieldBuilder(
-  typeOverride: "text" | "number" | "boolean" | "fmBooleanNumber" | "date" | "timestamp" | "container",
+  typeOverride: "text" | "number" | "boolean" | "date" | "timestamp" | "container",
 ): string {
   switch (typeOverride) {
     case "text":
@@ -46,8 +46,7 @@ function mapTypeOverrideToFieldBuilder(
     case "number":
       return "numberField()";
     case "boolean":
-    case "fmBooleanNumber":
-      return "numberField().outputValidator(z.coerce.boolean())";
+      return "numberField().readValidator(z.coerce.boolean()).writeValidator(z.boolean().transform((v) => (v ? 1 : 0)))";
     case "date":
       return "dateField()";
     case "timestamp":
@@ -95,7 +94,7 @@ function applyAliasToFieldBuilder(fieldBuilder: string, importAliases: Map<strin
  */
 function mapODataTypeToFieldBuilder(
   edmType: string,
-  typeOverride?: "text" | "number" | "boolean" | "fmBooleanNumber" | "date" | "timestamp" | "container",
+  typeOverride?: "text" | "number" | "boolean" | "date" | "timestamp" | "container",
 ): string {
   // If typeOverride is provided, use it instead of the inferred type
   if (typeOverride) {
@@ -111,7 +110,7 @@ function mapODataTypeToFieldBuilder(
     case "Edm.Double":
       return "numberField()";
     case "Edm.Boolean":
-      return "numberField().outputValidator(z.coerce.boolean())";
+      return "numberField().readValidator(z.coerce.boolean()).writeValidator(z.boolean().transform((v) => (v ? 1 : 0)))";
     case "Edm.Date":
       return "dateField()"; // ISO date string
     case "Edm.DateTimeOffset":
@@ -262,15 +261,7 @@ function generateTableOccurrence(
     // Apply typeOverride if provided, otherwise use inferred type
     let fieldBuilder = mapODataTypeToFieldBuilder(
       metadata.$Type,
-      fieldOverride?.typeOverride as
-        | "text"
-        | "number"
-        | "boolean"
-        | "fmBooleanNumber"
-        | "date"
-        | "timestamp"
-        | "container"
-        | undefined,
+      fieldOverride?.typeOverride as "text" | "number" | "boolean" | "date" | "timestamp" | "container" | undefined,
     );
 
     // Apply import aliases if present

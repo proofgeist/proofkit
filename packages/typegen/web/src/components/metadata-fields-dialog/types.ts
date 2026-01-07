@@ -4,7 +4,7 @@
 export interface FieldConfig {
   fieldName: string;
   exclude?: boolean;
-  typeOverride?: "text" | "number" | "boolean" | "fmBooleanNumber" | "date" | "timestamp" | "container";
+  typeOverride?: "text" | "number" | "boolean" | "date" | "timestamp" | "container";
 }
 
 /**
@@ -46,7 +46,7 @@ export interface MetadataFieldsDialogProps {
 /**
  * Type override options available for field types
  */
-export type TypeOverrideValue = "text" | "number" | "boolean" | "fmBooleanNumber" | "date" | "timestamp" | "container";
+export type TypeOverrideValue = "text" | "number" | "boolean" | "date" | "timestamp" | "container";
 
 /**
  * Stable empty array to prevent infinite re-renders

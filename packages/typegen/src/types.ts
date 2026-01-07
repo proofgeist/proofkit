@@ -101,7 +101,6 @@ const fieldOverride = z.object({
       "text", // textField()
       "number", // numberField()
       "boolean", // numberField().outputValidator(z.coerce.boolean())
-      "fmBooleanNumber", // Same as boolean, explicit FileMaker 0/1 pattern
       "date", // dateField()
       "timestamp", // timestampField()
       "container", // containerField()
@@ -109,7 +108,7 @@ const fieldOverride = z.object({
     .optional()
     .meta({
       description:
-        "Override the inferred field type from metadata. Options: text, number, boolean, fmBooleanNumber, date, timestamp, container",
+        "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container",
     }),
 });
 

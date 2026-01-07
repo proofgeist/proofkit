@@ -4,6 +4,7 @@
     "build": "turbo run build --filter={./packages/*} --filter=@proofkit/docs",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "biome format --write .",
     "changeset": "changeset",
@@ -22,12 +23,12 @@
     "husky": "^9.1.7",
     "knip": "^5.56.0",
     "lint-staged": "^16.2.7",
-    "turbo": "^2.5.4",
+    "turbo": "^2.7.3",
     "typescript": "^5.9.3",
     "ultracite": "7.0.8",
     "vitest": "^4.0.7"
   },
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.27.0",
   "engines": {
     "node": ">=18"
   },

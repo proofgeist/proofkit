@@ -12,7 +12,7 @@
     "sherif": "pnpm dlx sherif@latest",
     "sherif:fix": "pnpm sherif --fix",
     "release": "turbo run build --filter={./packages/*} && changeset publish",
-    "test": "vitest",
+    "test": "doppler run -- vitest",
     "knip": "knip",
     "prepare": "husky"
   },

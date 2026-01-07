@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { PostInstallStep } from "@proofkit/registry";
-import { type ImportDeclarationStructure, StructureKind, SyntaxKind } from "ts-morph";
+import { type ImportDeclarationStructure, type JsxChild, type JsxElement, StructureKind, SyntaxKind } from "ts-morph";
 
 import { getShadcnConfig } from "~/helpers/shadcn-cli.js";
 import { state } from "~/state.js";
@@ -66,9 +66,7 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
       return;
     }
 
-    let targetElement: ReturnType<
-      (typeof returnStatement.getDescendantsOfKind<typeof SyntaxKind.JsxOpeningElement>)[number]["getParentIfKind"]
-    >;
+    let targetElement: JsxElement | undefined;
 
     // Try to find the parent tag if specified
     if (parentTag && parentTag.length > 0) {
@@ -88,7 +86,7 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
       // If we found a parent tag, wrap its children
       const childrenText = targetElement
         ?.getJsxChildren()
-        .map((child) => child.getText())
+        .map((child: JsxChild) => child.getText())
         .filter(Boolean)
         .join("\n");
 

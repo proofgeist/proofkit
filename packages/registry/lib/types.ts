@@ -116,7 +116,7 @@ const categorySchema = z.enum(["component", "page", "utility", "hook", "email"])
 
 export const frameworkSchema = z.enum(["next-pages", "next-app", "manual"]);
 
-export type TemplateMetadata = z.infer<typeof registryItemSchema> & {
+export type TemplateMetadata = Omit<z.infer<typeof registryItemSchema>, "name" | "type" | "files" | "docs"> & {
   title: string;
   description?: string;
   category: z.infer<typeof categorySchema>;

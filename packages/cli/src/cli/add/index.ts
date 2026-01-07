@@ -1,8 +1,8 @@
 import { select } from "@clack/prompts";
+import type { RegistryIndex } from "@proofkit/registry";
 import { Command } from "commander";
 import { capitalize, groupBy, uniq } from "es-toolkit";
 import ora from "ora";
-
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
@@ -77,7 +77,7 @@ const runAddFromRegistry = async (_options?: { noInstall?: boolean }) => {
     await runAddSchemaAction();
   } else if (addType === "data") {
     await runAddDataSourceCommand();
-  } else if (categories.includes(addType)) {
+  } else if ((categories as string[]).includes(addType)) {
     // one of the categories
     const itemsFromCategory = groupedByCategory[addType as keyof typeof groupedByCategory];
 

@@ -60,7 +60,7 @@ export async function generateODataTablesSingle(
   };
 
   // Generate types from merged metadata
-  await generateODataTypes(mergedMetadata, { ...config, postGenerateCommand: options?.postGenerateCommand, cwd });
+  await generateODataTypes(mergedMetadata, { ...config, cwd });
 
   // Return the resolved output path
   return path.resolve(cwd, outputPath);

@@ -878,7 +878,6 @@ export async function generateODataTypes(
   metadata: ParsedMetadata,
   config: FmodataConfig & {
     alwaysOverrideFieldNames?: boolean;
-    postGenerateCommand?: string;
     cwd?: string;
   },
 ): Promise<void> {
@@ -889,7 +888,6 @@ export async function generateODataTypes(
     tables,
     alwaysOverrideFieldNames = true,
     includeAllFieldsByDefault = true,
-    postGenerateCommand,
     cwd = process.cwd(),
   } = config;
   const outputPath = path ?? "schema";
@@ -1314,6 +1312,6 @@ ${exportStatements.join("\n")}
     overwrite: true,
   });
 
-  // Format and save files, then run post-generate command if provided
-  await formatAndSaveSourceFiles(project, postGenerateCommand, cwd);
+  // Format and save files
+  await formatAndSaveSourceFiles(project, cwd);
 }

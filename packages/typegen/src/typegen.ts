@@ -13,7 +13,7 @@ import { buildLayoutClient } from "./buildLayoutClient";
 import { buildOverrideFile, buildSchema } from "./buildSchema";
 import { commentHeader, defaultEnvNames, overrideCommentHeader } from "./constants";
 import { generateODataTablesSingle } from "./fmodata/typegen";
-import { formatAndSaveSourceFiles } from "./formatting";
+import { formatAndSaveSourceFiles, runPostGenerateCommand } from "./formatting";
 import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
 import { getLayoutMetadata } from "./getLayoutMetadata";
 import { type BuildSchemaArgs, typegenConfig, type typegenConfigSingle } from "./types";
@@ -52,7 +52,7 @@ export const generateTypedClients = async (
 
   for (const singleConfig of configArray) {
     if (singleConfig.type === "fmdapi") {
-      const result = await generateTypedClientsSingle(singleConfig, { resetOverrides, cwd, postGenerateCommand });
+      const result = await generateTypedClientsSingle(singleConfig, { resetOverrides, cwd });
       if (result) {
         totalSuccessCount += result.successCount;
         totalErrorCount += result.errorCount;
@@ -62,7 +62,7 @@ export const generateTypedClients = async (
         }
       }
     } else if (singleConfig.type === "fmodata") {
-      const outputPath = await generateODataTablesSingle(singleConfig, { cwd, postGenerateCommand });
+      const outputPath = await generateODataTablesSingle(singleConfig, { cwd });
       if (outputPath) {
         outputPaths.push(outputPath);
       }
@@ -70,6 +70,9 @@ export const generateTypedClients = async (
       console.log(chalk.red("ERROR: Invalid config type"));
     }
   }
+
+  // Run post-generate command once after all configs have been processed
+  await runPostGenerateCommand(postGenerateCommand, cwd);
 
   return { successCount: totalSuccessCount, errorCount: totalErrorCount, totalCount, outputPaths };
 };
@@ -88,7 +91,7 @@ const generateTypedClientsSingle = async (
     ...rest
   } = config;
 
-  const { resetOverrides = false, cwd = process.cwd(), postGenerateCommand } = options ?? {};
+  const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
 
   const validator = rest.validator ?? "zod/v4";
 
@@ -251,8 +254,8 @@ const generateTypedClientsSingle = async (
     successCount++;
   }
 
-  // Format and save files, then run post-generate command if provided
-  await formatAndSaveSourceFiles(project, postGenerateCommand, cwd);
+  // Format and save files
+  await formatAndSaveSourceFiles(project, cwd);
 
   return { successCount, errorCount, totalCount, outputPath: rootDir };
 };

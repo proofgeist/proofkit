@@ -5,12 +5,8 @@
  * used across all E2E test files.
  */
 
-import path from "node:path";
 import { fmTableOccurrence, textField, timestampField } from "@proofkit/fmodata";
-import { config } from "dotenv";
 import { z } from "zod/v4";
-
-config({ path: path.resolve(__dirname, "../../.env.local") });
 
 // Load environment variables
 export const serverUrl = process.env.FMODATA_SERVER_URL;

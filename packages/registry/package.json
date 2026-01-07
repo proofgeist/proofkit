@@ -31,7 +31,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check .",
+    "lint": "biome check . --write",
     "lint:summary": "biome check . --reporter=summary"
   },
   "keywords": [

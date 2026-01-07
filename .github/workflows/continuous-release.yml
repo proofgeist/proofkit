@@ -1,6 +1,10 @@
 name: Publish Any Commit
 on: [push, pull_request]
 
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest

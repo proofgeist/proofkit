@@ -572,9 +572,6 @@ importers:
       jiti:
         specifier: ^1.21.7
         version: 1.21.7
-      shadcn:
-        specifier: ^2.10.0
-        version: 2.10.0(@types/node@22.19.3)(typescript@5.9.3)
       zod:
         specifier: ^4.2.0
         version: 4.2.0
@@ -10042,6 +10039,7 @@ snapshots:
       '@inquirer/type': 3.0.7(@types/node@22.19.3)
     optionalDependencies:
       '@types/node': 22.19.3
+    optional: true
 
   '@inquirer/core@10.1.13(@types/node@22.17.1)':
     dependencies:
@@ -10068,6 +10066,7 @@ snapshots:
       yoctocolors-cjs: 2.1.2
     optionalDependencies:
       '@types/node': 22.19.3
+    optional: true
 
   '@inquirer/figures@1.0.12': {}
 
@@ -10078,6 +10077,7 @@ snapshots:
   '@inquirer/type@3.0.7(@types/node@22.19.3)':
     optionalDependencies:
       '@types/node': 22.19.3
+    optional: true
 
   '@isaacs/balanced-match@4.0.1': {}
 
@@ -12221,14 +12221,14 @@ snapshots:
       msw: 2.10.2(@types/node@22.17.1)(typescript@5.9.3)
       vite: 6.3.5(@types/node@22.17.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
 
-  '@vitest/mocker@4.0.15(msw@2.10.2(@types/node@22.19.3)(typescript@5.9.3))(vite@6.3.5(@types/node@22.17.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.0.15(msw@2.10.2(@types/node@22.19.3)(typescript@5.9.3))(vite@6.3.5(@types/node@22.19.3)(jiti@1.21.7)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@vitest/spy': 4.0.15
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.10.2(@types/node@22.19.3)(typescript@5.9.3)
-      vite: 6.3.5(@types/node@22.17.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
+      vite: 6.3.5(@types/node@22.19.3)(jiti@1.21.7)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/mocker@4.0.15(msw@2.10.2(@types/node@22.19.3)(typescript@5.9.3))(vite@6.3.5(@types/node@22.19.3)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
@@ -15103,6 +15103,7 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - '@types/node'
+    optional: true
 
   muggle-string@0.4.1: {}
 
@@ -16090,38 +16091,6 @@ snapshots:
       https-proxy-agent: 6.2.1
       kleur: 4.1.5
       msw: 2.10.2(@types/node@22.17.1)(typescript@5.9.3)
-      node-fetch: 3.3.2
-      ora: 6.3.1
-      postcss: 8.5.6
-      prompts: 2.4.2
-      recast: 0.23.11
-      stringify-object: 5.0.0
-      ts-morph: 18.0.0
-      tsconfig-paths: 4.2.0
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@types/node'
-      - supports-color
-      - typescript
-
-  shadcn@2.10.0(@types/node@22.19.3)(typescript@5.9.3):
-    dependencies:
-      '@antfu/ni': 23.3.1
-      '@babel/core': 7.27.7
-      '@babel/parser': 7.28.3
-      '@babel/plugin-transform-typescript': 7.27.1(@babel/core@7.27.7)
-      '@modelcontextprotocol/sdk': 1.17.2
-      commander: 10.0.1
-      cosmiconfig: 8.3.6(typescript@5.9.3)
-      deepmerge: 4.3.1
-      diff: 5.2.0
-      execa: 7.2.0
-      fast-glob: 3.3.3
-      fs-extra: 11.3.0
-      https-proxy-agent: 6.2.1
-      kleur: 4.1.5
-      msw: 2.10.2(@types/node@22.19.3)(typescript@5.9.3)
       node-fetch: 3.3.2
       ora: 6.3.1
       postcss: 8.5.6
@@ -17225,7 +17194,7 @@ snapshots:
   vitest@4.0.15(@types/node@22.19.3)(happy-dom@15.11.7)(jiti@1.21.7)(lightningcss@1.30.2)(msw@2.10.2(@types/node@22.19.3)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@vitest/expect': 4.0.15
-      '@vitest/mocker': 4.0.15(msw@2.10.2(@types/node@22.19.3)(typescript@5.9.3))(vite@6.3.5(@types/node@22.17.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.15(msw@2.10.2(@types/node@22.19.3)(typescript@5.9.3))(vite@6.3.5(@types/node@22.19.3)(jiti@1.21.7)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/pretty-format': 4.0.15
       '@vitest/runner': 4.0.15
       '@vitest/snapshot': 4.0.15

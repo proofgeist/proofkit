@@ -34,6 +34,24 @@ interface FullProofkitTypegenJsonFile {
   config: AnyDataSourceConfig | AnyDataSourceConfig[];
 }
 
+// Helper function to normalize data sources by adding default type for backwards compatibility
+// This mirrors the zod preprocess in @proofkit/typegen that defaults type to "fmdapi"
+function normalizeDataSource(ds: AnyDataSourceConfig): AnyDataSourceConfig {
+  if (!("type" in ds) || ds.type === undefined) {
+    return { ...(ds as object), type: "fmdapi" } as AnyDataSourceConfig;
+  }
+  return ds;
+}
+
+function normalizeConfig(
+  config: AnyDataSourceConfig | AnyDataSourceConfig[],
+): AnyDataSourceConfig | AnyDataSourceConfig[] {
+  if (Array.isArray(config)) {
+    return config.map(normalizeDataSource);
+  }
+  return normalizeDataSource(config);
+}
+
 // Helper functions for JSON config
 async function readJsonConfigFile(configPath: string): Promise<FullProofkitTypegenJsonFile | null> {
   if (!fs.existsSync(configPath)) {
@@ -42,6 +60,10 @@ async function readJsonConfigFile(configPath: string): Promise<FullProofkitTypeg
   try {
     const fileContent = await fs.readFile(configPath, "utf8");
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
+    // Normalize config to add default type for backwards compatibility
+    if (parsed.config) {
+      parsed.config = normalizeConfig(parsed.config);
+    }
     return parsed;
   } catch (error) {
     console.error(`Error reading or parsing JSONC config at ${configPath}:`, error);
@@ -213,7 +235,9 @@ export function getClientSuffix({
     const fileContent = fs.readFileSync(jsonConfigPath, "utf8");
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
 
-    const configToSearch = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
+    // Normalize config to add default type for backwards compatibility
+    const normalizedConfig = normalizeConfig(parsed.config);
+    const configToSearch = Array.isArray(normalizedConfig) ? normalizedConfig : [normalizedConfig];
 
     const targetDataSource = configToSearch.find(
       (ds): ds is FmdapiDataSourceConfig =>
@@ -242,7 +266,9 @@ export function getExistingSchemas({
     const fileContent = fs.readFileSync(jsonConfigPath, "utf8");
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
 
-    const configToSearch = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
+    // Normalize config to add default type for backwards compatibility
+    const normalizedConfig = normalizeConfig(parsed.config);
+    const configToSearch = Array.isArray(normalizedConfig) ? normalizedConfig : [normalizedConfig];
 
     const targetDataSource = configToSearch.find(
       (ds): ds is FmdapiDataSourceConfig =>

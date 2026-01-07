@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { z } from "zod/v4";
 import type { OttoAPIKey } from "../../fmdapi/src";
 import { generateTypedClients } from "../src/typegen";
@@ -114,10 +114,24 @@ describe("typegen", () => {
   // Define a base path for generated files relative to the test file directory
   const baseGenPath = getBaseGenPath();
 
+  // Store original env values to restore after tests
+  const originalEnv: Record<string, string | undefined> = {};
+
   // Clean up the base directory before each test
   beforeEach(async () => {
     await fs.rm(baseGenPath, { recursive: true, force: true });
     console.log(`Cleaned base output directory: ${baseGenPath}`);
+  });
+
+  // Restore original environment after each test
+  afterEach(() => {
+    for (const key of Object.keys(originalEnv)) {
+      if (originalEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = originalEnv[key];
+      }
+    }
   });
 
   it("basic typegen with zod", async () => {
@@ -317,6 +331,58 @@ describe("typegen", () => {
     expect(clientContent).not.toContain("OttoAdapter");
     expect(clientContent).toContain("TEST_USERNAME");
     expect(clientContent).toContain("TEST_PASSWORD");
+
+    await cleanupGeneratedFiles(genPath);
+  }, 30_000);
+
+  it("should use OttoAdapter with default env var names when OTTO_API_KEY is set and no envNames config provided", async () => {
+    // Store original env values
+    originalEnv.OTTO_API_KEY = process.env.OTTO_API_KEY;
+    originalEnv.FM_SERVER = process.env.FM_SERVER;
+    originalEnv.FM_DATABASE = process.env.FM_DATABASE;
+    originalEnv.FM_USERNAME = process.env.FM_USERNAME;
+    originalEnv.FM_PASSWORD = process.env.FM_PASSWORD;
+
+    // Set up environment with default env var names (API key auth)
+    process.env.OTTO_API_KEY = process.env.DIFFERENT_OTTO_API_KEY || "test-api-key";
+    process.env.FM_SERVER = process.env.DIFFERENT_FM_SERVER || "test-server";
+    process.env.FM_DATABASE = process.env.DIFFERENT_FM_DATABASE || "test-db";
+    // Ensure username/password are NOT set to force API key usage
+    // biome-ignore lint/performance/noDelete: delete is required to unset environment variables
+    delete process.env.FM_USERNAME;
+    // biome-ignore lint/performance/noDelete: delete is required to unset environment variables
+    delete process.env.FM_PASSWORD;
+
+    // Config without envNames - should use defaults
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "layout",
+          schemaName: "testLayout",
+          generateClient: true,
+        },
+      ],
+      path: "typegen-output/default-api-key",
+      generateClient: true,
+      // Note: envNames is undefined - should use defaults
+      envNames: undefined,
+    };
+
+    const genPath = await generateTypes(config);
+
+    // Check that the generated client uses OttoAdapter with default env var names
+    const clientPath = path.join(genPath, "client", "testLayout.ts");
+    const clientContent = await fs.readFile(clientPath, "utf-8");
+
+    // Should use OttoAdapter since OTTO_API_KEY was set
+    expect(clientContent).toContain("OttoAdapter");
+    expect(clientContent).not.toContain("FetchAdapter");
+    // Should use the default env var name
+    expect(clientContent).toContain("OTTO_API_KEY");
+    // Should NOT have username/password env var references
+    expect(clientContent).not.toContain("FM_USERNAME");
+    expect(clientContent).not.toContain("FM_PASSWORD");
 
     await cleanupGeneratedFiles(genPath);
   }, 30_000);

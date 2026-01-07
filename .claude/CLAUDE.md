@@ -1,3 +1,73 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+ProofKit is a monorepo of TypeScript tools and libraries for building web applications integrated with Claris FileMaker. Documentation: https://proofkit.dev
+
+## Commands
+
+```bash
+# Build & Development
+pnpm build              # Build all packages
+pnpm dev                # Start dev mode for all packages
+pnpm test               # Run tests (Vitest)
+pnpm lint               # Lint all packages
+pnpm format             # Format with Biome
+
+# Single package operations (use --filter)
+pnpm --filter @proofkit/fmdapi build
+pnpm --filter @proofkit/cli test
+
+# Code quality
+pnpm dlx ultracite fix  # Format and fix lint issues
+pnpm dlx ultracite check
+pnpm knip               # Find unused dependencies
+pnpm sherif             # Check dependency compliance
+```
+
+## Package Installation
+
+**Always use pnpm with --filter for package-specific dependencies.** Never install to workspace root unless explicitly requested.
+
+```bash
+pnpm --filter @proofkit/fmdapi add zod
+```
+
+## Monorepo Structure
+
+```
+packages/
+├── fmdapi/      # FileMaker Data API client (REST)
+├── fmodata/     # FileMaker OData API client with Drizzle-like ORM
+├── typegen/     # TypeScript type generator from FM layouts (CLI + Web UI)
+├── webviewer/   # FileMaker WebViewer utilities
+├── cli/         # Interactive CLI for scaffolding projects
+├── better-auth/ # Better Auth adapter for FileMaker
+├── registry/    # Types and templates registry
+└── create-proofkit/  # Quick-start alias package
+apps/
+└── docs/        # Documentation site (Next.js + Fumadocs)
+```
+
+## Architecture Notes
+
+- **Build pipeline**: TypeScript → Vite bundling → publint validation
+- **Error handling**: Custom error types + neverthrow Result pattern (fmodata)
+- **Code generation**: ts-morph for AST manipulation (typegen, CLI)
+- **CLI framework**: Commander with @clack/prompts for interactive UI
+- **ORM pattern**: Drizzle-inspired field builders in fmodata
+
+## TypeScript Configuration
+
+Strict mode enabled with:
+- `noUncheckedIndexedAccess`: Safe array/object access
+- `useUnknownInCatchVariables`: Typed catch variables
+- Path aliases: `@proofkit/*` → `packages/*/src`
+
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.

@@ -20,7 +20,7 @@
     "lint:summary": "biome check . --reporter=summary"
   },
   "dependencies": {
-    "execa": "^9.5.1"
+    "execa": "^9.5.3"
   },
   "engines": {
     "node": ">=20.12.0"

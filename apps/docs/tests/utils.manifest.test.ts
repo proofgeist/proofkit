@@ -43,11 +43,11 @@ describe("Registry utils (dynamic scanning)", () => {
       ],
     };
 
+    // Note: RegistryItem from shadcn/registry has content and files as optional
     const _test2: RegistryItem = {
       name: "test",
       type: "registry:component",
       files: [
-        // @ts-expect-error - content is missing
         {
           type: "registry:block",
           path: "test.tsx",
@@ -56,7 +56,6 @@ describe("Registry utils (dynamic scanning)", () => {
       ],
     };
 
-    // @ts-expect-error - files is missing
     const _test3: RegistryItem = {
       name: "test",
       type: "registry:component",

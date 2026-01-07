@@ -303,9 +303,7 @@ export async function addToFmschemaConfig({
       fileContent.config = configArray;
     }
 
-    const existingDsIndex = configArray.findIndex(
-      (ds) => ds.type === "fmdapi" && ds.path === newDataSource.path,
-    );
+    const existingDsIndex = configArray.findIndex((ds) => ds.type === "fmdapi" && ds.path === newDataSource.path);
     if (existingDsIndex === -1) {
       configArray.push(newDataSource);
     } else {
@@ -372,9 +370,7 @@ export async function removeFromFmschemaConfig({ dataSourceName }: { dataSourceN
   const pathToRemove = `./src/config/schemas/${dataSourceName}`;
 
   if (Array.isArray(fileContent.config)) {
-    fileContent.config = fileContent.config.filter(
-      (ds) => !(ds.type === "fmdapi" && ds.path === pathToRemove),
-    );
+    fileContent.config = fileContent.config.filter((ds) => !(ds.type === "fmdapi" && ds.path === pathToRemove));
   } else {
     const currentConfig = fileContent.config;
     if (currentConfig.type === "fmdapi" && currentConfig.path === pathToRemove) {

@@ -21,15 +21,17 @@ interface Schema {
   strictNumbers?: boolean;
 }
 
-// For a single data source configuration object
-type ImportedDataSourceConfig = Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>;
+// For any data source configuration object (fmdapi or fmodata)
+type AnyDataSourceConfig = z.infer<typeof typegenConfigSingle>;
+// For a single fmdapi data source configuration object
+type FmdapiDataSourceConfig = Extract<AnyDataSourceConfig, { type: "fmdapi" }>;
 // For a single layout configuration object within a data source
-type ImportedLayoutConfig = ImportedDataSourceConfig["layouts"][number];
+type ImportedLayoutConfig = FmdapiDataSourceConfig["layouts"][number];
 
 // This type represents the actual structure of the JSONC file, including $schema
 interface FullProofkitTypegenJsonFile {
   $schema?: string;
-  config: ImportedDataSourceConfig | ImportedDataSourceConfig[];
+  config: AnyDataSourceConfig | AnyDataSourceConfig[];
 }
 
 // Helper functions for JSON config
@@ -95,7 +97,7 @@ export async function addLayout({
   // Work with the 'config' property which is TypegenConfig['config']
   const configProperty = fileContent.config;
 
-  let configArray: ImportedDataSourceConfig[];
+  let configArray: AnyDataSourceConfig[];
   if (Array.isArray(configProperty)) {
     configArray = configProperty;
   } else {
@@ -111,8 +113,10 @@ export async function addLayout({
     strictNumbers: schema.strictNumbers,
   }));
 
-  let targetDataSource: ImportedDataSourceConfig | undefined = configArray.find(
-    (ds) => ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName,
+  let targetDataSource: FmdapiDataSourceConfig | undefined = configArray.find(
+    (ds): ds is FmdapiDataSourceConfig =>
+      ds.type === "fmdapi" &&
+      (ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName),
   );
 
   if (targetDataSource) {
@@ -143,7 +147,7 @@ export async function addConfig({
   projectDir,
   runCodegen = true,
 }: {
-  config: ImportedDataSourceConfig | ImportedDataSourceConfig[];
+  config: FmdapiDataSourceConfig | FmdapiDataSourceConfig[];
   projectDir: string;
   runCodegen?: boolean;
 }) {
@@ -212,8 +216,9 @@ export function getClientSuffix({
     const configToSearch = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
 
     const targetDataSource = configToSearch.find(
-      (ds) =>
-        ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName,
+      (ds): ds is FmdapiDataSourceConfig =>
+        ds.type === "fmdapi" &&
+        (ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName),
     );
     return targetDataSource?.clientSuffix ?? "Client";
   } catch (error) {
@@ -236,13 +241,13 @@ export function getExistingSchemas({
   try {
     const fileContent = fs.readFileSync(jsonConfigPath, "utf8");
     const parsed = parseJsonc(fileContent) as FullProofkitTypegenJsonFile;
-    let targetDataSource: ImportedDataSourceConfig | undefined;
 
     const configToSearch = Array.isArray(parsed.config) ? parsed.config : [parsed.config];
 
-    targetDataSource = configToSearch.find(
-      (ds) =>
-        ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName,
+    const targetDataSource = configToSearch.find(
+      (ds): ds is FmdapiDataSourceConfig =>
+        ds.type === "fmdapi" &&
+        (ds.path?.endsWith(dataSourceName) || ds.path?.endsWith(`${dataSourceName}/`) || ds.path === dataSourceName),
     );
 
     if (targetDataSource?.layouts) {
@@ -269,7 +274,7 @@ export async function addToFmschemaConfig({
   const jsonConfigPath = path.join(projectDir, "proofkit-typegen.config.jsonc");
   let fileContent = await readJsonConfigFile(jsonConfigPath);
 
-  const newDataSource: ImportedDataSourceConfig = {
+  const newDataSource: FmdapiDataSourceConfig = {
     type: "fmdapi",
     layouts: [],
     path: `./src/config/schemas/${dataSourceName}`,
@@ -290,7 +295,7 @@ export async function addToFmschemaConfig({
   }
 
   if (fileContent) {
-    let configArray: ImportedDataSourceConfig[];
+    let configArray: AnyDataSourceConfig[];
     if (Array.isArray(fileContent.config)) {
       configArray = fileContent.config;
     } else {
@@ -298,14 +303,17 @@ export async function addToFmschemaConfig({
       fileContent.config = configArray;
     }
 
-    const existingDsIndex = configArray.findIndex((ds) => ds.path === newDataSource.path);
+    const existingDsIndex = configArray.findIndex(
+      (ds) => ds.type === "fmdapi" && ds.path === newDataSource.path,
+    );
     if (existingDsIndex === -1) {
       configArray.push(newDataSource);
     } else {
+      const existingConfig = configArray[existingDsIndex] as FmdapiDataSourceConfig;
       configArray[existingDsIndex] = {
-        ...configArray[existingDsIndex],
+        ...existingConfig,
         ...newDataSource,
-        layouts: newDataSource.layouts.length > 0 ? newDataSource.layouts : configArray[existingDsIndex]?.layouts || [],
+        layouts: newDataSource.layouts.length > 0 ? newDataSource.layouts : existingConfig.layouts || [],
       };
     }
   } else {
@@ -364,10 +372,12 @@ export async function removeFromFmschemaConfig({ dataSourceName }: { dataSourceN
   const pathToRemove = `./src/config/schemas/${dataSourceName}`;
 
   if (Array.isArray(fileContent.config)) {
-    fileContent.config = fileContent.config.filter((ds) => ds.path !== pathToRemove);
+    fileContent.config = fileContent.config.filter(
+      (ds) => !(ds.type === "fmdapi" && ds.path === pathToRemove),
+    );
   } else {
-    const currentConfig = fileContent.config as ImportedDataSourceConfig;
-    if (currentConfig.path === pathToRemove) {
+    const currentConfig = fileContent.config;
+    if (currentConfig.type === "fmdapi" && currentConfig.path === pathToRemove) {
       fileContent.config = [];
     }
   }
@@ -395,7 +405,7 @@ export async function removeLayout({
   let dataSourceModified = false;
   const targetDsPath = `./src/config/schemas/${dataSourceName}`;
 
-  let configArray: ImportedDataSourceConfig[];
+  let configArray: AnyDataSourceConfig[];
   if (Array.isArray(fileContent.config)) {
     configArray = fileContent.config;
   } else {
@@ -403,7 +413,9 @@ export async function removeLayout({
     fileContent.config = configArray;
   }
 
-  const targetDataSource = configArray.find((ds) => ds.path === targetDsPath);
+  const targetDataSource = configArray.find(
+    (ds): ds is FmdapiDataSourceConfig => ds.type === "fmdapi" && ds.path === targetDsPath,
+  );
 
   if (targetDataSource?.layouts) {
     const initialCount = targetDataSource.layouts.length;

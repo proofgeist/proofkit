@@ -6,14 +6,9 @@ import type { Project } from "ts-morph";
 /**
  * Formats all source files in a ts-morph Project using prettier and saves the changes.
  * @param project The ts-morph Project containing the files to format
- * @param postGenerateCommand Optional command to run after formatting
  * @param cwd Current working directory for command execution
  */
-export async function formatAndSaveSourceFiles(
-  project: Project,
-  postGenerateCommand?: string,
-  cwd: string = process.cwd(),
-) {
+export async function formatAndSaveSourceFiles(project: Project, _cwd: string = process.cwd()) {
   try {
     const files = project.getSourceFiles();
 
@@ -30,7 +25,14 @@ export async function formatAndSaveSourceFiles(
     // Ignore formatting errors and continue
   }
   await project.save();
+}
 
+/**
+ * Runs the post-generate command if provided.
+ * @param postGenerateCommand Optional command to run after formatting
+ * @param cwd Current working directory for command execution
+ */
+export async function runPostGenerateCommand(postGenerateCommand?: string, cwd: string = process.cwd()) {
   if (postGenerateCommand) {
     try {
       // Parse the command string into command and arguments

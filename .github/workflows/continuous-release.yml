@@ -74,7 +74,7 @@ jobs:
         run: |
           doppler oidc login --scope=. --identity=${{ vars.DOPPLER_SERVICE_IDENTITY_ID }} --token=$OIDC_TOKEN
           doppler configure set project proofkit
-          doppler configure set config dev
+          doppler configure set config test
 
       - name: Run Unit Tests
         run: pnpm test

@@ -14,7 +14,7 @@ describe("Non-Interactive CLI Tests", () => {
   // Parse test environment variables
   const testEnv = z
     .object({
-      OTTO_SERVER_URL: z.string().url(),
+      OTTO_SERVER_URL: z.url(),
       OTTO_ADMIN_API_KEY: z.string().min(1),
       FM_DATA_API_KEY: z.string().min(1),
       FM_FILE_NAME: z.string().min(1),

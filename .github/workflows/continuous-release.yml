@@ -45,6 +45,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: [lint, typecheck]
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,18 +61,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install 1Password CLI
-        uses: 1password/install-cli-action@v1
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      - name: Get OIDC token
+        run: |
+          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://github.com/$GITHUB_REPOSITORY_OWNER")
+          echo "OIDC_TOKEN=$(echo $TOKEN | jq -r '.value')" >> $GITHUB_ENV
+
+      - name: Authenticate with Doppler
+        run: |
+          doppler oidc login --scope=. --identity=${{ vars.DOPPLER_SERVICE_IDENTITY_ID }} --token=$OIDC_TOKEN
+          doppler configure set project proofkit
+          doppler configure set config test
 
       - name: Run Unit Tests
-        run: op run --env-file=op.env -- pnpm test
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: pnpm test
 
       - name: Run fmodata E2E Tests
-        run: op run --env-file=op.env -- pnpm --filter @proofkit/fmodata test:e2e:ci
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: pnpm --filter @proofkit/fmodata test:e2e
 
   build:
     runs-on: ubuntu-latest

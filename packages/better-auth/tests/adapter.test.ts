@@ -51,7 +51,7 @@ describe("My Adapter Tests", async () => {
         }
       }
     }
-  });
+  }, 60_000);
 
   if (!process.env.FM_SERVER) {
     throw new Error("FM_SERVER is not set");

@@ -1,0 +1,3 @@
+setup:
+  project: proofkit
+  config: test

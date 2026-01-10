@@ -51,7 +51,7 @@
     "pub:beta": "NODE_ENV=production pnpm build && npm publish --tag beta --access public",
     "pub:next": "NODE_ENV=production pnpm build && npm publish --tag next --access public",
     "pub:release": "NODE_ENV=production pnpm build && npm publish --access public",
-    "test": "vitest run"
+    "test": "doppler run -c test_cli -- vitest run"
   },
   "dependencies": {
     "@better-fetch/fetch": "1.1.17",

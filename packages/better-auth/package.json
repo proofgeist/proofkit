@@ -6,7 +6,7 @@
   "main": "dist/esm/index.js",
   "scripts": {
     "dev": "pnpm build:watch",
-    "test": "vitest run",
+    "test": "doppler run -c test_betterauth -- vitest run",
     "typecheck": "tsc --noEmit",
     "build": "vite build && publint --strict",
     "build:watch": "vite build --watch",

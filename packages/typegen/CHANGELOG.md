@@ -1,5 +1,13 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.5
+
+### Patch Changes
+
+- ae07372: Fix post-generate command to run once after all configs instead of once per config.
+- 23639ec: Fix generated client authentication type detection to use OttoAdapter when OTTO_API_KEY environment variable is set with default names
+- dfe52a7: Fix boolean transformations in odata
+
 ## 1.1.0-beta.4
 
 ### Minor Changes

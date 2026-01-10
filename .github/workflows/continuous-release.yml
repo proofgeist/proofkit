@@ -1,5 +1,11 @@
 name: Publish Any Commit
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore:
+      - beads-sync
+  pull_request:
+    branches-ignore:
+      - beads-sync
 
 env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

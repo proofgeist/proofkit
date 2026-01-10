@@ -14,7 +14,6 @@ import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
-import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
 import { buildPkgInstallerMap } from "~/installers/index.js";
 import { ensureWebViewerAddonInstalled } from "~/installers/proofkit-webviewer.js";
 import { initProgramState, state } from "~/state.js";
@@ -272,10 +271,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   await askForAuth({ projectDir });
 
   await installDependencies({ projectDir });
-
-  if (state.ui === "shadcn") {
-    await shadcnInstall([`${getRegistryUrl()}/r/components/mode-toggle`, "sonner", "button"]);
-  }
 
   await runCodegenCommand();
 

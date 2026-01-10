@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
@@ -10,6 +10,8 @@ describe("Non-Interactive CLI Tests", () => {
   // Use root-level tmp directory for test outputs
   const testDir = join(__dirname, "..", "..", "tmp", "cli-tests");
   const cliPath = join(__dirname, "..", "dist", "index.js");
+  const projectName = "test-fm-project";
+  const projectDir = join(testDir, projectName);
 
   // Parse test environment variables
   const testEnv = z
@@ -22,14 +24,19 @@ describe("Non-Interactive CLI Tests", () => {
     })
     .parse(process.env);
 
-  beforeEach(() => {
-    // Ensure the test directory exists
-    mkdirSync(testDir, { recursive: true });
-  });
+  beforeEach(
+    () => {
+      // Clean up any stale test project from previous runs
+      if (existsSync(projectDir)) {
+        rmSync(projectDir, { recursive: true, force: true });
+      }
+      // Ensure the test directory exists
+      mkdirSync(testDir, { recursive: true });
+    },
+    30_000, // 30s timeout for cleanup of large node_modules
+  );
 
   it("should create a project with FileMaker integration in CI mode", () => {
-    const projectName = "test-fm-project";
-
     // Build the command with all necessary flags for non-interactive mode
     const command = [
       `node "${cliPath}" init`,
@@ -56,8 +63,6 @@ describe("Non-Interactive CLI Tests", () => {
         encoding: "utf-8",
       });
     }).not.toThrow();
-
-    const projectDir = join(testDir, projectName);
 
     // Verify project structure
     expect(existsSync(projectDir)).toBe(true);

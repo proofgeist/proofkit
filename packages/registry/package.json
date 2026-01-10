@@ -30,7 +30,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check . --write",
     "lint:summary": "biome check . --reporter=summary"
   },
   "keywords": [
@@ -53,7 +54,6 @@
   },
   "dependencies": {
     "jiti": "^1.21.7",
-    "shadcn": "^2.10.0",
     "zod": "^4.2.0"
   }
 }

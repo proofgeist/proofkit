@@ -181,23 +181,38 @@ const generateTypedClientsSingle = async (
       strictNumbers: item.strictNumbers,
       webviewerScriptName: config?.type === "fmdapi" ? config.webviewerScriptName : undefined,
       envNames: (() => {
-        const hasApiKey = envNames?.auth?.apiKey !== undefined;
-        const hasUsername = envNames?.auth?.username !== undefined;
+        // Determine the intended auth type based on config AND runtime.
+        // Priority:
+        // 1. If user explicitly specified apiKey in config → use OttoAdapter
+        // 2. If user explicitly specified username in config → use FetchAdapter
+        // 3. If neither specified (defaults) → use what was actually used at runtime
+        //
+        // Note: We check for the VALUE being defined, not just the property existing,
+        // because the Zod schema defines both apiKey and username as optional properties,
+        // so both exist on the object but with undefined values when not specified.
+        const configHasApiKey = envNames?.auth?.apiKey !== undefined;
+        const configHasUsername = envNames?.auth?.username !== undefined;
+        const runtimeUsedApiKey = "apiKey" in auth;
+
+        // Use apiKey if: explicitly specified in config, OR not explicitly set to username AND runtime used apiKey
+        const useApiKey = configHasApiKey || (!configHasUsername && runtimeUsedApiKey);
+
+        // Determine the env var names to use in generated code
+        const apiKeyEnvName = envNames?.auth?.apiKey ?? defaultEnvNames.apiKey;
+        const usernameEnvName = envNames?.auth?.username ?? defaultEnvNames.username;
+        const passwordEnvName = envNames?.auth?.password ?? defaultEnvNames.password;
 
         return {
-          auth: hasApiKey
+          auth: useApiKey
             ? {
-                apiKey: envNames?.auth?.apiKey ?? defaultEnvNames.apiKey,
+                apiKey: apiKeyEnvName,
                 username: undefined,
                 password: undefined,
               }
             : {
                 apiKey: undefined,
-                username: hasUsername && envNames?.auth ? envNames.auth.username : defaultEnvNames.username,
-                password:
-                  hasUsername && envNames?.auth && envNames.auth.password !== undefined
-                    ? envNames.auth.password
-                    : defaultEnvNames.password,
+                username: usernameEnvName,
+                password: passwordEnvName,
               },
           db: envNames?.db ?? defaultEnvNames.db,
           server: envNames?.server ?? defaultEnvNames.server,

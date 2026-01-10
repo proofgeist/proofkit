@@ -76,3 +76,6 @@ packages/typegen/schema/metadata.xml
 
 # Prevent accidentally committing files with absolute paths
 Users/
+
+# bv (beads viewer) local config and caches
+.bv/

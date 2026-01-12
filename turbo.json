@@ -29,6 +29,19 @@
       "outputs": [],
       "dependsOn": ["^build"]
     },
+    "test:e2e": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "vitest.config.*",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx"
+      ],
+      "outputs": [],
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "test:watch": {
       "cache": false,
       "persistent": true

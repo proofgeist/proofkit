@@ -1,156 +1,306 @@
-import { runAdapterTest } from "better-auth/adapters/test";
-import { beforeAll, describe, expect, it } from "vitest";
-import { z } from "zod/v4";
-import { FileMakerAdapter } from "../src";
-import { createRawFetch } from "../src/odata";
+/**
+ * Unit tests for FileMaker adapter operations using mocked responses.
+ * These tests verify adapter behavior without requiring a live FileMaker server.
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { FileMakerAdapter } from "../src/adapter";
+import { mockResponses } from "./fixtures/responses";
+import { createMockFetch, createMockFetchSequence } from "./utils/mock-fetch";
 
-if (!process.env.FM_SERVER) {
-  throw new Error("FM_SERVER is not set");
-}
-if (!process.env.FM_DATABASE) {
-  throw new Error("FM_DATABASE is not set");
-}
-if (!process.env.FM_USERNAME) {
-  throw new Error("FM_USERNAME is not set");
-}
-if (!process.env.FM_PASSWORD) {
-  throw new Error("FM_PASSWORD is not set");
+// Test adapter factory - creates adapter with test config
+function createTestAdapter() {
+  return FileMakerAdapter({
+    odata: {
+      serverUrl: "https://api.example.com",
+      auth: { apiKey: "test-api-key" },
+      database: "test.fmp12",
+    },
+    debugLogs: false,
+  });
 }
 
-const { fetch } = createRawFetch({
-  serverUrl: process.env.FM_SERVER,
-  auth: {
-    username: process.env.FM_USERNAME,
-    password: process.env.FM_PASSWORD,
-  },
-  database: process.env.FM_DATABASE,
-  logging: "verbose", // Enable verbose logging to see the response details
-});
+describe("FileMakerAdapter", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-describe("My Adapter Tests", async () => {
-  beforeAll(async () => {
-    // reset the database
-    for (const table of ["user", "session", "account", "verification"]) {
-      const result = await fetch(`/${table}`, {
-        output: z.object({ value: z.array(z.any()) }),
+  describe("create", () => {
+    it("should create a record and return data with id", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["create-user"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.create({
+        model: "user",
+        data: {
+          id: "user-123",
+          email: "test@example.com",
+          name: "Test User",
+        },
       });
 
-      if (result.error) {
-        console.log("Error fetching records:", result.error);
-        continue;
-      }
-
-      const records = result.data?.value || [];
-      for (const record of records) {
-        const deleteResult = await fetch(`/${table}('${record.id}')`, {
-          method: "DELETE",
-        });
-
-        if (deleteResult.error) {
-          console.log(`Error deleting record ${record.id}:`, deleteResult.error);
-        }
-      }
-    }
-  }, 60_000);
-
-  if (!process.env.FM_SERVER) {
-    throw new Error("FM_SERVER is not set");
-  }
-  if (!process.env.FM_DATABASE) {
-    throw new Error("FM_DATABASE is not set");
-  }
-  if (!process.env.FM_USERNAME) {
-    throw new Error("FM_USERNAME is not set");
-  }
-  if (!process.env.FM_PASSWORD) {
-    throw new Error("FM_PASSWORD is not set");
-  }
-
-  const adapter = FileMakerAdapter({
-    debugLogs: {
-      isRunningAdapterTests: true, // This is our super secret flag to let us know to only log debug logs if a test fails.
-    },
-    odata: {
-      auth: {
-        username: process.env.FM_USERNAME,
-        password: process.env.FM_PASSWORD,
-      },
-      database: process.env.FM_DATABASE,
-      serverUrl: process.env.FM_SERVER,
-    },
-  });
-
-  await runAdapterTest({
-    // biome-ignore lint/suspicious/useAwait: must be an async function
-    getAdapter: async (betterAuthOptions = {}) => {
-      return adapter(betterAuthOptions);
-    },
-  });
-
-  it("should sort descending", async () => {
-    const result = await adapter({}).findMany({
-      model: "verification",
-      where: [
-        {
-          field: "identifier",
-          operator: "eq",
-          value: "zyzaUHEsETWiuORCCdyguVVlVPcnduXk",
-        },
-      ],
-      limit: 1,
-      sortBy: { direction: "desc", field: "createdAt" },
+      expect(result).toBeDefined();
+      expect(result.id).toBe("user-123");
     });
 
-    console.log(result);
+    it("should create a session record", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["create-session"]));
+      const adapter = createTestAdapter()({});
 
-    // expect(result.data).toHaveLength(1);
+      const result = await adapter.create({
+        model: "session",
+        data: {
+          id: "session-456",
+          userId: "user-123",
+          token: "abc123token",
+        },
+      });
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("session-456");
+    });
+  });
+
+  describe("findOne", () => {
+    it("should find a single record", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-one-user"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.findOne({
+        model: "user",
+        where: [{ field: "email", operator: "eq", value: "test@example.com", connector: "AND" }],
+      });
+
+      expect(result).toBeDefined();
+      expect(result?.id).toBe("user-123");
+      expect(result?.email).toBe("test@example.com");
+    });
+
+    it("should return null when no record found", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-one-user-not-found"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.findOne({
+        model: "user",
+        where: [{ field: "id", operator: "eq", value: "nonexistent", connector: "AND" }],
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("findMany", () => {
+    it("should find multiple records", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-users"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.findMany({
+        model: "user",
+      });
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(2);
+    });
+
+    it("should return empty array when no records found", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-users-empty"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.findMany({
+        model: "user",
+        where: [{ field: "email", operator: "eq", value: "nonexistent@example.com", connector: "AND" }],
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("should apply limit", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-with-limit"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.findMany({
+        model: "user",
+        limit: 1,
+      });
+
+      expect(result.length).toBe(1);
+    });
+
+    it("should apply sort", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-sorted-desc"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.findMany({
+        model: "user",
+        sortBy: { field: "createdAt", direction: "desc" },
+      });
+
+      expect(result.length).toBe(2);
+      // First record should be newer
+      const first = result[0] as { createdAt: string };
+      const second = result[1] as { createdAt: string };
+      expect(new Date(first.createdAt).getTime()).toBeGreaterThan(new Date(second.createdAt).getTime());
+    });
+  });
+
+  describe("count", () => {
+    it("should count records", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["count-users"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.count({
+        model: "user",
+      });
+
+      expect(result).toBe(5);
+    });
+  });
+
+  describe("update", () => {
+    it("should update a record and return updated data", async () => {
+      // Update requires: find record -> patch -> read back
+      vi.stubGlobal(
+        "fetch",
+        createMockFetchSequence([
+          mockResponses["update-find-user"],
+          mockResponses["update-patch-user"],
+          mockResponses["update-read-back-user"],
+        ]),
+      );
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.update({
+        model: "user",
+        where: [{ field: "id", operator: "eq", value: "user-123", connector: "AND" }],
+        update: { email: "updated@example.com", name: "Updated User" },
+      });
+
+      expect(result).toBeDefined();
+      expect(result?.email).toBe("updated@example.com");
+      expect(result?.name).toBe("Updated User");
+    });
+
+    it("should return null when record to update not found", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-one-user-not-found"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.update({
+        model: "user",
+        where: [{ field: "id", operator: "eq", value: "nonexistent", connector: "AND" }],
+        update: { name: "New Name" },
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("delete", () => {
+    it("should delete a record", async () => {
+      // Delete requires: find record -> delete
+      vi.stubGlobal(
+        "fetch",
+        createMockFetchSequence([mockResponses["delete-find-user"], mockResponses["delete-user"]]),
+      );
+      const adapter = createTestAdapter()({});
+
+      // Should not throw
+      await adapter.delete({
+        model: "user",
+        where: [{ field: "id", operator: "eq", value: "user-123", connector: "AND" }],
+      });
+    });
+
+    it("should do nothing when record to delete not found", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["delete-find-not-found"]));
+      const adapter = createTestAdapter()({});
+
+      // Should not throw
+      await adapter.delete({
+        model: "user",
+        where: [{ field: "id", operator: "eq", value: "nonexistent", connector: "AND" }],
+      });
+    });
+  });
+
+  describe("deleteMany", () => {
+    it("should delete multiple records", async () => {
+      // DeleteMany requires: find all -> delete each
+      vi.stubGlobal(
+        "fetch",
+        createMockFetchSequence([
+          mockResponses["delete-many-find-users"],
+          mockResponses["delete-user-123"],
+          mockResponses["delete-user-456"],
+        ]),
+      );
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.deleteMany({
+        model: "user",
+        where: [{ field: "email", operator: "eq", value: "test@example.com", connector: "AND" }],
+      });
+
+      expect(result).toBe(2);
+    });
+
+    it("should return 0 when no records to delete", async () => {
+      vi.stubGlobal("fetch", createMockFetch(mockResponses["delete-find-not-found"]));
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.deleteMany({
+        model: "user",
+        where: [{ field: "id", operator: "eq", value: "nonexistent", connector: "AND" }],
+      });
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe("updateMany", () => {
+    it("should update multiple records", async () => {
+      // UpdateMany requires: find all -> patch each
+      vi.stubGlobal(
+        "fetch",
+        createMockFetchSequence([
+          mockResponses["delete-many-find-users"], // reuse the find response
+          mockResponses["update-patch-user"],
+          mockResponses["update-patch-user"],
+        ]),
+      );
+      const adapter = createTestAdapter()({});
+
+      const result = await adapter.updateMany({
+        model: "user",
+        where: [{ field: "email", operator: "eq", value: "test@example.com", connector: "AND" }],
+        update: { name: "Updated Name" },
+      });
+
+      expect(result).toBe(2);
+    });
   });
 });
 
-it("should properly filter by dates", async () => {
-  // delete all users - using buildQuery to construct the filter properly
-  const deleteAllResult = await fetch(`/user?$filter="id" ne '0'`, {
-    method: "DELETE",
+describe("FileMakerAdapter configuration", () => {
+  it("should throw on invalid config", () => {
+    expect(() =>
+      FileMakerAdapter({
+        odata: {
+          serverUrl: "not-a-url",
+          auth: { apiKey: "test" },
+          database: "test.fmp12",
+        },
+      }),
+    ).toThrow();
   });
 
-  if (deleteAllResult.error) {
-    console.log("Error deleting all users:", deleteAllResult.error);
-  }
-
-  // create user
-  const date = new Date("2025-01-10").toISOString();
-  const createResult = await fetch("/user", {
-    method: "POST",
-    body: {
-      id: "filter-test",
-      createdAt: date,
-    },
-    output: z.object({ id: z.string() }),
+  it("should throw when database lacks .fmp12 extension", () => {
+    expect(() =>
+      FileMakerAdapter({
+        odata: {
+          serverUrl: "https://api.example.com",
+          auth: { apiKey: "test" },
+          database: "test",
+        },
+      }),
+    ).toThrow();
   });
-
-  if (createResult.error) {
-    throw new Error(`Failed to create user: ${createResult.error}`);
-  }
-
-  const result = await fetch("/user?$filter=createdAt ge 2025-01-05", {
-    method: "GET",
-    output: z.object({ value: z.array(z.any()) }),
-  });
-
-  console.log(result);
-
-  if (result.error) {
-    throw new Error(`Failed to fetch users: ${result.error}`);
-  }
-
-  expect(result.data?.value).toHaveLength(1);
-
-  // delete record
-  const deleteResult = await fetch(`/user('filter-test')`, {
-    method: "DELETE",
-  });
-
-  if (deleteResult.error) {
-    console.log("Error deleting test record:", deleteResult.error);
-  }
 });

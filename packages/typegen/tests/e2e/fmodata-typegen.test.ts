@@ -2,11 +2,11 @@ import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { generateODataTypes, parseMetadataFromFile } from "../src/fmodata";
-import type { FmodataConfig } from "../src/types";
+import { generateODataTypes, parseMetadataFromFile } from "../../src/fmodata";
+import type { FmodataConfig } from "../../src/types";
 
 // Helper to read fixture files
-const fixturesDir = path.resolve(__dirname, "fixtures");
+const fixturesDir = path.resolve(__dirname, "../fixtures");
 const outputDir = path.resolve(__dirname, "fmodata-output");
 
 /**
@@ -438,7 +438,7 @@ describe("fmodata typegen - snapshot tests", () => {
     await generateODataTypes(metadata, config);
 
     const content = await fs.readFile(path.join(outputDir, "Customers.ts"), "utf-8");
-    await expect(content).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "fmodata-customers.snap.ts"));
+    await expect(content).toMatchFileSnapshot(path.join(__dirname, "../__snapshots__", "fmodata-customers.snap.ts"));
   });
 
   it("generates expected Orders table output", async () => {
@@ -455,7 +455,7 @@ describe("fmodata typegen - snapshot tests", () => {
     await generateODataTypes(metadata, config);
 
     const content = await fs.readFile(path.join(outputDir, "Orders.ts"), "utf-8");
-    await expect(content).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "fmodata-orders.snap.ts"));
+    await expect(content).toMatchFileSnapshot(path.join(__dirname, "../__snapshots__", "fmodata-orders.snap.ts"));
   });
 
   it("generates expected index file output", async () => {
@@ -472,7 +472,7 @@ describe("fmodata typegen - snapshot tests", () => {
     await generateODataTypes(metadata, config);
 
     const content = await fs.readFile(path.join(outputDir, "index.ts"), "utf-8");
-    await expect(content).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "fmodata-index.snap.ts"));
+    await expect(content).toMatchFileSnapshot(path.join(__dirname, "../__snapshots__", "fmodata-index.snap.ts"));
   });
 
   it("generates expected output with all typeOverride transformations", async () => {
@@ -502,6 +502,8 @@ describe("fmodata typegen - snapshot tests", () => {
     await generateODataTypes(metadata, config);
 
     const content = await fs.readFile(path.join(outputDir, "Customers.ts"), "utf-8");
-    await expect(content).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "fmodata-type-overrides.snap.ts"));
+    await expect(content).toMatchFileSnapshot(
+      path.join(__dirname, "../__snapshots__", "fmodata-type-overrides.snap.ts"),
+    );
   });
 });

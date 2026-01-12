@@ -113,9 +113,10 @@ export async function planMigration(
     const fields: FmField[] = Object.entries(baTable.fields).map(([key, field]) => {
       // Better Auth's FieldType can be a string literal union or arrays.
       // Normalize it to a string so our FM mapping logic remains stable.
+      // Use .includes() for all checks to handle array types like ["boolean", "null"] → "boolean|null"
       const t = normalizeBetterAuthFieldType(field.type);
       const type: "varchar" | "numeric" | "timestamp" =
-        t === "boolean" || t.includes("number") ? "numeric" : t === "date" ? "timestamp" : "varchar";
+        t.includes("boolean") || t.includes("number") ? "numeric" : t.includes("date") ? "timestamp" : "varchar";
       return {
         name: field.fieldName ?? key,
         type,

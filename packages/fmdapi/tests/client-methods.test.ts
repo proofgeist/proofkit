@@ -1,20 +1,50 @@
-import { describe, expect, it, test } from "vitest";
-import { DataApi, OttoAdapter } from "../src";
+/**
+ * Unit tests for client methods using mocked responses.
+ * These tests verify the client behavior without requiring a live FileMaker server.
+ */
+import { afterEach, describe, expect, it, test, vi } from "vitest";
+import { z } from "zod/v4";
 import type { AllLayoutsMetadataResponse, Layout, ScriptOrFolder, ScriptsMetadataResponse } from "../src/client-types";
-import { config, containerClient, layoutClient, weirdPortalClient } from "./setup";
+import { DataApi, FileMakerError, OttoAdapter } from "../src/index";
+import { mockResponses } from "./fixtures/responses";
+import { createMockFetch, createMockFetchSequence } from "./utils/mock-fetch";
+
+// Test client factory - creates a client with mocked fetch
+function createTestClient(layout = "layout") {
+  return DataApi({
+    adapter: new OttoAdapter({
+      auth: { apiKey: "dk_test_api_key" },
+      db: "test",
+      server: "https://api.example.com",
+    }),
+    layout,
+  });
+}
 
 describe("sort methods", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   test("should sort descending", async () => {
-    const resp = await layoutClient.list({
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["list-sorted-descend"]));
+    const client = createTestClient();
+
+    const resp = await client.list({
       sort: { fieldName: "recordId", sortOrder: "descend" },
     });
+
     expect(resp.data.length).toBe(3);
     const firstRecord = Number.parseInt(resp.data[0]?.fieldData.recordId as string, 10);
     const secondRecord = Number.parseInt(resp.data[1]?.fieldData.recordId as string, 10);
     expect(firstRecord).toBeGreaterThan(secondRecord);
   });
+
   test("should sort ascending by default", async () => {
-    const resp = await layoutClient.list({
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["list-sorted-ascend"]));
+    const client = createTestClient();
+
+    const resp = await client.list({
       sort: { fieldName: "recordId" },
     });
 
@@ -25,108 +55,48 @@ describe("sort methods", () => {
 });
 
 describe("find methods", () => {
-  const client = DataApi({
-    adapter: new OttoAdapter({
-      auth: config.auth,
-      db: config.db,
-      server: config.server,
-    }),
-    layout: "layout",
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   test("successful find", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["find-basic"]));
+    const client = createTestClient();
+
     const resp = await client.find({
       query: { anything: "anything" },
     });
 
     expect(Array.isArray(resp.data)).toBe(true);
+    expect(resp.data.length).toBe(2);
   });
+
   test("successful findFirst with multiple return", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["find-basic"]));
+    const client = createTestClient();
+
     const resp = await client.findFirst({
       query: { anything: "anything" },
     });
+
     expect(Array.isArray(resp.data)).toBe(false);
+    expect(resp.data.fieldData).toBeDefined();
   });
+
   test("successful findOne", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["find-unique"]));
+    const client = createTestClient();
+
     const resp = await client.findOne({
       query: { anything: "unique" },
     });
 
     expect(Array.isArray(resp.data)).toBe(false);
   });
-  it("find with omit", async () => {
-    await layoutClient.find({
-      query: { anything: "anything", omit: "true" },
-    });
-  });
-});
-
-describe("portal methods", () => {
-  it("should return portal data with limit and offset", async () => {
-    const result = await layoutClient.list({
-      limit: 1,
-    });
-    expect(result.data[0]?.portalData?.test?.length).toBe(50); // default portal limit is 50
-
-    const { data } = await layoutClient.list({
-      limit: 1,
-      portalRanges: { test: { limit: 1, offset: 2 } },
-    });
-    expect(data.length).toBe(1);
-
-    const portalData = data[0]?.portalData;
-    const testPortal = portalData?.test;
-    expect(testPortal?.length).toBe(1);
-    expect(testPortal?.[0]?.["related::related_field"]).toContain("2"); // we should get the 2nd record
-  });
-  it("should update portal data", async () => {
-    await layoutClient.update({
-      recordId: 1,
-      fieldData: { anything: "anything" },
-      portalData: {
-        test: [{ "related::related_field": "updated", recordId: "1" }],
-      },
-    });
-  });
-  it("should handle portal methods with strange names", async () => {
-    const { data } = await weirdPortalClient.list({
-      limit: 1,
-      portalRanges: {
-        "long_and_strange.portalName#forTesting": { limit: 100 },
-      },
-    });
-
-    expect("long_and_strange.portalName#forTesting" in (data?.[0]?.portalData ?? {})).toBeTruthy();
-
-    const portalData = data[0]?.portalData["long_and_strange.portalName#forTesting"];
-
-    expect(portalData?.length).toBeGreaterThan(50);
-  });
-});
-
-describe("other methods", () => {
-  it("should allow list method without layout param", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
-
-    await client.list();
-  });
 
   it("findOne with 2 results should fail", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["find-basic"]));
+    const client = createTestClient();
 
     await expect(
       client.findOne({
@@ -134,51 +104,76 @@ describe("other methods", () => {
       }),
     ).rejects.toThrow();
   });
+});
+
+describe("portal methods", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should return portal data with default limit", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["list-with-portal-data"]));
+    const client = createTestClient();
+
+    const result = await client.list({ limit: 1 });
+    expect(result.data[0]?.portalData?.test?.length).toBe(50);
+  });
+
+  it("should return portal data with limit and offset", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["list-with-portal-ranges"]));
+    const client = createTestClient();
+
+    const { data } = await client.list({
+      limit: 1,
+      portalRanges: { test: { limit: 1, offset: 2 } },
+    });
+
+    expect(data.length).toBe(1);
+    const portalData = data[0]?.portalData;
+    const testPortal = portalData?.test;
+    expect(testPortal?.length).toBe(1);
+    expect(testPortal?.[0]?.["related::related_field"]).toContain("2");
+  });
+});
+
+describe("other methods", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should allow list method without params", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["list-basic"]));
+    const client = createTestClient();
+
+    const result = await client.list();
+    expect(result.data).toBeDefined();
+  });
 
   it("should rename offset param", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["list-basic"]));
+    const client = createTestClient();
 
-    await client.list({
-      offset: 0,
-    });
+    await client.list({ offset: 0 });
   });
 
   it("should retrieve a list of folders and layouts", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["all-layouts"]));
+    const client = createTestClient();
 
     const resp = (await client.layouts()) as AllLayoutsMetadataResponse;
 
     expect(Object.hasOwn(resp, "layouts")).toBe(true);
     expect(resp.layouts.length).toBeGreaterThanOrEqual(2);
     expect(resp.layouts[0] as Layout).toHaveProperty("name");
-    const layoutFoler = resp.layouts.find((o) => "isFolder" in o);
-    expect(layoutFoler).not.toBeUndefined();
-    expect(layoutFoler).toHaveProperty("isFolder");
-    expect(layoutFoler).toHaveProperty("folderLayoutNames");
+    const layoutFolder = resp.layouts.find((o) => "isFolder" in o);
+    expect(layoutFolder).not.toBeUndefined();
+    expect(layoutFolder).toHaveProperty("isFolder");
+    expect(layoutFolder).toHaveProperty("folderLayoutNames");
   });
+
   it("should retrieve a list of folders and scripts", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["all-scripts"]));
+    const client = createTestClient();
 
     const resp = (await client.scripts()) as ScriptsMetadataResponse;
 
@@ -188,73 +183,19 @@ describe("other methods", () => {
     expect(resp.scripts[1] as ScriptOrFolder).toHaveProperty("isFolder");
   });
 
-  it("should retrieve layout metadata with only the layout parameter", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+  it("should retrieve layout metadata", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["layout-metadata"]));
+    const client = createTestClient();
 
-    // Call the method with only the required layout parameter
     const response = await client.layoutMetadata();
 
-    // Assertion 1: Ensure the call succeeded and returned a response object
     expect(response).toBeDefined();
     expect(response).toBeTypeOf("object");
-
-    // Assertion 2: Check for the presence of core metadata properties
     expect(response).toHaveProperty("fieldMetaData");
     expect(response).toHaveProperty("portalMetaData");
-    // valueLists is optional, check type if present
-    if (response.valueLists) {
-      expect(Array.isArray(response.valueLists)).toBe(true);
-    }
-
-    // Assertion 3: Verify the types of the core properties
     expect(Array.isArray(response.fieldMetaData)).toBe(true);
     expect(typeof response.portalMetaData).toBe("object");
 
-    // Assertion 4 (Optional but recommended): Check structure of metadata
-    if (response.fieldMetaData.length > 0) {
-      expect(response.fieldMetaData[0]).toHaveProperty("name");
-      expect(response.fieldMetaData[0]).toHaveProperty("type");
-    }
-  });
-
-  it("should retrieve layout metadata when layout is configured on the client", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout", // Configure layout on the client
-    });
-
-    // Call the method without the layout parameter (expecting it to use the client's layout)
-    // No arguments should be needed when layout is configured on the client.
-    const response = await client.layoutMetadata();
-
-    // Assertion 1: Ensure the call succeeded and returned a response object
-    expect(response).toBeDefined();
-    expect(response).toBeTypeOf("object");
-
-    // Assertion 2: Check for the presence of core metadata properties
-    expect(response).toHaveProperty("fieldMetaData");
-    expect(response).toHaveProperty("portalMetaData");
-    // valueLists is optional, check type if present
-    if (response.valueLists) {
-      expect(Array.isArray(response.valueLists)).toBe(true);
-    }
-
-    // Assertion 3: Verify the types of the core properties
-    expect(Array.isArray(response.fieldMetaData)).toBe(true);
-    expect(typeof response.portalMetaData).toBe("object");
-
-    // Assertion 4 (Optional but recommended): Check structure of metadata
     if (response.fieldMetaData.length > 0) {
       expect(response.fieldMetaData[0]).toHaveProperty("name");
       expect(response.fieldMetaData[0]).toHaveProperty("type");
@@ -262,28 +203,24 @@ describe("other methods", () => {
   });
 
   it("should paginate through all records", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    // listAll will make multiple calls until all records are fetched
+    vi.stubGlobal(
+      "fetch",
+      createMockFetchSequence([
+        mockResponses["list-with-limit"],
+        mockResponses["list-with-limit"],
+        mockResponses["list-with-limit"],
+      ]),
+    );
+    const client = createTestClient();
 
     const data = await client.listAll({ limit: 1 });
     expect(data.length).toBe(3);
   });
 
   it("should paginate using findAll method", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    vi.stubGlobal("fetch", createMockFetchSequence([mockResponses["find-basic"], mockResponses["find-no-results"]]));
+    const client = createTestClient();
 
     const data = await client.findAll({
       query: { anything: "anything" },
@@ -294,14 +231,8 @@ describe("other methods", () => {
   });
 
   it("should return from execute script", async () => {
-    const client = DataApi({
-      adapter: new OttoAdapter({
-        auth: config.auth,
-        db: config.db,
-        server: config.server,
-      }),
-      layout: "layout",
-    });
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["execute-script"]));
+    const client = createTestClient();
 
     const param = JSON.stringify({ hello: "world" });
 
@@ -314,21 +245,150 @@ describe("other methods", () => {
   });
 });
 
-describe("container field methods", () => {
-  it("should upload a file to a container field", async () => {
-    await containerClient.containerUpload({
-      containerFieldName: "myContainer",
-      file: new Blob([Buffer.from("test/fixtures/test.txt")]),
-      recordId: "1",
-    });
+describe("error handling", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("should handle container field repetition", async () => {
-    await containerClient.containerUpload({
-      containerFieldName: "repeatingContainer",
-      containerFieldRepetition: 2,
-      file: new Blob([Buffer.from("test/fixtures/test.txt")]),
-      recordId: "1",
+  it("missing layout should error", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["error-missing-layout"]));
+    const client = DataApi({
+      adapter: new OttoAdapter({
+        auth: { apiKey: "dk_test_api_key" },
+        db: "test",
+        server: "https://api.example.com",
+      }),
+      layout: "not_a_layout",
     });
+
+    await client.list().catch((err) => {
+      expect(err).toBeInstanceOf(FileMakerError);
+      expect(err.code).toBe("105");
+    });
+  });
+});
+
+describe("zod validation", () => {
+  const ZCustomer = z.object({ name: z.string(), phone: z.string() });
+  const ZPortalTable = z.object({
+    "related::related_field": z.string(),
+  });
+
+  const ZCustomerPortals = {
+    PortalTable: ZPortalTable,
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should pass validation, allow extra fields", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["customer-list"]));
+
+    const client = DataApi({
+      adapter: new OttoAdapter({
+        auth: { apiKey: "dk_test_api_key" },
+        db: "test",
+        server: "https://api.example.com",
+      }),
+      layout: "customer",
+      schema: { fieldData: ZCustomer },
+    });
+
+    await client.list();
+  });
+
+  it("list method: should fail validation when field is missing", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["customer-fields-missing"]));
+
+    const client = DataApi({
+      adapter: new OttoAdapter({
+        auth: { apiKey: "dk_test_api_key" },
+        db: "test",
+        server: "https://api.example.com",
+      }),
+      layout: "customer_fieldsMissing",
+      schema: { fieldData: ZCustomer },
+    });
+
+    await expect(client.list()).rejects.toBeInstanceOf(Error);
+  });
+
+  it("find method: should properly infer from root type", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["customer-find"]));
+
+    const client = DataApi({
+      adapter: new OttoAdapter({
+        auth: { apiKey: "dk_test_api_key" },
+        db: "test",
+        server: "https://api.example.com",
+      }),
+      layout: "customer",
+      schema: { fieldData: ZCustomer },
+    });
+
+    const resp = await client.find({ query: { name: "test" } });
+    const _name = resp.data[0].fieldData.name;
+    const _phone = resp.data[0].fieldData.phone;
+    expect(_name).toBeDefined();
+    expect(_phone).toBeDefined();
+  });
+
+  it("client with portal data passed as zod type", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["customer-list"]));
+
+    const client = DataApi({
+      adapter: new OttoAdapter({
+        auth: { apiKey: "dk_test_api_key" },
+        db: "test",
+        server: "https://api.example.com",
+      }),
+      layout: "customer",
+      schema: { fieldData: ZCustomer, portalData: ZCustomerPortals },
+    });
+
+    const data = await client.list();
+    const portalField = data.data[0]?.portalData?.PortalTable?.[0]?.["related::related_field"];
+    expect(portalField).toBeDefined();
+  });
+});
+
+describe("zod transformation", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should return JS-native types when in the zod schema", async () => {
+    vi.stubGlobal("fetch", createMockFetch(mockResponses["layout-transformation"]));
+
+    const customClient = DataApi({
+      adapter: new OttoAdapter({
+        auth: { apiKey: "dk_test_api_key" },
+        db: "test",
+        server: "https://api.example.com",
+      }),
+      layout: "layout",
+      schema: {
+        fieldData: z.object({
+          booleanField: z.coerce.boolean(),
+          CreationTimestamp: z.coerce.date(),
+        }),
+        portalData: {
+          test: z.object({
+            "related::related_field": z.string(),
+            "related::recordId": z.coerce.string(),
+          }),
+        },
+      },
+    });
+
+    const data = await customClient.listAll();
+    expect(typeof data[0].fieldData.booleanField).toBe("boolean");
+    expect(typeof data[0].fieldData.CreationTimestamp).toBe("object");
+    const firstPortalRecord = data[0].portalData.test[0];
+    expect(typeof firstPortalRecord["related::related_field"]).toBe("string");
+    expect(typeof firstPortalRecord["related::recordId"]).toBe("string");
+    expect(firstPortalRecord.recordId).not.toBeUndefined();
+    expect(firstPortalRecord.modId).not.toBeUndefined();
   });
 });

@@ -8,8 +8,12 @@ import type { createRawFetch } from "./odata";
 type BetterAuthSchema = Record<string, { fields: Record<string, DBFieldAttribute>; order: number }>;
 
 function normalizeBetterAuthFieldType(fieldType: unknown): string {
-  if (typeof fieldType === "string") return fieldType;
-  if (Array.isArray(fieldType)) return fieldType.map(String).join("|");
+  if (typeof fieldType === "string") {
+    return fieldType;
+  }
+  if (Array.isArray(fieldType)) {
+    return fieldType.map(String).join("|");
+  }
   return String(fieldType);
 }
 
@@ -106,8 +110,12 @@ export async function planMigration(
       // Normalize it to a string so our FM mapping logic remains stable.
       // Use .includes() for all checks to handle array types like ["boolean", "null"] → "boolean|null"
       const t = normalizeBetterAuthFieldType(field.type);
-      const type: "varchar" | "numeric" | "timestamp" =
-        t.includes("boolean") || t.includes("number") ? "numeric" : t.includes("date") ? "timestamp" : "varchar";
+      let type: "varchar" | "numeric" | "timestamp" = "varchar";
+      if (t.includes("boolean") || t.includes("number")) {
+        type = "numeric";
+      } else if (t.includes("date")) {
+        type = "timestamp";
+      }
       return {
         name: field.fieldName ?? key,
         type,

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 claude --dangerously-skip-permissions "\
-1. Run 'bd ready' to find available work. \
+1. Run 'bv --robot-triage' to find available work. \
 2. Pick ONE task and run 'bd update <id> --status=in_progress'. \
 3. Run 'bd show <id>' to understand the task. \
 4. Implement the task. \

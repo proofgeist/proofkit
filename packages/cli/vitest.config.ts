@@ -6,6 +6,8 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.ts"],
+    // Exclude E2E tests that require real credentials
+    exclude: ["**/node_modules/**", "**/dist/**", "tests/browser-apps.test.ts"],
     testTimeout: 60_000, // 60 seconds for CLI tests which can be slow
     coverage: {
       provider: "v8",

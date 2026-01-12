@@ -1,8 +1,8 @@
 import { runAdapterTest } from "better-auth/adapters/test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
-import { FileMakerAdapter } from "../src";
-import { createRawFetch } from "../src/odata";
+import { FileMakerAdapter } from "../../src";
+import { createRawFetch } from "../../src/odata";
 
 if (!process.env.FM_SERVER) {
   throw new Error("FM_SERVER is not set");

@@ -24,7 +24,7 @@
     "lint": "biome check . --write",
     "lint:summary": "biome check . --reporter=summary",
     "dev": "tsc --watch",
-    "test": "doppler run -- vitest run --typecheck",
+    "test": "vitest run --typecheck",
     "typecheck": "tsc --noEmit",
     "test:typecheck": "vitest run --typecheck",
     "test:watch": "vitest --typecheck",

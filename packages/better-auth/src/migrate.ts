@@ -7,6 +7,12 @@ import type { createRawFetch } from "./odata";
 /** Schema type returned by better-auth's getSchema function */
 type BetterAuthSchema = Record<string, { fields: Record<string, DBFieldAttribute>; order: number }>;
 
+function normalizeBetterAuthFieldType(fieldType: unknown): string {
+  if (typeof fieldType === "string") return fieldType;
+  if (Array.isArray(fieldType)) return fieldType.map(String).join("|");
+  return String(fieldType);
+}
+
 export async function getMetadata(fetch: ReturnType<typeof createRawFetch>["fetch"], databaseName: string) {
   console.log("getting metadata...");
   const result = await fetch("/$metadata", {
@@ -96,12 +102,12 @@ export async function planMigration(
 
   for (const baTable of baTables) {
     const fields: FmField[] = Object.entries(baTable.fields).map(([key, field]) => {
-      let type: "varchar" | "numeric" | "timestamp" = "varchar";
-      if (field.type === "boolean" || field.type.includes("number")) {
-        type = "numeric";
-      } else if (field.type === "date") {
-        type = "timestamp";
-      }
+      // Better Auth's FieldType can be a string literal union or arrays.
+      // Normalize it to a string so our FM mapping logic remains stable.
+      // Use .includes() for all checks to handle array types like ["boolean", "null"] → "boolean|null"
+      const t = normalizeBetterAuthFieldType(field.type);
+      const type: "varchar" | "numeric" | "timestamp" =
+        t.includes("boolean") || t.includes("number") ? "numeric" : t.includes("date") ? "timestamp" : "varchar";
       return {
         name: field.fieldName ?? key,
         type,

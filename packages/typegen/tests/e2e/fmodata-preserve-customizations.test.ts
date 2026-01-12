@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { generateODataTypes } from "../src/fmodata/generateODataTypes";
-import type { ParsedMetadata } from "../src/fmodata/parseMetadata";
+import { generateODataTypes } from "../../src/fmodata/generateODataTypes";
+import type { ParsedMetadata } from "../../src/fmodata/parseMetadata";
 
 function makeMetadata({
   entitySetName,

@@ -1,8 +1,11 @@
-import type { BetterAuthDbSchema } from "better-auth/db";
+import type { DBFieldAttribute } from "better-auth/db";
 import chalk from "chalk";
 import type { Metadata } from "fm-odata-client";
 import z from "zod/v4";
 import type { createRawFetch } from "./odata";
+
+/** Schema type returned by better-auth's getSchema function */
+type BetterAuthSchema = Record<string, { fields: Record<string, DBFieldAttribute>; order: number }>;
 
 export async function getMetadata(fetch: ReturnType<typeof createRawFetch>["fetch"], databaseName: string) {
   console.log("getting metadata...");
@@ -28,7 +31,7 @@ export async function getMetadata(fetch: ReturnType<typeof createRawFetch>["fetc
 
 export async function planMigration(
   fetch: ReturnType<typeof createRawFetch>["fetch"],
-  betterAuthSchema: BetterAuthDbSchema,
+  betterAuthSchema: BetterAuthSchema,
   databaseName: string,
 ): Promise<MigrationPlan> {
   const metadata = await getMetadata(fetch, databaseName);
@@ -86,7 +89,7 @@ export async function planMigration(
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))
     .map(([key, value]) => ({
       ...value,
-      keyName: key,
+      modelName: key, // Use the key as modelName since getSchema uses table names as keys
     }));
 
   const migrationPlan: MigrationPlan = [];

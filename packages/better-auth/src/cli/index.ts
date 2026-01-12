@@ -1,11 +1,11 @@
 #!/usr/bin/env node --no-warnings
 import { Command } from "@commander-js/extra-typings";
 import { logger } from "better-auth";
-import { getAdapter, getAuthTables } from "better-auth/db";
+import { getAdapter, getSchema } from "better-auth/db";
 import chalk from "chalk";
 import fs from "fs-extra";
 import prompts from "prompts";
-import type { AdapterOptions } from "../adapter";
+import type { FileMakerAdapterConfig } from "../adapter";
 import { getConfig } from "../better-auth-cli/utils/get-config";
 import { executeMigration, planMigration, prettyPrintMigrationPlan } from "../migrate";
 import { createRawFetch } from "../odata";
@@ -50,9 +50,9 @@ async function main() {
         return;
       }
 
-      const betterAuthSchema = getAuthTables(config);
+      const betterAuthSchema = getSchema(config);
 
-      const adapterConfig = (adapter.options as AdapterOptions).config;
+      const adapterConfig = (adapter as unknown as { filemakerConfig: FileMakerAdapterConfig }).filemakerConfig;
       const { fetch } = createRawFetch({
         ...adapterConfig.odata,
         auth:

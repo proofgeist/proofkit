@@ -32,7 +32,7 @@ Follow the [Better-Auth installation guide](https://better-auth.com/docs/install
 
 Ensure you have the @proofkit/better-auth package installed in your app.
 ```package-install
-@proofkit/better-auth
+@proofkit/better-auth@beta
 ```
 
 Configure your database connection in your `auth.ts` file. Be sure to set these value secrets in your environment variables. The credentials you use here need `fmodata` permissions enabled, and read/write access to the better-auth tables.
@@ -62,10 +62,10 @@ export const auth = betterAuth({
 # Step 2: Create/Update Database Tables
 
 Run the following command to create the necessary tables and fields in your FileMaker file. It will show you a confirmation before any changes are applied, so you can review them.
-<CliCommand command="migrate" exec execPackage="@proofkit/better-auth@latest" />
+<CliCommand command="migrate" exec execPackage="@proofkit/better-auth@beta" />
 
 [Full Access] credentials are required for the schema changes to be applied automatically, but you may want to use a more restricted account for the rest of better-auth usage. If your credentials that you entered earlier in the `auth.ts` file do not have the [Full Access] permissions, you can override them in the CLI.
-<CliCommand command={`migrate --username "full_access_username" --password "full_access_password"`} exec execPackage="@proofkit/better-auth@latest" />
+<CliCommand command={`migrate --username "full_access_username" --password "full_access_password"`} exec execPackage="@proofkit/better-auth@beta" />
 
 These changes affect database schema only. No layouts or relationships are created or modified during this process.
 

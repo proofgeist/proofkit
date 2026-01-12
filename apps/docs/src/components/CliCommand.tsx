@@ -33,18 +33,22 @@ const MANAGERS = [
 export function CliCommand({
   command,
   exec,
-  execPackage = `@proofkit/cli@${cliVersion}`,
+  execPackage,
+  packageName = "@proofkit/cli",
 }: {
   command: string;
   exec?: boolean;
+  /** @deprecated Use packageName instead */
   execPackage?: string;
+  packageName?: string;
 }) {
+  const pkg = execPackage ?? `${packageName}@${cliVersion}`;
   return (
     <Tabs groupId="package-manager" id="package-manager" items={MANAGERS.map((m) => m.label)} persist>
       {MANAGERS.map((manager) => (
         <Tab key={manager.key} value={manager.label}>
           <DynamicCodeBlock
-            code={`${exec ? `${manager.execPrefix} ${execPackage}` : manager.prefix} ${command}`}
+            code={`${exec ? `${manager.execPrefix} ${pkg}` : manager.prefix} ${command}`}
             lang="bash"
           />
         </Tab>

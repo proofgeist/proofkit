@@ -12,6 +12,7 @@ import {
 import { Callout } from "fumadocs-ui/components/callout";
 import { Card } from "fumadocs-ui/components/card";
 import { CliCommand } from "@/components/CliCommand";
+import { PackageInstall } from "@/components/PackageInstall";
 import { Badge } from "@/components/ui/badge";
 
 Here's a minimal example to get you started with `@proofkit/fmodata`:
@@ -20,9 +21,7 @@ Here's a minimal example to get you started with `@proofkit/fmodata`:
   <Step>
     ### Install the package
 
-    ```package-install
-    @proofkit/fmodata@beta
-    ```
+    <PackageInstall packages="@proofkit/fmodata" />
 
   </Step>
 
@@ -67,7 +66,7 @@ Here's a minimal example to get you started with `@proofkit/fmodata`:
   </TabsList>
   <TabsContent value="automatic">
   Run this command in your project to launch a browser-based UI for configuring your schema definitions. You will need environment variables set for your FileMaker server and database.
-  <CliCommand command="ui" exec execPackage="@proofkit/typegen@beta" />
+  <CliCommand command="ui" exec packageName="@proofkit/typegen" />
 
 Learn more about the [@proofkit/typegen](/docs/typegen) tool.
 

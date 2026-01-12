@@ -7,6 +7,7 @@ import { Tabs, TabItem } from "fumadocs-ui/components/tabs";
 import { Callout } from "fumadocs-ui/components/callout";
 import { File, Folder, Files } from "fumadocs-ui/components/files";
 import { IconFileTypeTs } from "@tabler/icons-react";
+import { CliCommand } from "@/components/CliCommand";
 
 A utility for generating runtime validators and TypeScript files from your
 own FileMaker layouts.
@@ -15,13 +16,7 @@ own FileMaker layouts.
 
 Run this command to initialize `@proofkit/typegen` in your project:
 
-```bash tab="pnpm"
-pnpm dlx @proofkit/typegen@beta
-```
-
-```bash tab="npm"
-npx @proofkit/typegen@beta
-```
+<CliCommand command="" exec packageName="@proofkit/typegen" />
 
 ## Configuring Typegen
 
@@ -51,14 +46,7 @@ If you need to use different env variable names (i.e. for multiple FileMaker con
 ## Running Typegen
 Once you have a config file setup, you can run the command to generate the types:
 
-
-```bash tab="pnpm"
-pnpm dlx @proofkit/typegen@beta
-```
-
-```bash tab="npm"
-npx @proofkit/typegen@beta
-```
+<CliCommand command="" exec packageName="@proofkit/typegen" />
 
 <Callout type="info">
 We suggest adding a script to your `package.json` to run this command more easily

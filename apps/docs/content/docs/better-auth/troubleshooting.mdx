@@ -2,6 +2,8 @@
 title: Troubleshooting
 ---
 
+import { CliCommand } from "@/components/CliCommand";
+
 ## Error when generating schema
 ```bash
 ERROR [Better Auth]: filemaker is not supported. If it is a custom adapter, please request the maintainer to implement createSchema
@@ -9,6 +11,4 @@ ERROR [Better Auth]: filemaker is not supported. If it is a custom adapter, plea
 
 This means you used the better-auth CLI directly instead of the @proofkit/better-auth version. Run this instead:
 
-```bash
-pnpm dlx @proofkit/better-auth@beta migrate
-```
+<CliCommand command="migrate" exec packageName="@proofkit/better-auth" />

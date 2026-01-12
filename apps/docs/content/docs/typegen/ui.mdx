@@ -2,13 +2,13 @@
 title: Typegen UI
 ---
 
+import { CliCommand } from "@/components/CliCommand";
+
 The typegen tool has a built-in web interface for editing your JSON config file and running the typegen scripts. It's helpful for making sure your environment variables are setup correctly and can help autocomplete layout/field/table names into the config file.
 
 To launch the UI, run the following command and a browser window will open at `http://localhost:3141`:
 
-```bash
-npx @proofkit/typegen@beta ui
-```
+<CliCommand command="ui" exec packageName="@proofkit/typegen" />
 
 
 ## CLI options

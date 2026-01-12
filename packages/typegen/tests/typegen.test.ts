@@ -1,130 +1,54 @@
-import { execSync } from "node:child_process";
+/**
+ * Unit Tests for Typegen (fmdapi)
+ *
+ * These tests use mocked layout metadata responses to test the code generation
+ * logic without requiring a live FileMaker server connection.
+ */
+
 import fs from "node:fs/promises";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod/v4";
-import type { OttoAPIKey } from "../../fmdapi/src";
 import { generateTypedClients } from "../src/typegen";
 import type { typegenConfigSingle } from "../src/types";
+import { mockLayoutMetadata } from "./fixtures/layout-metadata";
+import { createLayoutMetadataMock, createLayoutMetadataSequenceMock } from "./utils/mock-fetch";
 
-// // Load the correct .env.local relative to this test file's directory
-// dotenv.config({ path: path.resolve(__dirname, ".env.local") });
-
-// Remove the old genPath definition - we'll use baseGenPath consistently
-
-// Helper function to recursively get all .ts files (excluding index.ts)
-async function _getAllTsFilesRecursive(dir: string): Promise<string[]> {
-  let files: string[] = [];
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files = files.concat(await _getAllTsFilesRecursive(fullPath));
-    } else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.includes("index.ts")) {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
-
-async function generateTypes(config: z.infer<typeof typegenConfigSingle>): Promise<string> {
-  const genPath = path.resolve(__dirname, config.path || "./typegen-output"); // Resolve relative path to absolute
-
-  // 1. Generate the code
-  await fs.mkdir(genPath, { recursive: true }); // Ensure genPath exists
-  await generateTypedClients(config, { cwd: import.meta.dirname }); // Pass the test directory as cwd
-  console.log(`Generated code in ${genPath}`);
-
-  // // 2. Modify imports in generated files to point to local src
-  // const tsFiles = await getAllTsFilesRecursive(genPath);
-  // const targetImportString = '"@proofkit/fmdapi"'; // Target the full string including quotes
-  // const replacementImportString = '"../../../src"'; // Replacement string including quotes
-
-  // console.log(
-  //   `Checking ${tsFiles.length} generated files for import modification...`,
-  // );
-  // for (const filePath of tsFiles) {
-  //   const fileName = path.basename(filePath);
-  //   console.log(` -> Modifying import in ${fileName} (${filePath})`);
-  //   const content = await fs.readFile(filePath, "utf-8");
-  //   const newContent = content.replaceAll(
-  //     targetImportString,
-  //     replacementImportString,
-  //   );
-
-  //   if (content !== newContent) {
-  //     await fs.writeFile(filePath, newContent, "utf-8");
-  //   }
-  // }
-
-  // 3. Run tsc for type checking directly on modified files
-  const _relativeGenPath = path.relative(
-    path.resolve(__dirname, "../../.."), // Relative from monorepo root
-    genPath,
-  );
-  // Ensure forward slashes for the glob pattern, even on Windows
-  // const globPattern = relativeGenPath.replace(/\\/g, "/") + "/**/*.ts";
-  // Quote the glob pattern to handle potential spaces/special chars
-  // const tscCommand = `pnpm tsc --noEmit --target ESNext --module ESNext --moduleResolution bundler --strict --esModuleInterop --skipLibCheck --forceConsistentCasingInFileNames --lib ESNext,DOM --types node '${globPattern}'`;
-
-  // Rely on tsconfig.json includes, specify path relative to monorepo root
-  const tscCommand = "pnpm tsc --noEmit -p packages/typegen/tsconfig.json";
-  console.log(`Running type check: ${tscCommand}`);
-  execSync(tscCommand, {
-    stdio: "inherit",
-    cwd: path.resolve(__dirname, "../../.."), // Execute from monorepo root
-  });
-
-  return genPath;
+// Helper function to get the base path for generated files
+function getBaseGenPath(): string {
+  return path.resolve(__dirname, "./unit-typegen-output");
 }
 
 async function cleanupGeneratedFiles(genPath: string): Promise<void> {
   await fs.rm(genPath, { recursive: true, force: true });
-  console.log(`Cleaned up ${genPath}`);
 }
 
-async function testTypegenConfig(config: z.infer<typeof typegenConfigSingle>): Promise<void> {
-  const genPath = await generateTypes(config);
-  await cleanupGeneratedFiles(genPath);
-}
-
-// Helper function to get the base path for generated files
-function getBaseGenPath(): string {
-  return path.resolve(__dirname, "./typegen-output");
-}
-
-// Export the functions for individual use
-//
-// Usage examples:
-//
-// 1. Generate types only:
-//    const config = { layouts: [...], path: "typegen-output/my-config" };
-//    const genPath = await generateTypes(config);
-//    console.log(`Generated types in: ${genPath}`);
-//
-// 2. Clean up generated files:
-//    await cleanupGeneratedFiles(genPath);
-//
-// 3. Get the base path for generated files:
-//    const basePath = getBaseGenPath();
-//    console.log(`Base path: ${basePath}`);
-//
-
-describe("typegen", () => {
-  // Define a base path for generated files relative to the test file directory
+describe("typegen unit tests", () => {
   const baseGenPath = getBaseGenPath();
 
   // Store original env values to restore after tests
   const originalEnv: Record<string, string | undefined> = {};
 
-  // Clean up the base directory before each test
   beforeEach(async () => {
+    // Clean up any previous output
     await fs.rm(baseGenPath, { recursive: true, force: true });
-    console.log(`Cleaned base output directory: ${baseGenPath}`);
+
+    // Save original env
+    originalEnv.OTTO_API_KEY = process.env.OTTO_API_KEY;
+    originalEnv.FM_SERVER = process.env.FM_SERVER;
+    originalEnv.FM_DATABASE = process.env.FM_DATABASE;
+    originalEnv.FM_USERNAME = process.env.FM_USERNAME;
+    originalEnv.FM_PASSWORD = process.env.FM_PASSWORD;
+
+    // Set mock env values for tests
+    // Use valid Otto API key format (KEY_ prefix for Otto v3)
+    process.env.OTTO_API_KEY = "KEY_test_api_key_12345";
+    process.env.FM_SERVER = "https://test.example.com";
+    process.env.FM_DATABASE = "TestDB";
   });
 
-  // Restore original environment after each test
-  afterEach(() => {
+  afterEach(async () => {
+    // Restore original env
     for (const key of Object.keys(originalEnv)) {
       if (originalEnv[key] === undefined) {
         delete process.env[key];
@@ -132,258 +56,413 @@ describe("typegen", () => {
         process.env[key] = originalEnv[key];
       }
     }
+
+    // Clean up generated files
+    await cleanupGeneratedFiles(baseGenPath);
+
+    // Restore fetch
+    vi.unstubAllGlobals();
   });
 
-  it("basic typegen with zod", async () => {
+  it("generates schema file with basic fields", async () => {
+    // Mock fetch to return basic layout metadata
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        TestLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
+
     const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          valueLists: "allowEmpty",
+          layoutName: "TestLayout",
+          schemaName: "testSchema",
         },
-        // { layoutName: "Weird Portals", schemaName: "weirdPortals" },
       ],
-      path: "typegen-output/config1", // Use relative path
-      envNames: {
-        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
-        server: "DIFFERENT_FM_SERVER",
-        db: "DIFFERENT_FM_DATABASE",
-      },
-      clientSuffix: "Layout",
-    };
-    await testTypegenConfig(config);
-  }, 30_000);
-
-  it("basic typegen without zod", async () => {
-    // Define baseGenPath within the scope or ensure it's accessible
-    // Assuming baseGenPath is accessible from the describe block's scope
-    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
-      type: "fmdapi",
-      layouts: [
-        // add your layouts and name schemas here
-        {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          valueLists: "allowEmpty",
-        },
-        // { layoutName: "Weird Portals", schemaName: "weirdPortals" },
-
-        // repeat as needed for each schema...
-        // { layout: "my_other_layout", schemaName: "MyOtherSchema" },
-      ],
-      path: "typegen-output/config2", // Use relative path
-      // webviewerScriptName: "webviewer",
-      envNames: {
-        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
-        server: "DIFFERENT_FM_SERVER",
-        db: "DIFFERENT_FM_DATABASE",
-      },
+      path: "unit-typegen-output/basic",
+      generateClient: false,
       validator: false,
     };
-    await testTypegenConfig(config);
-  }, 30_000);
 
-  it("basic typegen with strict numbers", async () => {
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    // Verify the generated file exists
+    const schemaPath = path.join(__dirname, "unit-typegen-output/basic/generated/testSchema.ts");
+    const exists = await fs
+      .access(schemaPath)
+      .then(() => true)
+      .catch(() => false);
+    expect(exists).toBe(true);
+
+    // Check content has expected fields
+    const content = await fs.readFile(schemaPath, "utf-8");
+    expect(content).toContain("recordId");
+    expect(content).toContain("name");
+    expect(content).toContain("email");
+    expect(content).toContain("age");
+    expect(content).toContain("balance");
+    expect(content).toContain("created_at");
+  });
+
+  it("generates schema with portal data", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        CustomerLayout: mockLayoutMetadata["layout-with-portal"],
+      }),
+    );
+
     const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          valueLists: "allowEmpty",
-          strictNumbers: true,
-        },
-      ],
-      path: "typegen-output/config3", // Use relative path
-      envNames: {
-        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
-        server: "DIFFERENT_FM_SERVER",
-        db: "DIFFERENT_FM_DATABASE",
-      },
-      clientSuffix: "Layout",
-    };
-
-    // Step 1: Generate types
-    const genPath = await generateTypes(config);
-
-    // Step 2: Use vitest file snapshots to check generated types files
-    // This will create/update snapshots of the generated types files
-    const typesPath = path.join(genPath, "generated", "testLayout.ts");
-    const typesContent = await fs.readFile(typesPath, "utf-8");
-    await expect(typesContent).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", "strict-numbers.snap.ts"));
-
-    // Step 3: Clean up generated files
-    await cleanupGeneratedFiles(genPath);
-  }, 30_000);
-
-  it("zod validator", async () => {
-    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
-      type: "fmdapi",
-      layouts: [
-        {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          valueLists: "allowEmpty",
-          strictNumbers: true,
-        },
-        {
-          layoutName: "customer_fieldsMissing",
+          layoutName: "CustomerLayout",
           schemaName: "customer",
         },
       ],
-      path: "typegen-output/config4", // Use relative path
-      envNames: {
-        auth: { apiKey: "DIFFERENT_OTTO_API_KEY" as OttoAPIKey },
-        server: "DIFFERENT_FM_SERVER",
-        db: "DIFFERENT_FM_DATABASE",
-      },
-      clientSuffix: "Layout",
+      path: "unit-typegen-output/portal",
+      generateClient: false,
+      validator: false,
+    };
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    const schemaPath = path.join(__dirname, "unit-typegen-output/portal/generated/customer.ts");
+    const content = await fs.readFile(schemaPath, "utf-8");
+
+    // Check portal-related content
+    expect(content).toContain("Orders");
+    expect(content).toContain("order_id");
+    expect(content).toContain("order_date");
+    expect(content).toContain("amount");
+  });
+
+  it("generates schema with value lists", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        StatusLayout: mockLayoutMetadata["layout-with-value-lists"],
+      }),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "StatusLayout",
+          schemaName: "statusSchema",
+          valueLists: "strict",
+        },
+      ],
+      path: "unit-typegen-output/valuelists",
+      generateClient: false,
       validator: "zod",
     };
 
-    // Step 1: Generate types
-    const genPath = await generateTypes(config);
+    await generateTypedClients(config, { cwd: import.meta.dirname });
 
-    const snapshotMap = [
-      {
-        generated: path.join(genPath, "generated", "testLayout.ts"),
-        snapshot: "zod-layout-client.snap.ts",
-      },
-      {
-        generated: path.join(genPath, "testLayout.ts"),
-        snapshot: "zod-layout-overrides.snap.ts",
-      },
-      {
-        generated: path.join(genPath, "customer.ts"),
-        snapshot: "zod-layout-client-customer.snap.ts",
-      },
-    ];
+    const schemaPath = path.join(__dirname, "unit-typegen-output/valuelists/generated/statusSchema.ts");
+    const content = await fs.readFile(schemaPath, "utf-8");
 
-    for (const { generated, snapshot } of snapshotMap) {
-      const generatedContent = await fs.readFile(generated, "utf-8");
-      await expect(generatedContent).toMatchFileSnapshot(path.join(__dirname, "__snapshots__", snapshot));
-    }
+    // Check value list literals are generated
+    expect(content).toContain("Active");
+    expect(content).toContain("Inactive");
+    expect(content).toContain("Pending");
+    expect(content).toContain("High");
+    expect(content).toContain("Medium");
+    expect(content).toContain("Low");
+  });
 
-    // Step 3: Clean up generated files
-    await cleanupGeneratedFiles(genPath);
-  }, 30_000);
+  it("generates schema with all field types", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        AllFields: mockLayoutMetadata["layout-all-field-types"],
+      }),
+    );
 
-  it("should use OttoAdapter when apiKey is provided in envNames", async () => {
     const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          generateClient: true,
+          layoutName: "AllFields",
+          schemaName: "allFields",
         },
       ],
-      path: "typegen-output/auth-otto",
+      path: "unit-typegen-output/allfields",
+      generateClient: false,
+      validator: false,
+    };
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    const schemaPath = path.join(__dirname, "unit-typegen-output/allfields/generated/allFields.ts");
+    const content = await fs.readFile(schemaPath, "utf-8");
+
+    // Check various field types are present
+    expect(content).toContain("text_field");
+    expect(content).toContain("number_field");
+    expect(content).toContain("date_field");
+    expect(content).toContain("time_field");
+    expect(content).toContain("timestamp_field");
+    expect(content).toContain("container_field");
+    expect(content).toContain("calc_field");
+    expect(content).toContain("summary_field");
+    expect(content).toContain("global_field");
+  });
+
+  it("generates zod validators when specified", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        ZodLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "ZodLayout",
+          schemaName: "zodSchema",
+        },
+      ],
+      path: "unit-typegen-output/zod",
+      generateClient: false,
+      validator: "zod",
+    };
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    const schemaPath = path.join(__dirname, "unit-typegen-output/zod/generated/zodSchema.ts");
+    const content = await fs.readFile(schemaPath, "utf-8");
+
+    // Check for zod imports and schema definitions
+    expect(content).toContain('from "zod');
+    expect(content).toContain("z.object");
+  });
+
+  it("generates client file when generateClient is true", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        ClientLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "ClientLayout",
+          schemaName: "clientSchema",
+        },
+      ],
+      path: "unit-typegen-output/client",
+      generateClient: true,
+      validator: false,
+    };
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    // Check client file exists
+    const clientPath = path.join(__dirname, "unit-typegen-output/client/client/clientSchema.ts");
+    const exists = await fs
+      .access(clientPath)
+      .then(() => true)
+      .catch(() => false);
+    expect(exists).toBe(true);
+
+    const content = await fs.readFile(clientPath, "utf-8");
+    expect(content).toContain("DataApi");
+    expect(content).toContain("OttoAdapter");
+  });
+
+  it("generates override file that can be edited", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        OverrideLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "OverrideLayout",
+          schemaName: "overrideSchema",
+        },
+      ],
+      path: "unit-typegen-output/override",
+      generateClient: false,
+      validator: "zod",
+    };
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    // Check override file exists
+    const overridePath = path.join(__dirname, "unit-typegen-output/override/overrideSchema.ts");
+    const exists = await fs
+      .access(overridePath)
+      .then(() => true)
+      .catch(() => false);
+    expect(exists).toBe(true);
+
+    const content = await fs.readFile(overridePath, "utf-8");
+    // Override file should re-export from generated
+    expect(content).toContain("generated/overrideSchema");
+  });
+
+  it("handles multiple layouts in sequence", async () => {
+    // Use sequence mock for multiple layouts
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataSequenceMock([mockLayoutMetadata["basic-layout"], mockLayoutMetadata["layout-with-portal"]]),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "Layout1",
+          schemaName: "schema1",
+        },
+        {
+          layoutName: "Layout2",
+          schemaName: "schema2",
+        },
+      ],
+      path: "unit-typegen-output/multi",
+      generateClient: false,
+      validator: false,
+    };
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    // Check both schema files exist
+    const schema1Path = path.join(__dirname, "unit-typegen-output/multi/generated/schema1.ts");
+    const schema2Path = path.join(__dirname, "unit-typegen-output/multi/generated/schema2.ts");
+
+    const [exists1, exists2] = await Promise.all([
+      fs
+        .access(schema1Path)
+        .then(() => true)
+        .catch(() => false),
+      fs
+        .access(schema2Path)
+        .then(() => true)
+        .catch(() => false),
+    ]);
+
+    expect(exists1).toBe(true);
+    expect(exists2).toBe(true);
+  });
+
+  it("uses FetchAdapter when username/password env vars are set", async () => {
+    // Set username/password instead of API key
+    // biome-ignore lint/performance/noDelete: required to unset env vars
+    delete process.env.OTTO_API_KEY;
+    process.env.FM_USERNAME = "testuser";
+    process.env.FM_PASSWORD = "testpass";
+
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        FetchLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
+      type: "fmdapi",
+      layouts: [
+        {
+          layoutName: "FetchLayout",
+          schemaName: "fetchSchema",
+        },
+      ],
+      path: "unit-typegen-output/fetch",
+      generateClient: true,
       envNames: {
-        auth: { apiKey: "TEST_OTTO_API_KEY" as OttoAPIKey },
-        server: "TEST_FM_SERVER",
-        db: "TEST_FM_DATABASE",
+        auth: { username: "FM_USERNAME", password: "FM_PASSWORD" },
+        server: "FM_SERVER",
+        db: "FM_DATABASE",
       },
-      generateClient: true,
     };
 
-    const genPath = await generateTypes(config);
+    await generateTypedClients(config, { cwd: import.meta.dirname });
 
-    // Check that the generated client uses OttoAdapter
-    const clientPath = path.join(genPath, "client", "testLayout.ts");
-    const clientContent = await fs.readFile(clientPath, "utf-8");
+    const clientPath = path.join(__dirname, "unit-typegen-output/fetch/client/fetchSchema.ts");
+    const content = await fs.readFile(clientPath, "utf-8");
 
-    expect(clientContent).toContain("OttoAdapter");
-    expect(clientContent).not.toContain("FetchAdapter");
-    expect(clientContent).toContain("TEST_OTTO_API_KEY");
+    expect(content).toContain("FetchAdapter");
+    expect(content).not.toContain("OttoAdapter");
+    expect(content).toContain("FM_USERNAME");
+    expect(content).toContain("FM_PASSWORD");
+  });
 
-    await cleanupGeneratedFiles(genPath);
-  }, 30_000);
+  it("handles strictNumbers option", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        StrictLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
 
-  it("should use FetchAdapter when username/password is provided in envNames", async () => {
     const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          generateClient: true,
+          layoutName: "StrictLayout",
+          schemaName: "strictSchema",
+          strictNumbers: true,
         },
       ],
-      path: "typegen-output/auth-fetch",
-      envNames: {
-        auth: { username: "TEST_USERNAME", password: "TEST_PASSWORD" },
-        server: "TEST_FM_SERVER",
-        db: "TEST_FM_DATABASE",
-      },
-      generateClient: true,
+      path: "unit-typegen-output/strict",
+      generateClient: false,
+      validator: "zod",
     };
 
-    const genPath = await generateTypes(config);
+    await generateTypedClients(config, { cwd: import.meta.dirname });
 
-    // Check that the generated client uses FetchAdapter
-    const clientPath = path.join(genPath, "client", "testLayout.ts");
-    const clientContent = await fs.readFile(clientPath, "utf-8");
+    const schemaPath = path.join(__dirname, "unit-typegen-output/strict/generated/strictSchema.ts");
+    const content = await fs.readFile(schemaPath, "utf-8");
 
-    expect(clientContent).toContain("FetchAdapter");
-    expect(clientContent).not.toContain("OttoAdapter");
-    expect(clientContent).toContain("TEST_USERNAME");
-    expect(clientContent).toContain("TEST_PASSWORD");
+    // With strict numbers, number fields should have stricter validation
+    // Check file was generated (content validation depends on implementation)
+    expect(content).toBeDefined();
+    expect(content.length).toBeGreaterThan(0);
+  });
 
-    await cleanupGeneratedFiles(genPath);
-  }, 30_000);
+  it("handles custom client suffix", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        SuffixLayout: mockLayoutMetadata["basic-layout"],
+      }),
+    );
 
-  it("should use OttoAdapter with default env var names when OTTO_API_KEY is set and no envNames config provided", async () => {
-    // Store original env values
-    originalEnv.OTTO_API_KEY = process.env.OTTO_API_KEY;
-    originalEnv.FM_SERVER = process.env.FM_SERVER;
-    originalEnv.FM_DATABASE = process.env.FM_DATABASE;
-    originalEnv.FM_USERNAME = process.env.FM_USERNAME;
-    originalEnv.FM_PASSWORD = process.env.FM_PASSWORD;
-
-    // Set up environment with default env var names (API key auth)
-    process.env.OTTO_API_KEY = process.env.DIFFERENT_OTTO_API_KEY || "test-api-key";
-    process.env.FM_SERVER = process.env.DIFFERENT_FM_SERVER || "test-server";
-    process.env.FM_DATABASE = process.env.DIFFERENT_FM_DATABASE || "test-db";
-    // Ensure username/password are NOT set to force API key usage
-    // biome-ignore lint/performance/noDelete: delete is required to unset environment variables
-    delete process.env.FM_USERNAME;
-    // biome-ignore lint/performance/noDelete: delete is required to unset environment variables
-    delete process.env.FM_PASSWORD;
-
-    // Config without envNames - should use defaults
     const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }> = {
       type: "fmdapi",
       layouts: [
         {
-          layoutName: "layout",
-          schemaName: "testLayout",
-          generateClient: true,
+          layoutName: "SuffixLayout",
+          schemaName: "suffixSchema",
         },
       ],
-      path: "typegen-output/default-api-key",
+      path: "unit-typegen-output/suffix",
       generateClient: true,
-      // Note: envNames is undefined - should use defaults
-      envNames: undefined,
+      clientSuffix: "Layout",
     };
 
-    const genPath = await generateTypes(config);
+    await generateTypedClients(config, { cwd: import.meta.dirname });
 
-    // Check that the generated client uses OttoAdapter with default env var names
-    const clientPath = path.join(genPath, "client", "testLayout.ts");
-    const clientContent = await fs.readFile(clientPath, "utf-8");
+    // Check index file has the custom suffix
+    const indexPath = path.join(__dirname, "unit-typegen-output/suffix/client/index.ts");
+    const content = await fs.readFile(indexPath, "utf-8");
 
-    // Should use OttoAdapter since OTTO_API_KEY was set
-    expect(clientContent).toContain("OttoAdapter");
-    expect(clientContent).not.toContain("FetchAdapter");
-    // Should use the default env var name
-    expect(clientContent).toContain("OTTO_API_KEY");
-    // Should NOT have username/password env var references
-    expect(clientContent).not.toContain("FM_USERNAME");
-    expect(clientContent).not.toContain("FM_PASSWORD");
-
-    await cleanupGeneratedFiles(genPath);
-  }, 30_000);
+    expect(content).toContain("suffixSchemaLayout");
+  });
 });

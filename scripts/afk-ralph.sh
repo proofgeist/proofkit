@@ -13,10 +13,10 @@ for ((i=1; i<=$1; i++)); do
   3. Pick ONE task and run 'bd update <id> --status=in_progress'. \
   4. Run 'bd show <id>' to understand the task. \
   5. Implement the task. \
-  6. Run tests and type checks. \
+  6. Run `pnpm ci` at the root to check tests, linters, and other quality gates. \
   7. Run 'bd close <id>'. \
-  8. Run 'git add . && git commit' with a descriptive message. \
-  9. Run 'bd sync --from-main'. \
+  8. Use the graphite CLI to create a new branch with the name of the task and commit the changes. \
+  9. Run 'bd sync'. \
   STOP AFTER ONE TASK.")
 
   echo "$result"

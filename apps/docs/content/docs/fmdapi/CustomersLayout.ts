@@ -1,5 +1,5 @@
 import { DataApi, OttoAdapter } from "@proofkit/fmdapi";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 const fieldData = z.object({
   firstName: z.string(),
@@ -8,7 +8,7 @@ const fieldData = z.object({
   phone: z.string(),
   city: z.string(),
   status: z.enum(["Active", "Inactive"]),
-  created_date: z.string().datetime(),
+  created_date: z.iso.datetime(),
 });
 
 export const CustomersLayout = DataApi({

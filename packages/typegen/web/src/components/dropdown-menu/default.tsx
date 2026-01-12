@@ -1,19 +1,3 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Bug,
   FileText,
@@ -30,7 +14,23 @@ import {
   User,
   UserPlus,
   Users,
-} from 'lucide-react';
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function DropdownMenuDemo() {
   return (
@@ -136,9 +136,9 @@ export default function DropdownMenuDemo() {
           </DropdownMenuSub>
           <DropdownMenuItem>
             <Package />
-            <span className="grow flex items-center justify-between">
+            <span className="flex grow items-center justify-between">
               <span>Integrations</span>
-              <Badge variant="destructive" shape="circle" size="xs">
+              <Badge shape="circle" size="xs" variant="destructive">
                 5
               </Badge>
             </span>

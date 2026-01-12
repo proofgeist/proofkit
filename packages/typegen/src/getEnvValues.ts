@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type { z } from "zod/v4";
-import type { typegenConfigSingle } from "./types";
 import { defaultEnvNames } from "./constants";
+import type { typegenConfigSingle } from "./types";
 
 type EnvNames = z.infer<typeof typegenConfigSingle>["envNames"];
 
@@ -38,8 +38,7 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
     customName && customName.trim() !== "" ? customName : defaultName;
 
   // Resolve environment variables
-  const server =
-    process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
+  const server = process.env[getEnvName(envNames?.server, defaultEnvNames.server)];
   const db = process.env[getEnvName(envNames?.db, defaultEnvNames.db)];
 
   // Always attempt to read all auth methods from environment variables,
@@ -79,10 +78,7 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
  * @param envNames - Optional custom environment variable names (for error messages)
  * @returns Validation result with success flag and either data or error message
  */
-export function validateEnvValues(
-  envValues: EnvValues,
-  envNames?: EnvNames,
-): EnvValidationResult {
+export function validateEnvValues(envValues: EnvValues, envNames?: EnvNames): EnvValidationResult {
   const { server, db, apiKey, username, password } = envValues;
 
   // Helper to get env name, treating empty strings as undefined
@@ -90,7 +86,7 @@ export function validateEnvValues(
     customName && customName.trim() !== "" ? customName : defaultName;
 
   // Validate required env vars (server, db, and at least one auth method)
-  if (!server || !db || (!apiKey && !username)) {
+  if (!(server && db && (apiKey || username))) {
     // Build missing details
     const missingDetails: {
       server?: boolean;
@@ -100,7 +96,7 @@ export function validateEnvValues(
     } = {
       server: !server,
       db: !db,
-      auth: !apiKey && !username,
+      auth: !(apiKey || username),
     };
 
     // Only report password as missing if server and db are both present,
@@ -120,30 +116,22 @@ export function validateEnvValues(
       missingVars.push(getEnvName(envNames?.db, defaultEnvNames.db));
     }
 
-    if (!apiKey && !username) {
+    if (!(apiKey || username)) {
       // Determine the names to display in the error message
       const apiKeyName = getEnvName(
-        envNames?.auth && "apiKey" in envNames.auth
-          ? envNames.auth.apiKey
-          : undefined,
+        envNames?.auth && "apiKey" in envNames.auth ? envNames.auth.apiKey : undefined,
         defaultEnvNames.apiKey,
       );
       const usernameName = getEnvName(
-        envNames?.auth && "username" in envNames.auth
-          ? envNames.auth.username
-          : undefined,
+        envNames?.auth && "username" in envNames.auth ? envNames.auth.username : undefined,
         defaultEnvNames.username,
       );
       const passwordName = getEnvName(
-        envNames?.auth && "password" in envNames.auth
-          ? envNames.auth.password
-          : undefined,
+        envNames?.auth && "password" in envNames.auth ? envNames.auth.password : undefined,
         defaultEnvNames.password,
       );
 
-      missingVars.push(
-        `${apiKeyName} (or ${usernameName} and ${passwordName})`,
-      );
+      missingVars.push(`${apiKeyName} (or ${usernameName} and ${passwordName})`);
     }
 
     return {
@@ -155,9 +143,7 @@ export function validateEnvValues(
   // Validate password if username is provided
   if (username && !password) {
     const passwordName = getEnvName(
-      envNames?.auth && "password" in envNames.auth
-        ? envNames.auth.password
-        : undefined,
+      envNames?.auth && "password" in envNames.auth ? envNames.auth.password : undefined,
       defaultEnvNames.password,
     );
 
@@ -167,10 +153,9 @@ export function validateEnvValues(
     };
   }
 
-  const auth: { apiKey: string } | { username: string; password: string } =
-    apiKey
-      ? { apiKey }
-      : { username: username ?? "", password: password ?? "" };
+  const auth: { apiKey: string } | { username: string; password: string } = apiKey
+    ? { apiKey }
+    : { username: username ?? "", password: password ?? "" };
 
   return {
     success: true,
@@ -188,17 +173,14 @@ export function validateEnvValues(
  * @param envNames - Optional custom environment variable names (for error messages)
  * @returns Validated values or undefined if validation failed
  */
-export function validateAndLogEnvValues(
-  envValues: EnvValues,
-  envNames?: EnvNames,
-): EnvValidationResult | undefined {
+export function validateAndLogEnvValues(envValues: EnvValues, envNames?: EnvNames): EnvValidationResult | undefined {
   const result = validateEnvValues(envValues, envNames);
 
   if (!result.success) {
     console.log(chalk.red("ERROR: Could not get all required config values"));
     console.log("Ensure the following environment variables are set:");
 
-    const { server, db, apiKey, username } = envValues;
+    const { server, db, apiKey } = envValues;
 
     if (!server) {
       console.log(`${envNames?.server ?? defaultEnvNames.server}`);
@@ -222,9 +204,7 @@ export function validateAndLogEnvValues(
           ? envNames.auth.password
           : defaultEnvNames.password;
 
-      console.log(
-        `${apiKeyNameToLog} (or ${usernameNameToLog} and ${passwordNameToLog})`,
-      );
+      console.log(`${apiKeyNameToLog} (or ${usernameNameToLog} and ${passwordNameToLog})`);
     }
 
     console.log();

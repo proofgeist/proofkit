@@ -1,16 +1,18 @@
+import { RecordCountMismatchError } from "../../errors";
+import type { InternalLogger } from "../../logger";
 import type { FMTable } from "../../orm/table";
+import { getBaseTableConfig } from "../../orm/table";
+import { transformResponseFields } from "../../transform";
 import type { Result } from "../../types";
 import type { ExpandValidationConfig } from "../../validation";
-import { validateSingleResponse, validateListResponse } from "../../validation";
-import { transformResponseFields } from "../../transform";
-import { RecordCountMismatchError } from "../../errors";
-import { getBaseTableConfig } from "../../orm/table";
+import { validateListResponse, validateSingleResponse } from "../../validation";
 import { ExpandBuilder } from "./expand-builder";
 import type { ExpandConfig } from "./shared-types";
-import { InternalLogger } from "../../logger";
 
 export interface ProcessResponseConfig {
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table?: FMTable<any, any>;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema shape from table configuration
   schema?: Record<string, any>;
   singleMode: "exact" | "maybe" | false;
   selectedFields?: string[];
@@ -26,10 +28,8 @@ export interface ProcessResponseConfig {
  * Processes OData response with transformation and validation.
  * Shared by QueryBuilder and RecordBuilder.
  */
-export async function processODataResponse<T>(
-  rawResponse: any,
-  config: ProcessResponseConfig,
-): Promise<Result<T>> {
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
+export async function processODataResponse<T>(rawResponse: any, config: ProcessResponseConfig): Promise<Result<T>> {
   const {
     table,
     schema,
@@ -45,11 +45,7 @@ export async function processODataResponse<T>(
   // Transform field IDs back to names if using entity IDs
   let response = rawResponse;
   if (table && useEntityIds) {
-    response = transformResponseFields(
-      response,
-      table,
-      expandValidationConfigs,
-    );
+    response = transformResponseFields(response, table, expandValidationConfigs);
   }
 
   // Fast path: skip validation
@@ -73,9 +69,11 @@ export async function processODataResponse<T>(
   // but included for RecordBuilder.get() method (both use singleMode: "exact")
   // The exclusion is handled in QueryBuilder's processQueryResponse, not here
   if (singleMode !== false) {
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
     const validation = await validateSingleResponse<any>(
       response,
       schema,
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       selectedFields as any,
       expandValidationConfigs,
       singleMode,
@@ -97,9 +95,11 @@ export async function processODataResponse<T>(
     return { data: validation.data as T, error: undefined };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
   const validation = await validateListResponse<any>(
     response,
     schema,
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
     selectedFields as any,
     expandValidationConfigs,
     includeSpecialColumns,
@@ -123,10 +123,8 @@ export async function processODataResponse<T>(
 /**
  * Extracts records from response without validation.
  */
-function extractRecords<T>(
-  response: any,
-  singleMode: "exact" | "maybe" | false,
-): Result<T> {
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
+function extractRecords<T>(response: any, singleMode: "exact" | "maybe" | false): Result<T> {
   if (singleMode === false) {
     const records = response.value ?? [];
     return { data: records as T, error: undefined };
@@ -138,10 +136,7 @@ function extractRecords<T>(
   if (count > 1) {
     return {
       data: undefined,
-      error: new RecordCountMismatchError(
-        singleMode === "exact" ? "one" : "at-most-one",
-        count,
-      ),
+      error: new RecordCountMismatchError(singleMode === "exact" ? "one" : "at-most-one", count),
     };
   }
 
@@ -160,10 +155,11 @@ function extractRecords<T>(
  * Gets schema from a table occurrence, excluding container fields.
  * Container fields are never returned in regular responses (only via getSingleField).
  */
-export function getSchemaFromTable(
-  table: FMTable<any, any> | undefined,
-): Record<string, any> | undefined {
-  if (!table) return undefined;
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration, dynamic schema shape
+export function getSchemaFromTable(table: FMTable<any, any> | undefined): Record<string, any> | undefined {
+  if (!table) {
+    return undefined;
+  }
   const baseTableConfig = getBaseTableConfig(table);
   const containerFields = baseTableConfig.containerFields || [];
 
@@ -180,10 +176,8 @@ export function getSchemaFromTable(
  * Renames fields in response data according to the field mapping.
  * Used when select() is called with renamed fields (e.g., { userEmail: users.email }).
  */
-function renameFieldsInResponse(
-  data: any,
-  fieldMapping: Record<string, string>,
-): any {
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic response data transformation
+function renameFieldsInResponse(data: any, fieldMapping: Record<string, string>): any {
   if (!data || typeof data !== "object") {
     return data;
   }
@@ -197,13 +191,13 @@ function renameFieldsInResponse(
   if ("value" in data && Array.isArray(data.value)) {
     return {
       ...data,
-      value: data.value.map((item: any) =>
-        renameFieldsInResponse(item, fieldMapping),
-      ),
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic record transformation
+      value: data.value.map((item: any) => renameFieldsInResponse(item, fieldMapping)),
     };
   }
 
   // Handle single record
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
   const renamed: Record<string, any> = {};
   for (const [key, value] of Object.entries(data)) {
     // Check if this field should be renamed
@@ -222,8 +216,10 @@ function renameFieldsInResponse(
  * This is a convenience wrapper that builds validation configs from expand configs.
  */
 export async function processQueryResponse<T>(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
   response: any,
   config: {
+    // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
     occurrence?: FMTable<any, any>;
     singleMode: "exact" | "maybe" | false;
     queryOptions: { select?: (keyof T)[] | string[] };
@@ -235,6 +231,7 @@ export async function processQueryResponse<T>(
     fieldMapping?: Record<string, string>;
     logger: InternalLogger;
   },
+  // biome-ignore lint/suspicious/noExplicitAny: Generic return type for interface compliance
 ): Promise<Result<any>> {
   const {
     occurrence,
@@ -249,14 +246,14 @@ export async function processQueryResponse<T>(
   } = config;
 
   const expandBuilder = new ExpandBuilder(useEntityIds ?? false, logger);
-  const expandValidationConfigs =
-    expandBuilder.buildValidationConfigs(expandConfigs);
+  const expandValidationConfigs = expandBuilder.buildValidationConfigs(expandConfigs);
 
-  const selectedFields = queryOptions.select
-    ? Array.isArray(queryOptions.select)
+  let selectedFields: string[] | undefined;
+  if (queryOptions.select) {
+    selectedFields = Array.isArray(queryOptions.select)
       ? queryOptions.select.map(String)
-      : [String(queryOptions.select)]
-    : undefined;
+      : [String(queryOptions.select)];
+  }
 
   // Process the response first
   let processedResponse = await processODataResponse(response, {
@@ -271,11 +268,7 @@ export async function processQueryResponse<T>(
   });
 
   // Rename fields if field mapping is provided (for renamed fields in select)
-  if (
-    processedResponse.data &&
-    fieldMapping &&
-    Object.keys(fieldMapping).length > 0
-  ) {
+  if (processedResponse.data && fieldMapping && Object.keys(fieldMapping).length > 0) {
     processedResponse = {
       ...processedResponse,
       data: renameFieldsInResponse(processedResponse.data, fieldMapping),

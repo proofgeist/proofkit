@@ -30,13 +30,17 @@
  * - "filter-by-status" - List with $filter
  * - "single-by-id" - Single record query
  */
+/** biome-ignore-all lint/suspicious/noExplicitAny: Just a dev script */
 
-import path from "path";
-import { fileURLToPath } from "url";
-import { config } from "dotenv";
-import { writeFileSync } from "fs";
-import * as prettier from "prettier";
+import { writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import createClient from "@fetchkit/ffetch";
+import { config } from "dotenv";
+
+// Regex patterns
+const TRAILING_SLASHES_REGEX = /\/+$/;
+
 import { MOCK_SERVER_URL } from "../tests/utils/mock-server-url";
 
 // Get __dirname equivalent in ES modules
@@ -63,7 +67,7 @@ if (!database) {
 }
 
 // Type for captured response
-type CapturedResponse = {
+interface CapturedResponse {
   url: string;
   method: string;
   status: number;
@@ -72,7 +76,7 @@ type CapturedResponse = {
     location?: string;
   };
   response: any;
-};
+}
 
 // Storage for captured responses - maps query name to response
 const capturedResponses: Record<string, CapturedResponse> = {};
@@ -84,19 +88,12 @@ const capturedResponses: Record<string, CapturedResponse> = {};
 function sanitizeUrl(url: string, actualServerUrl: string): string {
   try {
     // Extract domain from serverUrl (handle both with and without protocol)
-    const serverUrlObj = new URL(
-      actualServerUrl.startsWith("http")
-        ? actualServerUrl
-        : `https://${actualServerUrl}`,
-    );
+    const serverUrlObj = new URL(actualServerUrl.startsWith("http") ? actualServerUrl : `https://${actualServerUrl}`);
     const actualDomain = serverUrlObj.hostname;
 
     // Replace all occurrences of the actual domain with the mock domain
-    return url.replace(
-      new RegExp(actualDomain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-      MOCK_SERVER_URL,
-    );
-  } catch (e) {
+    return url.replace(new RegExp(actualDomain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), MOCK_SERVER_URL);
+  } catch (_e) {
     // If URL parsing fails, return original
     return url;
   }
@@ -139,14 +136,10 @@ type ClientRequestInit = Omit<RequestInit, "body"> & {
 /**
  * Creates an ffetch client with Authorization header, baseUrl, and database configured
  */
-function createAuthenticatedClient(
-  baseUrl: string,
-  database: string,
-  apiKey: string,
-) {
+function createAuthenticatedClient(baseUrl: string, database: string, apiKey: string) {
   const client = createClient();
   // Ensure baseUrl has no trailing slash
-  const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+  const cleanBaseUrl = baseUrl.replace(TRAILING_SLASHES_REGEX, "");
   // FileMaker OData API path: /otto/fmi/odata/v4/{database} when using API key auth
   const basePath = `${cleanBaseUrl}/otto/fmi/odata/v4/${encodeURIComponent(database)}`;
   return (path: string, init?: ClientRequestInit): Promise<Response> => {
@@ -164,7 +157,7 @@ function createAuthenticatedClient(
     let body: BodyInit | undefined = init?.body;
     if (body && typeof body === "object" && !(body instanceof FormData)) {
       body = JSON.stringify(body);
-      if (!init?.headers || !("Content-Type" in init.headers)) {
+      if (!(init?.headers && "Content-Type" in init.headers)) {
         headers["Content-Type"] = "application/json";
       }
     }
@@ -285,17 +278,14 @@ const queriesToCapture: {
       if (contentType.includes("application/json") && listResponse.ok) {
         try {
           listData = await listResponse.json();
-        } catch (e) {
+        } catch (_e) {
           // If JSON parsing fails, use fallback ID
         }
       }
 
       let recordId = "B5BFBC89-03E0-47FC-ABB6-D51401730227"; // fallback
       if (listData.value && listData.value.length > 0) {
-        const firstId =
-          listData.value[0].ContactID ||
-          listData.value[0].id ||
-          listData.value[0].PrimaryKey;
+        const firstId = listData.value[0].ContactID || listData.value[0].id || listData.value[0].PrimaryKey;
         if (firstId) {
           recordId = String(firstId);
         }
@@ -379,8 +369,7 @@ const queriesToCapture: {
     name: "get with expand",
     description: "Get query with expand to include related records",
     execute: async (client) => {
-      const path =
-        "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')?$expand=users";
+      const path = "/contacts('B5BFBC89-03E0-47FC-ABB6-D51401730227')?$expand=users";
       const response = await client(path);
       const url = response.url;
       return { url, method: "GET", response };
@@ -401,7 +390,7 @@ const queriesToCapture: {
     name: "list with nested expand",
     description: "List query with deeply nested expand and selected fields",
     execute: async (client) => {
-      const path = `/contacts?$top=2&$expand=users($expand=user_customer($select=name))`;
+      const path = "/contacts?$top=2&$expand=users($expand=user_customer($select=name))";
       const response = await client(path);
       const url = response.url;
       return { url, method: "GET", response };
@@ -530,8 +519,12 @@ const queriesToCapture: {
  */
 function formatObject(obj: any, indent = 2): string {
   const spaces = " ".repeat(indent);
-  if (obj === null) return "null";
-  if (obj === undefined) return "undefined";
+  if (obj === null) {
+    return "null";
+  }
+  if (obj === undefined) {
+    return "undefined";
+  }
   if (typeof obj === "string") {
     // Escape quotes and newlines using JSON.stringify
     return JSON.stringify(obj);
@@ -540,15 +533,17 @@ function formatObject(obj: any, indent = 2): string {
     return String(obj);
   }
   if (Array.isArray(obj)) {
-    if (obj.length === 0) return "[]";
-    const items = obj
-      .map((item) => `${spaces}${formatObject(item, indent + 2)},`)
-      .join("\n");
+    if (obj.length === 0) {
+      return "[]";
+    }
+    const items = obj.map((item) => `${spaces}${formatObject(item, indent + 2)},`).join("\n");
     return `[\n${items}\n${" ".repeat(indent - 2)}]`;
   }
   if (typeof obj === "object") {
     const keys = Object.keys(obj);
-    if (keys.length === 0) return "{}";
+    if (keys.length === 0) {
+      return "{}";
+    }
     const entries = keys
       .map((key) => {
         const value = formatObject(obj[key], indent + 2);
@@ -563,9 +558,7 @@ function formatObject(obj: any, indent = 2): string {
 /**
  * Generates TypeScript code for the responses file
  */
-function generateResponsesFile(
-  responses: Record<string, CapturedResponse>,
-): string {
+function generateResponsesFile(responses: Record<string, CapturedResponse>): string {
   const entries = Object.entries(responses)
     .map(([key, response]) => {
       const urlStr = JSON.stringify(response.url);
@@ -573,9 +566,7 @@ function generateResponsesFile(
       const statusStr = response.status;
       const responseStr = formatObject(response.response);
 
-      const headersLine = response.headers
-        ? `\n    headers: ${formatObject(response.headers, 4)},`
-        : "";
+      const headersLine = response.headers ? `\n    headers: ${formatObject(response.headers, 4)},` : "";
 
       return `  "${key}": {
     url: ${urlStr},
@@ -669,7 +660,7 @@ async function main() {
           // Clone response to read without consuming
           const clonedResponse = response.clone();
           responseData = await clonedResponse.json();
-        } catch (e) {
+        } catch (_e) {
           responseData = null;
         }
       } else {
@@ -697,20 +688,13 @@ async function main() {
       };
 
       if (status >= 400 && !queryDef.expectError) {
-        console.log(
-          `  ⚠ Captured error response for ${queryDef.name} (status: ${status})`,
-        );
+        console.log(`  ⚠ Captured error response for ${queryDef.name} (status: ${status})`);
       } else {
         console.log(`  ✓ Captured response for ${queryDef.name}`);
       }
     } catch (error) {
       // Only log errors if they're not expected
-      if (!queryDef.expectError) {
-        console.error(`  ✗ Failed to capture ${queryDef.name}:`, error);
-        if (error instanceof Error) {
-          console.error(`    ${error.message}`);
-        }
-      } else {
+      if (queryDef.expectError) {
         // For expected errors, try to capture the error response
         // ffetch might throw, but we can check if we got a response
         if (error && typeof error === "object" && "response" in error) {
@@ -718,10 +702,8 @@ async function main() {
           if (errorResponse) {
             const url = errorResponse.url || "";
             const status = errorResponse.status || 500;
-            const contentType =
-              errorResponse.headers?.get("content-type") || "";
-            const location =
-              errorResponse.headers?.get("location") || undefined;
+            const contentType = errorResponse.headers?.get("content-type") || "";
+            const location = errorResponse.headers?.get("location") || undefined;
             let responseData: any;
 
             try {
@@ -731,16 +713,13 @@ async function main() {
               } else {
                 responseData = await clonedResponse.text();
               }
-            } catch (e) {
+            } catch (_e) {
               responseData = null;
             }
 
             // Sanitize URLs before storing
             const sanitizedUrl = sanitizeUrl(url, serverUrl);
-            const sanitizedResponse = sanitizeResponseData(
-              responseData,
-              serverUrl,
-            );
+            const sanitizedResponse = sanitizeResponseData(responseData, serverUrl);
 
             // For error cases, we don't have the method from execute, so default to GET
             // This should rarely happen as most errors still return a response
@@ -759,14 +738,15 @@ async function main() {
             };
             console.log(`  ✓ Captured error response for ${queryDef.name}`);
           } else {
-            console.warn(
-              `  ⚠ Expected error for ${queryDef.name} but response was not captured`,
-            );
+            console.warn(`  ⚠ Expected error for ${queryDef.name} but response was not captured`);
           }
         } else {
-          console.warn(
-            `  ⚠ Expected error for ${queryDef.name} but response was not captured`,
-          );
+          console.warn(`  ⚠ Expected error for ${queryDef.name} but response was not captured`);
+        }
+      } else {
+        console.error(`  ✗ Failed to capture ${queryDef.name}:`, error);
+        if (error instanceof Error) {
+          console.error(`    ${error.message}`);
         }
       }
     }
@@ -776,25 +756,15 @@ async function main() {
   console.log(`Captured ${Object.keys(capturedResponses).length} responses`);
 
   if (Object.keys(capturedResponses).length === 0) {
-    console.warn(
-      "Warning: No responses were captured. Check your queries and server connection.",
-    );
+    console.warn("Warning: No responses were captured. Check your queries and server connection.");
     return;
   }
 
   // Generate and write the responses file
-  const fixturesPath = path.resolve(
-    __dirname,
-    "../tests/fixtures/responses.ts",
-  );
+  const fixturesPath = path.resolve(__dirname, "../tests/fixtures/responses.ts");
   const fileContent = generateResponsesFile(capturedResponses);
 
-  // Format the file content with prettier
-  const formattedContent = await prettier.format(fileContent, {
-    filepath: fixturesPath,
-  });
-
-  writeFileSync(fixturesPath, formattedContent, "utf-8");
+  writeFileSync(fixturesPath, fileContent, "utf-8");
 
   console.log(`\nResponses written to: ${fixturesPath}`);
   console.log("\nYou can now use these mocks in your tests!");

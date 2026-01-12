@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Tree, TreeItem, TreeItemLabel } from '@/components/ui/tree';
-import { hotkeysCoreFeature, syncDataLoaderFeature } from '@headless-tree/core';
-import { useTree } from '@headless-tree/react';
+import { hotkeysCoreFeature, syncDataLoaderFeature } from "@headless-tree/core";
+import { useTree } from "@headless-tree/react";
+import { Tree, TreeItem, TreeItemLabel } from "@/components/ui/tree";
 
 interface Item {
   name: string;
@@ -12,63 +11,63 @@ interface Item {
 
 const items: Record<string, Item> = {
   crm: {
-    name: 'CRM',
-    children: ['leads', 'accounts', 'activities', 'support'],
+    name: "CRM",
+    children: ["leads", "accounts", "activities", "support"],
   },
   leads: {
-    name: 'Leads',
-    children: ['new-lead', 'contacted-lead', 'qualified-lead'],
+    name: "Leads",
+    children: ["new-lead", "contacted-lead", "qualified-lead"],
   },
-  'new-lead': { name: 'New Lead' },
-  'contacted-lead': { name: 'Contacted Lead' },
-  'qualified-lead': { name: 'Qualified Lead' },
+  "new-lead": { name: "New Lead" },
+  "contacted-lead": { name: "Contacted Lead" },
+  "qualified-lead": { name: "Qualified Lead" },
   accounts: {
-    name: 'Accounts',
-    children: ['acme-corp', 'globex-inc'],
+    name: "Accounts",
+    children: ["acme-corp", "globex-inc"],
   },
-  'acme-corp': {
-    name: 'Acme Corp',
-    children: ['acme-contacts', 'acme-opportunities'],
+  "acme-corp": {
+    name: "Acme Corp",
+    children: ["acme-contacts", "acme-opportunities"],
   },
-  'acme-contacts': {
-    name: 'Contacts',
-    children: ['john-smith', 'jane-doe'],
+  "acme-contacts": {
+    name: "Contacts",
+    children: ["john-smith", "jane-doe"],
   },
-  'john-smith': { name: 'John Smith' },
-  'jane-doe': { name: 'Jane Doe' },
-  'acme-opportunities': {
-    name: 'Opportunities',
-    children: ['website-redesign', 'annual-maintenance'],
+  "john-smith": { name: "John Smith" },
+  "jane-doe": { name: "Jane Doe" },
+  "acme-opportunities": {
+    name: "Opportunities",
+    children: ["website-redesign", "annual-maintenance"],
   },
-  'website-redesign': { name: 'Website Redesign' },
-  'annual-maintenance': { name: 'Annual Maintenance' },
-  'globex-inc': {
-    name: 'Globex Inc',
-    children: ['globex-contacts', 'globex-opportunities'],
+  "website-redesign": { name: "Website Redesign" },
+  "annual-maintenance": { name: "Annual Maintenance" },
+  "globex-inc": {
+    name: "Globex Inc",
+    children: ["globex-contacts", "globex-opportunities"],
   },
-  'globex-contacts': {
-    name: 'Contacts',
-    children: ['alice-johnson'],
+  "globex-contacts": {
+    name: "Contacts",
+    children: ["alice-johnson"],
   },
-  'alice-johnson': { name: 'Alice Johnson' },
-  'globex-opportunities': {
-    name: 'Opportunities',
-    children: ['cloud-migration'],
+  "alice-johnson": { name: "Alice Johnson" },
+  "globex-opportunities": {
+    name: "Opportunities",
+    children: ["cloud-migration"],
   },
-  'cloud-migration': { name: 'Cloud Migration' },
+  "cloud-migration": { name: "Cloud Migration" },
   activities: {
-    name: 'Activities',
-    children: ['calls', 'meetings', 'emails'],
+    name: "Activities",
+    children: ["calls", "meetings", "emails"],
   },
-  calls: { name: 'Calls' },
-  meetings: { name: 'Meetings' },
-  emails: { name: 'Emails' },
+  calls: { name: "Calls" },
+  meetings: { name: "Meetings" },
+  emails: { name: "Emails" },
   support: {
-    name: 'Support',
-    children: ['open-tickets', 'closed-tickets'],
+    name: "Support",
+    children: ["open-tickets", "closed-tickets"],
   },
-  'open-tickets': { name: 'Open Tickets' },
-  'closed-tickets': { name: 'Closed Tickets' },
+  "open-tickets": { name: "Open Tickets" },
+  "closed-tickets": { name: "Closed Tickets" },
 };
 
 const indent = 20;
@@ -76,10 +75,10 @@ const indent = 20;
 export default function Component() {
   const tree = useTree<Item>({
     initialState: {
-      expandedItems: ['leads', 'accounts', 'activities'],
+      expandedItems: ["leads", "accounts", "activities"],
     },
     indent,
-    rootItemId: 'crm',
+    rootItemId: "crm",
     getItemName: (item) => item.getItemData().name,
     isItemFolder: (item) => (item.getItemData()?.children?.length ?? 0) > 0,
     dataLoader: {
@@ -94,7 +93,7 @@ export default function Component() {
       <Tree indent={indent} tree={tree}>
         {tree.getItems().map((item) => {
           return (
-            <TreeItem key={item.getId()} item={item}>
+            <TreeItem item={item} key={item.getId()}>
               <TreeItemLabel />
             </TreeItem>
           );

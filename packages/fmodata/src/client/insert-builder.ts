@@ -1,58 +1,47 @@
+import type { FFetchOptions } from "@fetchkit/ffetch";
+import { InvalidLocationHeaderError } from "../errors";
+import type { FMTable } from "../orm/table";
+import { getBaseTableConfig, getTableId as getTableIdHelper, getTableName, isUsingEntityIds } from "../orm/table";
+import { transformFieldNamesToIds, transformResponseFields } from "../transform";
 import type {
-  ExecutionContext,
-  ExecutableBuilder,
-  Result,
-  ODataRecordMetadata,
-  InferSchemaType,
-  ExecuteOptions,
   ConditionallyWithODataAnnotations,
+  ExecutableBuilder,
   ExecuteMethodOptions,
+  ExecuteOptions,
+  ExecutionContext,
+  Result,
 } from "../types";
 import { getAcceptHeader } from "../types";
-import type { FMTable } from "../orm/table";
-import {
-  getBaseTableConfig,
-  getTableName,
-  getTableId as getTableIdHelper,
-  isUsingEntityIds,
-} from "../orm/table";
-import {
-  validateSingleResponse,
-  validateAndTransformInput,
-} from "../validation";
-import { type FFetchOptions } from "@fetchkit/ffetch";
-import {
-  transformFieldNamesToIds,
-  transformResponseFields,
-} from "../transform";
-import { InvalidLocationHeaderError } from "../errors";
-import { safeJsonParse } from "./sanitize-json";
+import { validateAndTransformInput, validateSingleResponse } from "../validation";
 import { parseErrorResponse } from "./error-parser";
+import { safeJsonParse } from "./sanitize-json";
 
-export type InsertOptions = {
+const ROWID_MATCH_REGEX = /ROWID=(\d+)/;
+const PAREN_VALUE_REGEX = /\(['"]?([^'"]+)['"]?\)/;
+
+export interface InsertOptions {
   return?: "minimal" | "representation";
-};
+}
 
 import type { InferSchemaOutputFromFMTable } from "../orm/table";
 
 export class InsertBuilder<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   Occ extends FMTable<any, any> | undefined = undefined,
   ReturnPreference extends "minimal" | "representation" = "representation",
 > implements
     ExecutableBuilder<
-      ReturnPreference extends "minimal"
-        ? { ROWID: number }
-        : InferSchemaOutputFromFMTable<NonNullable<Occ>>
+      ReturnPreference extends "minimal" ? { ROWID: number } : InferSchemaOutputFromFMTable<NonNullable<Occ>>
     >
 {
-  private table?: Occ;
-  private databaseName: string;
-  private context: ExecutionContext;
-  private data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
-  private returnPreference: ReturnPreference;
+  private readonly table?: Occ;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
+  private readonly returnPreference: ReturnPreference;
 
-  private databaseUseEntityIds: boolean;
-  private databaseIncludeSpecialColumns: boolean;
+  private readonly databaseUseEntityIds: boolean;
+  private readonly databaseIncludeSpecialColumns: boolean;
 
   constructor(config: {
     occurrence?: Occ;
@@ -67,11 +56,9 @@ export class InsertBuilder<
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.data = config.data;
-    this.returnPreference = (config.returnPreference ||
-      "representation") as ReturnPreference;
+    this.returnPreference = (config.returnPreference || "representation") as ReturnPreference;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns =
-      config.databaseIncludeSpecialColumns ?? false;
+    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
   }
 
   /**
@@ -95,23 +82,21 @@ export class InsertBuilder<
    */
   private parseLocationHeader(locationHeader: string | undefined): number {
     if (!locationHeader) {
-      throw new InvalidLocationHeaderError(
-        "Location header is required but was not provided",
-      );
+      throw new InvalidLocationHeaderError("Location header is required but was not provided");
     }
 
     // Try to match ROWID=number pattern
-    const rowidMatch = locationHeader.match(/ROWID=(\d+)/);
-    if (rowidMatch && rowidMatch[1]) {
-      return parseInt(rowidMatch[1], 10);
+    const rowidMatch = locationHeader.match(ROWID_MATCH_REGEX);
+    if (rowidMatch?.[1]) {
+      return Number.parseInt(rowidMatch[1], 10);
     }
 
     // Try to extract value from parentheses and parse as number
-    const parenMatch = locationHeader.match(/\(['"]?([^'"]+)['"]?\)/);
-    if (parenMatch && parenMatch[1]) {
+    const parenMatch = locationHeader.match(PAREN_VALUE_REGEX);
+    if (parenMatch?.[1]) {
       const value = parenMatch[1];
-      const numValue = parseInt(value, 10);
-      if (!isNaN(numValue)) {
+      const numValue = Number.parseInt(value, 10);
+      if (!Number.isNaN(numValue)) {
         return numValue;
       }
     }
@@ -178,6 +163,7 @@ export class InsertBuilder<
         return {
           data: undefined,
           error: error instanceof Error ? error : new Error(String(error)),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         } as any;
       }
     }
@@ -187,22 +173,19 @@ export class InsertBuilder<
     const shouldUseIds = mergedOptions.useEntityIds ?? false;
 
     const transformedData =
-      this.table && shouldUseIds
-        ? transformFieldNamesToIds(validatedData, this.table)
-        : validatedData;
+      this.table && shouldUseIds ? transformFieldNamesToIds(validatedData, this.table) : validatedData;
 
     // Set Prefer header based on return preference
-    const preferHeader =
-      this.returnPreference === "minimal"
-        ? "return=minimal"
-        : "return=representation";
+    const preferHeader = this.returnPreference === "minimal" ? "return=minimal" : "return=representation";
 
     // Make POST request with JSON body
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
     const result = await this.context._makeRequest<any>(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Prefer: preferHeader,
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for headers object
         ...((mergedOptions as any)?.headers || {}),
       },
       body: JSON.stringify(transformedData),
@@ -217,15 +200,17 @@ export class InsertBuilder<
     if (this.returnPreference === "minimal") {
       // The response should be empty (204 No Content)
       // _makeRequest will return { _location: string } when there's a Location header
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
       const responseData = result.data as any;
 
-      if (!responseData || !responseData._location) {
+      if (!responseData?._location) {
         throw new InvalidLocationHeaderError(
           "Location header is required when using return=minimal but was not found in response",
         );
       }
 
       const rowid = this.parseLocationHeader(responseData._location);
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
       return { data: { ROWID: rowid } as any, error: undefined };
     }
 
@@ -242,6 +227,7 @@ export class InsertBuilder<
     }
 
     // Get schema from table if available, excluding container fields
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema shape from table configuration
     let schema: Record<string, any> | undefined;
     if (this.table) {
       const baseTableConfig = getBaseTableConfig(this.table);
@@ -255,9 +241,7 @@ export class InsertBuilder<
     }
 
     // Validate the response (FileMaker returns the created record)
-    const validation = await validateSingleResponse<
-      InferSchemaOutputFromFMTable<NonNullable<Occ>>
-    >(
+    const validation = await validateSingleResponse<InferSchemaOutputFromFMTable<NonNullable<Occ>>>(
       response,
       schema,
       undefined, // No selected fields for insert
@@ -277,9 +261,11 @@ export class InsertBuilder<
       };
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
     return { data: validation.data as any, error: undefined };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
     // For batch operations, use database-level setting (no per-request override available here)
     // Note: Input validation happens in execute() and processResponse() for batch operations
@@ -287,9 +273,7 @@ export class InsertBuilder<
 
     // Transform field names to FMFIDs if using entity IDs
     const transformedData =
-      this.table && this.databaseUseEntityIds
-        ? transformFieldNamesToIds(this.data, this.table)
-        : this.data;
+      this.table && this.databaseUseEntityIds ? transformFieldNamesToIds(this.data, this.table) : this.data;
 
     return {
       method: "POST",
@@ -303,10 +287,7 @@ export class InsertBuilder<
     const fullUrl = `${baseUrl}${config.url}`;
 
     // Set Prefer header based on return preference
-    const preferHeader =
-      this.returnPreference === "minimal"
-        ? "return=minimal"
-        : "return=representation";
+    const preferHeader = this.returnPreference === "minimal" ? "return=minimal" : "return=representation";
 
     return new Request(fullUrl, {
       method: config.method,
@@ -323,19 +304,12 @@ export class InsertBuilder<
     response: Response,
     options?: ExecuteOptions,
   ): Promise<
-    Result<
-      ReturnPreference extends "minimal"
-        ? { ROWID: number }
-        : InferSchemaOutputFromFMTable<NonNullable<Occ>>
-    >
+    Result<ReturnPreference extends "minimal" ? { ROWID: number } : InferSchemaOutputFromFMTable<NonNullable<Occ>>>
   > {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const tableName = this.table ? getTableName(this.table) : "unknown";
-      const error = await parseErrorResponse(
-        response,
-        response.url || `/${this.databaseName}/${tableName}`,
-      );
+      const error = await parseErrorResponse(response, response.url || `/${this.databaseName}/${tableName}`);
       return { data: undefined, error };
     }
 
@@ -344,10 +318,10 @@ export class InsertBuilder<
     if (response.status === 204) {
       // Check for Location header (for return=minimal)
       if (this.returnPreference === "minimal") {
-        const locationHeader =
-          response.headers.get("Location") || response.headers.get("location");
+        const locationHeader = response.headers.get("Location") || response.headers.get("location");
         if (locationHeader) {
           const rowid = this.parseLocationHeader(locationHeader);
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
           return { data: { ROWID: rowid } as any, error: undefined };
         }
         throw new InvalidLocationHeaderError(
@@ -359,6 +333,7 @@ export class InsertBuilder<
       // This is valid OData behavior for changeset operations
       // We return a success indicator but no actual data
       return {
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         data: {} as any,
         error: undefined,
       };
@@ -372,13 +347,14 @@ export class InsertBuilder<
     }
 
     // Use safeJsonParse to handle FileMaker's invalid JSON with unquoted ? values
-    let rawResponse;
+    let rawResponse: unknown;
     try {
       rawResponse = await safeJsonParse(response);
     } catch (err) {
       // If parsing fails with 204, handle it gracefully
       if (response.status === 204) {
         return {
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
           data: {} as any,
           error: undefined,
         };
@@ -389,6 +365,7 @@ export class InsertBuilder<
           name: "ResponseParseError",
           message: `Failed to parse response JSON: ${err instanceof Error ? err.message : "Unknown error"}`,
           timestamp: new Date(),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for error object
         } as any,
       };
     }
@@ -396,16 +373,17 @@ export class InsertBuilder<
     // Validate and transform input data using input validators (writeValidators)
     // This is needed for processResponse because it's called from batch operations
     // where the data hasn't been validated yet
-    let validatedData = this.data;
+    let _validatedData = this.data;
     if (this.table) {
       const baseTableConfig = getBaseTableConfig(this.table);
       const inputSchema = baseTableConfig.inputSchema;
       try {
-        validatedData = await validateAndTransformInput(this.data, inputSchema);
+        _validatedData = await validateAndTransformInput(this.data, inputSchema);
       } catch (error) {
         return {
           data: undefined,
           error: error instanceof Error ? error : new Error(String(error)),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         } as any;
       }
     }
@@ -424,6 +402,7 @@ export class InsertBuilder<
     }
 
     // Get schema from table if available, excluding container fields
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema shape from table configuration
     let schema: Record<string, any> | undefined;
     if (this.table) {
       const baseTableConfig = getBaseTableConfig(this.table);
@@ -437,9 +416,7 @@ export class InsertBuilder<
     }
 
     // Validate the response (FileMaker returns the created record)
-    const validation = await validateSingleResponse<
-      InferSchemaOutputFromFMTable<NonNullable<Occ>>
-    >(
+    const validation = await validateSingleResponse<InferSchemaOutputFromFMTable<NonNullable<Occ>>>(
       transformedResponse,
       schema,
       undefined, // No selected fields for insert
@@ -459,6 +436,7 @@ export class InsertBuilder<
       };
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
     return { data: validation.data as any, error: undefined };
   }
 }

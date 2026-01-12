@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getConfig, saveConfig } from "../lib/api";
 import type { SingleConfig } from "../lib/config-utils";
 
@@ -27,15 +27,21 @@ export function useConfig() {
             error.message.includes("after retries")));
       return isConnectionError && failureCount < 5;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: Infinity,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30_000),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Save config mutation
   const saveMutation = useMutation({
-    mutationFn: async (configsToSave: SingleConfig[]) => {
+    mutationFn: async ({
+      configsToSave,
+      postGenerateCommand,
+    }: {
+      configsToSave: SingleConfig[];
+      postGenerateCommand?: string;
+    }) => {
       console.log("configsToSave", configsToSave);
-      return await saveConfig(configsToSave);
+      return await saveConfig(configsToSave, postGenerateCommand);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });

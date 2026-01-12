@@ -1,20 +1,23 @@
 import type { QueryOptions } from "odata-query";
-import type { ExecutionContext } from "../../types";
 import type { FMTable } from "../../orm/table";
+import type { ExecutionContext } from "../../types";
 
 /**
  * Expand configuration used by both QueryBuilder and RecordBuilder
  */
-export type ExpandConfig = {
+export interface ExpandConfig {
   relation: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryOptions configuration
   options?: Partial<QueryOptions<any>>;
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   targetTable?: FMTable<any, any>;
   nestedExpandConfigs?: ExpandConfig[];
-};
+}
 
 /**
  * Type to represent expanded relations in return types
  */
+// biome-ignore lint/suspicious/noExplicitAny: Dynamic schema and selected types from user input
 export type ExpandedRelations = Record<string, { schema: any; selected: any }>;
 
 /**
@@ -32,6 +35,7 @@ export interface NavigationContext {
 /**
  * Common builder configuration
  */
+// biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export interface BuilderConfig<Occ extends FMTable<any, any> | undefined> {
   occurrence?: Occ;
   tableName: string;
@@ -39,4 +43,3 @@ export interface BuilderConfig<Occ extends FMTable<any, any> | undefined> {
   context: ExecutionContext;
   databaseUseEntityIds?: boolean;
 }
-

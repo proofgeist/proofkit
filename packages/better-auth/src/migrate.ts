@@ -1,7 +1,7 @@
-import { type Metadata } from "fm-odata-client";
 import chalk from "chalk";
+import type { Metadata } from "fm-odata-client";
 import z from "zod/v4";
-import { createRawFetch } from "./odata";
+import type { createRawFetch } from "./odata";
 
 type BetterAuthTableField = {
   fieldName?: string;
@@ -22,10 +22,7 @@ function normalizeBetterAuthFieldType(fieldType: unknown): string {
   return String(fieldType);
 }
 
-export async function getMetadata(
-  fetch: ReturnType<typeof createRawFetch>["fetch"],
-  databaseName: string,
-) {
+export async function getMetadata(fetch: ReturnType<typeof createRawFetch>["fetch"], databaseName: string) {
   console.log("getting metadata...");
   const result = await fetch("/$metadata", {
     method: "GET",
@@ -55,7 +52,7 @@ export async function planMigration(
   const metadata = await getMetadata(fetch, databaseName);
 
   // Build a map from entity set name to entity type key
-  let entitySetToType: Record<string, string> = {};
+  const entitySetToType: Record<string, string> = {};
   if (metadata) {
     for (const [key, value] of Object.entries(metadata)) {
       if (value.$Kind === "EntitySet" && value.$Type) {
@@ -70,27 +67,32 @@ export async function planMigration(
     ? Object.entries(entitySetToType).reduce(
         (acc, [entitySetName, entityTypeKey]) => {
           const entityType = metadata[entityTypeKey];
-          if (!entityType) return acc;
+          if (!entityType) {
+            return acc;
+          }
           const fields = Object.entries(entityType)
             .filter(
-              ([fieldKey, fieldValue]) =>
-                typeof fieldValue === "object" &&
-                fieldValue !== null &&
-                "$Type" in fieldValue,
+              ([_fieldKey, fieldValue]) =>
+                typeof fieldValue === "object" && fieldValue !== null && "$Type" in fieldValue,
             )
-            .map(([fieldKey, fieldValue]) => ({
-              name: fieldKey,
-              type:
-                fieldValue.$Type === "Edm.String"
-                  ? "varchar"
-                  : fieldValue.$Type === "Edm.DateTimeOffset"
-                    ? "timestamp"
-                    : fieldValue.$Type === "Edm.Decimal" ||
-                        fieldValue.$Type === "Edm.Int32" ||
-                        fieldValue.$Type === "Edm.Int64"
-                      ? "numeric"
-                      : "varchar",
-            }));
+            .map(([fieldKey, fieldValue]) => {
+              let type = "varchar";
+              if (fieldValue.$Type === "Edm.String") {
+                type = "varchar";
+              } else if (fieldValue.$Type === "Edm.DateTimeOffset") {
+                type = "timestamp";
+              } else if (
+                fieldValue.$Type === "Edm.Decimal" ||
+                fieldValue.$Type === "Edm.Int32" ||
+                fieldValue.$Type === "Edm.Int64"
+              ) {
+                type = "numeric";
+              }
+              return {
+                name: fieldKey,
+                type,
+              };
+            });
           acc[entitySetName] = fields;
           return acc;
         },
@@ -108,36 +110,47 @@ export async function planMigration(
   const migrationPlan: MigrationPlan = [];
 
   for (const baTable of baTables) {
-    const fields: FmField[] = Object.entries(baTable.fields).map(
-      ([key, field]) => ({
+    const fields: FmField[] = Object.entries(baTable.fields).map(([key, field]) => {
+      // Better Auth's FieldType can be a string literal union or arrays.
+      // Normalize it to a string so our FM mapping logic remains stable.
+      const t = normalizeBetterAuthFieldType(field.type);
+      const type: "varchar" | "numeric" | "timestamp" =
+        t === "boolean" || t.includes("number") ? "numeric" : t === "date" ? "timestamp" : "varchar";
+      return {
         name: field.fieldName ?? key,
-        // Better Auth's FieldType can be a string literal union or arrays.
-        // Normalize it to a string so our FM mapping logic remains stable.
-        // Examples: "number", "string[]", ["string", "number"] (plugin-defined)
-        // See Better Auth: FieldType = "string" | "number" | ... | Array<LiteralString>
-        //
-        // We only need coarse mapping for FileMaker field creation.
-        // Anything unknown falls back to "varchar".
-        //
-        type:
-          (() => {
-            const t = normalizeBetterAuthFieldType(field.type);
-            return t === "boolean" || t.includes("number")
-              ? "numeric"
-              : t === "date"
-                ? "timestamp"
-                : "varchar";
-          })(),
-      }),
-    );
+        type,
+      };
+    });
 
     // get existing table or create it
-    const tableExists = Object.prototype.hasOwnProperty.call(
-      existingTables,
-      baTable.modelName,
-    );
+    const tableExists = baTable.modelName in existingTables;
 
-    if (!tableExists) {
+    if (tableExists) {
+      const existingFields = (existingTables[baTable.modelName] || []).map((f) => f.name);
+      const existingFieldMap = (existingTables[baTable.modelName] || []).reduce(
+        (acc, f) => {
+          acc[f.name] = f.type;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+      // Warn about type mismatches (optional, not in plan)
+      for (const field of fields) {
+        if (existingFields.includes(field.name) && existingFieldMap[field.name] !== field.type) {
+          console.warn(
+            `⚠️ WARNING: Field '${field.name}' in table '${baTable.modelName}' exists but has type '${existingFieldMap[field.name]}' (expected '${field.type}'). Change the field type in FileMaker to avoid potential errors.`,
+          );
+        }
+      }
+      const fieldsToAdd = fields.filter((f) => !existingFields.includes(f.name));
+      if (fieldsToAdd.length > 0) {
+        migrationPlan.push({
+          tableName: baTable.modelName,
+          operation: "update",
+          fields: fieldsToAdd,
+        });
+      }
+    } else {
       migrationPlan.push({
         tableName: baTable.modelName,
         operation: "create",
@@ -151,38 +164,6 @@ export async function planMigration(
           ...fields,
         ],
       });
-    } else {
-      const existingFields = (existingTables[baTable.modelName] || []).map(
-        (f) => f.name,
-      );
-      const existingFieldMap = (existingTables[baTable.modelName] || []).reduce(
-        (acc, f) => {
-          acc[f.name] = f.type;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
-      // Warn about type mismatches (optional, not in plan)
-      fields.forEach((field) => {
-        if (
-          existingFields.includes(field.name) &&
-          existingFieldMap[field.name] !== field.type
-        ) {
-          console.warn(
-            `⚠️ WARNING: Field '${field.name}' in table '${baTable.modelName}' exists but has type '${existingFieldMap[field.name]}' (expected '${field.type}'). Change the field type in FileMaker to avoid potential errors.`,
-          );
-        }
-      });
-      const fieldsToAdd = fields.filter(
-        (f) => !existingFields.includes(f.name),
-      );
-      if (fieldsToAdd.length > 0) {
-        migrationPlan.push({
-          tableName: baTable.modelName,
-          operation: "update",
-          fields: fieldsToAdd,
-        });
-      }
     }
   }
 
@@ -205,10 +186,7 @@ export async function executeMigration(
       });
 
       if (result.error) {
-        console.error(
-          `Failed to create table ${step.tableName}:`,
-          result.error,
-        );
+        console.error(`Failed to create table ${step.tableName}:`, result.error);
         throw new Error(`Migration failed: ${result.error}`);
       }
     } else if (step.operation === "update") {
@@ -219,10 +197,7 @@ export async function executeMigration(
       });
 
       if (result.error) {
-        console.error(
-          `Failed to update table ${step.tableName}:`,
-          result.error,
-        );
+        console.error(`Failed to update table ${step.tableName}:`, result.error);
         throw new Error(`Migration failed: ${result.error}`);
       }
     }
@@ -303,8 +278,12 @@ export function prettyPrintMigrationPlan(migrationPlan: MigrationPlan) {
     if (step.fields.length) {
       for (const field of step.fields) {
         let fieldDesc = `    - ${field.name} (${field.type}`;
-        if (field.primary) fieldDesc += ", primary";
-        if (field.unique) fieldDesc += ", unique";
+        if (field.primary) {
+          fieldDesc += ", primary";
+        }
+        if (field.unique) {
+          fieldDesc += ", unique";
+        }
         fieldDesc += ")";
         console.log(fieldDesc);
       }

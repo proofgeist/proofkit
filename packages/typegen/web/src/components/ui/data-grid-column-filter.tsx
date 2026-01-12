@@ -1,7 +1,8 @@
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import type { Column } from "@tanstack/react-table";
+import { Check, CirclePlus } from "lucide-react";
+import type * as React from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -10,11 +11,10 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-import { Column } from '@tanstack/react-table';
-import { Check, CirclePlus } from 'lucide-react';
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface DataGridColumnFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
@@ -33,25 +33,25 @@ function DataGridColumnFilter<TData, TValue>({ column, title, options }: DataGri
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button size="sm" variant="outline">
           <CirclePlus className="size-4" />
           {title}
           {selectedValues?.size > 0 && (
             <>
-              <Separator orientation="vertical" className="mx-2 h-4" />
-              <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
+              <Separator className="mx-2 h-4" orientation="vertical" />
+              <Badge className="rounded-sm px-1 font-normal lg:hidden" variant="secondary">
                 {selectedValues.size}
               </Badge>
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size > 2 ? (
-                  <Badge variant="secondary" className="rounded-sm px-1 font-normal">
+                  <Badge className="rounded-sm px-1 font-normal" variant="secondary">
                     {selectedValues.size} selected
                   </Badge>
                 ) : (
                   options
                     .filter((option) => selectedValues.has(option.value))
                     .map((option) => (
-                      <Badge variant="secondary" key={option.value} className="rounded-sm px-1 font-normal">
+                      <Badge className="rounded-sm px-1 font-normal" key={option.value} variant="secondary">
                         {option.label}
                       </Badge>
                     ))
@@ -61,7 +61,7 @@ function DataGridColumnFilter<TData, TValue>({ column, title, options }: DataGri
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0" align="start">
+      <PopoverContent align="start" className="w-[200px] p-0">
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
@@ -84,11 +84,11 @@ function DataGridColumnFilter<TData, TValue>({ column, title, options }: DataGri
                   >
                     <div
                       className={cn(
-                        'me-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-                        isSelected ? 'bg-primary text-primary-foreground' : 'opacity-50 [&_svg]:invisible',
+                        "me-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible",
                       )}
                     >
-                      <Check className={cn('h-4 w-4')} />
+                      <Check className={cn("h-4 w-4")} />
                     </div>
                     {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
                     <span>{option.label}</span>
@@ -106,8 +106,8 @@ function DataGridColumnFilter<TData, TValue>({ column, title, options }: DataGri
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
-                    onSelect={() => column?.setFilterValue(undefined)}
                     className="justify-center text-center"
+                    onSelect={() => column?.setFilterValue(undefined)}
                   >
                     Clear filters
                   </CommandItem>

@@ -1,23 +1,14 @@
-import path from "path";
-import { PostInstallStep } from "@proofkit/registry";
-import {
-  ImportDeclarationStructure,
-  StructureKind,
-  SyntaxKind,
-} from "ts-morph";
+import path from "node:path";
+import type { PostInstallStep } from "@proofkit/registry";
+import { type ImportDeclarationStructure, type JsxChild, type JsxElement, StructureKind, SyntaxKind } from "ts-morph";
 
 import { getShadcnConfig } from "~/helpers/shadcn-cli.js";
 import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 
-export async function wrapProvider(step: Extract<PostInstallStep, { action: "wrap provider" }>) {  
-  const {
-    parentTag,
-    imports: importConfigs,
-    providerCloseTag,
-    providerOpenTag,
-  } = step.data;
+export async function wrapProvider(step: Extract<PostInstallStep, { action: "wrap provider" }>) {
+  const { parentTag, imports: importConfigs, providerCloseTag, providerOpenTag } = step.data;
 
   try {
     const projectDir = state.projectDir;
@@ -61,38 +52,33 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
     }
 
     // Handle providers.tsx file - look for the default export function
-    const exportDefault = providersFile.getFunction((dec) =>
-      dec.isDefaultExport()
-    );
+    const exportDefault = providersFile.getFunction((dec) => dec.isDefaultExport());
 
     if (!exportDefault) {
       logger.warn(`No default export function found in ${providersPath}`);
       return;
     }
 
-    const returnStatement = exportDefault
-      ?.getBody()
-      ?.getFirstDescendantByKind(SyntaxKind.ReturnStatement);
+    const returnStatement = exportDefault?.getBody()?.getFirstDescendantByKind(SyntaxKind.ReturnStatement);
 
     if (!returnStatement) {
-      logger.warn(`No return statement found in default export function`);
+      logger.warn("No return statement found in default export function");
       return;
     }
 
-    let targetElement;
+    let targetElement: JsxElement | undefined;
 
     // Try to find the parent tag if specified
     if (parentTag && parentTag.length > 0) {
       for (const tag of parentTag) {
         targetElement = returnStatement
           ?.getDescendantsOfKind(SyntaxKind.JsxOpeningElement)
-          .find(
-            (openingElement) =>
-              openingElement.getTagNameNode().getText() === tag
-          )
+          .find((openingElement) => openingElement.getTagNameNode().getText() === tag)
           ?.getParentIfKind(SyntaxKind.JsxElement);
 
-        if (targetElement) break;
+        if (targetElement) {
+          break;
+        }
       }
     }
 
@@ -100,7 +86,7 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
       // If we found a parent tag, wrap its children
       const childrenText = targetElement
         ?.getJsxChildren()
-        .map((child) => child.getText())
+        .map((child: JsxChild) => child.getText())
         .filter(Boolean)
         .join("\n");
 
@@ -115,7 +101,7 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
       if (returnExpression) {
         // Check if the expression is a ParenthesizedExpression
         const isParenthesized = returnExpression.getKind() === SyntaxKind.ParenthesizedExpression;
-        
+
         let innerExpressionText: string;
         if (isParenthesized) {
           // Get the inner expression from the parenthesized expression
@@ -124,7 +110,7 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
         } else {
           innerExpressionText = returnExpression.getText();
         }
-        
+
         const newReturnContent = `return (
     ${providerOpenTag}
       ${innerExpressionText}
@@ -133,7 +119,7 @@ export async function wrapProvider(step: Extract<PostInstallStep, { action: "wra
 
         returnStatement?.replaceWithText(newReturnContent);
       } else {
-        logger.warn(`No return expression found to wrap`);
+        logger.warn("No return expression found to wrap");
       }
     }
 

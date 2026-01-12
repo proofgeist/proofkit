@@ -1,11 +1,11 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 describe("CLI Basic Tests", () => {
   it("should show help without throwing", () => {
     expect(() => {
       execSync("node ../dist/index.js --help", {
-        cwd: __dirname,
+        cwd: import.meta.dirname,
         encoding: "utf-8",
       });
     }).not.toThrow();
@@ -14,7 +14,7 @@ describe("CLI Basic Tests", () => {
   it("should be executable", () => {
     expect(() => {
       execSync("node ../dist/index.js --version", {
-        cwd: __dirname,
+        cwd: import.meta.dirname,
         encoding: "utf-8",
       });
     }).not.toThrow();

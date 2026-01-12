@@ -1,10 +1,20 @@
 name: Publish Any Commit
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore:
+      - beads-sync
+  pull_request:
+    branches-ignore:
+      - beads-sync
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
 jobs:
-  build:
+  lint:
+    if: github.ref != 'refs/heads/beads-sync'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,8 +26,89 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  typecheck:
+    if: github.ref != 'refs/heads/beads-sync'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type Check
+        run: pnpm typecheck
+
+  test:
+    if: github.ref != 'refs/heads/beads-sync'
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      - name: Get OIDC token
+        run: |
+          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://github.com/$GITHUB_REPOSITORY_OWNER")
+          echo "OIDC_TOKEN=$(echo $TOKEN | jq -r '.value')" >> $GITHUB_ENV
+
+      - name: Authenticate with Doppler
+        run: |
+          doppler oidc login --scope=. --identity=${{ vars.DOPPLER_SERVICE_IDENTITY_ID }} --token=$OIDC_TOKEN
+          doppler configure set project proofkit
+          doppler configure set config test
+
+      - name: Run Unit Tests
+        run: pnpm test
+
+      - name: Run fmodata E2E Tests
+        run: pnpm --filter @proofkit/fmodata test:e2e
+
+  build:
+    if: github.ref != 'refs/heads/beads-sync'
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
+
       - run: pnpm dlx pkg-pr-new publish './packages/*' --packageManager=pnpm

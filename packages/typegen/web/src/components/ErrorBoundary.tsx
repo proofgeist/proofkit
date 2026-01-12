@@ -1,6 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Button } from "./ui/button";
 import { AlertTriangle } from "lucide-react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Button } from "./ui/button";
 
 interface Props {
   children: ReactNode;
@@ -53,53 +53,41 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 max-w-2xl w-full">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="w-6 h-6 text-destructive" />
-              <h2 className="text-2xl font-semibold text-destructive">
-                Something went wrong
-              </h2>
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+          <div className="w-full max-w-2xl rounded-lg border border-destructive/50 bg-destructive/10 p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+              <h2 className="font-semibold text-2xl text-destructive">Something went wrong</h2>
             </div>
-            <p className="text-destructive/90 mb-4">
-              An unexpected error occurred. Please try refreshing the page or
-              contact support if the problem persists.
+            <p className="mb-4 text-destructive/90">
+              An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.
             </p>
             {this.state.error && (
               <details className="mb-4">
-                <summary className="cursor-pointer text-sm text-muted-foreground mb-2 hover:text-foreground">
+                <summary className="mb-2 cursor-pointer text-muted-foreground text-sm hover:text-foreground">
                   Error details
                 </summary>
-                <div className="bg-muted p-4 rounded-md text-sm font-mono overflow-auto max-h-64">
-                  <div className="text-destructive font-semibold mb-2">
+                <div className="max-h-64 overflow-auto rounded-md bg-muted p-4 font-mono text-sm">
+                  <div className="mb-2 font-semibold text-destructive">
                     {this.state.error.name}: {this.state.error.message}
                   </div>
                   {this.state.error.stack && (
-                    <pre className="whitespace-pre-wrap text-xs">
-                      {this.state.error.stack}
-                    </pre>
+                    <pre className="whitespace-pre-wrap text-xs">{this.state.error.stack}</pre>
                   )}
                   {this.state.errorInfo && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <div className="text-muted-foreground font-semibold mb-2">
-                        Component Stack:
-                      </div>
-                      <pre className="whitespace-pre-wrap text-xs">
-                        {this.state.errorInfo.componentStack}
-                      </pre>
+                    <div className="mt-4 border-border border-t pt-4">
+                      <div className="mb-2 font-semibold text-muted-foreground">Component Stack:</div>
+                      <pre className="whitespace-pre-wrap text-xs">{this.state.errorInfo.componentStack}</pre>
                     </div>
                   )}
                 </div>
               </details>
             )}
             <div className="flex gap-2">
-              <Button onClick={this.handleReset} variant="default">
+              <Button onClick={this.handleReset} variant="primary">
                 Try again
               </Button>
-              <Button
-                onClick={() => window.location.reload()}
-                variant="outline"
-              >
+              <Button onClick={() => window.location.reload()} variant="outline">
                 Reload page
               </Button>
             </div>
@@ -111,7 +99,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-
-
-

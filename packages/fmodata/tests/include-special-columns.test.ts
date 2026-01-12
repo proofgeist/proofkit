@@ -6,11 +6,10 @@
  * included in responses when the header is set and no $select query is applied.
  */
 
-import { describe, it, expect, expectTypeOf, assert } from "vitest";
 import { fmTableOccurrence, textField } from "@proofkit/fmodata";
+import { assert, describe, expect, expectTypeOf, it } from "vitest";
 import { simpleMock } from "./utils/mock-fetch";
 import { createMockClient } from "./utils/test-setup";
-import { first } from "es-toolkit/compat";
 
 // Create a simple table occurrence for testing
 const contactsTO = fmTableOccurrence("contacts", {
@@ -33,11 +32,10 @@ describe("includeSpecialColumns feature", () => {
       .list()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             reqUrl = req.url;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -48,13 +46,22 @@ describe("includeSpecialColumns feature", () => {
         }),
       });
     expect(preferHeader).toBe("fmodata.include-specialcolumns");
-    const parsedUrl = new URL(reqUrl!);
+    if (!reqUrl) {
+      throw new Error("Expected reqUrl to be defined");
+    }
+    const parsedUrl = new URL(reqUrl);
     const selectParam = parsedUrl.searchParams.get("$select");
     // since we're automatically adding a $select parameter (defaultSelect: "schema"), we need to include the special columns in the select parameter
     expect(selectParam).toContain("ROWID");
     expect(selectParam).toContain("ROWMODID");
 
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord).toHaveProperty("ROWID");
@@ -79,18 +86,17 @@ describe("includeSpecialColumns feature", () => {
       { defaultSelect: "all" },
     );
 
-    let preferHeader: string | null = null;
+    let _preferHeader: string | null = null;
     let reqUrl: string | null = null;
     const { data } = await db
       .from(contactsAll)
       .list()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
-            preferHeader = headers.get("Prefer");
+            _preferHeader = headers.get("Prefer");
             reqUrl = req.url;
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -100,12 +106,21 @@ describe("includeSpecialColumns feature", () => {
           status: 200,
         }),
       });
-    const parsedUrl = new URL(reqUrl!);
+    if (!reqUrl) {
+      throw new Error("Expected reqUrl to be defined");
+    }
+    const parsedUrl = new URL(reqUrl);
     const selectParam = parsedUrl.searchParams.get("$select");
     // don't add $select parameter when defaultSelect is not 'schema'
     expect(selectParam).toBeNull();
 
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord).toHaveProperty("ROWID");
@@ -129,10 +144,9 @@ describe("includeSpecialColumns feature", () => {
       .list()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -142,7 +156,13 @@ describe("includeSpecialColumns feature", () => {
       });
     expect(preferHeader).toBeNull();
 
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord).not.toHaveProperty("ROWID");
@@ -166,10 +186,9 @@ describe("includeSpecialColumns feature", () => {
       .list()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -179,7 +198,13 @@ describe("includeSpecialColumns feature", () => {
       });
     expect(preferHeader).toBeNull();
 
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord).not.toHaveProperty("ROWID");
@@ -206,10 +231,9 @@ describe("includeSpecialColumns feature", () => {
       .list()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader1 = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -218,7 +242,13 @@ describe("includeSpecialColumns feature", () => {
         }),
       });
 
-    const firstRecord1 = data1![0]!;
+    if (!data1 || data1.length === 0) {
+      throw new Error("Expected data1 to be defined and non-empty");
+    }
+    const firstRecord1 = data1[0];
+    if (!firstRecord1) {
+      throw new Error("Expected firstRecord1 to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord1).not.toHaveProperty("ROWID");
@@ -240,10 +270,9 @@ describe("includeSpecialColumns feature", () => {
       .execute({
         includeSpecialColumns: true,
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader2 = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -254,7 +283,13 @@ describe("includeSpecialColumns feature", () => {
         }),
       });
 
-    const firstRecord2 = data2![0]!;
+    if (!data2 || data2.length === 0) {
+      throw new Error("Expected data2 to be defined and non-empty");
+    }
+    const firstRecord2 = data2[0];
+    if (!firstRecord2) {
+      throw new Error("Expected firstRecord2 to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord2).toHaveProperty("ROWID");
@@ -274,10 +309,9 @@ describe("includeSpecialColumns feature", () => {
       .execute({
         includeSpecialColumns: false,
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader3 = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({ body: { value: [] }, status: 200 }),
@@ -311,10 +345,9 @@ describe("includeSpecialColumns feature", () => {
       .list()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -324,16 +357,27 @@ describe("includeSpecialColumns feature", () => {
           status: 200,
         }),
       });
-    expect(preferHeader).toContain("fmodata.entity-ids");
-    expect(preferHeader).toContain("fmodata.include-specialcolumns");
     // Should be comma-separated
     expect(preferHeader).not.toBeNull();
-    const preferValues = preferHeader!.split(", ");
+    if (!preferHeader) {
+      throw new Error("Expected preferHeader to be defined");
+    }
+    // Type assertion needed because preferHeader is mutated in async callback
+    const headerValue = preferHeader as string;
+    expect(headerValue).toContain("fmodata.entity-ids");
+    expect(headerValue).toContain("fmodata.include-specialcolumns");
+    const preferValues = headerValue.split(", ");
     expect(preferValues.length).toBe(2);
     expect(preferValues).toContain("fmodata.entity-ids");
     expect(preferValues).toContain("fmodata.include-specialcolumns");
 
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord).toHaveProperty("ROWID");
@@ -357,10 +401,9 @@ describe("includeSpecialColumns feature", () => {
       .get("123")
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -402,11 +445,10 @@ describe("includeSpecialColumns feature", () => {
       .select({ name: contactsTO.name })
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             // Header should still be sent, but server won't return special columns
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -418,7 +460,13 @@ describe("includeSpecialColumns feature", () => {
       });
     expect(preferHeader).toBe("fmodata.include-specialcolumns");
 
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     // type checks
     expectTypeOf(firstRecord).not.toHaveProperty("ROWID");
@@ -439,11 +487,7 @@ describe("includeSpecialColumns feature", () => {
     });
 
     // Explicit select() should remain exact (no implicit system columns)
-    const queryString = db
-      .from(contactsTO)
-      .list()
-      .select({ name: contactsTO.name })
-      .getQueryString();
+    const queryString = db.from(contactsTO).list().select({ name: contactsTO.name }).getQueryString();
 
     expect(queryString).toContain("$select=");
     expect(queryString).toContain("name");
@@ -473,10 +517,9 @@ describe("includeSpecialColumns feature", () => {
       .single()
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({
@@ -516,10 +559,9 @@ describe("includeSpecialColumns feature", () => {
       .getSingleField(contactsTO.name)
       .execute({
         hooks: {
-          before: async (req) => {
+          before: (req) => {
             const headers = req.headers;
             preferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({ body: { value: "John" }, status: 200 }),
@@ -554,7 +596,13 @@ describe("includeSpecialColumns feature", () => {
           status: 200,
         }),
       });
-    const firstRecord = data![0]!;
+    if (!data || data.length === 0) {
+      throw new Error("Expected data to be defined and non-empty");
+    }
+    const firstRecord = data[0];
+    if (!firstRecord) {
+      throw new Error("Expected firstRecord to be defined");
+    }
 
     expectTypeOf(firstRecord).toHaveProperty("ROWID");
     expectTypeOf(firstRecord).toHaveProperty("ROWMODID");

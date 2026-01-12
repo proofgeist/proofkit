@@ -1,23 +1,23 @@
-import { FMTable, getTableName } from "../orm";
-import type { ExecutionContext, ExecuteMethodOptions } from "../types";
-import type { FFetchOptions } from "@fetchkit/ffetch";
+import { type FMTable, getTableName } from "../orm";
+import { type Column, isColumn } from "../orm/column";
 import { FilterExpression } from "../orm/operators";
-import { isColumn, type Column } from "../orm/column";
+import type { ExecuteMethodOptions, ExecutionContext } from "../types";
 import { formatSelectFields } from "./builders/select-utils";
 
-export type Webhook<TableName = string> = {
+export interface Webhook<TableName = string> {
   webhook: string;
   headers?: Record<string, string>;
   tableName: TableName;
   notifySchemaChanges?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
   select?: string | Column<any, any, any>[];
   filter?: string | FilterExpression;
-};
+}
 
 /**
  * Webhook information returned by the API
  */
-export type WebhookInfo = {
+export interface WebhookInfo {
   webHookID: number;
   tableName: string;
   url: string;
@@ -26,30 +26,33 @@ export type WebhookInfo = {
   select: string;
   filter: string;
   pendingOperations: unknown[];
-};
+}
 
 /**
  * Response from listing all webhooks
  */
-export type WebhookListResponse = {
+export interface WebhookListResponse {
   Status: string;
   WebHook: WebhookInfo[];
-};
+}
 
 /**
  * Response from adding a webhook
  */
-export type WebhookAddResponse = {
+export interface WebhookAddResponse {
   webHookResult: {
     webHookID: number;
   };
-};
+}
 
 export class WebhookManager {
-  constructor(
-    private readonly databaseName: string,
-    private readonly context: ExecutionContext,
-  ) {}
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+
+  constructor(databaseName: string, context: ExecutionContext) {
+    this.databaseName = databaseName;
+    this.context = context;
+  }
 
   /**
    * Adds a new webhook to the database.
@@ -81,16 +84,12 @@ export class WebhookManager {
    * });
    * ```
    */
-  async add(
-    webhook: Webhook<FMTable>,
-    options?: ExecuteMethodOptions,
-  ): Promise<WebhookAddResponse> {
+  async add(webhook: Webhook<FMTable>, options?: ExecuteMethodOptions): Promise<WebhookAddResponse> {
     // Extract the string table name from the FMTable instance
     const tableName = getTableName(webhook.tableName);
 
     // Get useEntityIds setting (check options first, then context, default to false)
-    const useEntityIds =
-      options?.useEntityIds ?? this.context._getUseEntityIds?.() ?? false;
+    const useEntityIds = options?.useEntityIds ?? this.context._getUseEntityIds?.() ?? false;
 
     // Transform filter if it's a FilterExpression
     let filter: string | undefined;
@@ -114,11 +113,7 @@ export class WebhookManager {
           return String(item);
         });
         // Use formatSelectFields to properly format the select string
-        select = formatSelectFields(
-          fieldNames,
-          webhook.tableName,
-          useEntityIds,
-        );
+        select = formatSelectFields(fieldNames, webhook.tableName, useEntityIds);
       } else {
         // Already a string, use as-is
         select = webhook.select;
@@ -151,14 +146,11 @@ export class WebhookManager {
       requestBody.filter = filter;
     }
 
-    const result = await this.context._makeRequest<WebhookAddResponse>(
-      `/${this.databaseName}/Webhook.Add`,
-      {
-        method: "POST",
-        body: JSON.stringify(requestBody),
-        ...options,
-      },
-    );
+    const result = await this.context._makeRequest<WebhookAddResponse>(`/${this.databaseName}/Webhook.Add`, {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+      ...options,
+    });
 
     if (result.error) {
       throw result.error;
@@ -176,17 +168,11 @@ export class WebhookManager {
    * await db.webhook.remove(1);
    * ```
    */
-  async remove(
-    webhookId: number,
-    options?: ExecuteMethodOptions,
-  ): Promise<void> {
-    const result = await this.context._makeRequest(
-      `/${this.databaseName}/Webhook.Delete(${webhookId})`,
-      {
-        method: "POST",
-        ...options,
-      },
-    );
+  async remove(webhookId: number, options?: ExecuteMethodOptions): Promise<void> {
+    const result = await this.context._makeRequest(`/${this.databaseName}/Webhook.Delete(${webhookId})`, {
+      method: "POST",
+      ...options,
+    });
 
     if (result.error) {
       throw result.error;
@@ -203,10 +189,7 @@ export class WebhookManager {
    * // webhook.webHookID, webhook.tableName, webhook.url, etc.
    * ```
    */
-  async get(
-    webhookId: number,
-    options?: ExecuteMethodOptions,
-  ): Promise<WebhookInfo> {
+  async get(webhookId: number, options?: ExecuteMethodOptions): Promise<WebhookInfo> {
     const result = await this.context._makeRequest<WebhookInfo>(
       `/${this.databaseName}/Webhook.Get(${webhookId})`,
       options,
@@ -267,14 +250,11 @@ export class WebhookManager {
       body.rowIDs = options.rowIDs;
     }
 
-    const result = await this.context._makeRequest<unknown>(
-      `/${this.databaseName}/Webhook.Invoke(${webhookId})`,
-      {
-        method: "POST",
-        body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
-        ...executeOptions,
-      },
-    );
+    const result = await this.context._makeRequest<unknown>(`/${this.databaseName}/Webhook.Invoke(${webhookId})`, {
+      method: "POST",
+      body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
+      ...executeOptions,
+    });
 
     if (result.error) {
       throw result.error;

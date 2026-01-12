@@ -1,36 +1,28 @@
-'use client';
+"use client";
 
-import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { RiCheckboxCircleFill } from '@remixicon/react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { z } from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { RiCheckboxCircleFill } from "@remixicon/react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Alert, AlertIcon, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 const FormSchema = z.object({
-  email: z.string().check(z.email('Please enter a valid email address.')),
+  email: z.string().check(z.email("Please enter a valid email address.")),
 });
 
 export default function InputDemo() {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: { email: '' },
+    defaultValues: { email: "" },
   });
 
   const onSubmit = () => {
     toast.custom((t) => (
-      <Alert variant="mono" icon="primary" onClose={() => toast.dismiss(t)}>
+      <Alert icon="primary" onClose={() => toast.dismiss(t)} variant="mono">
         <AlertIcon>
           <RiCheckboxCircleFill />
         </AlertIcon>
@@ -45,7 +37,7 @@ export default function InputDemo() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="w-80 space-y-6">
+      <form className="w-80 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="email"
@@ -61,7 +53,7 @@ export default function InputDemo() {
           )}
         />
         <div className="flex items-center justify-end gap-2.5">
-          <Button type="button" variant="outline" onClick={handleReset}>
+          <Button onClick={handleReset} type="button" variant="outline">
             Reset
           </Button>
           <Button type="submit">Submit</Button>

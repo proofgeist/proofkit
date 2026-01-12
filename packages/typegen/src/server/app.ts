@@ -1,24 +1,15 @@
-import { Hono } from "hono";
+import path from "node:path";
 import { zValidator } from "@hono/zod-validator";
-import fs from "fs-extra";
-import path from "path";
-import { parse } from "jsonc-parser";
-import {
-  typegenConfig,
-  typegenConfigSingle,
-  typegenConfigSingleForValidation,
-} from "../types";
-import z from "zod/v4";
 import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
-import {
-  createDataApiClient,
-  createClientFromConfig,
-  createOdataClientFromConfig,
-} from "./createDataApiClient";
-import { ContentfulStatusCode } from "hono/utils/http-status";
-import { generateTypedClients } from "../typegen";
-import { FMServerConnection } from "@proofkit/fmodata";
+import fs from "fs-extra";
+import { Hono } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { parse } from "jsonc-parser";
+import z from "zod/v4";
 import { downloadTableMetadata, parseMetadata } from "../fmodata";
+import { generateTypedClients } from "../typegen";
+import { typegenConfig, typegenConfigSingle, typegenConfigSingleForValidation } from "../types";
+import { createClientFromConfig, createDataApiClient, createOdataClientFromConfig } from "./createDataApiClient";
 
 export interface ApiContext {
   cwd: string;
@@ -30,7 +21,7 @@ export interface ApiContext {
  */
 function flattenLayouts(
   layouts: clientTypes.LayoutOrFolder[],
-  parentPath: string = "",
+  parentPath = "",
 ): Array<{ name: string; path: string; table?: string }> {
   const result: Array<{ name: string; path: string; table?: string }> = [];
 
@@ -71,7 +62,7 @@ export function createApiApp(context: ApiContext) {
     .basePath("/api")
 
     // GET /api/config
-    .get("/config", async (c) => {
+    .get("/config", (c) => {
       const { configPath, cwd } = context;
       const fullPath = path.resolve(cwd, configPath);
 
@@ -81,8 +72,9 @@ export function createApiApp(context: ApiContext) {
         return c.json({
           exists: false,
           path: configPath,
-          fullPath: fullPath,
+          fullPath,
           config: null,
+          postGenerateCommand: undefined,
         });
       }
 
@@ -94,8 +86,9 @@ export function createApiApp(context: ApiContext) {
         return c.json({
           exists: true,
           path: configPath,
-          fullPath: fullPath,
+          fullPath,
           config: parsed.config,
+          postGenerateCommand: parsed.postGenerateCommand,
         });
       } catch (err) {
         console.log("error from get config", err);
@@ -114,6 +107,7 @@ export function createApiApp(context: ApiContext) {
         "json",
         z.object({
           config: z.array(typegenConfigSingleRequestForValidation),
+          postGenerateCommand: z.string().optional(),
         }),
       ),
       async (c) => {
@@ -122,20 +116,19 @@ export function createApiApp(context: ApiContext) {
 
           // Transform validated data using runtime schema (applies transforms)
           const transformedData = {
+            postGenerateCommand: data.postGenerateCommand,
             config: data.config.map((config) => {
               // Add default type if missing (backwards compatibility)
               const configWithType =
                 "type" in config && config.type
                   ? config
-                  : Object.assign({}, config as Record<string, unknown>, {
-                      type: "fmdapi" as const,
-                    });
+                  : { ...(config as Record<string, unknown>), type: "fmdapi" as const };
               // Parse with runtime schema to apply transforms
               return typegenConfigSingle.parse(configWithType);
             }),
           };
 
-          // Validate with Zod (data is already { config: [...] })
+          // Validate with Zod (data is already { config: [...], postGenerateCommand?: string })
           const validation = typegenConfig.safeParse(transformedData);
 
           if (!validation.success) {
@@ -174,7 +167,7 @@ export function createApiApp(context: ApiContext) {
             $schema: "https://proofkit.dev/typegen-config-schema.json",
             ...rest,
           };
-          const jsonContent = JSON.stringify(configWithSchema, null, 2) + "\n";
+          const jsonContent = `${JSON.stringify(configWithSchema, null, 2)}\n`;
 
           await fs.ensureDir(path.dirname(fullPath));
           await fs.writeFile(fullPath, jsonContent, "utf8");
@@ -216,161 +209,166 @@ export function createApiApp(context: ApiContext) {
         }
       },
     )
-    // POST /api/run (stub)
+    // POST /api/run
     .post(
       "/run",
       zValidator(
         "json",
         z.object({
-          config: z.union([
-            z.array(typegenConfigSingleRequestForValidation),
-            typegenConfigSingleRequestForValidation,
-          ]),
+          config: z.union([z.array(typegenConfigSingleRequestForValidation), typegenConfigSingleRequestForValidation]),
+          postGenerateCommand: z.string().optional(),
         }),
       ),
       async (c, next) => {
         const rawData = c.req.valid("json");
         // Transform validated data using runtime schema (applies transforms)
-        const configArray = Array.isArray(rawData.config)
-          ? rawData.config
-          : [rawData.config];
+        const configArray = Array.isArray(rawData.config) ? rawData.config : [rawData.config];
         const transformedConfig = configArray.map((config) => {
           // Add default type if missing (backwards compatibility)
           const configWithType =
             "type" in config && config.type
               ? config
-              : Object.assign({}, config as Record<string, unknown>, {
-                  type: "fmdapi" as const,
-                });
+              : { ...(config as Record<string, unknown>), type: "fmdapi" as const };
           // Parse with runtime schema to apply transforms
           return typegenConfigSingle.parse(configWithType);
         });
         const config: z.infer<typeof typegenConfig>["config"] =
-          transformedConfig.length === 1
-            ? transformedConfig[0]!
-            : transformedConfig;
+          transformedConfig.length === 1 && transformedConfig[0] ? transformedConfig[0] : transformedConfig;
 
-        await generateTypedClients(config);
+        // Get postGenerateCommand from request or from config file
+        let postGenerateCommand = rawData.postGenerateCommand;
+        if (!postGenerateCommand) {
+          // Try to read from config file
+          try {
+            const configPath = path.resolve(context.cwd, context.configPath);
+            if (fs.existsSync(configPath)) {
+              const raw = fs.readFileSync(configPath, "utf8");
+              const rawJson = parse(raw);
+              const parsed = typegenConfig.parse(rawJson);
+              postGenerateCommand = parsed.postGenerateCommand;
+            }
+          } catch (_err) {
+            // Ignore errors reading config
+          }
+        }
+
+        // Generate typed clients (postGenerateCommand will be executed inside)
+        await generateTypedClients(config, {
+          cwd: context.cwd,
+          postGenerateCommand,
+        });
+
         await next();
       },
     )
     // GET /api/layouts
-    .get(
-      "/layouts",
-      zValidator("query", z.object({ configIndex: z.coerce.number() })),
-      async (c) => {
-        const input = c.req.valid("query");
-        const configIndex = input.configIndex;
+    .get("/layouts", zValidator("query", z.object({ configIndex: z.coerce.number() })), async (c) => {
+      const input = c.req.valid("query");
+      const configIndex = input.configIndex;
 
-        const result = createDataApiClient(context, configIndex);
+      const result = createDataApiClient(context, configIndex);
 
-        // Check if result is an error
-        if ("error" in result) {
-          const statusCode = result.statusCode;
-          if (statusCode === 400) {
-            return c.json(
-              {
-                error: result.error,
-                ...(result.details || {}),
-              },
-              400,
-            );
-          } else if (statusCode === 404) {
-            return c.json(
-              {
-                error: result.error,
-                ...(result.details || {}),
-              },
-              404,
-            );
-          } else {
-            return c.json(
-              {
-                error: result.error,
-                ...(result.details || {}),
-              },
-              500,
-            );
-          }
-        }
-
-        const { client } = result;
-
-        // Call layouts method - using type assertion as TypeScript has inference issues with DataApi return type
-        // The layouts method exists but TypeScript can't infer it from the complex return type
-        try {
-          const layoutsResp = (await (client as any).layouts()) as {
-            layouts: clientTypes.LayoutOrFolder[];
-          };
-          const { layouts } = layoutsResp;
-
-          // Flatten the nested layout/folder structure into a flat list with full paths
-          const flatLayouts = flattenLayouts(layouts);
-
-          return c.json({ layouts: flatLayouts });
-        } catch (err) {
-          // Handle connection errors from layouts() call
-          let errorMessage = "Failed to fetch layouts";
-          let statusCode = 500;
-          let suspectedField: "server" | "db" | "auth" | undefined;
-          let fmErrorCode: string | undefined;
-
-          if (err instanceof FileMakerError) {
-            errorMessage = err.message;
-            fmErrorCode = err.code;
-
-            // Infer suspected field from error code
-            if (err.code === "105") {
-              suspectedField = "db";
-              errorMessage = `Database not found: ${err.message}`;
-            } else if (err.code === "212" || err.code === "952") {
-              suspectedField = "auth";
-              errorMessage = `Authentication failed: ${err.message}`;
-            }
-            statusCode = 400;
-          } else if (err instanceof TypeError) {
-            errorMessage = `Connection error: ${err.message}`;
-            suspectedField = "server";
-            statusCode = 400;
-          } else if (err instanceof Error) {
-            errorMessage = err.message;
-            statusCode = 500;
-          }
-
+      // Check if result is an error
+      if ("error" in result) {
+        const statusCode = result.statusCode;
+        if (statusCode === 400) {
           return c.json(
             {
-              error: errorMessage,
-              message: errorMessage,
-              suspectedField,
-              fmErrorCode,
+              error: result.error,
+              ...(result.details || {}),
             },
-            statusCode as ContentfulStatusCode,
+            400,
           );
         }
-      },
-    )
+        if (statusCode === 404) {
+          return c.json(
+            {
+              error: result.error,
+              ...(result.details || {}),
+            },
+            404,
+          );
+        }
+        return c.json(
+          {
+            error: result.error,
+            ...(result.details || {}),
+          },
+          500,
+        );
+      }
+
+      const { client } = result;
+
+      // Call layouts method - using type assertion as TypeScript has inference issues with DataApi return type
+      // The layouts method exists but TypeScript can't infer it from the complex return type
+      try {
+        if (!("layouts" in client)) {
+          return c.json({ error: "Layouts method not found" }, 500);
+        }
+        const layoutsResp = (await client.layouts()) as {
+          layouts: clientTypes.LayoutOrFolder[];
+        };
+        const { layouts } = layoutsResp;
+
+        // Flatten the nested layout/folder structure into a flat list with full paths
+        const flatLayouts = flattenLayouts(layouts);
+
+        return c.json({ layouts: flatLayouts });
+      } catch (err) {
+        // Handle connection errors from layouts() call
+        let errorMessage = "Failed to fetch layouts";
+        let statusCode = 500;
+        let suspectedField: "server" | "db" | "auth" | undefined;
+        let fmErrorCode: string | undefined;
+
+        if (err instanceof FileMakerError) {
+          errorMessage = err.message;
+          fmErrorCode = err.code;
+
+          // Infer suspected field from error code
+          if (err.code === "105") {
+            suspectedField = "db";
+            errorMessage = `Database not found: ${err.message}`;
+          } else if (err.code === "212" || err.code === "952") {
+            suspectedField = "auth";
+            errorMessage = `Authentication failed: ${err.message}`;
+          }
+          statusCode = 400;
+        } else if (err instanceof TypeError) {
+          errorMessage = `Connection error: ${err.message}`;
+          suspectedField = "server";
+          statusCode = 400;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+          statusCode = 500;
+        }
+
+        return c.json(
+          {
+            error: errorMessage,
+            message: errorMessage,
+            suspectedField,
+            fmErrorCode,
+          },
+          statusCode as ContentfulStatusCode,
+        );
+      }
+    })
     // GET /api/env-names
-    .get(
-      "/env-names",
-      zValidator("query", z.object({ envName: z.string() })),
-      async (c) => {
-        const input = c.req.valid("query");
+    .get("/env-names", zValidator("query", z.object({ envName: z.string() })), (c) => {
+      const input = c.req.valid("query");
 
-        const value = process.env[input.envName];
+      const value = process.env[input.envName];
 
-        return c.json({ value });
-      },
-    )
-    .get(
-      "/file-exists",
-      zValidator("query", z.object({ path: z.string() })),
-      async (c) => {
-        const input = c.req.valid("query");
-        const path = input.path;
-        const exists = await fs.pathExists(path);
-        return c.json({ exists });
-      },
-    )
+      return c.json({ value });
+    })
+    .get("/file-exists", zValidator("query", z.object({ path: z.string() })), async (c) => {
+      const input = c.req.valid("query");
+      const path = input.path;
+      const exists = await fs.pathExists(path);
+      return c.json({ exists });
+    })
     .post(
       "/table-metadata",
       zValidator(
@@ -386,21 +384,17 @@ export function createApiApp(context: ApiContext) {
         const configWithType =
           "type" in rawInput.config && rawInput.config.type
             ? rawInput.config
-            : Object.assign({}, rawInput.config as Record<string, unknown>, {
-                type: "fmdapi" as const,
-              });
+            : { ...(rawInput.config as Record<string, unknown>), type: "fmdapi" as const };
         const config = typegenConfigSingle.parse(configWithType);
         const tableName = rawInput.tableName;
         if (config.type !== "fmodata") {
           return c.json({ error: "Invalid config type" }, 400);
         }
-        const tableConfig = config.tables.find(
-          (t) => t.tableName === tableName,
-        );
+        const tableConfig = config.tables.find((t) => t.tableName === tableName);
         try {
           // Download metadata for the specified table
           const tableMetadataXml = await downloadTableMetadata({
-            config: config,
+            config,
             tableName,
             reduceAnnotations: tableConfig?.reduceMetadata ?? false,
           });
@@ -410,15 +404,13 @@ export function createApiApp(context: ApiContext) {
           // Also convert nested Maps (like Properties) to objects
           const serializedMetadata = {
             entityTypes: Object.fromEntries(
-              Array.from(parsedMetadata.entityTypes.entries()).map(
-                ([key, value]) => [
-                  key,
-                  {
-                    ...value,
-                    Properties: Object.fromEntries(value.Properties),
-                  },
-                ],
-              ),
+              Array.from(parsedMetadata.entityTypes.entries()).map(([key, value]) => [
+                key,
+                {
+                  ...value,
+                  Properties: Object.fromEntries(value.Properties),
+                },
+              ]),
             ),
             entitySets: Object.fromEntries(parsedMetadata.entitySets),
             namespace: parsedMetadata.namespace,
@@ -427,62 +419,53 @@ export function createApiApp(context: ApiContext) {
         } catch (err) {
           return c.json(
             {
-              error:
-                err instanceof Error ? err.message : "Failed to fetch metadata",
+              error: err instanceof Error ? err.message : "Failed to fetch metadata",
             },
             500,
           );
         }
       },
     )
-    .get(
-      "/list-tables",
-      zValidator("query", z.object({ config: z.string() })),
-      async (c) => {
-        const input = c.req.valid("query");
-        // Parse the JSON-encoded config string
-        let config: z.infer<typeof typegenConfigSingle>;
-        try {
-          config = typegenConfigSingle.parse(JSON.parse(input.config));
-        } catch (err) {
-          return c.json({ error: "Invalid config format" }, 400);
-        }
-        if (config.type !== "fmodata") {
-          return c.json({ error: "Invalid config type" }, 400);
-        }
-        try {
-          const result = createOdataClientFromConfig(config);
-          if ("error" in result) {
-            return c.json(
-              {
-                error: result.error,
-                kind: result.kind,
-                suspectedField: result.suspectedField,
-              },
-              result.statusCode as ContentfulStatusCode,
-            );
-          }
-          const { db } = result;
-          const tableNames = await db.listTableNames();
-          return c.json({ tables: tableNames });
-        } catch (err) {
+    .get("/list-tables", zValidator("query", z.object({ config: z.string() })), async (c) => {
+      const input = c.req.valid("query");
+      // Parse the JSON-encoded config string
+      let config: z.infer<typeof typegenConfigSingle>;
+      try {
+        config = typegenConfigSingle.parse(JSON.parse(input.config));
+      } catch (_err) {
+        return c.json({ error: "Invalid config format" }, 400);
+      }
+      if (config.type !== "fmodata") {
+        return c.json({ error: "Invalid config type" }, 400);
+      }
+      try {
+        const result = createOdataClientFromConfig(config);
+        if ("error" in result) {
           return c.json(
             {
-              error:
-                err instanceof Error ? err.message : "Failed to list tables",
+              error: result.error,
+              kind: result.kind,
+              suspectedField: result.suspectedField,
             },
-            500,
+            result.statusCode as ContentfulStatusCode,
           );
         }
-      },
-    )
+        const { db } = result;
+        const tableNames = await db.listTableNames();
+        return c.json({ tables: tableNames });
+      } catch (err) {
+        return c.json(
+          {
+            error: err instanceof Error ? err.message : "Failed to list tables",
+          },
+          500,
+        );
+      }
+    })
     // POST /api/test-connection
     .post(
       "/test-connection",
-      zValidator(
-        "json",
-        z.object({ config: typegenConfigSingleRequestForValidation }),
-      ),
+      zValidator("json", z.object({ config: typegenConfigSingleRequestForValidation })),
       async (c) => {
         try {
           const rawData = c.req.valid("json");
@@ -490,9 +473,7 @@ export function createApiApp(context: ApiContext) {
           const configWithType =
             "type" in rawData.config && rawData.config.type
               ? rawData.config
-              : Object.assign({}, rawData.config as Record<string, unknown>, {
-                  type: "fmdapi" as const,
-                });
+              : { ...(rawData.config as Record<string, unknown>), type: "fmdapi" as const };
           const config = typegenConfigSingle.parse(configWithType);
 
           // Validate config type
@@ -595,8 +576,7 @@ export function createApiApp(context: ApiContext) {
                 await connection.listDatabaseNames();
               } catch (err) {
                 // Handle connection errors from listDatabaseNames()
-                let errorMessage =
-                  "Failed to connect to FileMaker OData API (listDatabaseNames failed)";
+                let errorMessage = "Failed to connect to FileMaker OData API (listDatabaseNames failed)";
                 let statusCode = 500;
                 let kind: "connection_error" | "unknown" = "unknown";
                 let suspectedField: "server" | "db" | "auth" | undefined;
@@ -665,8 +645,7 @@ export function createApiApp(context: ApiContext) {
               });
             } catch (err) {
               // Handle connection errors from listTableNames()
-              let errorMessage =
-                "Failed to connect to FileMaker OData API (listTableNames failed)";
+              let errorMessage = "Failed to connect to FileMaker OData API (listTableNames failed)";
               let statusCode = 500;
               let kind: "connection_error" | "unknown" = "unknown";
               let suspectedField: "server" | "db" | "auth" | undefined;

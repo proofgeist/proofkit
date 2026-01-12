@@ -1,12 +1,11 @@
 #!/usr/bin/env node --no-warnings
-import * as p from "@clack/prompts";
+import { intro } from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
-
 import { makeInitCommand, runInit } from "~/cli/init.js";
 import { logger } from "~/utils/logger.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
-import { makeAddCommand, runAdd } from "./cli/add/index.js";
+import { makeAddCommand } from "./cli/add/index.js";
 import { makeDeployCommand } from "./cli/deploy/index.js";
 import { runMenu } from "./cli/menu.js";
 import { makeRemoveCommand } from "./cli/remove/index.js";
@@ -38,28 +37,23 @@ const main = async () => {
       let settings: Settings | undefined;
       try {
         settings = getSettings();
-      } catch {}
+      } catch {
+        // void
+      }
 
       if (state.ci) {
         logger.warn("Running in CI mode");
       }
 
       if (settings) {
-        p.intro(`Found ${proofGradient("ProofKit")} project`);
+        intro(`Found ${proofGradient("ProofKit")} project`);
         await runMenu();
       } else {
-        p.intro(
-          `No ${proofGradient("ProofKit")} project found, running \`init\``
-        );
+        intro(`No ${proofGradient("ProofKit")} project found, running \`init\``);
         await runInit();
       }
     })
-    .addHelpText(
-      "afterAll",
-      `\n The ProofKit CLI was inspired by the ${chalk
-        .hex("#E8DCFF")
-        .bold("t3 stack")}\n`
-    );
+    .addHelpText("afterAll", `\n The ProofKit CLI was inspired by the ${chalk.hex("#E8DCFF").bold("t3 stack")}\n`);
 
   program.addCommand(makeInitCommand());
   program.addCommand(makeAddCommand());
@@ -79,9 +73,7 @@ main().catch((err) => {
     logger.error("Aborting installation...");
     logger.error(err);
   } else {
-    logger.error(
-      "An unknown error has occurred. Please open an issue on github with the below:"
-    );
+    logger.error("An unknown error has occurred. Please open an issue on github with the below:");
     console.log(err);
   }
   process.exit(1);

@@ -1,4 +1,4 @@
-import { type DataSource } from "~/utils/parseSettings.js";
+import type { DataSource } from "~/utils/parseSettings.js";
 
 export type TPostInstallFn = (args: {
   projectDir: string;

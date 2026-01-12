@@ -1,139 +1,104 @@
-import Link from "next/link";
-
-import ProofKitLogo from "@/../public/proofkit.png";
-import { ShimmerButton } from "@/components/magicui/shimmer-button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-
+import { Card, Cards } from "fumadocs-ui/components/card";
+import { Code, Database, Globe, RectangleEllipsis, Terminal, WebhookIcon } from "lucide-react";
 import Image from "next/image";
-import { Card } from "fumadocs-ui/components/card";
-import { Cards } from "fumadocs-ui/components/card";
-import {
-  Code,
-  Database,
-  Globe,
-  RectangleEllipsis,
-  Terminal,
-  WebhookIcon,
-} from "lucide-react";
-import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import ProofKitLogo from "@/../public/proofkit.png";
 import InitCommand from "@/components/InitCommand";
+import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   return (
-    <main className="flex text-center mb-42 mt-24">
-      <div className="flex flex-col items-center justify-center w-full mx-auto max-w-screen-lg">
-        <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden rounded-lg  bg-background">
+    <main className="mt-24 mb-42 flex text-center">
+      <div className="mx-auto flex w-full max-w-screen-lg flex-col items-center justify-center">
+        <div className="relative flex h-[500px] w-full flex-col items-center justify-center overflow-hidden rounded-lg bg-background">
           <InteractiveGridPattern
-            className={cn(
-              "absolute inset-0 [mask-image:radial-gradient(400px_circle_at_center,white,transparent)]",
-            )}
-            width={40}
+            className={cn("absolute inset-0 [mask-image:radial-gradient(400px_circle_at_center,white,transparent)]")}
             height={40}
             squares={[80, 80]}
             squaresClassName="hover:fill-brand/50"
             style={{ zIndex: 0 }}
+            width={40}
           />
-          <Image
-            src={ProofKitLogo}
-            alt="ProofKit Logo"
-            width={400}
-            className="z-10 pointer-events-none"
-          />
+          <Image alt="ProofKit Logo" className="pointer-events-none z-10" src={ProofKitLogo} width={400} />
         </div>
 
-        <div className="mt-8 space-y-8 text-center w-full ">
-          <h1 className="text-4xl font-bold">
-            A collection of tools for FileMaker-aware TypeScript applications
-          </h1>
-          <p className="text-xl text-gray-500 font-medium">
-            For new and experienced developers alike, the ProofKit toolset is
-            the best way to build web apps connected to FileMaker data, or rich,
-            interactive interfaces in a FileMaker webviewer.
+        <div className="mt-8 w-full space-y-8 text-center">
+          <h1 className="font-bold text-4xl">A collection of tools for FileMaker-aware TypeScript applications</h1>
+          <p className="font-medium text-gray-500 text-xl">
+            For new and experienced developers alike, the ProofKit toolset is the best way to build web apps connected
+            to FileMaker data, or rich, interactive interfaces in a FileMaker webviewer.
           </p>
 
           <Cards className="px-4 text-left">
-            <Card icon={<Terminal />} title="ProofKit CLI" href="/docs/cli">
-              A command line tool to start a new project, or easily apply
-              templates and common patterns with{" "}
-              <span className="underline">no JavaScript experience</span>{" "}
-              required.
+            <Card href="/docs/cli" icon={<Terminal />} title="ProofKit CLI">
+              A command line tool to start a new project, or easily apply templates and common patterns with{" "}
+              <span className="underline">no JavaScript experience</span> required.
             </Card>
-            <Card icon={<Code />} href="/docs/typegen" title={"Typegen"}>
-              Automatically generate runtime validators and TypeScript files
-              from your own FileMaker layouts or table occurrences.
+            <Card href="/docs/typegen" icon={<Code />} title={"Typegen"}>
+              Automatically generate runtime validators and TypeScript files from your own FileMaker layouts or table
+              occurrences.
             </Card>
-            <Card
-              icon={<WebhookIcon />}
-              title="Filemaker Data API"
-              href="/docs/fmdapi"
-            >
-              A type-safe API for your FileMaker layouts. Easily connect without
-              worrying about token management.
+            <Card href="/docs/fmdapi" icon={<WebhookIcon />} title="Filemaker Data API">
+              A type-safe API for your FileMaker layouts. Easily connect without worrying about token management.
             </Card>
             <Card
+              href="/docs/fmodata"
               icon={<Database />}
               title={
                 <span className="flex items-center gap-2">
                   FileMaker OData API{" "}
-                  <Badge variant="success" appearance="light">
+                  <Badge appearance="light" variant="success">
                     New
                   </Badge>
                 </span>
               }
-              href="/docs/fmodata"
             >
-              A strongly-typed OData API client with full TypeScript inference,
-              runtime validation, and a fluent query builder.
+              A strongly-typed OData API client with full TypeScript inference, runtime validation, and a fluent query
+              builder.
+            </Card>
+            <Card href="/docs/webviewer" icon={<Globe />} title="FileMaker Webviewer">
+              Use async functions in WebViewer code to execute and get the result of a FileMaker script.
             </Card>
             <Card
-              icon={<Globe />}
-              title="FileMaker Webviewer"
-              href="/docs/webviewer"
-            >
-              Use async functions in WebViewer code to execute and get the
-              result of a FileMaker script.
-            </Card>
-            <Card
+              href="/docs/better-auth"
               icon={<RectangleEllipsis />}
               title={
                 <span className="flex items-center gap-2">
                   Better-Auth Adapter{" "}
-                  <Badge variant="info" appearance="light">
+                  <Badge appearance="light" variant="info">
                     Beta
                   </Badge>
                 </span>
               }
-              href="/docs/better-auth"
             >
-              Own your authentication with FileMaker and the extensible
-              Better-Auth framework.
+              Own your authentication with FileMaker and the extensible Better-Auth framework.
             </Card>
           </Cards>
 
           <Separator className="my-12" />
 
-          <div className="max-w-5xl mx-auto px-4">
-            <div className="flex flex-col text-left ">
-              <h2 className="text-3xl font-bold mb-4">Quick Start</h2>
-              <p className="text-lg text-gray-600 mb-0">
-                Use the ProofKit CLI to launch a full-featured Next.js app in
-                minutes—no prior experience required.
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="flex flex-col text-left">
+              <h2 className="mb-4 font-bold text-3xl">Quick Start</h2>
+              <p className="mb-0 text-gray-600 text-lg">
+                Use the ProofKit CLI to launch a full-featured Next.js app in minutes—no prior experience required.
               </p>
             </div>
 
-            <div className="flex flex-col md:flex-row text-left">
+            <div className="flex flex-col text-left md:flex-row">
               <div className="min-w-96">
                 <InitCommand />
               </div>
 
-              <div className="flex flex-col text-left mt-6 md:mt-0 p-4 md:p-6 rounded-lg bg-background/50">
+              <div className="mt-6 flex flex-col rounded-lg bg-background/50 p-4 text-left md:mt-0 md:p-6">
                 <p>
                   Check out the{" "}
                   <Link
+                    className="text-primary underline transition hover:opacity-80"
                     href="/docs/cli/guides/getting-started"
-                    className="text-primary underline hover:opacity-80 transition"
                   >
                     full getting started guide
                   </Link>{" "}

@@ -1,5 +1,5 @@
-import { execSync } from "child_process";
-import https from "https";
+import { execSync } from "node:child_process";
+import https from "node:https";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import * as semver from "semver";
@@ -18,12 +18,7 @@ export const renderVersionWarning = (npmVersion: string) => {
     logger.warn("  Please report any bugs you encounter.");
   } else if (semver.valid(currentVersion) && semver.valid(npmVersion) && semver.lt(currentVersion, npmVersion)) {
     logger.warn(`  You are using an outdated version of ${cliName}.`);
-    logger.warn(
-      "  Your version:",
-      currentVersion + ".",
-      "Latest version in the npm registry:",
-      npmVersion
-    );
+    logger.warn("  Your version:", `${currentVersion}.`, "Latest version in the npm registry:", npmVersion);
     logger.warn("  Please run the CLI with @latest to get the latest updates.");
   }
   console.log("");
@@ -43,20 +38,19 @@ interface DistTagsBody {
 function checkForLatestVersion(): Promise<string> {
   return new Promise((resolve, reject) => {
     https
-      .get(
-        "https://registry.npmjs.org/-/package/@proofkit/cli/dist-tags",
-        (res) => {
-          if (res.statusCode === 200) {
-            let body = "";
-            res.on("data", (data) => (body += data));
-            res.on("end", () => {
-              resolve((JSON.parse(body) as DistTagsBody).latest);
-            });
-          } else {
-            reject();
-          }
+      .get("https://registry.npmjs.org/-/package/@proofkit/cli/dist-tags", (res) => {
+        if (res.statusCode === 200) {
+          let body = "";
+          res.on("data", (data) => {
+            body += data;
+          });
+          res.on("end", () => {
+            resolve((JSON.parse(body) as DistTagsBody).latest);
+          });
+        } else {
+          reject();
         }
-      )
+      })
       .on("error", () => {
         // logger.error("Unable to check for latest version.");
         reject();
@@ -77,20 +71,15 @@ export const getNpmVersion = async () =>
 export const checkAndRenderVersionWarning = async () => {
   const npmVersion = await getNpmVersion();
   const currentVersion = getVersion();
-  
+
   // Only show warning if current version is valid, npm version is valid, and current is actually older
-  if (
-    npmVersion && 
-    semver.valid(currentVersion) && 
-    semver.valid(npmVersion) && 
-    semver.lt(currentVersion, npmVersion)
-  ) {
+  if (npmVersion && semver.valid(currentVersion) && semver.valid(npmVersion) && semver.lt(currentVersion, npmVersion)) {
     const pkgManager = getUserPkgManager();
     p.log.warn(
       `${chalk.yellow(
-        `You are using an outdated version of ${cliName}.`
+        `You are using an outdated version of ${cliName}.`,
       )} Your version: ${currentVersion}. Latest version: ${npmVersion}.
-      Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the latest updates.`
+      Run ${chalk.magenta.bold(`${pkgManager} install ${npmName}@latest`)} to get the latest updates.`,
     );
   }
   return { npmVersion, currentVersion };

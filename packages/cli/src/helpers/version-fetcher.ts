@@ -1,16 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import https from "https";
+import https from "node:https";
 import { TRPCError } from "@trpc/server";
 import axios from "axios";
 import z from "zod/v4";
 
-export async function fetchServerVersions({
-  url,
-  ottoPort = 3030,
-}: {
-  url: string;
-  ottoPort?: number;
-}) {
+export async function fetchServerVersions({ url, ottoPort = 3030 }: { url: string; ottoPort?: number }) {
   const fmsInfo = await fetchFMSVersionInfo(url);
   const ottoInfo = await fetchOttoVersion({ url, ottoPort });
   return { fmsInfo, ottoInfo };
@@ -43,9 +36,7 @@ export async function fetchFMSVersionInfo(url: string) {
   const fmsUrl = new URL(url);
   fmsUrl.pathname = "/fmws/serverinfo";
 
-  const fmsInfoResult = await fetchWithoutSSL(fmsUrl.toString()).then((r) =>
-    fmsInfoSchema.safeParse(r.data)
-  );
+  const fmsInfoResult = await fetchWithoutSSL(fmsUrl.toString()).then((r) => fmsInfoSchema.safeParse(r.data));
   if (!fmsInfoResult.success) {
     console.error("fmsInfoResult.error", fmsInfoResult.error.issues);
     throw new TRPCError({
@@ -87,7 +78,9 @@ export async function fetchOttoVersion({
   ottoPort?: number | null;
 }): Promise<z.infer<typeof ottoInfoSchema> | null> {
   let ottoInfo = await fetchOtto4Version(url);
-  if (!ottoInfo) ottoInfo = await fetchOtto3Version(url, ottoPort);
+  if (!ottoInfo) {
+    ottoInfo = await fetchOtto3Version(url, ottoPort);
+  }
   return ottoInfo;
 }
 
@@ -99,7 +92,7 @@ async function fetchOtto4Version(url: string) {
       return ottoInfoResponseSchema.parse(r.data).response;
     });
     return otto4Info;
-  } catch (error) {
+  } catch (_error) {
     console.log("unable to fetch otto4 info, trying otto3");
     return null;
   }
@@ -126,13 +119,13 @@ async function fetchWithoutSSL(url: string) {
   const agent = new https.Agent({
     rejectUnauthorized: false,
   });
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+
   const result = await axios.get(url, {
     validateStatus: null,
     headers: { Connection: "close" },
     httpsAgent: agent,
-    timeout: 10000,
+    timeout: 10_000,
   });
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
   return result;
 }

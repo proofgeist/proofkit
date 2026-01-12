@@ -1,40 +1,30 @@
-import type {
-  ExecutionContext,
-  ExecutableBuilder,
-  Result,
-  ExecuteOptions,
-  ExecuteMethodOptions,
-} from "../types";
-import { getAcceptHeader } from "../types";
+import type { FFetchOptions } from "@fetchkit/ffetch";
 import type { FMTable, InferSchemaOutputFromFMTable } from "../orm/table";
-import {
-  getTableName,
-  getTableId as getTableIdHelper,
-  getBaseTableConfig,
-  isUsingEntityIds,
-} from "../orm/table";
-import { QueryBuilder } from "./query-builder";
-import { type FFetchOptions } from "@fetchkit/ffetch";
+import { getBaseTableConfig, getTableId as getTableIdHelper, getTableName, isUsingEntityIds } from "../orm/table";
 import { transformFieldNamesToIds } from "../transform";
-import { parseErrorResponse } from "./error-parser";
+import type { ExecutableBuilder, ExecuteMethodOptions, ExecuteOptions, ExecutionContext, Result } from "../types";
+import { getAcceptHeader } from "../types";
 import { validateAndTransformInput } from "../validation";
+import { parseErrorResponse } from "./error-parser";
+import { QueryBuilder } from "./query-builder";
 
 /**
  * Initial update builder returned from EntitySet.update(data)
  * Requires calling .byId() or .where() before .execute() is available
  */
 export class UpdateBuilder<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   Occ extends FMTable<any, any>,
   ReturnPreference extends "minimal" | "representation" = "minimal",
 > {
-  private databaseName: string;
-  private context: ExecutionContext;
-  private table: Occ;
-  private data: Partial<InferSchemaOutputFromFMTable<Occ>>;
-  private returnPreference: ReturnPreference;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly table: Occ;
+  private readonly data: Partial<InferSchemaOutputFromFMTable<Occ>>;
+  private readonly returnPreference: ReturnPreference;
 
-  private databaseUseEntityIds: boolean;
-  private databaseIncludeSpecialColumns: boolean;
+  private readonly databaseUseEntityIds: boolean;
+  private readonly databaseIncludeSpecialColumns: boolean;
 
   constructor(config: {
     occurrence: Occ;
@@ -51,17 +41,14 @@ export class UpdateBuilder<
     this.data = config.data;
     this.returnPreference = config.returnPreference;
     this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns =
-      config.databaseIncludeSpecialColumns ?? false;
+    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
   }
 
   /**
    * Update a single record by ID
    * Returns updated count by default, or full record if returnFullRecord was set to true
    */
-  byId(
-    id: string | number,
-  ): ExecutableUpdateBuilder<Occ, true, ReturnPreference> {
+  byId(id: string | number): ExecutableUpdateBuilder<Occ, true, ReturnPreference> {
     return new ExecutableUpdateBuilder<Occ, true, ReturnPreference>({
       occurrence: this.table,
       databaseName: this.databaseName,
@@ -79,9 +66,7 @@ export class UpdateBuilder<
    * Returns updated count by default, or full record if returnFullRecord was set to true
    * @param fn Callback that receives a QueryBuilder for building the filter
    */
-  where(
-    fn: (q: QueryBuilder<Occ>) => QueryBuilder<Occ>,
-  ): ExecutableUpdateBuilder<Occ, true, ReturnPreference> {
+  where(fn: (q: QueryBuilder<Occ>) => QueryBuilder<Occ>): ExecutableUpdateBuilder<Occ, true, ReturnPreference> {
     // Create a QueryBuilder for the user to configure
     const queryBuilder = new QueryBuilder<Occ>({
       occurrence: this.table,
@@ -111,25 +96,22 @@ export class UpdateBuilder<
  * Can return either updated count or full record based on returnFullRecord option
  */
 export class ExecutableUpdateBuilder<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   Occ extends FMTable<any, any>,
-  IsByFilter extends boolean,
+  _IsByFilter extends boolean,
   ReturnPreference extends "minimal" | "representation" = "minimal",
 > implements
-    ExecutableBuilder<
-      ReturnPreference extends "minimal"
-        ? { updatedCount: number }
-        : InferSchemaOutputFromFMTable<Occ>
-    >
+    ExecutableBuilder<ReturnPreference extends "minimal" ? { updatedCount: number } : InferSchemaOutputFromFMTable<Occ>>
 {
-  private databaseName: string;
-  private context: ExecutionContext;
-  private table: Occ;
-  private data: Partial<InferSchemaOutputFromFMTable<Occ>>;
-  private mode: "byId" | "byFilter";
-  private recordId?: string | number;
-  private queryBuilder?: QueryBuilder<Occ>;
-  private returnPreference: ReturnPreference;
-  private databaseUseEntityIds: boolean;
+  private readonly databaseName: string;
+  private readonly context: ExecutionContext;
+  private readonly table: Occ;
+  private readonly data: Partial<InferSchemaOutputFromFMTable<Occ>>;
+  private readonly mode: "byId" | "byFilter";
+  private readonly recordId?: string | number;
+  private readonly queryBuilder?: QueryBuilder<Occ>;
+  private readonly returnPreference: ReturnPreference;
+  private readonly databaseUseEntityIds: boolean;
 
   constructor(config: {
     occurrence: Occ;
@@ -189,11 +171,7 @@ export class ExecutableUpdateBuilder<
   async execute(
     options?: ExecuteMethodOptions<ExecuteOptions>,
   ): Promise<
-    Result<
-      ReturnPreference extends "minimal"
-        ? { updatedCount: number }
-        : InferSchemaOutputFromFMTable<Occ>
-    >
+    Result<ReturnPreference extends "minimal" ? { updatedCount: number } : InferSchemaOutputFromFMTable<Occ>>
   > {
     // Merge database-level useEntityIds with per-request options
     const mergedOptions = this.mergeExecuteOptions(options);
@@ -214,6 +192,7 @@ export class ExecutableUpdateBuilder<
         return {
           data: undefined,
           error: error instanceof Error ? error : new Error(String(error)),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         } as any;
       }
     }
@@ -223,9 +202,7 @@ export class ExecutableUpdateBuilder<
     const shouldUseIds = mergedOptions.useEntityIds ?? false;
 
     const transformedData =
-      this.table && shouldUseIds
-        ? transformFieldNamesToIds(validatedData, this.table)
-        : validatedData;
+      this.table && shouldUseIds ? transformFieldNamesToIds(validatedData, this.table) : validatedData;
 
     let url: string;
 
@@ -243,11 +220,14 @@ export class ExecutableUpdateBuilder<
       // The query string will have the tableId already transformed by QueryBuilder
       // Remove the leading "/" and table name from the query string as we'll build our own URL
       const tableName = getTableName(this.table);
-      const queryParams = queryString.startsWith(`/${tableId}`)
-        ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${tableName}`)
-          ? queryString.slice(`/${tableName}`.length)
-          : queryString;
+      let queryParams: string;
+      if (queryString.startsWith(`/${tableId}`)) {
+        queryParams = queryString.slice(`/${tableId}`.length);
+      } else if (queryString.startsWith(`/${tableName}`)) {
+        queryParams = queryString.slice(`/${tableName}`.length);
+      } else {
+        queryParams = queryString;
+      }
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
     }
@@ -258,7 +238,7 @@ export class ExecutableUpdateBuilder<
     };
 
     if (this.returnPreference === "representation") {
-      headers["Prefer"] = "return=representation";
+      headers.Prefer = "return=representation";
     }
 
     // Make PATCH request with JSON body
@@ -284,26 +264,27 @@ export class ExecutableUpdateBuilder<
           : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
-    } else {
-      // Return updated count (minimal)
-      let updatedCount = 0;
-
-      if (typeof response === "number") {
-        updatedCount = response;
-      } else if (response && typeof response === "object") {
-        // Check if the response has a count property (fallback)
-        updatedCount = (response as any).updatedCount || 0;
-      }
-
-      return {
-        data: { updatedCount } as ReturnPreference extends "minimal"
-          ? { updatedCount: number }
-          : InferSchemaOutputFromFMTable<Occ>,
-        error: undefined,
-      };
     }
+    // Return updated count (minimal)
+    let updatedCount = 0;
+
+    if (typeof response === "number") {
+      updatedCount = response;
+    } else if (response && typeof response === "object") {
+      // Check if the response has a count property (fallback)
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
+      updatedCount = (response as any).updatedCount || 0;
+    }
+
+    return {
+      data: { updatedCount } as ReturnPreference extends "minimal"
+        ? { updatedCount: number }
+        : InferSchemaOutputFromFMTable<Occ>,
+      error: undefined,
+    };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
     // For batch operations, use database-level setting (no per-request override available here)
     // Note: Input validation happens in execute() and processResponse() for batch operations
@@ -311,9 +292,7 @@ export class ExecutableUpdateBuilder<
 
     // Transform field names to FMFIDs if using entity IDs
     const transformedData =
-      this.table && this.databaseUseEntityIds
-        ? transformFieldNamesToIds(this.data, this.table)
-        : this.data;
+      this.table && this.databaseUseEntityIds ? transformFieldNamesToIds(this.data, this.table) : this.data;
 
     let url: string;
 
@@ -326,11 +305,14 @@ export class ExecutableUpdateBuilder<
 
       const queryString = this.queryBuilder.getQueryString();
       const tableName = getTableName(this.table);
-      const queryParams = queryString.startsWith(`/${tableId}`)
-        ? queryString.slice(`/${tableId}`.length)
-        : queryString.startsWith(`/${tableName}`)
-          ? queryString.slice(`/${tableName}`.length)
-          : queryString;
+      let queryParams: string;
+      if (queryString.startsWith(`/${tableId}`)) {
+        queryParams = queryString.slice(`/${tableId}`.length);
+      } else if (queryString.startsWith(`/${tableName}`)) {
+        queryParams = queryString.slice(`/${tableName}`.length);
+      } else {
+        queryParams = queryString;
+      }
 
       url = `/${this.databaseName}/${tableId}${queryParams}`;
     }
@@ -358,21 +340,14 @@ export class ExecutableUpdateBuilder<
 
   async processResponse(
     response: Response,
-    options?: ExecuteOptions,
+    _options?: ExecuteOptions,
   ): Promise<
-    Result<
-      ReturnPreference extends "minimal"
-        ? { updatedCount: number }
-        : InferSchemaOutputFromFMTable<Occ>
-    >
+    Result<ReturnPreference extends "minimal" ? { updatedCount: number } : InferSchemaOutputFromFMTable<Occ>>
   > {
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const tableName = getTableName(this.table);
-      const error = await parseErrorResponse(
-        response,
-        response.url || `/${this.databaseName}/${tableName}`,
-      );
+      const error = await parseErrorResponse(response, response.url || `/${this.databaseName}/${tableName}`);
       return { data: undefined, error };
     }
 
@@ -381,7 +356,7 @@ export class ExecutableUpdateBuilder<
     if (!text || text.trim() === "") {
       // For 204 No Content, check the fmodata.affected_rows header
       const affectedRows = response.headers.get("fmodata.affected_rows");
-      const updatedCount = affectedRows ? parseInt(affectedRows, 10) : 1;
+      const updatedCount = affectedRows ? Number.parseInt(affectedRows, 10) : 1;
       return {
         data: { updatedCount } as ReturnPreference extends "minimal"
           ? { updatedCount: number }
@@ -395,16 +370,17 @@ export class ExecutableUpdateBuilder<
     // Validate and transform input data using input validators (writeValidators)
     // This is needed for processResponse because it's called from batch operations
     // where the data hasn't been validated yet
-    let validatedData = this.data;
+    let _validatedData = this.data;
     if (this.table) {
       const baseTableConfig = getBaseTableConfig(this.table);
       const inputSchema = baseTableConfig.inputSchema;
       try {
-        validatedData = await validateAndTransformInput(this.data, inputSchema);
+        _validatedData = await validateAndTransformInput(this.data, inputSchema);
       } catch (error) {
         return {
           data: undefined,
           error: error instanceof Error ? error : new Error(String(error)),
+          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         } as any;
       }
     }
@@ -418,23 +394,23 @@ export class ExecutableUpdateBuilder<
           : InferSchemaOutputFromFMTable<Occ>,
         error: undefined,
       };
-    } else {
-      // Return updated count (minimal)
-      let updatedCount = 0;
-
-      if (typeof rawResponse === "number") {
-        updatedCount = rawResponse;
-      } else if (rawResponse && typeof rawResponse === "object") {
-        // Check if the response has a count property (fallback)
-        updatedCount = (rawResponse as any).updatedCount || 0;
-      }
-
-      return {
-        data: { updatedCount } as ReturnPreference extends "minimal"
-          ? { updatedCount: number }
-          : InferSchemaOutputFromFMTable<Occ>,
-        error: undefined,
-      };
     }
+    // Return updated count (minimal)
+    let updatedCount = 0;
+
+    if (typeof rawResponse === "number") {
+      updatedCount = rawResponse;
+    } else if (rawResponse && typeof rawResponse === "object") {
+      // Check if the response has a count property (fallback)
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
+      updatedCount = (rawResponse as any).updatedCount || 0;
+    }
+
+    return {
+      data: { updatedCount } as ReturnPreference extends "minimal"
+        ? { updatedCount: number }
+        : InferSchemaOutputFromFMTable<Occ>,
+      error: undefined,
+    };
   }
 }

@@ -5,30 +5,21 @@
  * Tests basic operations, entity IDs, and batch operations.
  */
 
-import { describe, it, afterEach, expect, assert, expectTypeOf } from "vitest";
 import {
-  FMServerConnection,
-  fmTableOccurrence,
-  Metadata,
-  textField,
   contains,
   eq,
+  FMServerConnection,
+  fmTableOccurrence,
   isNotNull,
+  type Metadata,
+  textField,
 } from "@proofkit/fmodata";
-import { jsonCodec } from "./utils/helpers";
+import { afterEach, assert, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod/v4";
+import { apiKey, contacts, contactsTOWithIds, database, password, serverUrl, username, users } from "./e2e/setup";
 import { mockResponses } from "./fixtures/responses";
+import { jsonCodec } from "./utils/helpers";
 import { createMockFetch, simpleMock } from "./utils/mock-fetch";
-import {
-  serverUrl,
-  username,
-  password,
-  apiKey,
-  database,
-  contacts,
-  users,
-  contactsTOWithIds,
-} from "./e2e/setup";
 
 if (!serverUrl) {
   throw new Error("FMODATA_SERVER_URL environment variable is required");
@@ -43,13 +34,19 @@ const createdRecordIds: string[] = [];
 const createdMarkers: string[] = [];
 
 afterEach(async () => {
-  if (!apiKey) return; // Skip cleanup if not running basic operations tests
+  if (!apiKey) {
+    return; // Skip cleanup if not running basic operations tests
+  }
+
+  if (!(serverUrl && apiKey && database)) {
+    throw new Error("FMODATA_SERVER_URL, FMODATA_API_KEY, and FMODATA_DATABASE environment variables are required");
+  }
 
   const connection = new FMServerConnection({
-    serverUrl: serverUrl!,
+    serverUrl,
     auth: { apiKey },
   });
-  const db = connection.database(database!);
+  const db = connection.database(database);
 
   const entitySet = db.from(contacts);
 
@@ -81,15 +78,20 @@ afterEach(async () => {
 
 describe("Basic E2E Operations", () => {
   if (!apiKey) {
-    it.skip("API key required for basic operations tests", () => {});
+    it("API key required for basic operations tests", () => {
+      // Test skipped - API key not available
+    });
     return;
   }
 
+  if (!(serverUrl && database)) {
+    throw new Error("serverUrl and database are required");
+  }
   const connection = new FMServerConnection({
-    serverUrl: serverUrl!,
+    serverUrl,
     auth: { apiKey },
   });
-  const db = connection.database(database!);
+  const db = connection.database(database);
 
   it("should connect to the server and list records", async () => {
     const entitySet = db.from(contacts);
@@ -115,13 +117,10 @@ describe("Basic E2E Operations", () => {
     expect(resultCode).toBe(0);
     expect(result).toBe("hello world");
 
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    const { resultCode: resultCode2, result: result2 } = await db.runScript(
-      "return-input",
-      {
-        scriptParam: randomNumber,
-      },
-    );
+    const randomNumber = Math.floor(10_000 + Math.random() * 90_000);
+    const { resultCode: resultCode2, result: result2 } = await db.runScript("return-input", {
+      scriptParam: randomNumber,
+    });
     expect(resultCode2).toBe(0);
     expect(result2).toBe(randomNumber.toString());
   });
@@ -129,11 +128,7 @@ describe("Basic E2E Operations", () => {
   it("should transform the script result if a schema is provided", async () => {
     const { resultCode, result } = await db.runScript("return-input", {
       scriptParam: { hello: "world" },
-      resultSchema: jsonCodec(
-        z
-          .object({ hello: z.string() })
-          .transform((data) => ({ ...data, world: "world" })),
-      ),
+      resultSchema: jsonCodec(z.object({ hello: z.string() }).transform((data) => ({ ...data, world: "world" }))),
     });
     expect(resultCode).toBe(0);
     expect(result).toStrictEqual({ hello: "world", world: "world" });
@@ -197,10 +192,7 @@ describe("Basic E2E Operations", () => {
 
     // Update the record
     const updatedName = `${uniqueName} Updated`;
-    const updateResult = await entitySet
-      .update({ name: updatedName })
-      .byId(primaryKey)
-      .execute();
+    const updateResult = await entitySet.update({ name: updatedName }).byId(primaryKey).execute();
 
     assert(updateResult.data, "Expected update data to be defined");
     expect(updateResult.error).toBeUndefined();
@@ -289,9 +281,7 @@ describe("Basic E2E Operations", () => {
     // Verify count decreased
     const afterCount = await entitySet.list().count().execute();
     assert(afterCount.data, "Expected count data to be defined");
-    expect(afterCount.data).toBeLessThanOrEqual(
-      beforeCount.data - deleteResult.data.deletedCount,
-    );
+    expect(afterCount.data).toBeLessThanOrEqual(beforeCount.data - deleteResult.data.deletedCount);
   });
 
   it("should properly type and validate expanded properties", async () => {
@@ -306,7 +296,9 @@ describe("Basic E2E Operations", () => {
     // Verify we got a response
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
-    if (!result.data) throw new Error("Expected result.data to be defined");
+    if (!result.data) {
+      throw new Error("Expected result.data to be defined");
+    }
     expect(Array.isArray(result.data)).toBe(true);
 
     const firstRecord = result.data[0];
@@ -327,9 +319,7 @@ describe("Basic E2E Operations", () => {
         return b.select({ notReal: notRealUsers.not_real_field });
       })
       .execute({
-        fetchHandler: createMockFetch(
-          mockResponses["list with invalid expand"],
-        ),
+        fetchHandler: createMockFetch(mockResponses["list with invalid expand"]),
       });
 
     expect(result.error).toBeDefined();
@@ -385,23 +375,28 @@ describe("Basic E2E Operations", () => {
 });
 
 describe("Entity IDs", () => {
-  if (!username || !password) {
-    it.skip("Username and password required for entity IDs tests", () => {});
+  if (!(username && password)) {
+    it("Username and password required for entity IDs tests", () => {
+      // Test skipped - username/password not available
+    });
     return;
   }
 
+  if (!(serverUrl && database)) {
+    throw new Error("serverUrl and database are required");
+  }
   const connection = new FMServerConnection({
-    serverUrl: serverUrl!,
+    serverUrl,
     auth: { username, password },
   });
 
-  const db = connection.database(database!, { useEntityIds: true });
+  const db = connection.database(database, { useEntityIds: true });
 
-  const dbWithoutIds = connection.database(database!, {
+  const dbWithoutIds = connection.database(database, {
     useEntityIds: false,
   });
 
-  it("should not use entity IDs in the queryString if useEntityIds is false", async () => {
+  it("should not use entity IDs in the queryString if useEntityIds is false", () => {
     const query = dbWithoutIds
       .from(contactsTOWithIds)
       .list()
@@ -418,7 +413,7 @@ describe("Entity IDs", () => {
     expect(queryString).not.toContain("FMTID");
   });
 
-  it("should replace field names in select statements with entity IDs", async () => {
+  it("should replace field names in select statements with entity IDs", () => {
     const query = db
       .from(contactsTOWithIds)
       .list()
@@ -439,15 +434,15 @@ describe("Entity IDs", () => {
     let rawResponseData: any;
 
     let capturedPreferHeader: string | null = null;
-    db.from(contactsTOWithIds)
+    await db
+      .from(contactsTOWithIds)
       .list()
       .top(1)
       .execute({
         hooks: {
-          before: async (req: any) => {
+          before: (req: any) => {
             const headers = req.headers;
             capturedPreferHeader = headers.get("Prefer");
-            return;
           },
         },
         fetchHandler: simpleMock({ status: 200, body: { value: [{}] } }),
@@ -460,7 +455,7 @@ describe("Entity IDs", () => {
       .top(1)
       .execute({
         hooks: {
-          after: async (req: any, res: any) => {
+          after: async (_req: any, res: any) => {
             // Clone the response so we can read it without consuming the original
             const clonedRes = res.clone();
             rawResponseData = await clonedRes.json();
@@ -470,7 +465,9 @@ describe("Entity IDs", () => {
 
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
-    if (!result.data) throw new Error("Expected result.data to be defined");
+    if (!result.data) {
+      throw new Error("Expected result.data to be defined");
+    }
     expect(Array.isArray(result.data)).toBe(true);
 
     const firstRecord = result.data[0];
@@ -510,11 +507,7 @@ describe("Entity IDs", () => {
   it("should not transform if the feature is disabled (even if ids are provided)", async () => {
     let rawResponseData: any;
 
-    const query = dbWithoutIds
-      .from(contacts)
-      .list()
-      .select({ hobby: contacts.hobby })
-      .top(1);
+    const query = dbWithoutIds.from(contacts).list().select({ hobby: contacts.hobby }).top(1);
 
     // should not use ids when useEntityIds is false
     expect(query.getQueryString()).toContain("contacts");
@@ -523,7 +516,7 @@ describe("Entity IDs", () => {
 
     const result = await query.execute({
       hooks: {
-        after: async (req: any, res: any) => {
+        after: async (_req: any, res: any) => {
           // Clone the response so we can read it without consuming the original
           const clonedRes = res.clone();
           rawResponseData = await clonedRes.json();
@@ -537,7 +530,9 @@ describe("Entity IDs", () => {
 
     expect(result.error).toBeUndefined();
     expect(result.data).toBeDefined();
-    if (!result.data) throw new Error("Expected result.data to be defined");
+    if (!result.data) {
+      throw new Error("Expected result.data to be defined");
+    }
     expect(Array.isArray(result.data)).toBe(true);
 
     const firstRecord = result.data[0];
@@ -578,10 +573,7 @@ describe("Entity IDs", () => {
     }
 
     // now expand the users property
-    const expandedResult = await db
-      .from(contactsTOWithIds)
-      .get(firstRecord.PrimaryKey)
-      .expand(users);
+    const expandedResult = await db.from(contactsTOWithIds).get(firstRecord.PrimaryKey).expand(users);
 
     // should use the table id in the query string
     expect(expandedResult.getQueryString()).not.toContain("/contacts(");
@@ -589,17 +581,22 @@ describe("Entity IDs", () => {
 });
 
 describe("Batch Operations", () => {
-  if (!username || !password) {
-    it.skip("Username and password required for batch operations tests", () => {});
+  if (!(username && password)) {
+    it("Username and password required for batch operations tests", () => {
+      // Test skipped - username/password not available
+    });
     return;
   }
 
+  if (!(serverUrl && database)) {
+    throw new Error("serverUrl and database are required");
+  }
   const connection = new FMServerConnection({
-    serverUrl: serverUrl!,
+    serverUrl,
     auth: { username, password },
   });
 
-  const db = connection.database(database!);
+  const db = connection.database(database);
 
   const batchCreatedRecordIds: string[] = [];
 
@@ -636,7 +633,7 @@ describe("Batch Operations", () => {
     expect(r2.error).toBeUndefined();
 
     const contactsResult = r1.data;
-    const usersResult = r2.data;
+    const _usersResult = r2.data;
 
     if (!contactsResult) {
       throw new Error("Expected contactsResult to be defined");
@@ -644,7 +641,10 @@ describe("Batch Operations", () => {
 
     // Contacts should be an array
     expect(Array.isArray(contactsResult)).toBe(true);
-    const firstContact = contactsResult[0]!;
+    const firstContact = contactsResult[0];
+    if (!firstContact) {
+      throw new Error("Expected firstContact to be defined");
+    }
     expect(firstContact).toBeDefined();
     expect(firstContact).not.toHaveProperty("@odata.id");
     expect(firstContact).not.toHaveProperty("@odata.editLink");
@@ -771,9 +771,7 @@ describe("Batch Operations", () => {
     const deleteOp = db.from(contacts).delete().byId(testRecordId);
 
     // Execute the complex batch
-    const result = await db
-      .batch([listQuery, insertOp, updateOp, deleteOp])
-      .execute();
+    const result = await db.batch([listQuery, insertOp, updateOp, deleteOp]).execute();
 
     // Verify we got results
     expect(result.results).toBeDefined();
@@ -832,7 +830,7 @@ describe("Batch Operations", () => {
     expect(r2.error).toBeUndefined();
     expect(r3.error).toBeUndefined();
 
-    if (!r1.data || !r2.data || !r3.data) {
+    if (!(r1.data && r2.data && r3.data)) {
       throw new Error("Expected all results to have data");
     }
 
@@ -850,13 +848,19 @@ describe("Batch Operations", () => {
     expect(Array.isArray(usersData)).toBe(true);
     expect(typeof insertedContact).toBe("object");
 
-    const firstContact = contactsData[0]!;
+    const firstContact = contactsData[0];
+    if (!firstContact) {
+      throw new Error("Expected firstContact to be defined");
+    }
     expect(firstContact).toBeDefined();
 
     const hobby: string | null = firstContact.hobby;
     expect(typeof hobby).toBe("string");
 
-    const firstUser = usersData[0]!;
+    const firstUser = usersData[0];
+    if (!firstUser) {
+      throw new Error("Expected firstUser to be defined");
+    }
     expect(firstUser).toBeDefined();
 
     expectTypeOf(firstUser.name).not.toBeAny();
@@ -869,14 +873,8 @@ describe("Batch Operations", () => {
 
   it("should execute batch with 3 GET operations each with a filter", async () => {
     // Create three GET queries with different filters
-    const query1 = db
-      .from(contacts)
-      .list()
-      .where(eq(contacts.hobby, "static-value"));
-    const query2 = db
-      .from(contacts)
-      .list()
-      .where(eq(contacts.id_user, "never"));
+    const query1 = db.from(contacts).list().where(eq(contacts.hobby, "static-value"));
+    const query2 = db.from(contacts).list().where(eq(contacts.id_user, "never"));
     const query3 = db.from(users).list().where(isNotNull(users.name));
 
     let flag = 1;
@@ -908,7 +906,10 @@ describe("Batch Operations", () => {
     // Verify first result (contacts filtered by hobby)
     expect(Array.isArray(result1)).toBe(true);
     if (result1 && result1.length > 0) {
-      const firstContact = result1[0]!;
+      const firstContact = result1[0];
+      if (!firstContact) {
+        throw new Error("Expected firstContact to be defined");
+      }
       expect(firstContact).toBeDefined();
       expect(firstContact.hobby).toBe("static-value");
     }

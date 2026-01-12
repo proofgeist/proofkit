@@ -1,5 +1,6 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+  "root": false,
+  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,13 +8,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!node_modules",
-      "!.next",
-      "!dist",
-      "!build"
-    ]
+    "includes": ["**", "!node_modules", "!.next", "!dist", "!build"]
   },
   "formatter": {
     "enabled": true,
@@ -23,7 +18,19 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "style": {
+        "noParameterAssign": "error",
+        "useAsConstAssertion": "error",
+        "useDefaultParameterLast": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error"
+      }
     },
     "domains": {
       "next": "recommended",
@@ -37,7 +44,5 @@
       }
     }
   },
-  "extends": [
-    "ultracite"
-  ]
+  "extends": ["ultracite"]
 }

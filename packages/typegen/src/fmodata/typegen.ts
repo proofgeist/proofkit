@@ -1,24 +1,26 @@
-import { FmodataConfig } from "../types";
+import path from "node:path";
+import type { z } from "zod/v4";
+import type { FmodataConfig, typegenConfig } from "../types";
 import { downloadTableMetadata } from "./downloadMetadata";
-import { parseMetadata, type ParsedMetadata } from "./parseMetadata";
 import { generateODataTypes } from "./generateODataTypes";
+import { type ParsedMetadata, parseMetadata } from "./parseMetadata";
 
-export async function generateODataTablesSingle(config: FmodataConfig) {
-  const { tables, reduceMetadata = false } = config;
+type GlobalOptions = Omit<z.infer<typeof typegenConfig>, "config">;
+
+export async function generateODataTablesSingle(
+  config: FmodataConfig,
+  options?: GlobalOptions & { cwd?: string },
+): Promise<string | undefined> {
+  const { tables, reduceMetadata = false, path: outputPath = "schema" } = config;
+  const { cwd = process.cwd() } = options ?? {};
 
   if (!tables || tables.length === 0) {
     throw new Error("No tables specified in config");
   }
 
   // Download and parse metadata for each table
-  const allEntityTypes = new Map<
-    string,
-    ParsedMetadata["entityTypes"] extends Map<infer K, infer V> ? V : never
-  >();
-  const allEntitySets = new Map<
-    string,
-    ParsedMetadata["entitySets"] extends Map<infer K, infer V> ? V : never
-  >();
+  const allEntityTypes = new Map<string, ParsedMetadata["entityTypes"] extends Map<string, infer V> ? V : never>();
+  const allEntitySets = new Map<string, ParsedMetadata["entitySets"] extends Map<string, infer V> ? V : never>();
   let namespace = "";
 
   for (const tableConfig of tables) {
@@ -35,18 +37,12 @@ export async function generateODataTablesSingle(config: FmodataConfig) {
     const parsedMetadata = await parseMetadata(tableMetadataXml);
 
     // Merge entity types
-    for (const [
-      entityTypeName,
-      entityType,
-    ] of parsedMetadata.entityTypes.entries()) {
+    for (const [entityTypeName, entityType] of parsedMetadata.entityTypes.entries()) {
       allEntityTypes.set(entityTypeName, entityType);
     }
 
     // Merge entity sets
-    for (const [
-      entitySetName,
-      entitySet,
-    ] of parsedMetadata.entitySets.entries()) {
+    for (const [entitySetName, entitySet] of parsedMetadata.entitySets.entries()) {
       allEntitySets.set(entitySetName, entitySet);
     }
 
@@ -64,5 +60,8 @@ export async function generateODataTablesSingle(config: FmodataConfig) {
   };
 
   // Generate types from merged metadata
-  await generateODataTypes(mergedMetadata, config);
+  await generateODataTypes(mergedMetadata, { ...config, cwd });
+
+  // Return the resolved output path
+  return path.resolve(cwd, outputPath);
 }

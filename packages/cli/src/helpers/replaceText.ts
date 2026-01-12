@@ -1,14 +1,10 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
-export function replaceTextInFiles(
-  directoryPath: string,
-  search: string,
-  replacement: string
-): void {
+export function replaceTextInFiles(directoryPath: string, search: string, replacement: string): void {
   const files = fs.readdirSync(directoryPath);
 
-  files.forEach((file) => {
+  for (const file of files) {
     const filePath = path.join(directoryPath, file);
     if (fs.statSync(filePath).isDirectory()) {
       replaceTextInFiles(filePath, search, replacement);
@@ -17,5 +13,5 @@ export function replaceTextInFiles(
       const updatedData = data.replace(new RegExp(search, "g"), replacement);
       fs.writeFileSync(filePath, updatedData, "utf8");
     }
-  });
+  }
 }

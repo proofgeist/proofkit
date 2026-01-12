@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useForm, useFieldArray } from "react-hook-form";
-import { client } from "./lib/api";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Loader2, PlayIcon, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ConfigEditor } from "./components/ConfigEditor";
+import { ConfigSummary } from "./components/ConfigSummary";
+import { ConnectionWarning } from "./components/ConnectionWarning";
+import { EmptyState } from "./components/EmptyState";
+import { InfoTooltip } from "./components/InfoTooltip";
+import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import {
   DropdownMenu,
@@ -15,21 +16,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
-import { Loader2, PlayIcon, Plus } from "lucide-react";
-import { ConfigSummary } from "./components/ConfigSummary";
-import { type SingleConfig } from "./lib/config-utils";
-import { Form } from "./components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./components/ui/form";
+import { Input } from "./components/ui/input";
 import { useConfig } from "./hooks/useConfig";
 import { useHealthCheck } from "./hooks/useHealthCheck";
-import { Badge } from "./components/ui/badge";
-import { ConfigEditor } from "./components/ConfigEditor";
-import { EmptyState } from "./components/EmptyState";
-import { ConnectionWarning } from "./components/ConnectionWarning";
+import { client } from "./lib/api";
+import type { SingleConfig } from "./lib/config-utils";
+
+// Post-generate command presets
+const COMMAND_PRESETS = [
+  { label: "Biome", command: "npx @biomejs/biome format --write ." },
+  { label: "Prettier", command: "npx prettier --write ." },
+  { label: "ESLint", command: "npx eslint --fix ." },
+] as const;
 
 // Normalize config to always be an array
-function normalizeConfig(
-  config: SingleConfig | SingleConfig[] | null,
-): SingleConfig[] {
+function normalizeConfig(config: SingleConfig | SingleConfig[] | null): SingleConfig[] {
   if (Array.isArray(config)) {
     return config;
   }
@@ -73,21 +75,16 @@ function App() {
   });
 
   // Load and save config using custom hook
-  const {
-    configDataResponse,
-    isError,
-    error,
-    refetch,
-    saveMutation,
-    isLoading,
-    isRetrying,
-  } = useConfig();
+  const { configDataResponse, isError, error, refetch, saveMutation, isLoading, isRetrying } = useConfig();
 
   // Track active accordion item to preserve state
   const [activeAccordionItem, setActiveAccordionItem] = useState<number>(0);
 
-  // Use React Hook Form to manage the configs array
-  type FormData = { config: SingleConfig[] };
+  // Use React Hook Form to manage the configs array and postGenerateCommand
+  interface FormData {
+    config: SingleConfig[];
+    postGenerateCommand?: string;
+  }
   const form = useForm<FormData>({});
 
   useEffect(() => {
@@ -95,7 +92,10 @@ function App() {
     if (configDataResponse) {
       const configData = configDataResponse?.config;
       const serverConfigs = normalizeConfig(configData);
-      form.reset({ config: serverConfigs });
+      form.reset({
+        config: serverConfigs,
+        postGenerateCommand: configDataResponse.exists ? configDataResponse.postGenerateCommand : undefined,
+      });
     }
   }, [configDataResponse]);
 
@@ -119,13 +119,13 @@ function App() {
 
   // Unified handler for creating configs (works for both file creation and adding)
   const handleAddConfig = async (type: "fmdapi" | "fmodata") => {
-    const newConfig =
-      type === "fmdapi" ? createFmdapiConfig() : createFmodataConfig();
+    const newConfig = type === "fmdapi" ? createFmdapiConfig() : createFmodataConfig();
 
     // If file doesn't exist, create it with the new config
     if (isFileMissing) {
       try {
-        await saveMutation.mutateAsync([newConfig]);
+        const postGenerateCommand = form.getValues("postGenerateCommand");
+        await saveMutation.mutateAsync({ configsToSave: [newConfig], postGenerateCommand });
         await refetch();
         setTimeout(() => {
           setActiveAccordionItem(0);
@@ -146,20 +146,22 @@ function App() {
   // Run typegen mutation
   const runTypegenMutation = useMutation({
     mutationFn: async () => {
+      const postGenerateCommand = form.getValues("postGenerateCommand");
       await client.api.run.$post({
-        json: { config: configs },
+        json: { config: configs, postGenerateCommand },
       });
     },
   });
 
   const handleSaveAll = form.handleSubmit(async (data) => {
     try {
-      await saveMutation.mutateAsync(data.config);
+      await saveMutation.mutateAsync({ configsToSave: data.config, postGenerateCommand: data.postGenerateCommand });
       // Reset the form with the current form state to clear dirty state
       // Use getValues() to get the current state, preserving any changes made during the save request
       // The accordion state is preserved because it's controlled and the component doesn't unmount
       const currentConfigs = form.getValues("config");
-      form.reset({ config: currentConfigs });
+      const currentPostGenerateCommand = form.getValues("postGenerateCommand");
+      form.reset({ config: currentConfigs, postGenerateCommand: currentPostGenerateCommand });
     } catch (err) {
       // Error is handled by the mutation
       console.error("Failed to save configs:", err);
@@ -182,16 +184,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8 relative">
+      <div className="relative mx-auto max-w-7xl px-4 py-8">
         {/* Connection Warning Overlay - Shows when server is unreachable */}
         {/* Only show if we've lost connection (not during initial load or retries) */}
-        {!isHealthy && !isLoading && !isRetrying && (
-          <ConnectionWarning onRefresh={() => refetch()} />
-        )}
+        {!(isHealthy || isLoading || isRetrying) && <ConnectionWarning onRefresh={() => refetch()} />}
 
         {/* Loading Overlay - Preserves form state underneath */}
         {isLoading && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <div className="text-muted-foreground">
               {isRetrying ? "Waiting for API server..." : "Loading config..."}
             </div>
@@ -200,19 +200,16 @@ function App() {
 
         {/* Error Overlay - Preserves form state underneath */}
         {isError && !isRetrying && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 max-w-md">
-              <h2 className="text-2xl font-semibold text-destructive mb-2">
-                Error
-              </h2>
-              <p className="text-destructive/90 mb-4">
-                {error instanceof Error
-                  ? error.message
-                  : "Failed to load config"}
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-6">
+              <h2 className="mb-2 font-semibold text-2xl text-destructive">Error</h2>
+              <p className="mb-4 text-destructive/90">
+                {error instanceof Error ? error.message : "Failed to load config"}
               </p>
               <button
+                className="rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
                 onClick={() => refetch()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                type="button"
               >
                 Retry
               </button>
@@ -222,53 +219,49 @@ function App() {
 
         {/* Main Content - Always rendered to preserve state */}
         <header>
-          <div className="mb-4 flex gap-2  justify-between">
+          <div className="mb-4 flex justify-between gap-2">
             <div className="flex items-center gap-3">
-              <img src="/proofkit-horiz.png" alt="ProofKit" className="h-12" />
-              <h1 className="text-3xl font-bold flex items-baseline gap-2 ">
+              {/** biome-ignore lint/performance/noImgElement: just a logo */}
+              {/** biome-ignore lint/correctness/useImageSize: just a logo */}
+              <img alt="ProofKit" className="h-12" src="/proofkit-horiz.png" />
+              <h1 className="flex items-baseline gap-2 font-bold text-3xl">
                 <div>
                   <span className="text-blue-600 dark:text-blue-400">type</span>
                   <span>gen</span>
                 </div>
-                <span className="px-2 py-1 bg-muted rounded-md text-[1.25rem] caption-bottom">
-                  UI
-                </span>
+                <span className="caption-bottom rounded-md bg-muted px-2 py-1 text-[1.25rem]">UI</span>
               </h1>
             </div>
 
             {!isFileMissing && (
               <div className="flex gap-2">
                 <Button
-                  variant="secondary"
+                  disabled={runTypegenMutation.isPending || saveMutation.isPending}
                   onClick={handleRunTypegen}
-                  disabled={
-                    runTypegenMutation.isPending || saveMutation.isPending
-                  }
+                  variant="secondary"
                 >
                   {runTypegenMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <PlayIcon className="w-4 h-4" />
+                    <PlayIcon className="h-4 w-4" />
                   )}
                   {runTypegenMutation.isPending ? "Running..." : "Run Typegen"}
                 </Button>
                 <Button
+                  disabled={saveMutation.isPending || runTypegenMutation.isPending || !form.formState.isDirty}
                   onClick={handleSaveAll}
-                  disabled={
-                    saveMutation.isPending ||
-                    runTypegenMutation.isPending ||
-                    !form.formState.isDirty
-                  }
                   variant={form.formState.isDirty ? "primary" : "outline"}
                 >
-                  {saveMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : null}
-                  {saveMutation.isPending
-                    ? "Saving..."
-                    : form.formState.isDirty
-                      ? "Save"
-                      : "Saved"}
+                  {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {(() => {
+                    if (saveMutation.isPending) {
+                      return "Saving...";
+                    }
+                    if (form.formState.isDirty) {
+                      return "Save";
+                    }
+                    return "Saved";
+                  })()}
                 </Button>
               </div>
             )}
@@ -278,104 +271,123 @@ function App() {
         <Form {...form}>
           <form onSubmit={handleSaveAll}>
             {!isLoading && showEmptyState ? (
-              <div className="w-full lg:w-[75%] mx-auto">
+              <div className="mx-auto w-full lg:w-[75%]">
                 <EmptyState
+                  configPath={isFileMissing ? fullPath || configPath : configPath}
+                  onAddFmdapi={isFileMissing || isEmptyConfig ? () => handleAddConfig("fmdapi") : undefined}
+                  onAddFmodata={isFileMissing || isEmptyConfig ? () => handleAddConfig("fmodata") : undefined}
                   variant={isFileMissing ? "file-missing" : "empty-config"}
-                  configPath={
-                    isFileMissing ? fullPath || configPath : configPath
-                  }
-                  onAddFmdapi={
-                    isFileMissing || isEmptyConfig
-                      ? () => handleAddConfig("fmdapi")
-                      : undefined
-                  }
-                  onAddFmodata={
-                    isFileMissing || isEmptyConfig
-                      ? () => handleAddConfig("fmodata")
-                      : undefined
-                  }
                 />
               </div>
             ) : (
-              <Accordion
-                value={activeAccordionItem.toString()}
-                onValueChange={(value) => setActiveAccordionItem(Number(value))}
-                type="single"
-                variant="outline"
-                collapsible
-                className="w-full lg:w-[75%] mx-auto"
-              >
-                {fields.map((field, index) => {
-                  const config = configs[index];
-                  return (
-                    <AccordionItem
-                      key={field.id}
-                      value={index.toString()}
-                      className="bg-card"
-                    >
-                      <AccordionTrigger>
-                        <ConfigSummary config={config} />
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <ConfigEditor
-                          index={index}
-                          onRemove={() => remove(index)}
-                        />
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
+              <>
+                {/* Global Settings Section */}
+                {!isFileMissing && (
+                  <div className="mx-auto mb-6 w-full rounded-lg border bg-card p-6 lg:w-[75%]">
+                    <h3 className="mb-4 font-semibold text-lg">Global Settings</h3>
+                    <FormField
+                      control={form.control}
+                      name="postGenerateCommand"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>
+                              Post-Generate Command{" "}
+                              <InfoTooltip label="Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'" />
+                            </FormLabel>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button className="h-8" size="sm" variant="outline">
+                                  Presets
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {COMMAND_PRESETS.map((preset) => (
+                                  <DropdownMenuItem key={preset.label} onSelect={() => field.onChange(preset.command)}>
+                                    {preset.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., pnpm biome format --write ."
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
-                <div className="w-full flex justify-center mt-6">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="lg" variant="inverse">
-                        <Plus className="w-4 h-4" />
-                        Add Connection
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-80">
-                      <DropdownMenuItem
-                        className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                        onClick={() => handleAddConfig("fmdapi")}
-                      >
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-base">Data API</p>
-                          <Badge
-                            shape="circle"
-                            appearance="light"
-                            variant="info"
-                          >
-                            Legacy
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Reads/writes data using layout-specific context
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="flex flex-col items-start gap-1 p-4 cursor-pointer"
-                        onClick={() => handleAddConfig("fmodata")}
-                      >
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-base">OData</p>
-                          <Badge
-                            shape="circle"
-                            appearance="light"
-                            variant="success"
-                          >
-                            New
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Reads/writes data directly to the database tables,
-                          using the relationship graph as context
-                        </div>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </Accordion>
+                <Accordion
+                  className="mx-auto w-full lg:w-[75%]"
+                  collapsible
+                  onValueChange={(value) => setActiveAccordionItem(Number(value))}
+                  type="single"
+                  value={activeAccordionItem.toString()}
+                  variant="outline"
+                >
+                  {fields.map((field, index) => {
+                    const config = configs[index];
+                    return (
+                      <AccordionItem className="bg-card" key={field.id} value={index.toString()}>
+                        <AccordionTrigger>
+                          <ConfigSummary config={config} />
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ConfigEditor index={index} onRemove={() => remove(index)} />
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+
+                  <div className="mt-6 flex w-full justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="lg" variant="inverse">
+                          <Plus className="h-4 w-4" />
+                          Add Connection
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-80">
+                        <DropdownMenuItem
+                          className="flex cursor-pointer flex-col items-start gap-1 p-4"
+                          onClick={() => handleAddConfig("fmdapi")}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-base">Data API</p>
+                            <Badge appearance="light" shape="circle" variant="info">
+                              Legacy
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            Reads/writes data using layout-specific context
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="flex cursor-pointer flex-col items-start gap-1 p-4"
+                          onClick={() => handleAddConfig("fmodata")}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-base">OData</p>
+                            <Badge appearance="light" shape="circle" variant="success">
+                              New
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            Reads/writes data directly to the database tables, using the relationship graph as context
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </Accordion>
+              </>
             )}
           </form>
         </Form>

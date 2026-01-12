@@ -1,8 +1,7 @@
-import { DocsLayout } from "@/components/layout/docs";
+import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import type { ReactNode } from "react";
 import { baseOptions } from "@/app/layout.config";
 import { source } from "@/lib/source";
-import { ArrowLeft, Package } from "lucide-react";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -11,14 +10,10 @@ export default function Layout({ children }: { children: ReactNode }) {
       {...baseOptions}
       sidebar={{
         footer: (
-          <div className="flex items-center justify-center text-xs text-muted-foreground mt-2">
+          <div className="mt-2 flex items-center justify-center text-muted-foreground text-xs">
             <p>
               Made with ❤️ by{" "}
-              <a
-                href="https://proofgeist.com"
-                target="_blank"
-                className="underline"
-              >
+              <a className="underline" href="https://proofgeist.com" rel="noopener" target="_blank">
                 Proof+Geist
               </a>
             </p>

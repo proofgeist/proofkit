@@ -4,19 +4,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "strictNullChecks": true
   },
   "include": ["src", "../src"]
 }
-
-
-
-
-
-
-
-
-
-
-
-

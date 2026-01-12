@@ -17,9 +17,3 @@ export function useRunTypegen() {
     error: runTypegenMutation.error,
   };
 }
-
-
-
-
-
-

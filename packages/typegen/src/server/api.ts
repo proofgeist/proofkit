@@ -1,7 +1,7 @@
-import { IncomingMessage } from "http";
-import { URL } from "url";
+import type { IncomingMessage } from "node:http";
+import path from "node:path";
+import type { URL } from "node:url";
 import fs from "fs-extra";
-import path from "path";
 import { parse } from "jsonc-parser";
 import { typegenConfig } from "../types";
 
@@ -16,11 +16,7 @@ export interface ApiResponse {
   body: string;
 }
 
-export async function handleApiRequest(
-  req: IncomingMessage,
-  url: URL,
-  context: ApiContext,
-): Promise<ApiResponse> {
+export async function handleApiRequest(req: IncomingMessage, url: URL, context: ApiContext): Promise<ApiResponse> {
   const pathname = url.pathname.replace("/api", "");
 
   // GET /api/config
@@ -30,7 +26,7 @@ export async function handleApiRequest(
 
   // POST /api/config
   if (pathname === "/config" && req.method === "POST") {
-    return handlePostConfig(req, context);
+    return await handlePostConfig(req, context);
   }
 
   return {
@@ -40,7 +36,7 @@ export async function handleApiRequest(
   };
 }
 
-async function handleGetConfig(context: ApiContext): Promise<ApiResponse> {
+function handleGetConfig(context: ApiContext): ApiResponse {
   const { configPath } = context;
   const fullPath = path.resolve(context.cwd, configPath);
 
@@ -82,10 +78,7 @@ async function handleGetConfig(context: ApiContext): Promise<ApiResponse> {
   }
 }
 
-async function handlePostConfig(
-  req: IncomingMessage,
-  context: ApiContext,
-): Promise<ApiResponse> {
+async function handlePostConfig(req: IncomingMessage, context: ApiContext): Promise<ApiResponse> {
   try {
     const body = await readRequestBody(req);
     const data = JSON.parse(body);
@@ -122,7 +115,7 @@ async function handlePostConfig(
       $schema: "https://proofkit.dev/typegen-config-schema.json",
       ...rest,
     };
-    const jsonContent = JSON.stringify(configWithSchema, null, 2) + "\n";
+    const jsonContent = `${JSON.stringify(configWithSchema, null, 2)}\n`;
 
     await fs.ensureDir(path.dirname(fullPath));
     await fs.writeFile(fullPath, jsonContent, "utf8");

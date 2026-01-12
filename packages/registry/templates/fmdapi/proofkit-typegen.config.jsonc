@@ -5,7 +5,7 @@
       "layouts": [],
       "path": "./src/lib/schemas/filemaker",
       "clearOldFiles": true,
-      "clientSuffix": "Layout",
-    },
-  ],
+      "clientSuffix": "Layout"
+    }
+  ]
 }

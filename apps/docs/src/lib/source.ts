@@ -1,9 +1,11 @@
-import { docs } from "@/.source";
+// import { createReactComponent, iconsList,   } from "@tabler/icons-react"; // Remove this
+
+import { docs } from "fumadocs-mdx:collections/server";
+// biome-ignore lint/performance/noNamespaceImport: suggestion from docs
+import * as TablerIcons from "@tabler/icons-react"; // Add this
 import { loader } from "fumadocs-core/source";
 import { icons } from "lucide-react";
 import { createElement } from "react";
-// import { createReactComponent, iconsList,   } from "@tabler/icons-react"; // Remove this
-import * as TablerIcons from "@tabler/icons-react"; // Add this
 
 // See https://fumadocs.vercel.app/docs/headless/source-api for more info
 export const source = loader({
@@ -15,7 +17,9 @@ export const source = loader({
       return;
     }
 
-    if (icon in icons) return createElement(icons[icon as keyof typeof icons]);
+    if (icon in icons) {
+      return createElement(icons[icon as keyof typeof icons]);
+    }
 
     // New logic for Tabler Icons
     // Helper function to convert kebab-case or simple lowercase to PascalCase
@@ -29,16 +33,14 @@ export const source = loader({
     const tablerComponentName = `Icon${toPascalCase(icon)}`;
 
     if (tablerComponentName in TablerIcons) {
-      const IconComponent =
-        TablerIcons[tablerComponentName as keyof typeof TablerIcons];
+      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: Dynamic icon lookup required for runtime icon resolution
+      const IconComponent = TablerIcons[tablerComponentName as keyof typeof TablerIcons];
       // Check if it's a functional component or a forwardRef component
       if (
         typeof IconComponent === "function" ||
-        (typeof IconComponent === "object" &&
-          IconComponent !== null &&
-          "render" in IconComponent)
+        (typeof IconComponent === "object" && IconComponent !== null && "render" in IconComponent)
       ) {
-        return createElement(IconComponent as React.ComponentType<any>);
+        return createElement(IconComponent as React.ComponentType<Record<string, never>>);
       }
     }
     // End of new logic for Tabler Icons

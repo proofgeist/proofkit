@@ -33,10 +33,7 @@ export type LogLevel = "debug" | "info" | "success" | "warn" | "error";
 
 export const levels = ["debug", "info", "success", "warn", "error"] as const;
 
-export function shouldPublishLog(
-  currentLogLevel: LogLevel,
-  logLevel: LogLevel,
-): boolean {
+export function shouldPublishLog(currentLogLevel: LogLevel, logLevel: LogLevel): boolean {
   return levels.indexOf(logLevel) >= levels.indexOf(currentLogLevel);
 }
 
@@ -44,19 +41,11 @@ export interface Logger {
   disabled?: boolean | undefined;
   disableColors?: boolean | undefined;
   level?: Exclude<LogLevel, "success"> | undefined;
-  log?:
-    | ((
-        level: Exclude<LogLevel, "success">,
-        message: string,
-        ...args: any[]
-      ) => void)
-    | undefined;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic log arguments from user code
+  log?: ((level: Exclude<LogLevel, "success">, message: string, ...args: any[]) => void) | undefined;
 }
 
-export type LogHandlerParams =
-  Parameters<NonNullable<Logger["log"]>> extends [LogLevel, ...infer Rest]
-    ? Rest
-    : never;
+export type LogHandlerParams = Parameters<NonNullable<Logger["log"]>> extends [LogLevel, ...infer Rest] ? Rest : never;
 
 const levelColors: Record<LogLevel, string> = {
   info: TTY_COLORS.fg.blue,
@@ -66,19 +55,13 @@ const levelColors: Record<LogLevel, string> = {
   debug: TTY_COLORS.fg.magenta,
 };
 
-const formatMessage = (
-  level: LogLevel,
-  message: string,
-  colorsEnabled: boolean,
-): string => {
+const formatMessage = (level: LogLevel, message: string, colorsEnabled: boolean): string => {
   const timestamp = new Date().toISOString();
 
   if (colorsEnabled) {
     return `${TTY_COLORS.dim}${timestamp}${TTY_COLORS.reset} ${
       levelColors[level]
-    }${level.toUpperCase()}${TTY_COLORS.reset} ${TTY_COLORS.bright}[FMODATA]:${
-      TTY_COLORS.reset
-    } ${message}`;
+    }${level.toUpperCase()}${TTY_COLORS.reset} ${TTY_COLORS.bright}[FMODATA]:${TTY_COLORS.reset} ${message}`;
   }
 
   return `${timestamp} ${level.toUpperCase()} [FMODATA]: ${message}`;
@@ -96,12 +79,9 @@ export const createLogger = (options?: Logger | undefined): InternalLogger => {
 
   const colorsEnabled = options?.disableColors !== true;
 
-  const LogFunc = (
-    level: LogLevel,
-    message: string,
-    args: any[] = [],
-  ): void => {
-    if (!enabled || !shouldPublishLog(logLevel, level)) {
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic log arguments from user code
+  const LogFunc = (level: LogLevel, message: string, args: any[] = []): void => {
+    if (!(enabled && shouldPublishLog(logLevel, level))) {
       return;
     }
 
@@ -122,11 +102,7 @@ export const createLogger = (options?: Logger | undefined): InternalLogger => {
   };
 
   const logger = Object.fromEntries(
-    levels.map((level) => [
-      level,
-      (...[message, ...args]: LogHandlerParams) =>
-        LogFunc(level, message, args),
-    ]),
+    levels.map((level) => [level, (...[message, ...args]: LogHandlerParams) => LogFunc(level, message, args)]),
   ) as Record<LogLevel, (...params: LogHandlerParams) => void>;
 
   return {

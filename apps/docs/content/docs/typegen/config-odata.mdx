@@ -212,10 +212,10 @@ Within each table's `fields` array, you can specify field-level overrides.
       description: "If true, this field will be excluded from generation",
     },
     typeOverride: {
-      type: `"text" | "number" | "boolean" | "fmBooleanNumber" | "date" | "timestamp" | "container"`,
+      type: `"text" | "number" | "boolean" | "date" | "timestamp" | "container"`,
       required: false,
       description:
-        "Override the inferred field type from metadata. Options: text, number, boolean, fmBooleanNumber, date, timestamp, container",
+        "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container",
     },
   }}
 />
@@ -232,7 +232,6 @@ Override the inferred field type from metadata. The available options are:
 - `"text"`: Treats the field as a text field
 - `"number"`: Treats the field as a number field
 - `"boolean"`: Treats the field as a boolean (validated with `z.coerce.boolean()`)
-- `"fmBooleanNumber"`: Same as boolean, explicit FileMaker 0/1 pattern
 - `"date"`: Treats the field as a date field
 - `"timestamp"`: Treats the field as a timestamp field
 - `"container"`: Treats the field as a container field

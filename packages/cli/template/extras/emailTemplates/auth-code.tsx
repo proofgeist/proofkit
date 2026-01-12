@@ -1,14 +1,4 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Img,
-  Section,
-  Text,
-} from "@react-email/components";
-import * as React from "react";
+import { Body, Container, Head, Heading, Html, Img, Section, Text } from "@react-email/components";
 
 interface AuthCodeEmailProps {
   validationCode: string;
@@ -22,29 +12,20 @@ export const AuthCodeEmail = ({ validationCode, type }: AuthCodeEmailProps) => (
       <Container style={container}>
         <Img
           // TODO: Replace with your logo
-          src="https://proofkit.dev/_astro/proofkit.DNcFg0_B_1JN3Dz.webp"
-          width="238"
-          height="175"
           alt="ProofKit"
+          height="175"
+          src="https://proofkit.dev/_astro/proofkit.DNcFg0_B_1JN3Dz.webp"
           style={logo}
+          width="238"
         />
-        <Text style={tertiary}>
-          {type === "verification"
-            ? "Verify Your Email"
-            : "Reset Your Password"}
-        </Text>
+        <Text style={tertiary}>{type === "verification" ? "Verify Your Email" : "Reset Your Password"}</Text>
         <Heading style={secondary}>
-          Enter the following code to{" "}
-          {type === "verification"
-            ? "verify your email"
-            : "reset your password"}
+          Enter the following code to {type === "verification" ? "verify your email" : "reset your password"}
         </Heading>
         <Section style={codeContainer}>
           <Text style={code}>{validationCode}</Text>
         </Section>
-        <Text style={paragraph}>
-          If you did not request this code, you can ignore this email.
-        </Text>
+        <Text style={paragraph}>If you did not request this code, you can ignore this email.</Text>
       </Container>
     </Body>
   </Html>

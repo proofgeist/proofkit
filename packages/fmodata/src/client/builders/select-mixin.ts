@@ -1,5 +1,5 @@
-import { InternalLogger } from "../../logger";
-import { isColumn, type Column } from "../../orm/column";
+import type { InternalLogger } from "../../logger";
+import { type Column, isColumn } from "../../orm/column";
 
 /**
  * Utility function for processing select() calls.
@@ -8,9 +8,8 @@ import { isColumn, type Column } from "../../orm/column";
  * @param fields - Field names or Column references
  * @returns Object with selectedFields array
  */
-export function processSelectFields(
-  ...fields: (string | Column<any, any, string>)[]
-): { selectedFields: string[] } {
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+export function processSelectFields(...fields: (string | Column<any, any, string>)[]): { selectedFields: string[] } {
   const fieldNames = fields.map((field) => {
     if (isColumn(field)) {
       return field.fieldName as string;
@@ -30,6 +29,7 @@ export function processSelectFields(
  * @returns Object with selectedFields array and fieldMapping for renamed fields
  */
 export function processSelectWithRenames<TTableName extends string>(
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
   fields: Record<string, Column<any, any, TTableName>>,
   tableName: string,
   logger: InternalLogger,
@@ -39,9 +39,7 @@ export function processSelectWithRenames<TTableName extends string>(
 
   for (const [outputKey, column] of Object.entries(fields)) {
     if (!isColumn(column)) {
-      throw new Error(
-        `select() expects column references, but got: ${typeof column}`,
-      );
+      throw new Error(`select() expects column references, but got: ${typeof column}`);
     }
 
     // Warn (not throw) on table mismatch for consistency
@@ -64,12 +62,4 @@ export function processSelectWithRenames<TTableName extends string>(
     selectedFields,
     fieldMapping: Object.keys(fieldMapping).length > 0 ? fieldMapping : {},
   };
-}
-
-/**
- * Legacy class name for backward compatibility.
- * @deprecated Use processSelectFields function instead
- */
-export class SelectMixin {
-  static processSelect = processSelectFields;
 }

@@ -1,7 +1,7 @@
-import path from "path";
+import path from "node:path";
 import chalk from "chalk";
 import fs from "fs-extra";
-import { SyntaxKind, type SourceFile } from "ts-morph";
+import { type SourceFile, SyntaxKind } from "ts-morph";
 
 import { PKG_ROOT } from "~/consts.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
@@ -9,11 +9,7 @@ import { addToEnv } from "~/utils/addToEnvs.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
 import { addToHeaderSlot } from "./auth-shared.js";
 
-export const clerkInstaller = async ({
-  projectDir,
-}: {
-  projectDir: string;
-}) => {
+export const clerkInstaller = async ({ projectDir }: { projectDir: string }) => {
   addPackageDependency({
     projectDir,
     dependencies: ["@clerk/nextjs", "@clerk/themes"],
@@ -25,29 +21,23 @@ export const clerkInstaller = async ({
   const extrasDir = path.join(PKG_ROOT, "template/extras");
 
   const middlewareDest = path.join(projectDir, "src/middleware.ts");
-  if (!fs.existsSync(middlewareDest)) {
-    const middlewareSrc = path.join(extrasDir, "src/middleware/clerk.ts");
-    fs.copySync(middlewareSrc, middlewareDest);
-  } else {
+  if (fs.existsSync(middlewareDest)) {
     // throw new Error("Middleware already exists");
     console.log(
       chalk.yellow(
-        "Middleware already exists. To require auth for your app, be sure to follow the guide to setup Clerk middleware. https://clerk.com/docs/references/nextjs/clerk-middleware#clerk-middleware-next-js"
-      )
+        "Middleware already exists. To require auth for your app, be sure to follow the guide to setup Clerk middleware. https://clerk.com/docs/references/nextjs/clerk-middleware#clerk-middleware-next-js",
+      ),
     );
+  } else {
+    const middlewareSrc = path.join(extrasDir, "src/middleware/clerk.ts");
+    fs.copySync(middlewareSrc, middlewareDest);
   }
 
   // copy auth pages
-  fs.copySync(
-    path.join(extrasDir, "src/app/clerk-auth"),
-    path.join(projectDir, "src/app/auth")
-  );
+  fs.copySync(path.join(extrasDir, "src/app/clerk-auth"), path.join(projectDir, "src/app/auth"));
 
   // copy auth components
-  fs.copySync(
-    path.join(extrasDir, "src/components/clerk-auth"),
-    path.join(projectDir, "src/components/clerk-auth")
-  );
+  fs.copySync(path.join(extrasDir, "src/components/clerk-auth"), path.join(projectDir, "src/components/clerk-auth"));
 
   // add ClerkProvider to app layout
   const layoutFile = path.join(projectDir, "src/app/layout.tsx");
@@ -56,26 +46,15 @@ export const clerkInstaller = async ({
 
   // inject signin/signout components to header slots
   addToHeaderSlot(
-    project.addSourceFileAtPath(
-      path.join(projectDir, "src/components/AppShell/slot-header-right.tsx")
-    ),
-    "@/components/clerk-auth/user-menu"
+    project.addSourceFileAtPath(path.join(projectDir, "src/components/AppShell/slot-header-right.tsx")),
+    "@/components/clerk-auth/user-menu",
   );
   addToHeaderSlot(
-    project.addSourceFileAtPath(
-      path.join(
-        projectDir,
-        "src/components/AppShell/slot-header-mobile-content.tsx"
-      )
-    ),
-    "@/components/clerk-auth/user-menu-mobile"
+    project.addSourceFileAtPath(path.join(projectDir, "src/components/AppShell/slot-header-mobile-content.tsx")),
+    "@/components/clerk-auth/user-menu-mobile",
   );
 
-  addToSafeActionClient(
-    project.addSourceFileAtPathIfExists(
-      path.join(projectDir, "src/server/safe-action.ts")
-    )
-  );
+  addToSafeActionClient(project.addSourceFileAtPathIfExists(path.join(projectDir, "src/server/safe-action.ts")));
 
   // add envs to .env and .env.schema
   await addToEnv({
@@ -132,10 +111,7 @@ export function addClerkProvider(sourceFile: SourceFile) {
     ?.getBody()
     ?.getFirstDescendantByKind(SyntaxKind.ReturnStatement)
     ?.getDescendantsOfKind(SyntaxKind.JsxOpeningElement)
-    .find(
-      (openingElement) =>
-        openingElement.getTagNameNode().getText() === "MantineProvider"
-    )
+    .find((openingElement) => openingElement.getTagNameNode().getText() === "MantineProvider")
     ?.getParentIfKind(SyntaxKind.JsxElement);
 
   const childrenText = mantineProvider
@@ -147,17 +123,13 @@ export function addClerkProvider(sourceFile: SourceFile) {
   mantineProvider?.getChildSyntaxList()?.replaceWithText(
     `<ClerkAuthProvider>
       ${childrenText}
-    </ClerkAuthProvider>`
+    </ClerkAuthProvider>`,
   );
 }
 
 function addToSafeActionClient(sourceFile?: SourceFile) {
   if (!sourceFile) {
-    console.log(
-      chalk.yellow(
-        "Failed to inject into safe-action-client. Did you move the safe-action.ts file?"
-      )
-    );
+    console.log(chalk.yellow("Failed to inject into safe-action-client. Did you move the safe-action.ts file?"));
     return;
   }
 
@@ -176,6 +148,6 @@ function addToSafeActionClient(sourceFile?: SourceFile) {
   return next({ ctx: { ...ctx, auth } });
 });
 
-`)
+`),
   );
 }

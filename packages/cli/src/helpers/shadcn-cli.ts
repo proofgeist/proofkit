@@ -1,17 +1,13 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { execa } from "execa";
 
 import { DEFAULT_REGISTRY_URL } from "~/consts.js";
 import { state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 import { getSettings } from "~/utils/parseSettings.js";
-import { runExecCommand } from "./installDependencies.js";
 
-export async function shadcnInstall(
-  components: string | string[],
-  friendlyComponentName?: string
-) {
+export async function shadcnInstall(components: string | string[], _friendlyComponentName?: string) {
   const componentsArray = Array.isArray(components) ? components : [components];
   const command = ["shadcn@latest", "add", ...componentsArray];
   // Use execa to run the shadcn add command directly
@@ -39,7 +35,7 @@ export function getRegistryUrl(): string {
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-export type ShadcnConfig = {
+export interface ShadcnConfig {
   style: "default" | "new-york";
   tailwind: {
     config: string;
@@ -75,12 +71,10 @@ export type ShadcnConfig = {
         };
   };
   [k: string]: unknown;
-};
+}
 
 export function getShadcnConfig() {
   const componentsJsonPath = path.join(state.projectDir, "components.json");
-  const componentsJson = JSON.parse(
-    fs.readFileSync(componentsJsonPath, "utf8")
-  );
+  const componentsJson = JSON.parse(fs.readFileSync(componentsJsonPath, "utf8"));
   return componentsJson as ShadcnConfig;
 }

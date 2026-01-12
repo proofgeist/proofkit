@@ -4,6 +4,7 @@
     "dbaeumer.vscode-eslint",
     "bradlc.vscode-tailwindcss",
     "unifiedjs.vscode-mdx",
-    "yoavbls.pretty-ts-errors"
+    "yoavbls.pretty-ts-errors",
+    "biomejs.biome"
   ]
 }

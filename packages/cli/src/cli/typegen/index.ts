@@ -1,7 +1,7 @@
 import { Command } from "commander";
 
 import { runCodegenCommand } from "~/generators/fmdapi.js";
-import { type Settings } from "~/utils/parseSettings.js";
+import type { Settings } from "~/utils/parseSettings.js";
 import { ensureProofKitProject } from "../utils.js";
 
 export async function runTypegen(opts: { settings: Settings }) {
@@ -10,10 +10,9 @@ export async function runTypegen(opts: { settings: Settings }) {
   for await (const db of dataSources) {
     if (db.type === "supabase") {
       throw new Error("Supabase is not supported yet");
-    } else if (db.type === "fm") {
-      console.log(
-        `Detected FileMaker database, generating types for ${db.name}...`
-      );
+    }
+    if (db.type === "fm") {
+      console.log(`Detected FileMaker database, generating types for ${db.name}...`);
       generateFmTypes = true;
     } else {
       throw new Error("Unable to generate types for unknown database type");
@@ -26,9 +25,7 @@ export async function runTypegen(opts: { settings: Settings }) {
 }
 
 export const makeTypegenCommand = () => {
-  const typegenCommand = new Command("typegen")
-    .description("Generate types for your project")
-    .action(runTypegen);
+  const typegenCommand = new Command("typegen").description("Generate types for your project").action(runTypegen);
 
   typegenCommand.hook("preAction", (_thisCommand, actionCommand) => {
     const settings = ensureProofKitProject({ commandName: "typegen" });

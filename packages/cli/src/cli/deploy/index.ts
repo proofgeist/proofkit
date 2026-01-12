@@ -1,12 +1,18 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Command, Option } from "commander";
 import { execa } from "execa";
 import fs from "fs-extra";
-import { type PackageJson } from "type-fest";
+import type { PackageJson } from "type-fest";
 
 import { ciOption, debugOption } from "~/globalOptions.js";
+
+// Regex patterns defined at top level for performance
+const LEADING_SYMBOLS_REGEX = /^[✔\s]+/;
+const MULTI_SPACE_REGEX = /\s{2,}/;
+const VERSION_PREFIX_REGEX = /^v/;
+
 import { initProgramState, state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { getSettings } from "~/utils/parseSettings.js";
@@ -16,7 +22,7 @@ async function checkVercelCLI(): Promise<boolean> {
   try {
     await execa("vercel", ["--version"]);
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -41,11 +47,9 @@ async function installVercelCLI() {
 async function checkVercelProject(): Promise<boolean> {
   try {
     // Try to read the .vercel/project.json file which exists when a project is linked
-    const projectConfig = (await fs.readJSON(
-      ".vercel/project.json"
-    )) as VercelProjectConfig;
+    const projectConfig = (await fs.readJSON(".vercel/project.json")) as VercelProjectConfig;
     return Boolean(projectConfig.projectId);
-  } catch (error) {
+  } catch (_error) {
     if (state.debug) {
       console.log("\nDebug: No Vercel project configuration found");
     }
@@ -80,16 +84,20 @@ async function getVercelTeams(): Promise<{ slug: string; name: string }[]> {
 
     if (state.debug) {
       console.log("\nDebug: Team lines:");
-      teamLines.forEach((line) => console.log(`"${line}"`));
+      for (const line of teamLines) {
+        console.log(`"${line}"`);
+      }
     }
 
     const teams = teamLines
       .map((line) => {
         // Remove any leading symbols (✔ or spaces) and trim
-        const cleanLine = line.replace(/^[✔\s]+/, "").trim();
+        const cleanLine = line.replace(LEADING_SYMBOLS_REGEX, "").trim();
         // Split on multiple spaces and take the first part as slug, rest as name
-        const [slug, ...nameParts] = cleanLine.split(/\s{2,}/);
-        if (!slug || nameParts.length === 0) return null;
+        const [slug, ...nameParts] = cleanLine.split(MULTI_SPACE_REGEX);
+        if (!slug || nameParts.length === 0) {
+          return null;
+        }
 
         return {
           slug,
@@ -174,7 +182,7 @@ async function pushEnvironmentVariables() {
 
   try {
     const settings = getSettings();
-    const envFile = path.join(process.cwd(), settings.envFile);
+    const envFile = path.join(process.cwd(), settings.envFile ?? ".env");
 
     if (!fs.existsSync(envFile)) {
       spinner.stop("No environment file found");
@@ -187,7 +195,9 @@ async function pushEnvironmentVariables() {
       .filter((line) => line.trim() && !line.startsWith("#"))
       .map((line) => {
         const [key, ...valueParts] = line.split("=");
-        if (!key) return null;
+        if (!key) {
+          return null;
+        }
         const value = valueParts.join("="); // Rejoin in case value contains =
         return { key: key.trim(), value: value.trim() };
       })
@@ -196,9 +206,9 @@ async function pushEnvironmentVariables() {
     if (state.debug) {
       spinner.stop();
       console.log("\nDebug: Parsed environment variables:");
-      envVars.forEach(({ key, value }) => {
+      for (const { key, value } of envVars) {
         console.log(`  ${key}=${value.substring(0, 3)}...`);
-      });
+      }
       spinner.start("Pushing environment variables to Vercel...");
     }
 
@@ -206,30 +216,32 @@ async function pushEnvironmentVariables() {
     const total = envVars.length;
 
     for (let i = 0; i < total; i++) {
-      const { key, value } = envVars[i]!;
-      spinner.message(
-        `Pushing environment variables to Vercel... (${i + 1}/${total})`
-      );
+      const envVar = envVars[i];
+      if (!envVar) {
+        continue;
+      }
+      const { key, value } = envVar;
+      spinner.message(`Pushing environment variables to Vercel... (${i + 1}/${total})`);
 
       try {
         if (state.debug) {
           console.log(`\nDebug: Attempting to add ${key} to Vercel...`);
         }
 
-        const result = await execa(
-          "vercel",
-          ["env", "add", key, "production"],
-          {
-            input: value,
-            stdio: "pipe",
-            reject: false,
-          }
-        );
+        const result = await execa("vercel", ["env", "add", key, "production"], {
+          input: value,
+          stdio: "pipe",
+          reject: false,
+        });
 
         if (state.debug) {
           console.log(`Debug: Command exit code: ${result.exitCode}`);
-          if (result.stdout) console.log("Debug: stdout:", result.stdout);
-          if (result.stderr) console.log("Debug: stderr:", result.stderr);
+          if (result.stdout) {
+            console.log("Debug: stdout:", result.stdout);
+          }
+          if (result.stderr) {
+            console.log("Debug: stderr:", result.stderr);
+          }
         }
 
         if (result.exitCode !== 0) {
@@ -245,9 +257,7 @@ async function pushEnvironmentVariables() {
     }
 
     if (failed > 0) {
-      spinner.stop(
-        chalk.yellow(`Environment variables pushed with ${failed} failures`)
-      );
+      spinner.stop(chalk.yellow(`Environment variables pushed with ${failed} failures`));
     } else {
       spinner.stop("Environment variables pushed successfully");
     }
@@ -271,7 +281,7 @@ interface VercelProjectConfig {
 }
 
 async function ensureCorrectNodeVersion() {
-  const nodeVersion = process.version.replace(/^v/, "");
+  const nodeVersion = process.version.replace(VERSION_PREFIX_REGEX, "");
   const majorVersion = nodeVersion.split(".")[0];
 
   try {
@@ -283,9 +293,7 @@ async function ensureCorrectNodeVersion() {
       return false;
     }
 
-    const projectConfig = (await fs.readJSON(
-      projectJsonPath
-    )) as VercelProjectConfig;
+    const projectConfig = (await fs.readJSON(projectJsonPath)) as VercelProjectConfig;
     if (state.debug) {
       console.log("Debug: Current project config:", projectConfig);
     }
@@ -344,7 +352,9 @@ async function loginToVercel(): Promise<boolean> {
 }
 
 export async function runDeploy() {
-  if (state.debug) console.log("Running deploy...");
+  if (state.debug) {
+    console.log("Running deploy...");
+  }
 
   // Check if Vercel CLI is installed
   const hasVercelCLI = await checkVercelCLI();
@@ -352,11 +362,7 @@ export async function runDeploy() {
   if (!hasVercelCLI) {
     const installed = await installVercelCLI();
     if (!installed) {
-      console.log(
-        chalk.red(
-          "\nFailed to install Vercel CLI. Please install it manually using:"
-        )
-      );
+      console.log(chalk.red("\nFailed to install Vercel CLI. Please install it manually using:"));
       console.log(chalk.blue("\n  npm install -g vercel"));
       return;
     }
@@ -379,19 +385,13 @@ export async function runDeploy() {
     console.log(chalk.blue("\nSetting up new Vercel project..."));
     const setup = await setupVercelProject();
     if (!setup) {
-      console.log(
-        chalk.red("\nFailed to set up Vercel project automatically.")
-      );
+      console.log(chalk.red("\nFailed to set up Vercel project automatically."));
       return;
     }
 
     const envPushed = await pushEnvironmentVariables();
     if (!envPushed) {
-      console.log(
-        chalk.red(
-          "\nFailed to push environment variables. Aborting deployment."
-        )
-      );
+      console.log(chalk.red("\nFailed to push environment variables. Aborting deployment."));
       return;
     }
   }
@@ -409,9 +409,7 @@ export async function runDeploy() {
 
   // Ensure correct Node.js version is set
   if (!(await ensureCorrectNodeVersion())) {
-    console.error(
-      chalk.red("\nFailed to set Node.js version. Continuing anyway...")
-    );
+    console.error(chalk.red("\nFailed to set Node.js version. Continuing anyway..."));
   }
 
   if (state.localBuild) {
@@ -460,23 +458,11 @@ export async function runDeploy() {
         console.error(chalk.red("\n✖ Deployment failed"));
 
         console.log(chalk.yellow("\nTroubleshooting Tips:"));
+        console.log(chalk.dim("You can check for most errors before deploying for a faster iteration cycle"));
         console.log(
-          chalk.dim(
-            "You can check for most errors before deploying for a faster iteration cycle"
-          )
+          `${chalk.dim("Run")} ${runCmd} tsc ${chalk.dim("to check for TypeScript errors (most common build errors)")}`,
         );
-        console.log(
-          chalk.dim("Run") +
-            ` ${runCmd} tsc ` +
-            chalk.dim(
-              "to check for TypeScript errors (most common build errors)"
-            )
-        );
-        console.log(
-          chalk.dim("Run") +
-            ` ${runCmd} build ` +
-            chalk.dim("to run the full production build locally")
-        );
+        console.log(`${chalk.dim("Run")} ${runCmd} build ${chalk.dim("to run the full production build locally")}`);
       }
     } catch {
       // This catch block should rarely be hit since we're using reject: false

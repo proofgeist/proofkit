@@ -2,11 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "target": "ESNext",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,18 +16,10 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/.source": [
-        "./.source/index.ts"
-      ],
-      "@/registry/*": [
-        "./src/registry/*"
-      ],
-      "@/*": [
-        "./src/*"
-      ],
-      "@/components/*": [
-        "./src/components/*"
-      ]
+      "fumadocs-mdx:collections/*": [".source/*"],
+      "@/registry/*": ["./src/registry/*"],
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"]
     },
     "plugins": [
       {
@@ -46,8 +34,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "public/registry-templates/**/*"
-  ]
+  "exclude": ["node_modules", "public/registry-templates/**/*"]
 }

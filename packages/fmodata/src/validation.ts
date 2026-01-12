@@ -1,11 +1,8 @@
-import type { ODataRecordMetadata } from "./types";
-import { StandardSchemaV1 } from "@standard-schema/spec";
+/** biome-ignore-all lint/style/useCollapsedElseIf: easier to read */
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { RecordCountMismatchError, ResponseStructureError, ValidationError } from "./errors";
 import type { FMTable } from "./orm/table";
-import {
-  ValidationError,
-  ResponseStructureError,
-  RecordCountMismatchError,
-} from "./errors";
+import type { ODataRecordMetadata } from "./types";
 
 /**
  * Validates and transforms input data for insert/update operations.
@@ -17,6 +14,7 @@ import {
  * @returns Transformed data ready to send to the server
  * @throws ValidationError if any field fails validation
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export async function validateAndTransformInput<T extends Record<string, any>>(
   data: Partial<T>,
   inputSchema?: Partial<Record<string, StandardSchemaV1>>,
@@ -26,13 +24,16 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field transformation
   const transformedData: Record<string, any> = { ...data };
 
   // Process each field that has an input validator
   for (const [fieldName, fieldSchema] of Object.entries(inputSchema)) {
     // Skip if no schema for this field
-    if (!fieldSchema) continue;
-    
+    if (!fieldSchema) {
+      continue;
+    }
+
     // Only process fields that are present in the input data
     if (fieldName in data) {
       const inputValue = data[fieldName];
@@ -46,15 +47,11 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
 
         // Check for validation errors
         if (result.issues) {
-          throw new ValidationError(
-            `Input validation failed for field '${fieldName}'`,
-            result.issues,
-            {
-              field: fieldName,
-              value: inputValue,
-              cause: result.issues,
-            },
-          );
+          throw new ValidationError(`Input validation failed for field '${fieldName}'`, result.issues, {
+            field: fieldName,
+            value: inputValue,
+            cause: result.issues,
+          });
         }
 
         // Store the transformed value
@@ -66,15 +63,11 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
         }
 
         // Otherwise, wrap the error
-        throw new ValidationError(
-          `Input validation failed for field '${fieldName}'`,
-          [],
-          {
-            field: fieldName,
-            value: inputValue,
-            cause: error,
-          },
-        );
+        throw new ValidationError(`Input validation failed for field '${fieldName}'`, [], {
+          field: fieldName,
+          value: inputValue,
+          cause: error,
+        });
       }
     }
   }
@@ -84,36 +77,41 @@ export async function validateAndTransformInput<T extends Record<string, any>>(
 }
 
 // Type for expand validation configuration
-export type ExpandValidationConfig = {
+export interface ExpandValidationConfig {
   relation: string;
   targetSchema?: Partial<Record<string, StandardSchemaV1>>;
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   targetTable?: FMTable<any, any>;
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table?: FMTable<any, any>; // For transformation
   selectedFields?: string[];
   nestedExpands?: ExpandValidationConfig[];
-};
+}
 
 /**
  * Validates a single record against a schema, only validating selected fields.
  * Also validates expanded relations if expandConfigs are provided.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export async function validateRecord<T extends Record<string, any>>(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic record validation
   record: any,
   schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   includeSpecialColumns?: boolean,
-): Promise<
-  | { valid: true; data: T & ODataRecordMetadata }
-  | { valid: false; error: ValidationError }
-> {
+): Promise<{ valid: true; data: T & ODataRecordMetadata } | { valid: false; error: ValidationError }> {
   // Extract OData metadata fields (don't validate them - include if present)
   const { "@id": id, "@editLink": editLink, ...rest } = record;
 
   // Only include metadata fields if they actually exist and have values
   const metadata: Partial<ODataRecordMetadata> = {};
-  if (id) metadata["@id"] = id;
-  if (editLink) metadata["@editLink"] = editLink;
+  if (id) {
+    metadata["@id"] = id;
+  }
+  if (editLink) {
+    metadata["@editLink"] = editLink;
+  }
 
   // If no schema, just return the data with metadata
   // Exclude special columns if includeSpecialColumns is false
@@ -121,8 +119,12 @@ export async function validateRecord<T extends Record<string, any>>(
     const { ROWID, ROWMODID, ...restWithoutSystemFields } = rest;
     const specialColumns: { ROWID?: number; ROWMODID?: number } = {};
     if (includeSpecialColumns) {
-      if (ROWID !== undefined) specialColumns.ROWID = ROWID;
-      if (ROWMODID !== undefined) specialColumns.ROWMODID = ROWMODID;
+      if (ROWID !== undefined) {
+        specialColumns.ROWID = ROWID;
+      }
+      if (ROWMODID !== undefined) {
+        specialColumns.ROWMODID = ROWMODID;
+      }
     }
     return {
       valid: true,
@@ -140,12 +142,17 @@ export async function validateRecord<T extends Record<string, any>>(
   const specialColumns: { ROWID?: number; ROWMODID?: number } = {};
   // Only include special columns if explicitly enabled (they're excluded for single() by design)
   if (includeSpecialColumns) {
-    if (ROWID !== undefined) specialColumns.ROWID = ROWID;
-    if (ROWMODID !== undefined) specialColumns.ROWMODID = ROWMODID;
+    if (ROWID !== undefined) {
+      specialColumns.ROWID = ROWID;
+    }
+    if (ROWMODID !== undefined) {
+      specialColumns.ROWMODID = ROWMODID;
+    }
   }
 
   // If selected fields are specified, validate only those fields
   if (selectedFields && selectedFields.length > 0) {
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic field validation
     const validatedRecord: Record<string, any> = {};
 
     for (const field of selectedFields) {
@@ -156,21 +163,19 @@ export async function validateRecord<T extends Record<string, any>>(
         const input = rest[fieldName];
         try {
           let result = fieldSchema["~standard"].validate(input);
-          if (result instanceof Promise) result = await result;
+          if (result instanceof Promise) {
+            result = await result;
+          }
 
           // if the `issues` field exists, the validation failed
           if (result.issues) {
             return {
               valid: false,
-              error: new ValidationError(
-                `Validation failed for field '${fieldName}'`,
-                result.issues,
-                {
-                  field: fieldName,
-                  value: input,
-                  cause: result.issues,
-                },
-              ),
+              error: new ValidationError(`Validation failed for field '${fieldName}'`, result.issues, {
+                field: fieldName,
+                value: input,
+                cause: result.issues,
+              }),
             };
           }
 
@@ -179,15 +184,11 @@ export async function validateRecord<T extends Record<string, any>>(
           // If the validator throws directly, wrap it
           return {
             valid: false,
-            error: new ValidationError(
-              `Validation failed for field '${fieldName}'`,
-              [],
-              {
-                field: fieldName,
-                value: input,
-                cause: originalError,
-              },
-            ),
+            error: new ValidationError(`Validation failed for field '${fieldName}'`, [], {
+              field: fieldName,
+              value: input,
+              cause: originalError,
+            }),
           };
         }
       } else {
@@ -224,13 +225,8 @@ export async function validateRecord<T extends Record<string, any>>(
               // 1. The error mentions the relation name, OR
               // 2. The error mentions any of the selected fields
               const isRelatedToExpand =
-                errorMessage
-                  .toLowerCase()
-                  .includes(expandConfig.relation.toLowerCase()) ||
-                (expandConfig.selectedFields &&
-                  expandConfig.selectedFields.some((field) =>
-                    errorMessage.toLowerCase().includes(field.toLowerCase()),
-                  ));
+                errorMessage.toLowerCase().includes(expandConfig.relation.toLowerCase()) ||
+                expandConfig.selectedFields?.some((field) => errorMessage.toLowerCase().includes(field.toLowerCase()));
 
               if (isRelatedToExpand) {
                 return {
@@ -253,6 +249,7 @@ export async function validateRecord<T extends Record<string, any>>(
           // Original validation logic for when expand exists
           if (Array.isArray(expandValue)) {
             // Validate each item in the expanded array
+            // biome-ignore lint/suspicious/noExplicitAny: Dynamic expanded items validation
             const validatedExpandedItems: any[] = [];
             for (let i = 0; i < expandValue.length; i++) {
               const item = expandValue[i];
@@ -307,39 +304,40 @@ export async function validateRecord<T extends Record<string, any>>(
       }
     }
 
-    // Merge validated data with metadata and special columns
+    // Return only the validated fields plus metadata and special columns
+    // Do NOT merge restWithoutSystemFields as that would overwrite validated values
     return {
       valid: true,
-      data: { ...validatedRecord, ...specialColumns, ...metadata } as T &
-        ODataRecordMetadata,
+      data: { ...validatedRecord, ...specialColumns, ...metadata } as T & ODataRecordMetadata,
     };
   }
 
   // Validate all fields in schema, but exclude ROWID/ROWMODID by default (unless includeSpecialColumns is enabled)
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic field validation
   const validatedRecord: Record<string, any> = { ...restWithoutSystemFields };
 
   for (const [fieldName, fieldSchema] of Object.entries(schema)) {
     // Skip if no schema for this field
-    if (!fieldSchema) continue;
-    
+    if (!fieldSchema) {
+      continue;
+    }
+
     const input = rest[fieldName];
     try {
       let result = fieldSchema["~standard"].validate(input);
-      if (result instanceof Promise) result = await result;
+      if (result instanceof Promise) {
+        result = await result;
+      }
 
       // if the `issues` field exists, the validation failed
       if (result.issues) {
         return {
           valid: false,
-          error: new ValidationError(
-            `Validation failed for field '${fieldName}'`,
-            result.issues,
-            {
-              field: fieldName,
-              value: input,
-              cause: result.issues,
-            },
-          ),
+          error: new ValidationError(`Validation failed for field '${fieldName}'`, result.issues, {
+            field: fieldName,
+            value: input,
+            cause: result.issues,
+          }),
         };
       }
 
@@ -349,15 +347,11 @@ export async function validateRecord<T extends Record<string, any>>(
       // This preserves the original error instance for instanceof checks
       return {
         valid: false,
-        error: new ValidationError(
-          `Validation failed for field '${fieldName}'`,
-          [],
-          {
-            field: fieldName,
-            value: input,
-            cause: originalError,
-          },
-        ),
+        error: new ValidationError(`Validation failed for field '${fieldName}'`, [], {
+          field: fieldName,
+          value: input,
+          cause: originalError,
+        }),
       };
     }
   }
@@ -379,13 +373,8 @@ export async function validateRecord<T extends Record<string, any>>(
             // 1. The error mentions the relation name, OR
             // 2. The error mentions any of the selected fields
             const isRelatedToExpand =
-              errorMessage
-                .toLowerCase()
-                .includes(expandConfig.relation.toLowerCase()) ||
-              (expandConfig.selectedFields &&
-                expandConfig.selectedFields.some((field) =>
-                  errorMessage.toLowerCase().includes(field.toLowerCase()),
-                ));
+              errorMessage.toLowerCase().includes(expandConfig.relation.toLowerCase()) ||
+              expandConfig.selectedFields?.some((field) => errorMessage.toLowerCase().includes(field.toLowerCase()));
 
             if (isRelatedToExpand) {
               return {
@@ -408,6 +397,7 @@ export async function validateRecord<T extends Record<string, any>>(
         // Original validation logic for when expand exists
         if (Array.isArray(expandValue)) {
           // Validate each item in the expanded array
+          // biome-ignore lint/suspicious/noExplicitAny: Dynamic expanded items validation
           const validatedExpandedItems: any[] = [];
           for (let i = 0; i < expandValue.length; i++) {
             const item = expandValue[i];
@@ -464,23 +454,23 @@ export async function validateRecord<T extends Record<string, any>>(
 
   return {
     valid: true,
-    data: { ...validatedRecord, ...specialColumns, ...metadata } as T &
-      ODataRecordMetadata,
+    data: { ...validatedRecord, ...specialColumns, ...metadata } as T & ODataRecordMetadata,
   };
 }
 
 /**
  * Validates a list response against a schema.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export async function validateListResponse<T extends Record<string, any>>(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response validation
   response: any,
   schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
   expandConfigs?: ExpandValidationConfig[],
   includeSpecialColumns?: boolean,
 ): Promise<
-  | { valid: true; data: (T & ODataRecordMetadata)[] }
-  | { valid: false; error: ResponseStructureError | ValidationError }
+  { valid: true; data: (T & ODataRecordMetadata)[] } | { valid: false; error: ResponseStructureError | ValidationError }
 > {
   // Check if response has the expected structure
   if (!response || typeof response !== "object") {
@@ -491,30 +481,20 @@ export async function validateListResponse<T extends Record<string, any>>(
   }
 
   // Extract @context (for internal validation, but we won't return it)
-  const { "@context": context, value, ...rest } = response;
+  const { "@context": context, value, ..._rest } = response;
 
   if (!Array.isArray(value)) {
     return {
       valid: false,
-      error: new ResponseStructureError(
-        "'value' property to be an array",
-        value,
-      ),
+      error: new ResponseStructureError("'value' property to be an array", value),
     };
   }
 
   // Validate each record in the array
   const validatedRecords: (T & ODataRecordMetadata)[] = [];
 
-  for (let i = 0; i < value.length; i++) {
-    const record = value[i];
-    const validation = await validateRecord<T>(
-      record,
-      schema,
-      selectedFields,
-      expandConfigs,
-      includeSpecialColumns,
-    );
+  for (const record of value) {
+    const validation = await validateRecord<T>(record, schema, selectedFields, expandConfigs, includeSpecialColumns);
 
     if (!validation.valid) {
       return {
@@ -535,7 +515,9 @@ export async function validateListResponse<T extends Record<string, any>>(
 /**
  * Validates a single record response against a schema.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export async function validateSingleResponse<T extends Record<string, any>>(
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response validation
   response: any,
   schema: Partial<Record<string, StandardSchemaV1>> | undefined,
   selectedFields?: (keyof T)[],
@@ -547,17 +529,10 @@ export async function validateSingleResponse<T extends Record<string, any>>(
   | { valid: false; error: RecordCountMismatchError | ValidationError }
 > {
   // Check for multiple records (error in both modes)
-  if (
-    response.value &&
-    Array.isArray(response.value) &&
-    response.value.length > 1
-  ) {
+  if (response.value && Array.isArray(response.value) && response.value.length > 1) {
     return {
       valid: false,
-      error: new RecordCountMismatchError(
-        mode === "exact" ? "one" : "at-most-one",
-        response.value.length,
-      ),
+      error: new RecordCountMismatchError(mode === "exact" ? "one" : "at-most-one", response.value.length),
     };
   }
 
@@ -578,13 +553,7 @@ export async function validateSingleResponse<T extends Record<string, any>>(
 
   // Single record validation
   const record = response.value?.[0] ?? response;
-  const validation = await validateRecord<T>(
-    record,
-    schema,
-    selectedFields,
-    expandConfigs,
-    includeSpecialColumns,
-  );
+  const validation = await validateRecord<T>(record, schema, selectedFields, expandConfigs, includeSpecialColumns);
 
   if (!validation.valid) {
     return validation as { valid: false; error: ValidationError };

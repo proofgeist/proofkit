@@ -6,14 +6,9 @@
       "~/*": ["./src/*"],
       "@config/*": ["../config/*"]
     },
-    "checkJs": true
+    "checkJs": true,
+    "strictNullChecks": true
   },
   "exclude": ["template"],
-  "include": [
-    "src",
-    "tsdown.config.ts",
-    "../reset.d.ts",
-    "prettier.config.mjs",
-    "index.d.ts"
-  ]
+  "include": ["src", "tsdown.config.ts", "../reset.d.ts", "index.d.ts"]
 }

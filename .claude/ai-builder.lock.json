@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "artifacts": {
+    "skill:openameba/create-changeset": {
+      "type": "skill",
+      "slug": "create-changeset",
+      "author": "openameba",
+      "name": "create-changeset",
+      "installedAt": "2026-01-07T14:50:43.613Z",
+      "files": [".claude/skills/create-changeset/SKILL.md"]
+    }
+  }
+}

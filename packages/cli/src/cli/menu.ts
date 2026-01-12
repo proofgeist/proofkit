@@ -1,12 +1,9 @@
-import * as p from "@clack/prompts";
+import { confirm, log, select } from "@clack/prompts";
 import chalk from "chalk";
 import open from "open";
 
 import { DOCS_URL } from "~/consts.js";
-import {
-  checkForAvailableUpgrades,
-  runAllAvailableUpgrades,
-} from "~/upgrades/index.js";
+import { checkForAvailableUpgrades, runAllAvailableUpgrades } from "~/upgrades/index.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { runAdd } from "./add/index.js";
 import { runDeploy } from "./deploy/index.js";
@@ -20,33 +17,29 @@ export const runMenu = async () => {
   const upgrades = checkForAvailableUpgrades();
 
   if (upgrades.length > 0) {
-    p.log.info(
+    log.info(
       `${chalk.yellow("There are upgrades available for your ProofKit project")}\n${upgrades
         .map((upgrade) => `- ${upgrade.title}`)
-        .join("\n")}`
+        .join("\n")}`,
     );
 
     const shouldRunUpgrades = abortIfCancel(
-      await p.confirm({
+      await confirm({
         message: "Would you like to run them now?",
         initialValue: true,
-      })
+      }),
     );
 
     if (shouldRunUpgrades) {
       await runAllAvailableUpgrades();
-      p.log.success(chalk.green("Successfully ran all upgrades"));
+      log.success(chalk.green("Successfully ran all upgrades"));
     } else {
-      p.log.info(
-        `You can apply the upgrades later by running ${chalk.cyan(
-          "proofkit upgrade"
-        )}`
-      );
+      log.info(`You can apply the upgrades later by running ${chalk.cyan("proofkit upgrade")}`);
     }
   }
 
   const menuChoice = abortIfCancel(
-    await p.select({
+    await select({
       message: "What would you like to do?",
       options: [
         {
@@ -80,7 +73,7 @@ export const runMenu = async () => {
           hint: "Open ProofKit documentation",
         },
       ],
-    })
+    }),
   );
 
   switch (menuChoice) {
@@ -91,7 +84,7 @@ export const runMenu = async () => {
       await runRemove(undefined);
       break;
     case "docs":
-      p.log.info(`Opening ${chalk.cyan(DOCS_URL)} in your browser...`);
+      log.info(`Opening ${chalk.cyan(DOCS_URL)} in your browser...`);
       await open(DOCS_URL);
       break;
     case "typegen":
@@ -103,5 +96,7 @@ export const runMenu = async () => {
     case "upgrade":
       await runUpgrade();
       break;
+    default:
+      throw new Error(`Unknown menu choice: ${menuChoice}`);
   }
 };

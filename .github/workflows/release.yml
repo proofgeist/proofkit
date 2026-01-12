@@ -1,45 +1,98 @@
 name: Release
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - main
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
 permissions:
-  # Changesets/action needs to push version commits and open/update a PR
   contents: write
   pull-requests: write
-  id-token: write # Required for OIDC
+  id-token: write
 
 jobs:
-  release:
-    name: Release
+  quality:
+    if: github.ref != 'refs/heads/beads-sync'
+    name: Quality Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Setup pnpm 8
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22
+          cache: "pnpm"
 
       - name: Install Dependencies
-        run: pnpm i
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type Check
+        run: pnpm typecheck
+
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      - name: Get OIDC token
+        run: |
+          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://github.com/$GITHUB_REPOSITORY_OWNER")
+          echo "OIDC_TOKEN=$(echo $TOKEN | jq -r '.value')" >> $GITHUB_ENV
+
+      - name: Authenticate with Doppler
+        run: |
+          doppler oidc login --scope=. --identity=${{ vars.DOPPLER_SERVICE_IDENTITY_ID }} --token=$OIDC_TOKEN
+          doppler configure set project proofkit
+          doppler configure set config test
+
+      - name: Run Tests
+        run: pnpm test
+
+      - name: Run fmodata E2E Tests
+        run: pnpm --filter @proofkit/fmodata test:e2e
+
+  release:
+    if: github.ref != 'refs/heads/beads-sync'
+    name: Release
+    needs: [quality]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
-          # This expects you to have a script called release which does a build for your packages and calls changeset publish
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

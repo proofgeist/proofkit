@@ -5,14 +5,11 @@ import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
-import {
-  makeRemoveDataSourceCommand,
-  runRemoveDataSourceCommand,
-} from "./data-source.js";
+import { makeRemoveDataSourceCommand, runRemoveDataSourceCommand } from "./data-source.js";
 import { makeRemovePageCommand, runRemovePageAction } from "./page.js";
 import { makeRemoveSchemaCommand, runRemoveSchemaAction } from "./schema.js";
 
-export const runRemove = async (name: string | undefined) => {
+export const runRemove = async (_name: string | undefined) => {
   const settings = getSettings();
 
   const removeType = abortIfCancel(
@@ -35,7 +32,7 @@ export const runRemove = async (name: string | undefined) => {
             ]
           : []),
       ],
-    })
+    }),
   );
 
   if (removeType === "data") {

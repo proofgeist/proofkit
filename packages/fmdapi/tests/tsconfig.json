@@ -4,7 +4,8 @@
     "noEmit": true,
     "types": ["vitest", "node"],
     "isolatedModules": true,
-    "rootDir": "../"
+    "rootDir": "../",
+    "strictNullChecks": true
   },
   "include": ["./**/*.ts"],
   "exclude": ["../dist", "../schema"]

@@ -39,13 +39,13 @@ export function SwitchField({
 
   return (
     <div className={cn("flex flex-col gap-2.5", className)}>
-      <div className="flex items-center gap-2 min-h-[20px]">
+      <div className="flex min-h-[20px] items-center gap-2">
         <Label
-          htmlFor={switchId}
           className={cn(
-            "font-medium text-foreground flex items-center gap-1",
-            topLabel ? "opacity-100" : "opacity-0 pointer-events-none",
+            "flex items-center gap-1 font-medium text-foreground",
+            topLabel ? "opacity-100" : "pointer-events-none opacity-0",
           )}
+          htmlFor={switchId}
         >
           {topLabel}
           {topLabelTooltip && <InfoTooltip label={topLabelTooltip} />}
@@ -53,16 +53,16 @@ export function SwitchField({
       </div>
       <div className="flex items-center gap-2">
         <Switch
-          id={switchId}
-          size={size}
-          checked={checked}
-          onCheckedChange={onCheckedChange}
-          disabled={disabled}
           aria-describedby={description ? descriptionId : undefined}
+          checked={checked}
+          disabled={disabled}
+          id={switchId}
+          onCheckedChange={onCheckedChange}
+          size={size}
         />
         <Label
+          className="flex cursor-pointer items-center gap-1.5 font-normal text-foreground text-sm"
           htmlFor={switchId}
-          className="font-normal text-sm text-foreground cursor-pointer flex items-center gap-1.5"
         >
           {label}
           {infoTooltip && <InfoTooltip label={infoTooltip} />}

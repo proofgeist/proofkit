@@ -1,11 +1,12 @@
+/** biome-ignore-all lint/performance/noBarrelFile: Re-exporting fmodata functions */
 export { downloadTableMetadata } from "./downloadMetadata";
+export { generateODataTypes } from "./generateODataTypes";
 export {
-  parseMetadata,
-  parseMetadataFromFile,
-  type ParsedMetadata,
-  type EntityType,
   type EntitySet,
+  type EntityType,
   type FieldMetadata,
   type NavigationProperty,
+  type ParsedMetadata,
+  parseMetadata,
+  parseMetadataFromFile,
 } from "./parseMetadata";
-export { generateODataTypes } from "./generateODataTypes";

@@ -1,5 +1,9 @@
-import { XMLParser } from "fast-xml-parser";
 import { readFile } from "node:fs/promises";
+import { XMLParser } from "fast-xml-parser";
+
+// Regex to extract entity type name from full type string
+// e.g., "com.filemaker.odata.WebData.fmp12.Addresses_" -> "Addresses_"
+const ENTITY_TYPE_NAME_REGEX = /\.([^.]+)$/;
 
 export interface FieldMetadata {
   $Type: string;
@@ -41,7 +45,9 @@ export interface ParsedMetadata {
 }
 
 function ensureArray<T>(value: T | T[] | undefined): T[] {
-  if (!value) return [];
+  if (!value) {
+    return [];
+  }
   return Array.isArray(value) ? value : [value];
 }
 
@@ -49,11 +55,9 @@ function ensureArray<T>(value: T | T[] | undefined): T[] {
  * Parses OData metadata XML content and extracts entity types, entity sets, and namespace.
  *
  * @param xmlContent - The XML content as a string
- * @returns Promise resolving to parsed metadata containing entity types, entity sets, and namespace
+ * @returns Parsed metadata containing entity types, entity sets, and namespace
  */
-export async function parseMetadata(
-  xmlContent: string,
-): Promise<ParsedMetadata> {
+export function parseMetadata(xmlContent: string): ParsedMetadata {
   const entityTypes = new Map<string, EntityType>();
   const entitySets = new Map<string, EntitySet>();
   let namespace = "";
@@ -91,7 +95,9 @@ export async function parseMetadata(
   const entityTypeList = ensureArray(schema.EntityType);
   for (const entityTypeEl of entityTypeList) {
     const entityTypeName = entityTypeEl["@_Name"] || entityTypeEl.Name;
-    if (!entityTypeName) continue;
+    if (!entityTypeName) {
+      continue;
+    }
 
     // Get TableID and FMComment from Annotations
     let tableId = "";
@@ -112,7 +118,9 @@ export async function parseMetadata(
       const propertyRefs = ensureArray(entityTypeEl.Key.PropertyRef);
       for (const propRef of propertyRefs) {
         const name = propRef["@_Name"] || propRef.Name;
-        if (name) keyFields.push(name);
+        if (name) {
+          keyFields.push(name);
+        }
       }
     }
 
@@ -121,16 +129,16 @@ export async function parseMetadata(
     const propertyList = ensureArray(entityTypeEl.Property);
     for (const propEl of propertyList) {
       const propName = propEl["@_Name"] || propEl.Name;
-      if (!propName) continue;
+      if (!propName) {
+        continue;
+      }
 
       const propType = propEl["@_Type"] || propEl.Type || "";
       // Nullable is false only if explicitly set to "false", otherwise assume nullable
       // The parser converts "false" to boolean false, so check for both
       const nullableAttr = propEl["@_Nullable"] ?? propEl.Nullable;
-      const isExplicitlyNotNullable =
-        nullableAttr === "false" || nullableAttr === false;
-      const defaultValue =
-        propEl["@_DefaultValue"] || propEl.DefaultValue || undefined;
+      const isExplicitlyNotNullable = nullableAttr === "false" || nullableAttr === false;
+      const defaultValue = propEl["@_DefaultValue"] || propEl.DefaultValue || undefined;
 
       // Get annotations
       let fieldId = "";
@@ -162,10 +170,7 @@ export async function parseMetadata(
         } else if (term === "Org.OData.Core.V1.Permissions") {
           const enumMember = ann.EnumMember;
           if (enumMember) {
-            permissions =
-              typeof enumMember === "string"
-                ? enumMember
-                : enumMember["#text"] || undefined;
+            permissions = typeof enumMember === "string" ? enumMember : enumMember["#text"] || undefined;
           }
         }
       }
@@ -221,7 +226,7 @@ export async function parseMetadata(
       if (setName && entityType) {
         // Extract just the entity type name from the full type string
         // e.g., "com.filemaker.odata.WebData.fmp12.Addresses_" -> "Addresses_"
-        const typeNameMatch = entityType.match(/\.([^.]+)$/);
+        const typeNameMatch = entityType.match(ENTITY_TYPE_NAME_REGEX);
         const entityTypeName = typeNameMatch ? typeNameMatch[1] : entityType;
 
         entitySets.set(setName, {
@@ -241,9 +246,7 @@ export async function parseMetadata(
  * @param filePath - The path to the XML metadata file
  * @returns Promise resolving to parsed metadata
  */
-export async function parseMetadataFromFile(
-  filePath: string,
-): Promise<ParsedMetadata> {
+export async function parseMetadataFromFile(filePath: string): Promise<ParsedMetadata> {
   const xmlContent = await readFile(filePath, "utf-8");
   return parseMetadata(xmlContent);
 }

@@ -1,33 +1,40 @@
-import { source } from "@/lib/source";
-import {
-  DocsPage,
-  DocsBody,
-  DocsDescription,
-  DocsTitle,
-} from "fumadocs-ui/page";
-import { notFound } from "next/navigation";
+import type { TableOfContents } from "fumadocs-core/toc";
 import { createRelativeLink } from "fumadocs-ui/mdx";
+import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
+import type { MDXProps } from "mdx/types";
+import { notFound } from "next/navigation";
+import type { FC } from "react";
+import { source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
-export default async function Page(props: {
-  params: Promise<{ slug?: string[] }>;
-}) {
+interface DocsPageData {
+  title: string;
+  description?: string;
+  body: FC<MDXProps>;
+  toc: TableOfContents;
+  full?: boolean;
+}
+
+export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
   const params = await props.params;
   const page = source.getPage(params.slug);
-  if (!page) notFound();
+  if (!page) {
+    notFound();
+  }
 
-  const MDXContent = page.data.body;
+  const data = page.data as DocsPageData;
+  const MDXContent = data.body;
 
   return (
     <DocsPage
-      toc={page.data.toc}
-      full={page.data.full}
       editOnGithub={{
         owner: "proofgeist",
         repo: "proofkit",
-        path: "apps/docs/content/docs/" + page.file.path,
+        path: `apps/docs/content/docs/${page.path}`,
         sha: "main",
       }}
+      full={data.full}
+      toc={data.toc}
     >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
@@ -35,7 +42,8 @@ export default async function Page(props: {
         <MDXContent
           components={getMDXComponents({
             // this allows you to link to other pages with relative file paths
-            a: createRelativeLink(source, page),
+            // biome-ignore lint/suspicious/noExplicitAny: fumadocs type compatibility issue
+            a: createRelativeLink(source as any, page),
           })}
         />
       </DocsBody>
@@ -47,12 +55,12 @@ export async function generateStaticParams() {
   return source.generateParams();
 }
 
-export async function generateMetadata(props: {
-  params: Promise<{ slug?: string[] }>;
-}) {
+export async function generateMetadata(props: { params: Promise<{ slug?: string[] }> }) {
   const params = await props.params;
   const page = source.getPage(params.slug);
-  if (!page) notFound();
+  if (!page) {
+    notFound();
+  }
 
   return {
     title: page.data.title,

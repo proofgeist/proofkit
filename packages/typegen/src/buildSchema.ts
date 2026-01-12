@@ -1,37 +1,27 @@
-import { VariableDeclarationKind, type SourceFile } from "ts-morph";
-import { overrideCommentHeader, varname } from "./constants";
-import { BuildSchemaArgs, TSchema } from "./types";
+import { type SourceFile, VariableDeclarationKind } from "ts-morph";
+import { pragmaComment, varname } from "./constants";
+import type { BuildSchemaArgs, TSchema } from "./types";
 
-export function buildSchema(
-  schemaFile: SourceFile,
-  { type, ...args }: BuildSchemaArgs,
-): void {
+// Regex to replace Z prefix with T prefix
+const REPLACE_Z_PREFIX_REGEX = /^Z/;
+
+export function buildSchema(schemaFile: SourceFile, { type, ...args }: BuildSchemaArgs): void {
   // make sure schema has unique keys, in case a field is on the layout mulitple times
-  args.schema.reduce(
-    (acc: TSchema[], el) =>
-      acc.find((o) => o.name === el.name)
-        ? acc
-        : ([...acc, el] as Array<TSchema>),
-    [],
-  );
+  args.schema.reduce((acc: TSchema[], el) => {
+    if (acc.find((o) => o.name === el.name)) {
+      return acc;
+    }
+    acc.push(el);
+    return acc;
+  }, []);
 
   // setup
-  const {
-    schema,
-    schemaName,
-    portalSchema = [],
-    valueLists = [],
-    strictNumbers = false,
-  } = args;
+  const { schema, schemaName, portalSchema = [], valueLists = [], strictNumbers = false } = args;
 
   const hasPortals = portalSchema.length > 0;
 
   if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
-    // Map zod/v4 to zod since we're using zod v4
-    schemaFile.addImportDeclaration({
-      moduleSpecifier: type,
-      namedImports: ["z"],
-    });
+    // Add InferZodPortals import first (if needed) for consistent import order
     if (hasPortals) {
       schemaFile.addImportDeclaration({
         moduleSpecifier: "@proofkit/fmdapi",
@@ -39,6 +29,14 @@ export function buildSchema(
         isTypeOnly: true,
       });
     }
+    // Map zod/v4 to zod since we're using zod v4
+    schemaFile.addImportDeclaration({
+      moduleSpecifier: type,
+      namedImports: ["z"],
+    });
+
+    // Add pragma comments after imports (before building schemas for proper formatting)
+    schemaFile.addStatements(pragmaComment);
   }
 
   // build the portals
@@ -97,9 +95,9 @@ export function buildSchema(
         name: `T${varname(schemaName)}Portals`,
         type: (writer) => {
           writer.block(() => {
-            portalSchema.forEach((p) => {
+            for (const p of portalSchema) {
               writer.write(`${p.schemaName}: T${varname(p.schemaName)}`);
-            });
+            }
           });
         },
         isExported: true,
@@ -113,19 +111,23 @@ export function buildSchema(
             name: `Z${varname(schemaName)}Portals`,
             initializer: (writer) => {
               writer
-                .write(`{`)
+                .write("{")
                 .newLine()
                 .indent(() => {
-                  portalSchema.forEach((p, i) => {
+                  for (let i = 0; i < portalSchema.length; i++) {
+                    const p = portalSchema[i];
+                    if (!p) {
+                      continue;
+                    }
                     writer
                       .quote(p.schemaName)
                       .write(": ")
                       .write(`Z${varname(p.schemaName)}`);
                     writer.conditionalWrite(i !== portalSchema.length - 1, ",");
                     writer.newLine();
-                  });
+                  }
                 })
-                .write(`}`);
+                .write("}");
             },
           },
         ],
@@ -161,7 +163,7 @@ function buildTypeTS(
     strictNumbers = false,
   }: {
     schemaName: string;
-    schema: Array<TSchema>;
+    schema: TSchema[];
     strictNumbers?: boolean;
   },
 ) {
@@ -169,7 +171,7 @@ function buildTypeTS(
     name: `T${varname(schemaName)}`,
     type: (writer) => {
       writer.inlineBlock(() => {
-        schema.forEach((field) => {
+        for (const field of schema) {
           writer.quote(field.name).write(": ");
           if (field.type === "string") {
             writer.write("string");
@@ -185,7 +187,7 @@ function buildTypeTS(
             writer.write("any");
           }
           writer.write(",").newLine();
-        });
+        }
       });
     },
     isExported: true,
@@ -199,7 +201,7 @@ function buildValueListTS(
     values,
   }: {
     name: string;
-    values: Array<string>;
+    values: string[];
   },
 ) {
   schemaFile.addTypeAlias({
@@ -217,7 +219,7 @@ function buildTypeZod(
     strictNumbers = false,
   }: {
     schemaName: string;
-    schema: Array<TSchema>;
+    schema: TSchema[];
     strictNumbers?: boolean;
   },
 ) {
@@ -229,9 +231,9 @@ function buildTypeZod(
         name: `Z${varname(schemaName)}`,
         initializer: (writer) => {
           writer
-            .write(`z.object(`)
+            .write("z.object(")
             .inlineBlock(() => {
-              schema.forEach((field) => {
+              for (const field of schema) {
                 writer.quote(field.name).write(": ");
                 if (field.type === "string") {
                   writer.write("z.string()");
@@ -242,25 +244,17 @@ function buildTypeZod(
                     writer.write("z.union([z.string(), z.number()])");
                   }
                 } else if (field.type === "valueList") {
-                  writer.write(`z.enum([`);
+                  writer.write("z.enum([");
                   field.values?.map((v, i) =>
-                    writer
-                      .quote(v)
-                      .conditionalWrite(
-                        i !== (field.values ?? []).length - 1,
-                        ", ",
-                      ),
+                    writer.quote(v).conditionalWrite(i !== (field.values ?? []).length - 1, ", "),
                   );
                   writer.write("])");
-                  writer.conditionalWrite(
-                    field.values?.includes(""),
-                    `.catch("")`,
-                  );
+                  writer.conditionalWrite(field.values?.includes(""), `.catch("")`);
                 } else {
                   writer.write("z.any()");
                 }
                 writer.write(",").newLine();
-              });
+              }
             })
             .write(")");
         },
@@ -281,7 +275,7 @@ function buildValueListZod(
     values,
   }: {
     name: string;
-    values: Array<string>;
+    values: string[];
   },
 ) {
   schemaFile.addVariableStatement({
@@ -291,10 +285,8 @@ function buildValueListZod(
       {
         name: `ZVL${varname(name)}`,
         initializer: (writer) => {
-          writer.write(`z.enum([`);
-          values.map((v, i) =>
-            writer.quote(v).conditionalWrite(i !== values.length - 1, ", "),
-          );
+          writer.write("z.enum([");
+          values.map((v, i) => writer.quote(v).conditionalWrite(i !== values.length - 1, ", "));
           writer.write("])");
         },
       },
@@ -327,9 +319,8 @@ export function buildOverrideFile(
     .filter((name) => {
       if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
         return name.startsWith("Z");
-      } else {
-        return name.startsWith("T");
       }
+      return name.startsWith("T");
     })
     .filter((name) => !name.endsWith("Portals"));
 
@@ -344,10 +335,7 @@ export function buildOverrideFile(
 
   const hasPortals = portalSchema.length > 0;
 
-  if (
-    hasPortals &&
-    (type === "zod" || type === "zod/v4" || type === "zod/v3")
-  ) {
+  if (hasPortals && (type === "zod" || type === "zod/v4" || type === "zod/v3")) {
     overrideFile.addImportDeclaration({
       moduleSpecifier: "@proofkit/fmdapi",
       namedImports: ["InferZodPortals"],
@@ -355,7 +343,7 @@ export function buildOverrideFile(
     });
   }
 
-  namedExportNames.forEach((name) => {
+  for (const name of namedExportNames) {
     if (type === "zod" || type === "zod/v4" || type === "zod/v3") {
       overrideFile.addVariableStatement({
         isExported: true,
@@ -371,7 +359,7 @@ export function buildOverrideFile(
       });
 
       overrideFile.addTypeAlias({
-        name: name.replace(/^Z/, "T"),
+        name: name.replace(REPLACE_Z_PREFIX_REGEX, "T"),
         type: `z.infer<typeof ${name}>`,
         isExported: true,
       });
@@ -382,7 +370,7 @@ export function buildOverrideFile(
         isExported: true,
       });
     }
-  });
+  }
 
   // build the final portals object
   if (hasPortals) {
@@ -391,9 +379,9 @@ export function buildOverrideFile(
         name: `T${varname(schemaName)}Portals`,
         type: (writer) => {
           writer.block(() => {
-            portalSchema.forEach((p) => {
+            for (const p of portalSchema) {
               writer.write(`${p.schemaName}: T${varname(p.schemaName)}`);
-            });
+            }
           });
         },
         isExported: true,
@@ -407,19 +395,23 @@ export function buildOverrideFile(
             name: `Z${varname(schemaName)}Portals`,
             initializer: (writer) => {
               writer
-                .write(`{`)
+                .write("{")
                 .newLine()
                 .indent(() => {
-                  portalSchema.forEach((p, i) => {
+                  for (let i = 0; i < portalSchema.length; i++) {
+                    const p = portalSchema[i];
+                    if (!p) {
+                      continue;
+                    }
                     writer
                       .quote(p.schemaName)
                       .write(": ")
                       .write(`Z${varname(p.schemaName)}`);
                     writer.conditionalWrite(i !== portalSchema.length - 1, ",");
                     writer.newLine();
-                  });
+                  }
                 })
-                .write(`}`);
+                .write("}");
             },
           },
         ],

@@ -1,19 +1,15 @@
-import type { ExecutionContext } from "../../types";
-import { getAcceptHeader } from "../../types";
-import type { FMTable } from "../../orm/table";
-import {
-  getTableName,
-  getTableId as getTableIdHelper,
-  isUsingEntityIds,
-} from "../../orm/table";
 import type { FFetchOptions } from "@fetchkit/ffetch";
-import type { ExecuteOptions } from "../../types";
+import type { FMTable } from "../../orm/table";
+import { getTableId as getTableIdHelper, getTableName, isUsingEntityIds } from "../../orm/table";
+import type { ExecuteOptions, ExecutionContext } from "../../types";
+import { getAcceptHeader } from "../../types";
 
 /**
  * Resolves table identifier based on entity ID settings.
  * Used by both QueryBuilder and RecordBuilder.
  */
 export function resolveTableId(
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   table: FMTable<any, any> | undefined,
   fallbackTableName: string,
   context: ExecutionContext,
@@ -28,9 +24,7 @@ export function resolveTableId(
 
   if (shouldUseIds) {
     if (!isUsingEntityIds(table)) {
-      throw new Error(
-        `useEntityIds is true but table "${getTableName(table)}" does not have entity IDs configured`,
-      );
+      throw new Error(`useEntityIds is true but table "${getTableName(table)}" does not have entity IDs configured`);
     }
     return getTableIdHelper(table);
   }
@@ -41,12 +35,14 @@ export function resolveTableId(
 /**
  * Merges database-level useEntityIds with per-request options.
  */
+// biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
 export function mergeEntityIdOptions<T extends Record<string, any>>(
   options: T | undefined,
   databaseDefault: boolean,
 ): T & { useEntityIds?: boolean } {
   return {
     ...options,
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for optional property access
     useEntityIds: (options as any)?.useEntityIds ?? databaseDefault,
   } as T & { useEntityIds?: boolean };
 }

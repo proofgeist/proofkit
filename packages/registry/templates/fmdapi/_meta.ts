@@ -1,4 +1,4 @@
-import { TemplateMetadata } from "@proofkit/registry";
+import type { TemplateMetadata } from "@proofkit/registry";
 
 export const meta: TemplateMetadata = {
   title: "@proofkit/fmdapi",

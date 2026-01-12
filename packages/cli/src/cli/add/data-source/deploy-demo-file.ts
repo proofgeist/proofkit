@@ -1,10 +1,6 @@
 import * as p from "@clack/prompts";
 
-import {
-  createDataAPIKeyWithCredentials,
-  getDeploymentStatus,
-  startDeployment,
-} from "~/cli/ottofms.js";
+import { createDataAPIKeyWithCredentials, getDeploymentStatus, startDeployment } from "~/cli/ottofms.js";
 
 export const filename = "ProofKitDemo.fmp12";
 
@@ -64,7 +60,10 @@ export async function deployDemoFile({
     token,
   });
 
-  const deploymentId = subDeploymentIds[0]!;
+  const deploymentId = subDeploymentIds[0];
+  if (!deploymentId) {
+    throw new Error("No deployment ID returned from the server");
+  }
 
   while (true) {
     // wait 2.5 seconds, then poll the status again
@@ -78,7 +77,9 @@ export async function deployDemoFile({
       deploymentId,
     });
     if (!running) {
-      if (status !== "complete") throw new Error("Deployment didn't complete");
+      if (status !== "complete") {
+        throw new Error("Deployment didn't complete");
+      }
       break;
     }
   }

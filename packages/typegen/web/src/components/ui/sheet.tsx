@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { X } from 'lucide-react';
-import { Dialog as SheetPrimitive } from 'radix-ui';
+import { cva, type VariantProps } from "class-variance-authority";
+import { X } from "lucide-react";
+import { Dialog as SheetPrimitive } from "radix-ui";
+import type * as React from "react";
+import { cn } from "@/lib/utils";
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -25,31 +25,31 @@ function SheetPortal({ ...props }: React.ComponentProps<typeof SheetPrimitive.Po
 function SheetOverlay({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
   return (
     <SheetPrimitive.Overlay
-      data-slot="sheet-overlay"
       className={cn(
-        'fixed inset-0 z-50 bg-black/30 [backdrop-filter:blur(4px)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/30 [backdrop-filter:blur(4px)] data-[state=closed]:animate-out data-[state=open]:animate-in",
         className,
       )}
+      data-slot="sheet-overlay"
       {...props}
     />
   );
 }
 
 const sheetVariants = cva(
-  'flex flex-col items-strech fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-400',
+  "items-strech fixed z-50 flex flex-col gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:duration-300 data-[state=open]:duration-400",
   {
     variants: {
       side: {
-        top: 'inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top',
+        top: "data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 border-b",
         bottom:
-          'inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
-        left: 'inset-y-0 start-0 h-full w-3/4 border-e data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm rtl:data-[state=closed]:slide-out-to-right rtl:data-[state=open]:slide-in-from-right',
+          "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 border-t",
+        left: "data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left rtl:data-[state=closed]:slide-out-to-right rtl:data-[state=open]:slide-in-from-right inset-y-0 start-0 h-full w-3/4 border-e sm:max-w-sm",
         right:
-          'inset-y-0 end-0 h-full w-3/4  border-s data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm rtl:data-[state=closed]:slide-out-to-left rtl:data-[state=open]:slide-in-from-left',
+          "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right rtl:data-[state=closed]:slide-out-to-left rtl:data-[state=open]:slide-in-from-left inset-y-0 end-0 h-full w-3/4 border-s sm:max-w-sm",
       },
     },
     defaultVariants: {
-      side: 'right',
+      side: "right",
     },
   },
 );
@@ -62,7 +62,7 @@ interface SheetContentProps
 }
 
 function SheetContent({
-  side = 'right',
+  side = "right",
   overlay = true,
   close = true,
   className,
@@ -76,8 +76,8 @@ function SheetContent({
         {children}
         {close && (
           <SheetPrimitive.Close
+            className="absolute end-5 top-4 cursor-pointer rounded-sm opacity-60 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
             data-slot="sheet-close"
-            className="cursor-pointer absolute end-5 top-4 rounded-sm opacity-60 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
@@ -88,25 +88,25 @@ function SheetContent({
   );
 }
 
-function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
+function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
+      className={cn("flex flex-col space-y-1 text-center sm:text-start", className)}
       data-slot="sheet-header"
-      className={cn('flex flex-col space-y-1 text-center sm:text-start', className)}
       {...props}
     />
   );
 }
 
-function SheetBody({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div data-slot="sheet-body" className={cn('py-2.5', className)} {...props} />;
+function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
+  return <div className={cn("py-2.5", className)} data-slot="sheet-body" {...props} />;
 }
 
-function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
+function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
+      className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
       data-slot="sheet-footer"
-      className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
       {...props}
     />
   );
@@ -115,8 +115,8 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
 function SheetTitle({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Title>) {
   return (
     <SheetPrimitive.Title
+      className={cn("font-semibold text-base text-foreground", className)}
       data-slot="sheet-title"
-      className={cn('text-base font-semibold text-foreground', className)}
       {...props}
     />
   );
@@ -125,8 +125,8 @@ function SheetTitle({ className, ...props }: React.ComponentProps<typeof SheetPr
 function SheetDescription({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Description>) {
   return (
     <SheetPrimitive.Description
+      className={cn("text-muted-foreground text-sm", className)}
       data-slot="sheet-description"
-      className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   );

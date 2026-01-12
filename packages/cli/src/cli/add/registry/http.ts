@@ -1,9 +1,5 @@
 import { createFetch, createSchema } from "@better-fetch/fetch";
-import {
-  registryIndexSchema,
-  templateMetadataSchema,
-} from "@proofkit/registry";
-import { z } from "zod/v4";
+import { registryIndexSchema, templateMetadataSchema } from "@proofkit/registry";
 
 import { getRegistryUrl } from "~/helpers/shadcn-cli.js";
 

@@ -1,6 +1,6 @@
 import type { clientTypes } from "@proofkit/fmdapi";
 import { FileMakerError } from "@proofkit/fmdapi";
-import {
+import type {
   Adapter,
   BaseRequest,
   CreateOptions,
@@ -11,15 +11,15 @@ import {
   ListOptions,
   UpdateOptions,
 } from "@proofkit/fmdapi/dist/esm/adapters/core.js";
-import { fmFetch, callFMScript } from "./main.js";
+import { fmFetch } from "./main.js";
 
 export type ExecuteScriptOptions = BaseRequest & {
   data: { script: string; scriptParam?: string };
 };
 
-export type WebViewerAdapterOptions = {
+export interface WebViewerAdapterOptions {
   scriptName: string;
-};
+}
 
 export class WebViewerAdapter implements Adapter {
   protected scriptName: string;
@@ -37,15 +37,15 @@ export class WebViewerAdapter implements Adapter {
 
     if ("_offset" in body) {
       Object.assign(body, { offset: body._offset });
-      delete body._offset;
+      body._offset = undefined;
     }
     if ("_limit" in body) {
       Object.assign(body, { limit: body._limit });
-      delete body._limit;
+      body._limit = undefined;
     }
     if ("_sort" in body) {
       Object.assign(body, { sort: body._sort });
-      delete body._sort;
+      body._sort = undefined;
     }
 
     const resp = await fmFetch<clientTypes.RawFMResponse>(this.scriptName, {
@@ -58,16 +58,14 @@ export class WebViewerAdapter implements Adapter {
     if (resp.messages?.[0].code !== "0") {
       throw new FileMakerError(
         resp?.messages?.[0].code ?? "500",
-        `Filemaker Data API failed with (${
-          resp.messages?.[0].code
-        }): ${JSON.stringify(resp, null, 2)}`,
+        `Filemaker Data API failed with (${resp.messages?.[0].code}): ${JSON.stringify(resp, null, 2)}`,
       );
     }
 
     return resp.response;
   };
 
-  public list = async (opts: ListOptions): Promise<clientTypes.GetResponse> => {
+  list = async (opts: ListOptions): Promise<clientTypes.GetResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       body: data,
@@ -76,7 +74,7 @@ export class WebViewerAdapter implements Adapter {
     return resp as clientTypes.GetResponse;
   };
 
-  public get = async (opts: GetOptions): Promise<clientTypes.GetResponse> => {
+  get = async (opts: GetOptions): Promise<clientTypes.GetResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       body: data,
@@ -85,7 +83,7 @@ export class WebViewerAdapter implements Adapter {
     return resp as clientTypes.GetResponse;
   };
 
-  public find = async (opts: FindOptions): Promise<clientTypes.GetResponse> => {
+  find = async (opts: FindOptions): Promise<clientTypes.GetResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       body: data,
@@ -94,9 +92,7 @@ export class WebViewerAdapter implements Adapter {
     return resp as clientTypes.GetResponse;
   };
 
-  public create = async (
-    opts: CreateOptions,
-  ): Promise<clientTypes.CreateResponse> => {
+  create = async (opts: CreateOptions): Promise<clientTypes.CreateResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       action: "create",
@@ -106,9 +102,7 @@ export class WebViewerAdapter implements Adapter {
     return resp as clientTypes.CreateResponse;
   };
 
-  public update = async (
-    opts: UpdateOptions,
-  ): Promise<clientTypes.UpdateResponse> => {
+  update = async (opts: UpdateOptions): Promise<clientTypes.UpdateResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       action: "update",
@@ -118,9 +112,7 @@ export class WebViewerAdapter implements Adapter {
     return resp as clientTypes.UpdateResponse;
   };
 
-  public delete = async (
-    opts: DeleteOptions,
-  ): Promise<clientTypes.DeleteResponse> => {
+  delete = async (opts: DeleteOptions): Promise<clientTypes.DeleteResponse> => {
     const { data, layout } = opts;
     const resp = await this.request({
       action: "delete",
@@ -130,9 +122,7 @@ export class WebViewerAdapter implements Adapter {
     return resp as clientTypes.DeleteResponse;
   };
 
-  public layoutMetadata = async (
-    opts: LayoutMetadataOptions,
-  ): Promise<clientTypes.LayoutMetadataResponse> => {
+  layoutMetadata = async (opts: LayoutMetadataOptions): Promise<clientTypes.LayoutMetadataResponse> => {
     return (await this.request({
       action: "metaData",
       layout: opts.layout,
@@ -140,13 +130,13 @@ export class WebViewerAdapter implements Adapter {
     })) as clientTypes.LayoutMetadataResponse;
   };
 
-  public executeScript = async (): Promise<never> => {
+  executeScript = (): Promise<never> => {
     throw new Error(
       "the `executeScript` method is not supported in the webviewer adapter. Use the `fmFetch` or `callFMScript` functions from @proofkit/webviewer instead.",
     );
   };
 
-  public containerUpload = async (): Promise<never> => {
+  containerUpload = (): Promise<never> => {
     throw new Error("Container upload is not supported in webviewer");
   };
 }

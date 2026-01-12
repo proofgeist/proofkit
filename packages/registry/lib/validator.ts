@@ -1,8 +1,11 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import createJiti from "jiti";
-import { templateMetadataSchema } from "./types.js";
+import { type TemplateFile, templateMetadataSchema } from "./types.js";
+
+// Regex to match file extension for handlebars replacement (defined at top level for performance)
+const FILE_EXTENSION_REGEX = /\.[^/.]+$/;
 
 export interface ValidationContext {
   templatesPath: string;
@@ -13,10 +16,7 @@ export interface ValidationContext {
 /**
  * Check if a registry template path is valid
  */
-export function isValidRegistryTemplate(
-  templatePath: string,
-  templatesPath: string,
-): boolean {
+export function isValidRegistryTemplate(templatePath: string, templatesPath: string): boolean {
   const fullTemplatePath = path.join(templatesPath, templatePath);
   const metaPath = path.join(fullTemplatePath, "_meta.ts");
   return fs.existsSync(metaPath);
@@ -25,10 +25,7 @@ export function isValidRegistryTemplate(
 /**
  * Validate a single template metadata object
  */
-export function validateTemplateMetadata(
-  meta: unknown,
-  context: ValidationContext,
-): void {
+export function validateTemplateMetadata(meta: unknown, context: ValidationContext): void {
   // Validate the metadata structure using zod schema
   const validationResult = templateMetadataSchema.safeParse(meta);
   if (!validationResult.success) {
@@ -42,10 +39,10 @@ export function validateTemplateMetadata(
   const validatedMeta = validationResult.data;
 
   // Validate that declared files actually exist
-  const declaredFiles = validatedMeta.files.map((f) => {
+  const declaredFiles = validatedMeta.files.map((f: TemplateFile) => {
     if (f.handlebars) {
       // Replace the file extension with .hbs for existence check
-      return f.sourceFileName.replace(/\.[^/.]+$/, ".hbs");
+      return f.sourceFileName.replace(FILE_EXTENSION_REGEX, ".hbs");
     }
     return f.sourceFileName;
   });
@@ -61,13 +58,9 @@ export function validateTemplateMetadata(
 
   // Check if template has content files when it declares files
   // Templates with empty files array in metadata are valid (e.g., dependency-only templates)
-  const actualFiles = fs
-    .readdirSync(context.templateDir)
-    .filter((f) => f !== "_meta.ts");
+  const actualFiles = fs.readdirSync(context.templateDir).filter((f) => f !== "_meta.ts");
   if (declaredFiles.length > 0 && actualFiles.length === 0) {
-    throw new Error(
-      `Template ${context.templateName} declares files but has no content files`,
-    );
+    throw new Error(`Template ${context.templateName} declares files but has no content files`);
   }
 
   // Validate registryDependencies references (only ProofKit registry references)
@@ -90,7 +83,9 @@ function getTemplateDirs(root: string, prefix = ""): string[] {
   const entries = fs.readdirSync(root, { withFileTypes: true });
   const result: string[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory()) {
+      continue;
+    }
     const dirPath = path.join(root, entry.name);
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     const files = fs.readdirSync(dirPath);
@@ -128,13 +123,10 @@ export function validateRegistry(): void {
       // Load and validate the meta file using jiti
       try {
         const metaModule = jiti(metaPath);
-        const meta =
-          metaModule.meta || metaModule.default?.meta || metaModule.default;
+        const meta = metaModule.meta || metaModule.default?.meta || metaModule.default;
 
         if (!meta) {
-          throw new Error(
-            `Template ${rel}: _meta.ts must export a 'meta' object`,
-          );
+          throw new Error(`Template ${rel}: _meta.ts must export a 'meta' object`);
         }
 
         // Use the refactored validation function
@@ -146,21 +138,14 @@ export function validateRegistry(): void {
 
         validateTemplateMetadata(meta, context);
       } catch (loadError) {
-        if (
-          loadError instanceof Error &&
-          loadError.message.includes("Template")
-        ) {
+        if (loadError instanceof Error && loadError.message.includes("Template")) {
           throw loadError; // Re-throw our custom errors
         }
-        throw new Error(
-          `Template ${rel}: Failed to load _meta.ts - ${loadError}`,
-        );
+        throw new Error(`Template ${rel}: Failed to load _meta.ts - ${loadError}`);
       }
     }
 
-    console.log(
-      `✅ Registry validation passed for ${templateDirs.length} templates`,
-    );
+    console.log(`✅ Registry validation passed for ${templateDirs.length} templates`);
   } catch (err) {
     console.error("Registry validation failed:", err);
     throw err; // stop the build

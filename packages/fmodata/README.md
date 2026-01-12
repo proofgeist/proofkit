@@ -2,7 +2,7 @@
 
 A strongly-typed FileMaker OData API client.
 
-⚠️ WARNING: This library is in "alpha" status. It's still in active development and the API is subject to change. Feedback is welcome on the [community forum](https://community.ottomatic.cloud/c/proofkit/13) or on [GitHub](https://github.com/proofgeist/proofkit/issues).
+⚠️ This library is in **beta** status. The core API is stable but may still see minor changes before 1.0. Feedback is welcome on the [community forum](https://community.ottomatic.cloud/c/proofkit/13) or on [GitHub](https://github.com/proofgeist/proofkit/issues).
 
 Roadmap:
 
@@ -10,13 +10,13 @@ Roadmap:
 - [x] Batch operations
   - [ ] Automatically chunk requests into smaller batches (e.g. max 512 inserts per batch)
 - [x] Schema updates (add/update tables and fields)
-- [ ] Proper docs at proofkit.dev
-- [ ] @proofkit/typegen integration
+- [x] Proper docs at proofkit.dev
+- [x] @proofkit/typegen integration
 
 ## Installation
 
 ```bash
-pnpm add @proofkit/fmodata@alpha
+pnpm add @proofkit/fmodata@beta
 ```
 
 ## Quick Start

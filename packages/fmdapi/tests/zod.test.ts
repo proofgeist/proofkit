@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { DataApi, OttoAdapter } from "../src";
-import { z } from "zod/v4";
-import { config } from "./setup";
 import { describe, expect, it } from "vitest";
+import { z } from "zod/v4";
+import { DataApi, OttoAdapter } from "../src";
+import { config } from "./setup";
 
 const ZCustomer = z.object({ name: z.string(), phone: z.string() });
 const ZPortalTable = z.object({
@@ -57,10 +56,7 @@ describe("zod validation", () => {
   it("client with portal data passed as zod type", async () => {
     await clientPortalData
       .list()
-      .then(
-        (data) =>
-          data.data[0].portalData.PortalTable[0]["related::related_field"],
-      )
+      .then((data) => data.data[0].portalData.PortalTable[0]["related::related_field"])
       .catch();
   });
 });

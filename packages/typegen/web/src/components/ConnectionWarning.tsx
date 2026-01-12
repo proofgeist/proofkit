@@ -15,49 +15,41 @@ export function ConnectionWarning({ onRefresh }: ConnectionWarningProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 max-w-md w-full shadow-lg">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-8 shadow-lg">
         <div className="flex items-start gap-4">
-          <AlertTriangle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="mt-0.5 h-6 w-6 flex-shrink-0 text-destructive" />
           <div className="flex-1">
-            <h2 className="text-2xl font-semibold text-destructive mb-3">
-              UI Server Unavailable
-            </h2>
-            <p className="text-destructive/90 mb-6">
-              Did you stop the @proofkit/typegen ui command?
-            </p>
+            <h2 className="mb-3 font-semibold text-2xl text-destructive">UI Server Unavailable</h2>
+            <p className="mb-6 text-destructive/90">Did you stop the @proofkit/typegen ui command?</p>
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                To resolve this, you can:
-              </p>
-              <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+              <p className="text-muted-foreground text-sm">To resolve this, you can:</p>
+              <ul className="list-inside list-disc space-y-2 text-muted-foreground text-sm">
                 <li>Close this browser tab or window</li>
                 <li>Refresh the page if you plan to reconnect</li>
                 <li>Rerun the @proofkit/ui command</li>
               </ul>
             </div>
-            <div className="flex gap-3 mt-6">
-              <Button onClick={handleRefresh} className="flex-1">
-                <RefreshCw className="w-4 h-4 mr-2" />
+            <div className="mt-6 flex gap-3">
+              <Button className="flex-1" onClick={handleRefresh}>
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh Page
               </Button>
               <Button
+                className="flex-1"
                 onClick={() => {
                   // Try to close the window/tab
                   // Note: This may not work in all browsers if the tab wasn't opened by script
                   try {
                     window.close();
-                  } catch (err) {
-                    // If closing fails, just show a message
-                    alert(
-                      "Please close this tab manually. Some browsers prevent closing tabs that weren't opened by script.",
-                    );
+                  } catch (_err) {
+                    // If closing fails, the user can manually close the tab
+                    // Some browsers prevent closing tabs that weren't opened by script
                   }
                 }}
                 variant="outline"
-                className="flex-1"
               >
-                <X className="w-4 h-4 mr-2" />
+                <X className="mr-2 h-4 w-4" />
                 Close Tab
               </Button>
             </div>

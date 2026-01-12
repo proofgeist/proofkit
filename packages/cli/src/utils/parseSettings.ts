@@ -1,8 +1,7 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
 import { z } from "zod/v4";
 
-import { DEFAULT_REGISTRY_URL } from "~/consts.js";
 import { state } from "~/state.js";
 
 const authSchema = z
@@ -90,7 +89,9 @@ export const defaultSettings = settingsSchema.parse({
 
 let settings: Settings | undefined;
 export const getSettings = () => {
-  if (settings) return settings;
+  if (settings) {
+    return settings;
+  }
 
   const settingsPath = path.join(state.projectDir, "proofkit.json");
 
@@ -101,11 +102,7 @@ export const getSettings = () => {
 
   let settingsFile: unknown = fs.readJSONSync(settingsPath);
 
-  if (
-    typeof settingsFile === "object" &&
-    settingsFile !== null &&
-    !("ui" in settingsFile)
-  ) {
+  if (typeof settingsFile === "object" && settingsFile !== null && !("ui" in settingsFile)) {
     settingsFile = { ...settingsFile, ui: "mantine" };
   }
 

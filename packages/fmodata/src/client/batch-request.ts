@@ -6,6 +6,11 @@
  * with support for transactional changesets.
  */
 
+const BOUNDARY_REGEX = /boundary=([^;]+)/;
+const HTTP_STATUS_LINE_REGEX = /HTTP\/\d\.\d\s+(\d+)\s*(.*)/;
+const CRLF_REGEX = /\r\n/;
+const CHANGESET_CONTENT_TYPE_REGEX = /Content-Type: multipart\/mixed;\s*boundary=([^\r\n]+)/;
+
 export interface RequestConfig {
   method: string;
   url: string;
@@ -17,6 +22,7 @@ export interface ParsedBatchResponse {
   status: number;
   statusText: string;
   headers: Record<string, string>;
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response body type from OData API
   body: any;
 }
 
@@ -25,10 +31,8 @@ export interface ParsedBatchResponse {
  * @param prefix - Prefix for the boundary (e.g., "batch_" or "changeset_")
  * @returns A boundary string with the prefix and 32 random hex characters
  */
-export function generateBoundary(prefix: string = "batch_"): string {
-  const randomHex = Array.from({ length: 32 }, () =>
-    Math.floor(Math.random() * 16).toString(16),
-  ).join("");
+export function generateBoundary(prefix = "batch_"): string {
+  const randomHex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
   return `${prefix}${randomHex}`;
 }
 
@@ -77,9 +81,7 @@ function formatSubRequest(request: RequestConfig, baseUrl: string): string {
   lines.push(""); // Empty line after multipart headers
 
   // Construct full URL (convert relative to absolute)
-  const fullUrl = request.url.startsWith("http")
-    ? request.url
-    : `${baseUrl}${request.url}`;
+  const fullUrl = request.url.startsWith("http") ? request.url : `${baseUrl}${request.url}`;
 
   // Add HTTP request line
   lines.push(`${request.method} ${fullUrl} HTTP/1.1`);
@@ -97,10 +99,7 @@ function formatSubRequest(request: RequestConfig, baseUrl: string): string {
 
     // Check if Content-Type is already set
     const hasContentType =
-      request.headers &&
-      Object.keys(request.headers).some(
-        (k) => k.toLowerCase() === "content-type",
-      );
+      request.headers && Object.keys(request.headers).some((k) => k.toLowerCase() === "content-type");
 
     if (!hasContentType) {
       lines.push("Content-Type: application/json");
@@ -108,10 +107,7 @@ function formatSubRequest(request: RequestConfig, baseUrl: string): string {
 
     // Add Content-Length (required for FileMaker to read the body)
     const hasContentLength =
-      request.headers &&
-      Object.keys(request.headers).some(
-        (k) => k.toLowerCase() === "content-length",
-      );
+      request.headers && Object.keys(request.headers).some((k) => k.toLowerCase() === "content-length");
 
     if (!hasContentLength) {
       lines.push(`Content-Length: ${request.body.length}`);
@@ -136,11 +132,7 @@ function formatSubRequest(request: RequestConfig, baseUrl: string): string {
  * @param changesetBoundary - Boundary string for the changeset
  * @returns Formatted changeset string with CRLF line endings
  */
-function formatChangeset(
-  requests: RequestConfig[],
-  baseUrl: string,
-  changesetBoundary: string,
-): string {
+function formatChangeset(requests: RequestConfig[], baseUrl: string, changesetBoundary: string): string {
   const lines: string[] = [];
 
   lines.push(`Content-Type: multipart/mixed; boundary=${changesetBoundary}`);
@@ -183,9 +175,7 @@ export function formatBatchRequest(
         // Close and add the current changeset
         const changesetBoundary = generateBoundary("changeset_");
         lines.push(`--${boundary}`);
-        lines.push(
-          formatChangeset(currentChangeset, baseUrl, changesetBoundary),
-        );
+        lines.push(formatChangeset(currentChangeset, baseUrl, changesetBoundary));
         currentChangeset = null;
       }
 
@@ -277,8 +267,8 @@ export async function formatBatchRequestFromNative(
  * @returns The boundary string, or null if not found
  */
 export function extractBoundary(contentType: string): string | null {
-  const match = contentType.match(/boundary=([^;]+)/);
-  return match && match[1] ? match[1].trim() : null;
+  const match = contentType.match(BOUNDARY_REGEX);
+  return match?.[1] ? match[1].trim() : null;
 }
 
 /**
@@ -290,12 +280,12 @@ function parseStatusLine(line: string): {
   status: number;
   statusText: string;
 } {
-  const match = line.match(/HTTP\/\d\.\d\s+(\d+)\s*(.*)/);
-  if (!match || !match[1]) {
+  const match = line.match(HTTP_STATUS_LINE_REGEX);
+  if (!match?.[1]) {
     return { status: 0, statusText: "" };
   }
   return {
-    status: parseInt(match[1], 10),
+    status: Number.parseInt(match[1], 10),
     statusText: match[2]?.trim() || "",
   };
 }
@@ -324,13 +314,13 @@ function parseHeaders(lines: string[]): Record<string, string> {
  * @returns Parsed response object
  */
 function parseHttpResponse(part: string): ParsedBatchResponse {
-  const lines = part.split(/\r\n/);
+  const lines = part.split(CRLF_REGEX);
 
   // Find the HTTP status line (skip multipart headers)
   let statusLineIndex = -1;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line && line.startsWith("HTTP/")) {
+    if (line?.startsWith("HTTP/")) {
       statusLineIndex = i;
       break;
     }
@@ -370,7 +360,7 @@ function parseHttpResponse(part: string): ParsedBatchResponse {
       break;
     }
     // Stop at boundary markers (for responses without bodies like 204)
-    if (line && line.startsWith("--")) {
+    if (line?.startsWith("--")) {
       break;
     }
     if (line) {
@@ -395,6 +385,7 @@ function parseHttpResponse(part: string): ParsedBatchResponse {
     bodyText = bodyLinesFiltered.join("\r\n").trim();
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic response body type from OData API
   let body: any = null;
   if (bodyText) {
     try {
@@ -419,10 +410,7 @@ function parseHttpResponse(part: string): ParsedBatchResponse {
  * @param contentType - The Content-Type header from the response
  * @returns Array of parsed responses in the same order as the request
  */
-export function parseBatchResponse(
-  responseText: string,
-  contentType: string,
-): ParsedBatchResponse[] {
+export function parseBatchResponse(responseText: string, contentType: string): ParsedBatchResponse[] {
   const boundary = extractBoundary(contentType);
   if (!boundary) {
     throw new Error("Could not extract boundary from Content-Type header");
@@ -445,9 +433,7 @@ export function parseBatchResponse(
     // Check if this part is a changeset (nested multipart)
     if (trimmedPart.includes("Content-Type: multipart/mixed")) {
       // Extract the changeset boundary
-      const changesetContentTypeMatch = trimmedPart.match(
-        /Content-Type: multipart\/mixed;\s*boundary=([^\r\n]+)/,
-      );
+      const changesetContentTypeMatch = trimmedPart.match(CHANGESET_CONTENT_TYPE_REGEX);
       if (changesetContentTypeMatch) {
         const changesetBoundary = changesetContentTypeMatch?.[1]?.trim();
         const changesetPattern = `--${changesetBoundary}`;
@@ -460,9 +446,7 @@ export function parseBatchResponse(
           }
 
           // Skip the changeset header
-          if (
-            trimmedChangesetPart.startsWith("Content-Type: multipart/mixed")
-          ) {
+          if (trimmedChangesetPart.startsWith("Content-Type: multipart/mixed")) {
             continue;
           }
 

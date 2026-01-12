@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
@@ -12,11 +12,7 @@ import { addRouteToNav } from "~/generators/route.js";
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
-import {
-  getSettings,
-  mergeSettings,
-  type DataSource,
-} from "~/utils/parseSettings.js";
+import { type DataSource, getSettings, mergeSettings } from "~/utils/parseSettings.js";
 import { abortIfCancel, ensureProofKitProject } from "../../utils.js";
 
 export const runAddPageAction = async (opts?: {
@@ -30,29 +26,19 @@ export const runAddPageAction = async (opts?: {
 
   const settings = getSettings();
   if (settings.ui === "shadcn") {
-    return p.cancel(
-      "Adding pages is not yet supported for shadcn-based projects."
-    );
+    return p.cancel("Adding pages is not yet supported for shadcn-based projects.");
   }
 
-  const templates =
-    state.appType === "browser"
-      ? Object.entries(nextjsTemplates)
-      : Object.entries(wvTemplates);
+  const templates = state.appType === "browser" ? Object.entries(nextjsTemplates) : Object.entries(wvTemplates);
 
   if (templates.length === 0) {
-    return p.cancel(`No templates found for your app type. Check back soon!`);
+    return p.cancel("No templates found for your app type. Check back soon!");
   }
 
   let routeName = opts?.routeName;
   let replacedMainPage = settings.replacedMainPage;
 
-  if (
-    state.appType === "webviewer" &&
-    !replacedMainPage &&
-    !state.ci &&
-    !routeName
-  ) {
+  if (state.appType === "webviewer" && !replacedMainPage && !state.ci && !routeName) {
     const replaceMainPage = abortIfCancel(
       await p.select({
         message: "Do you want to replace the default page?",
@@ -61,7 +47,7 @@ export const runAddPageAction = async (opts?: {
           { label: "No, maybe later", value: "no" },
           { label: "No, don't ask again", value: "never" },
         ],
-      })
+      }),
     );
     if (replaceMainPage === "never" || replaceMainPage === "yes") {
       replacedMainPage = true;
@@ -75,7 +61,7 @@ export const runAddPageAction = async (opts?: {
   if (!routeName) {
     routeName = abortIfCancel(
       await p.text({
-        message: `Enter the URL PATH for your new page`,
+        message: "Enter the URL PATH for your new page",
         placeholder: "/my-page",
         validate: (value) => {
           if (value.length === 0) {
@@ -83,7 +69,7 @@ export const runAddPageAction = async (opts?: {
           }
           return;
         },
-      })
+      }),
     );
   }
 
@@ -103,19 +89,22 @@ export const runAddPageAction = async (opts?: {
           label: `${value.label}`,
           hint: value.hint,
         })),
-      })
+      }),
     );
 
   const pageTemplate = templates.find(([key]) => key === template)?.[1];
-  if (!pageTemplate) return p.cancel(`Page template ${template} not found`);
+  if (!pageTemplate) {
+    return p.cancel(`Page template ${template} not found`);
+  }
 
   let dataSource: DataSource | undefined;
   let schemaName: string | undefined;
   if (pageTemplate.requireData) {
-    if (settings.dataSources.length === 0)
+    if (settings.dataSources.length === 0) {
       return p.cancel(
-        "This template requires a data source, but you don't have any. Add a data source first, or choose another page template"
+        "This template requires a data source, but you don't have any. Add a data source first, or choose another page template",
       );
+    }
 
     const dataSourceName =
       opts?.dataSourceName ??
@@ -127,14 +116,14 @@ export const runAddPageAction = async (opts?: {
                 value: dataSource.name,
                 label: dataSource.name,
               })),
-            })
+            }),
           )
         : settings.dataSources[0]?.name);
 
-    dataSource = settings.dataSources.find(
-      (dataSource) => dataSource.name === dataSourceName
-    );
-    if (!dataSource) return p.cancel(`Data source ${dataSourceName} not found`);
+    dataSource = settings.dataSources.find((dataSource) => dataSource.name === dataSourceName);
+    if (!dataSource) {
+      return p.cancel(`Data source ${dataSourceName} not found`);
+    }
 
     schemaName = await promptForSchemaFromDataSource({
       projectDir,
@@ -146,11 +135,7 @@ export const runAddPageAction = async (opts?: {
   spinner.start("Adding page from template");
 
   // copy template files
-  const templatePath = path.join(
-    PKG_ROOT,
-    "template/pages",
-    pageTemplate.templatePath
-  );
+  const templatePath = path.join(PKG_ROOT, "template/pages", pageTemplate.templatePath);
 
   const destPath =
     state.appType === "browser"
@@ -188,16 +173,14 @@ export const runAddPageAction = async (opts?: {
   const pkgManager = getUserPkgManager();
 
   console.log(
-    `\n${chalk.green("Next steps:")}\nTo preview this page, restart your dev server using the ${chalk.cyan(`${pkgManager === "npm" ? "npm run" : pkgManager} dev`)} command\n`
+    `\n${chalk.green("Next steps:")}\nTo preview this page, restart your dev server using the ${chalk.cyan(`${pkgManager === "npm" ? "npm run" : pkgManager} dev`)} command\n`,
   );
 };
 
 export const makeAddPageCommand = () => {
-  const addPageCommand = new Command("page")
-    .description("Add a new page to your project")
-    .action(async () => {
-      await runAddPageAction();
-    });
+  const addPageCommand = new Command("page").description("Add a new page to your project").action(async () => {
+    await runAddPageAction();
+  });
 
   addPageCommand.addOption(ciOption);
   addPageCommand.addOption(debugOption);
@@ -220,27 +203,28 @@ async function promptForSchemaFromDataSource({
 }) {
   if (dataSource.type === "supabase") {
     throw new Error("Not implemented");
-  } else {
-    const schemas = getExistingSchemas({
-      projectDir,
-      dataSourceName: dataSource.name,
-    })
-      .map((s) => s.schemaName)
-      .filter(Boolean);
-
-    if (schemas.length === 0) {
-      p.cancel("This data source doesn't have any schemas to load data from");
-      return undefined;
-    }
-
-    if (schemas.length === 1) return schemas[0];
-
-    const schemaName = abortIfCancel(
-      await p.select({
-        message: "Which schema should this page load data from?",
-        options: schemas.map((o) => ({ label: o, value: o ?? "" })),
-      })
-    );
-    return schemaName;
   }
+  const schemas = getExistingSchemas({
+    projectDir,
+    dataSourceName: dataSource.name,
+  })
+    .map((s) => s.schemaName)
+    .filter(Boolean);
+
+  if (schemas.length === 0) {
+    p.cancel("This data source doesn't have any schemas to load data from");
+    return undefined;
+  }
+
+  if (schemas.length === 1) {
+    return schemas[0];
+  }
+
+  const schemaName = abortIfCancel(
+    await p.select({
+      message: "Which schema should this page load data from?",
+      options: schemas.map((o) => ({ label: o, value: o ?? "" })),
+    }),
+  );
+  return schemaName;
 }

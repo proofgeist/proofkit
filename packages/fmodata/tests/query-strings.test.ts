@@ -19,20 +19,11 @@
  * that will be correctly parsed by OData endpoints.
  */
 
-import { describe, expect, expectTypeOf, it } from "vitest";
+const SELECT_QUERY_REGEX = /\$select=([^&]+)/;
+
+import { and, asc, desc, eq, fmTableOccurrence, gt, isNull, numberField, or, textField } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
 import { createMockClient } from "./utils/test-setup";
-import {
-  numberField,
-  textField,
-  fmTableOccurrence,
-  asc,
-  desc,
-  eq,
-  gt,
-  and,
-  or,
-  isNull,
-} from "@proofkit/fmodata";
 
 const users = fmTableOccurrence(
   "users",
@@ -61,11 +52,7 @@ describe("OData Query String Generation", () => {
 
   describe("$select", () => {
     it("should generate $select query for single field", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .select({ name: users.name })
-        .getQueryString();
+      const queryString = db.from(users).list().select({ name: users.name }).getQueryString();
 
       expect(queryString).toContain("$select");
       expect(queryString).toContain("name");
@@ -76,24 +63,17 @@ describe("OData Query String Generation", () => {
       const queryString = base.select({ id: users.id }).getQueryString();
       expect(queryString).toContain('$select="id"');
       expect(queryString).toContain("$top=1000");
-      const queryString2 = base
-        .select({ name: users["name with spaces"] })
-        .getQueryString();
+      const queryString2 = base.select({ name: users["name with spaces"] }).getQueryString();
       expect(queryString2).toContain('$select="name with spaces"');
       expect(queryString2).toContain("$top=1000");
 
-      const queryString3 = base
-        .select({ test: users["special%char"] })
-        .getQueryString();
+      const queryString3 = base.select({ test: users["special%char"] }).getQueryString();
       expect(queryString3).toContain("$top=1000");
-      expect(
-        queryString3.includes('$select="special%char"') ||
-          queryString3.includes('$select="special%char"'),
-      ).toBe(true);
+      expect(queryString3.includes('$select="special%char"') || queryString3.includes('$select="special%char"')).toBe(
+        true,
+      );
 
-      const queryString4 = base
-        .select({ test: users["special&char"] })
-        .getQueryString();
+      const queryString4 = base.select({ test: users["special&char"] }).getQueryString();
       expect(queryString4).toContain('$select="special&char"');
       expect(queryString4).toContain("$top=1000");
 
@@ -108,9 +88,7 @@ describe("OData Query String Generation", () => {
         .from(users)
         .list()
         .select({ name: users.name })
-        .expand(contacts, (b: any) =>
-          b.select({ name: contacts["name with spaces"] }),
-        )
+        .expand(contacts, (b: any) => b.select({ name: contacts["name with spaces"] }))
         .getQueryString();
       expect(queryString7).toContain("$select=name");
       expect(queryString7).toContain("$top=1000");
@@ -123,9 +101,7 @@ describe("OData Query String Generation", () => {
         .from(users)
         .list()
         .select({ name: users.name })
-        .expand(contacts, (b: any) =>
-          b.select({ test: contacts["special%char"] }),
-        )
+        .expand(contacts, (b: any) => b.select({ test: contacts["special%char"] }))
         .getQueryString();
       expect(queryString8).toContain("$select=name");
       expect(queryString8).toContain("$top=1000");
@@ -138,15 +114,11 @@ describe("OData Query String Generation", () => {
         .from(users)
         .list()
         .select({ name: users.name })
-        .expand(contacts, (b: any) =>
-          b.select({ test: contacts["special&char"] }),
-        )
+        .expand(contacts, (b: any) => b.select({ test: contacts["special&char"] }))
         .getQueryString();
       expect(queryString9).toContain("$select=name");
       expect(queryString9).toContain("$top=1000");
-      expect(queryString9).toContain(
-        '$expand=contacts($select="special&char")',
-      );
+      expect(queryString9).toContain('$expand=contacts($select="special&char")');
     });
 
     it("should generate $select query for multiple fields", () => {
@@ -163,14 +135,10 @@ describe("OData Query String Generation", () => {
     });
 
     it("should generate $select with comma-separated fields", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .select({ id: users.id, name: users.name })
-        .getQueryString();
+      const queryString = db.from(users).list().select({ id: users.id, name: users.name }).getQueryString();
 
       // OData format: $select=id,name
-      const selectPart = queryString.match(/\$select=([^&]+)/)?.[1];
+      const selectPart = queryString.match(SELECT_QUERY_REGEX)?.[1];
       expect(selectPart).toBeDefined();
 
       expect(selectPart?.split(",")).toContain("name");
@@ -179,11 +147,7 @@ describe("OData Query String Generation", () => {
 
   describe("$filter", () => {
     it("should generate $filter with equality operator", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where(eq(users.name, "John"))
-        .getQueryString();
+      const queryString = db.from(users).list().where(eq(users.name, "John")).getQueryString();
 
       expect(queryString).toContain("$filter");
       expect(queryString).toContain("name");
@@ -191,16 +155,12 @@ describe("OData Query String Generation", () => {
       expect(queryString).toContain("John");
       expect(queryString).not.toContain("operands");
       expect(queryString).toBe(
-        `/users?$filter=name eq 'John'&$top=1000&$select=\"id\",name,"name with spaces","special%char","special&char",email,age`,
+        `/users?$filter=name eq 'John'&$top=1000&$select="id",name,"name with spaces","special%char","special&char",email,age`,
       );
     });
 
     it("should generate $filter with numeric comparison", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where(gt(users.age, 18))
-        .getQueryString();
+      const queryString = db.from(users).list().where(gt(users.age, 18)).getQueryString();
 
       expect(queryString).toContain("$filter");
       expect(queryString).toContain("age");
@@ -233,11 +193,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should handle string values with quotes in filter", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where(eq(users.name, "John O'Connor"))
-        .getQueryString();
+      const queryString = db.from(users).list().where(eq(users.name, "John O'Connor")).getQueryString();
 
       expect(queryString).toContain("$filter");
       // OData should properly escape quotes
@@ -245,11 +201,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should handle null values in filter", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where(isNull(users.name))
-        .getQueryString();
+      const queryString = db.from(users).list().where(isNull(users.name)).getQueryString();
 
       expect(queryString).toContain("$filter");
       expect(queryString).toContain("null");
@@ -258,29 +210,17 @@ describe("OData Query String Generation", () => {
 
   describe("$orderby", () => {
     it("should generate $orderby for ascending order", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .orderBy(asc(users.name))
-        .getQueryString();
+      const queryString = db.from(users).list().orderBy(asc(users.name)).getQueryString();
 
       expect(queryString).toContain("$orderby");
       expect(queryString).toContain("name");
 
       // without asc should also work, as it's the default
-      const queryString2 = db
-        .from(users)
-        .list()
-        .orderBy(users.name)
-        .getQueryString();
+      const _queryString2 = db.from(users).list().orderBy(users.name).getQueryString();
     });
 
     it("should generate $orderby for descending order", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .orderBy(desc(users.name))
-        .getQueryString();
+      const queryString = db.from(users).list().orderBy(desc(users.name)).getQueryString();
 
       expect(queryString).toContain("$orderby");
       expect(queryString).toContain("name");
@@ -348,11 +288,7 @@ describe("OData Query String Generation", () => {
 
   describe("$expand", () => {
     it("should generate $expand query parameter", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .expand(contacts)
-        .getQueryString();
+      const queryString = db.from(users).list().expand(contacts).getQueryString();
 
       expect(queryString).toContain("$expand");
       expect(queryString).toContain("contacts");
@@ -367,12 +303,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should generate $count with other query parameters", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where("status eq 'active'")
-        .count()
-        .getQueryString();
+      const queryString = db.from(users).list().where("status eq 'active'").count().getQueryString();
 
       expect(queryString).toContain("$count");
       expect(queryString).toContain("$filter");
@@ -409,12 +340,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should combine $top and $skip for pagination", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .top(10)
-        .skip(20)
-        .getQueryString();
+      const queryString = db.from(users).list().top(10).skip(20).getQueryString();
 
       expect(queryString).toContain("$top");
       expect(queryString).toContain("$skip");
@@ -461,12 +387,7 @@ describe("OData Query String Generation", () => {
 
   describe("single() mode", () => {
     it("should generate query string for single record", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .select({ name: users.name })
-        .single()
-        .getQueryString();
+      const queryString = db.from(users).list().select({ name: users.name }).single().getQueryString();
 
       expect(queryString).toContain("$select");
       // single() mode affects execution, not query string format
@@ -474,12 +395,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should generate query string with single() and filter", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where("id eq '123'")
-        .single()
-        .getQueryString();
+      const queryString = db.from(users).list().where("id eq '123'").single().getQueryString();
 
       expect(queryString).toContain("$filter");
       expect(queryString).toContain("id");
@@ -502,11 +418,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should URL encode special characters in values", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .where("name eq 'John & Jane'")
-        .getQueryString();
+      const queryString = db.from(users).list().where("name eq 'John & Jane'").getQueryString();
 
       expect(queryString).toContain("$filter");
       // Special characters should be properly encoded
@@ -523,12 +435,7 @@ describe("OData Query String Generation", () => {
     });
 
     it("should combine list() with query parameters", () => {
-      const queryString = db
-        .from(users)
-        .list()
-        .select({ name: users.name })
-        .top(10)
-        .getQueryString();
+      const queryString = db.from(users).list().select({ name: users.name }).top(10).getQueryString();
 
       expect(queryString).toContain("$select");
       expect(queryString).toContain("$top");

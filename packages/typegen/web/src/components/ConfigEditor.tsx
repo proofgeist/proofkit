@@ -1,38 +1,19 @@
+import { Loader2, PlayIcon, Trash2 } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useState, useEffect, useId } from "react";
-import { Input, InputWrapper, InputGroup, InputAddon } from "./ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { SwitchField } from "./ui/switch-field";
-import { Switch, SwitchIndicator, SwitchWrapper } from "./ui/switch";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
+import { useRunTypegen } from "../hooks/useRunTypegen";
+import type { SingleConfig } from "../lib/config-utils";
 import { EnvVarDialog } from "./EnvVarDialog";
-import { SingleConfig } from "../lib/config-utils";
 import { InfoTooltip } from "./InfoTooltip";
 import { LayoutEditor } from "./LayoutEditor";
 import { MetadataTablesEditor } from "./MetadataTablesEditor";
 import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
-import { PlayIcon, Trash2, Loader2 } from "lucide-react";
-import { useRunTypegen } from "../hooks/useRunTypegen";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Switch, SwitchIndicator, SwitchWrapper } from "./ui/switch";
+import { SwitchField } from "./ui/switch-field";
 
 interface ConfigEditorProps {
   index: number;
@@ -45,7 +26,6 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
     formState: { errors },
     setValue,
     watch,
-    trigger,
   } = useFormContext<{ config: SingleConfig[] }>();
 
   const hasMultipleConfigs = watch("config").length > 1;
@@ -94,7 +74,7 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
   return (
     <div className="space-y-6">
       {configErrors?.root && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive text-sm">
           <strong>Error:</strong> {configErrors.root.message}
         </div>
       )}
@@ -102,39 +82,29 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
       <div className="space-y-8">
         {/* General Settings */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between pr-1 pt-3 overflow-visible">
+          <div className="flex items-center justify-between overflow-visible pt-3 pr-1">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold">General Settings</h3>
+              <h3 className="font-semibold text-lg">General Settings</h3>
             </div>
 
             <div className="flex items-center gap-2">
               <EnvVarDialog index={index} />
               {hasMultipleConfigs && (
-                <Button
-                  variant="success"
-                  appearance="ghost"
-                  size="sm"
-                  onClick={handleRunTypegen}
-                  disabled={isRunning}
-                >
-                  {isRunning ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <PlayIcon className="w-4 h-4" />
-                  )}
+                <Button appearance="ghost" disabled={isRunning} onClick={handleRunTypegen} size="sm" variant="success">
+                  {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayIcon className="h-4 w-4" />}
                 </Button>
               )}
               <Button
-                type="button"
-                variant="destructive"
                 appearance="ghost"
-                size="sm"
+                className="gap-2"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setShowRemoveDialog(true);
                 }}
-                className="gap-2"
+                size="sm"
+                type="button"
+                variant="destructive"
               >
                 <Trash2 className="size-4" />
               </Button>
@@ -149,8 +119,7 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Display Name{" "}
-                      <InfoTooltip label="The name of this connection displayed in this UI only" />
+                      Display Name <InfoTooltip label="The name of this connection displayed in this UI only" />
                     </FormLabel>
 
                     <FormControl>
@@ -186,10 +155,10 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                   <FormItem>
                     <FormControl>
                       <SwitchField
-                        label="Clear Old Files"
-                        checked={field.value || false}
-                        onCheckedChange={field.onChange}
+                        checked={field.value ?? false}
                         infoTooltip="Clear old files will clear the path before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept."
+                        label="Clear Old Files"
+                        onCheckedChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />
@@ -209,27 +178,24 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                       <FormLabel>Generate</FormLabel>
                       <FormControl>
                         <div className="flex w-full items-center">
-                          <SwitchWrapper
-                            permanent={true}
-                            className="w-full inline-grid"
-                          >
+                          <SwitchWrapper className="inline-grid w-full" permanent={true}>
                             <Switch
+                              checked={field.value}
+                              className="h-9 w-full rounded-md"
                               id={generateClientSwitchId}
-                              size="xl"
-                              className="w-full rounded-md h-9"
-                              thumbClassName="rounded-md"
-                              checked={field.value || false}
                               onCheckedChange={field.onChange}
+                              size="xl"
+                              thumbClassName="rounded-md"
                             />
                             <SwitchIndicator
-                              state="off"
                               className="w-1/2 text-accent-foreground peer-data-[state=checked]:text-primary"
+                              state="off"
                             >
                               Full Client
                             </SwitchIndicator>
                             <SwitchIndicator
-                              state="on"
                               className="w-1/2 text-accent-foreground peer-data-[state=unchecked]:text-primary"
+                              state="on"
                             >
                               Types Only
                             </SwitchIndicator>
@@ -266,14 +232,10 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                         <FormLabel>Validator</FormLabel>
                         <FormControl>
                           <Select
-                            value={
-                              field.value === false
-                                ? "false"
-                                : String(field.value || "")
-                            }
                             onValueChange={(value) => {
                               field.onChange(value === "false" ? false : value);
                             }}
+                            value={field.value === false ? "false" : String(field.value || "")}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select validator" />
@@ -301,9 +263,9 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                   name={`config.${index}.reduceMetadata` as const}
                   render={({ field }) => (
                     <SwitchField
-                      label="Reduce Metadata Annotations"
+                      checked={field.value ?? false}
                       infoTooltip="Request reduced OData annotations to reduce payload size. This will prevent comments, entity ids, and other properties from being generated."
-                      checked={field.value || false}
+                      label="Reduce Metadata Annotations"
                       onCheckedChange={field.onChange}
                     />
                   )}
@@ -313,9 +275,9 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                   name={`config.${index}.alwaysOverrideFieldNames` as const}
                   render={({ field }) => (
                     <SwitchField
-                      label="Always Update Field Names"
+                      checked={field.value ?? false}
                       infoTooltip="If true, the field names in your generated schema may be updated to match FileMaker. This may cause TypeScript errors in your code. If you only use entity IDs in your OData requests, you can safely leave this off."
-                      checked={field.value || false}
+                      label="Always Update Field Names"
                       onCheckedChange={field.onChange}
                     />
                   )}
@@ -325,9 +287,9 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
                   name={`config.${index}.includeAllFieldsByDefault` as const}
                   render={({ field }) => (
                     <SwitchField
-                      label="Include All Fields By Default"
-                      infoTooltip="If true, all fields from metadata will be included unless explicitly excluded. If false, only fields defined in the fields array will be included."
                       checked={field.value ?? true}
+                      infoTooltip="If true, all fields from metadata will be included unless explicitly excluded. If false, only fields defined in the fields array will be included."
+                      label="Include All Fields By Default"
                       onCheckedChange={field.onChange}
                     />
                   )}
@@ -340,14 +302,14 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
                   <SwitchField
-                    label="Generate Webviewer Client"
-                    topLabel="Webviewer Options"
                     checked={usingWebviewer}
+                    label="Generate Webviewer Client"
                     onCheckedChange={handleWebviewerToggle}
+                    topLabel="Webviewer Options"
                   />
                 </div>
                 {usingWebviewer && (
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <FormField
                       control={control}
                       name={`config.${index}.webviewerScriptName` as const}
@@ -372,36 +334,29 @@ export function ConfigEditor({ index, onRemove }: ConfigEditorProps) {
         </div>
 
         {configType === "fmdapi" && <LayoutEditor configIndex={index} />}
-        {configType === "fmodata" && (
-          <MetadataTablesEditor configIndex={index} />
-        )}
+        {configType === "fmodata" && <MetadataTablesEditor configIndex={index} />}
       </div>
 
       {/* Remove Config Confirmation Dialog */}
-      <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+      <Dialog onOpenChange={setShowRemoveDialog} open={showRemoveDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Remove Config</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove this config? This action cannot be
-              undone.
+              Are you sure you want to remove this config? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowRemoveDialog(false)}
-            >
+            <Button onClick={() => setShowRemoveDialog(false)} type="button" variant="outline">
               Cancel
             </Button>
             <Button
-              type="button"
-              variant="destructive"
               onClick={() => {
                 onRemove();
                 setShowRemoveDialog(false);
               }}
+              type="button"
+              variant="destructive"
             >
               Remove Config
             </Button>

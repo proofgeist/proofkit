@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import fs from "fs-extra";
 
 import { PKG_ROOT } from "~/consts.js";
@@ -11,7 +11,9 @@ export async function copyCursorRules() {
   const cursorRulesSrcDir = path.join(extrasDir, "_cursor/rules");
   const cursorRulesDestDir = path.join(projectDir, ".cursor/rules");
 
-  if (!fs.existsSync(cursorRulesSrcDir)) return;
+  if (!fs.existsSync(cursorRulesSrcDir)) {
+    return;
+  }
 
   const pkgManager = getUserPkgManager();
   await fs.ensureDir(cursorRulesDestDir);
@@ -26,8 +28,7 @@ export async function copyCursorRules() {
     yarn: "yarn.mdc",
   };
 
-  const selectedRule =
-    packageManagerRules[pkgManager as keyof typeof packageManagerRules];
+  const selectedRule = packageManagerRules[pkgManager as keyof typeof packageManagerRules];
 
   if (selectedRule) {
     const ruleSrc = path.join(conditionalRulesDir, selectedRule);

@@ -1,40 +1,37 @@
-import { Project, ScriptKind } from "ts-morph";
-
-import chalk from "chalk";
-import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
+import path from "node:path";
 import DataApi from "@proofkit/fmdapi";
 import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
+import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
 import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
+import chalk from "chalk";
 import fs from "fs-extra";
-import path from "path";
-import {
-  typegenConfig,
-  typegenConfigSingle,
-  type BuildSchemaArgs,
-} from "./types";
-import {
-  commentHeader,
-  defaultEnvNames,
-  overrideCommentHeader,
-} from "./constants";
-import { getLayoutMetadata } from "./getLayoutMetadata";
-import { buildOverrideFile, buildSchema } from "./buildSchema";
-import { buildLayoutClient } from "./buildLayoutClient";
-import { z } from "zod/v4";
-import { formatAndSaveSourceFiles } from "./formatting";
-import { type PackageJson } from "type-fest";
 import semver from "semver";
-import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
+import { IndentationText, Project, ScriptKind } from "ts-morph";
+import type { PackageJson } from "type-fest";
+import type { z } from "zod/v4";
+import { buildLayoutClient } from "./buildLayoutClient";
+import { buildOverrideFile, buildSchema } from "./buildSchema";
+import { commentHeader, defaultEnvNames, overrideCommentHeader } from "./constants";
 import { generateODataTablesSingle } from "./fmodata/typegen";
+import { formatAndSaveSourceFiles, runPostGenerateCommand } from "./formatting";
+import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
+import { getLayoutMetadata } from "./getLayoutMetadata";
+import { type BuildSchemaArgs, typegenConfig, type typegenConfigSingle } from "./types";
+
+type GlobalOptions = Omit<z.infer<typeof typegenConfig>, "config">;
 
 export const generateTypedClients = async (
   config: z.infer<typeof typegenConfig>["config"],
-  options?: { resetOverrides?: boolean; cwd?: string },
-): Promise<{
-  successCount: number;
-  errorCount: number;
-  totalCount: number;
-} | void> => {
+  options?: GlobalOptions & { resetOverrides?: boolean; cwd?: string },
+): Promise<
+  | {
+      successCount: number;
+      errorCount: number;
+      totalCount: number;
+      outputPaths: string[];
+    }
+  | undefined
+> => {
   const parsedConfig = typegenConfig.safeParse({ config });
   if (!parsedConfig.success) {
     console.log(chalk.red("ERROR: Invalid config"));
@@ -43,24 +40,46 @@ export const generateTypedClients = async (
     return;
   }
 
-  const configArray = Array.isArray(parsedConfig.data.config)
-    ? parsedConfig.data.config
-    : [parsedConfig.data.config];
+  const configArray = Array.isArray(parsedConfig.data.config) ? parsedConfig.data.config : [parsedConfig.data.config];
+  const postGenerateCommand = options?.postGenerateCommand ?? parsedConfig.data.postGenerateCommand;
+
+  const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
+
+  let totalSuccessCount = 0;
+  let totalErrorCount = 0;
+  let totalCount = 0;
+  const outputPaths: string[] = [];
 
   for (const singleConfig of configArray) {
     if (singleConfig.type === "fmdapi") {
-      await generateTypedClientsSingle(singleConfig, options);
+      const result = await generateTypedClientsSingle(singleConfig, { resetOverrides, cwd });
+      if (result) {
+        totalSuccessCount += result.successCount;
+        totalErrorCount += result.errorCount;
+        totalCount += result.totalCount;
+        if (result.outputPath) {
+          outputPaths.push(result.outputPath);
+        }
+      }
     } else if (singleConfig.type === "fmodata") {
-      await generateODataTablesSingle(singleConfig);
+      const outputPath = await generateODataTablesSingle(singleConfig, { cwd });
+      if (outputPath) {
+        outputPaths.push(outputPath);
+      }
     } else {
       console.log(chalk.red("ERROR: Invalid config type"));
     }
   }
+
+  // Run post-generate command once after all configs have been processed
+  await runPostGenerateCommand(postGenerateCommand, cwd);
+
+  return { successCount: totalSuccessCount, errorCount: totalErrorCount, totalCount, outputPaths };
 };
 
 const generateTypedClientsSingle = async (
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>,
-  options?: { resetOverrides?: boolean; cwd?: string },
+  options?: GlobalOptions & { resetOverrides?: boolean; cwd?: string },
 ) => {
   const {
     envNames,
@@ -79,9 +98,7 @@ const generateTypedClientsSingle = async (
   const rootDir = path.join(cwd, rest.path ?? "schema");
 
   try {
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(cwd, "package.json"), "utf8"),
-    ) as PackageJson;
+    const packageJson = JSON.parse(fs.readFileSync(path.join(cwd, "package.json"), "utf8")) as PackageJson;
     const fmdapiVersion = packageJson.dependencies?.["@proofkit/fmdapi"];
     if (fmdapiVersion && semver.valid(fmdapiVersion)) {
       const isAtLeast501 = semver.satisfies(fmdapiVersion, ">=5.0.1");
@@ -93,24 +110,26 @@ const generateTypedClientsSingle = async (
         );
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 
-  const project = new Project({});
+  const project = new Project({
+    manipulationSettings: {
+      indentationText: IndentationText.TwoSpaces,
+    },
+  });
 
   const envValues = getEnvValues(envNames);
   const validationResult = validateAndLogEnvValues(envValues, envNames);
 
-  if (!validationResult || !validationResult.success) {
+  if (!validationResult?.success) {
     return;
   }
 
   const { server, db, auth: validatedAuth } = validationResult;
   const auth: { apiKey: OttoAPIKey } | { username: string; password: string } =
-    "apiKey" in validatedAuth
-      ? { apiKey: validatedAuth.apiKey as OttoAPIKey }
-      : validatedAuth;
+    "apiKey" in validatedAuth ? { apiKey: validatedAuth.apiKey as OttoAPIKey } : validatedAuth;
 
   await fs.ensureDir(rootDir);
   if (clearOldFiles) {
@@ -134,7 +153,7 @@ const generateTypedClientsSingle = async (
           })
         : DataApi({
             adapter: new FetchAdapter({
-              auth: auth as any,
+              auth,
               server,
               db,
               tokenStore: memoryStore(),
@@ -158,35 +177,47 @@ const generateTypedClientsSingle = async (
       layoutName: item.layoutName,
       portalSchema,
       valueLists,
-      type:
-        validator === "zod" || validator === "zod/v4" || validator === "zod/v3"
-          ? validator
-          : "ts",
+      type: validator === "zod" || validator === "zod/v4" || validator === "zod/v3" ? validator : "ts",
       strictNumbers: item.strictNumbers,
-      webviewerScriptName:
-        config?.type === "fmdapi" ? config.webviewerScriptName : undefined,
-      envNames: {
-        auth:
-          envNames?.auth && "apiKey" in envNames.auth
+      webviewerScriptName: config?.type === "fmdapi" ? config.webviewerScriptName : undefined,
+      envNames: (() => {
+        // Determine the intended auth type based on config AND runtime.
+        // Priority:
+        // 1. If user explicitly specified apiKey in config → use OttoAdapter
+        // 2. If user explicitly specified username in config → use FetchAdapter
+        // 3. If neither specified (defaults) → use what was actually used at runtime
+        //
+        // Note: We check for the VALUE being defined, not just the property existing,
+        // because the Zod schema defines both apiKey and username as optional properties,
+        // so both exist on the object but with undefined values when not specified.
+        const configHasApiKey = envNames?.auth?.apiKey !== undefined;
+        const configHasUsername = envNames?.auth?.username !== undefined;
+        const runtimeUsedApiKey = "apiKey" in auth;
+
+        // Use apiKey if: explicitly specified in config, OR not explicitly set to username AND runtime used apiKey
+        const useApiKey = configHasApiKey || (!configHasUsername && runtimeUsedApiKey);
+
+        // Determine the env var names to use in generated code
+        const apiKeyEnvName = envNames?.auth?.apiKey ?? defaultEnvNames.apiKey;
+        const usernameEnvName = envNames?.auth?.username ?? defaultEnvNames.username;
+        const passwordEnvName = envNames?.auth?.password ?? defaultEnvNames.password;
+
+        return {
+          auth: useApiKey
             ? {
-                apiKey: envNames.auth.apiKey ?? defaultEnvNames.apiKey,
+                apiKey: apiKeyEnvName,
                 username: undefined,
                 password: undefined,
               }
             : {
                 apiKey: undefined,
-                username:
-                  envNames?.auth && "username" in envNames.auth
-                    ? (envNames.auth.username ?? defaultEnvNames.username)
-                    : defaultEnvNames.username,
-                password:
-                  envNames?.auth && "password" in envNames.auth
-                    ? (envNames.auth.password ?? defaultEnvNames.password)
-                    : defaultEnvNames.password,
+                username: usernameEnvName,
+                password: passwordEnvName,
               },
-        db: envNames?.db ?? defaultEnvNames.db,
-        server: envNames?.server ?? defaultEnvNames.server,
-      },
+          db: envNames?.db ?? defaultEnvNames.db,
+          server: envNames?.server ?? defaultEnvNames.server,
+        };
+      })(),
     };
     const schemaFile = project.createSourceFile(
       path.join(rootDir, "generated", `${item.schemaName}.ts`),
@@ -229,22 +260,17 @@ const generateTypedClientsSingle = async (
       await fs.ensureFile(clientIndexFilePath);
       const clientIndexFile = project.addSourceFileAtPath(clientIndexFilePath);
       clientIndexFile.addExportDeclaration({
-        namedExports: [
-          { name: "client", alias: `${item.schemaName}${clientSuffix}` },
-        ],
+        namedExports: [{ name: "client", alias: `${item.schemaName}${clientSuffix}` }],
         moduleSpecifier: `./${item.schemaName}`,
       });
     } else {
-      console.log(
-        chalk.yellow(
-          `Skipping client generation for ${item.schemaName} because generateClient is false`,
-        ),
-      );
+      console.log(chalk.yellow(`Skipping client generation for ${item.schemaName} because generateClient is false`));
     }
     successCount++;
   }
 
-  await formatAndSaveSourceFiles(project);
+  // Format and save files
+  await formatAndSaveSourceFiles(project, cwd);
 
-  return { successCount, errorCount, totalCount };
+  return { successCount, errorCount, totalCount, outputPath: rootDir };
 };

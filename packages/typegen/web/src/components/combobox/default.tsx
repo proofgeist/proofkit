@@ -1,8 +1,7 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-import { Button, ButtonArrow } from '@/components/ui/button';
+import { useState } from "react";
+import { Button, ButtonArrow } from "@/components/ui/button";
 import {
   Command,
   CommandCheck,
@@ -11,53 +10,54 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const topCities = [
   {
-    value: 'amsterdam',
-    label: 'Amsterdam, Netherlands',
+    value: "amsterdam",
+    label: "Amsterdam, Netherlands",
   },
   {
-    value: 'london',
-    label: 'London, UK',
+    value: "london",
+    label: "London, UK",
   },
   {
-    value: 'paris',
-    label: 'Paris, France',
+    value: "paris",
+    label: "Paris, France",
   },
   {
-    value: 'tokyo',
-    label: 'Tokyo, Japan',
+    value: "tokyo",
+    label: "Tokyo, Japan",
   },
   {
-    value: 'new_york',
-    label: 'New York, USA',
+    value: "new_york",
+    label: "New York, USA",
   },
   {
-    value: 'dubai',
-    label: 'Dubai, UAE',
+    value: "dubai",
+    label: "Dubai, UAE",
   },
 ];
 
 export default function ComboboxDemo() {
-  const [open, setOpen] = React.useState(false);
-  const [value, setValue] = React.useState('');
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          role="combobox"
-          mode="input"
-          placeholder={!value}
           aria-expanded={open}
           className="w-[200px]"
+          mode="input"
+          placeholder={!value}
+          role="combobox"
+          variant="outline"
         >
-          <span className={cn('truncate')}>
-            {value ? topCities.find((city) => city.value === value)?.label : 'Select city...'}
+          <span className={cn("truncate")}>
+            {value ? topCities.find((city) => city.value === value)?.label : "Select city..."}
           </span>
           <ButtonArrow />
         </Button>
@@ -71,11 +71,11 @@ export default function ComboboxDemo() {
               {topCities.map((city) => (
                 <CommandItem
                   key={city.value}
-                  value={city.value}
                   onSelect={(currentValue) => {
-                    setValue(currentValue === value ? '' : currentValue);
+                    setValue(currentValue === value ? "" : currentValue);
                     setOpen(false);
                   }}
+                  value={city.value}
                 >
                   <span className="truncate">{city.label}</span>
                   {value === city.value && <CommandCheck />}

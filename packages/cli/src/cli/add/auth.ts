@@ -1,4 +1,4 @@
-import * as p from "@clack/prompts";
+import { cancel, select } from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
 import { z } from "zod/v4";
@@ -12,18 +12,16 @@ import { abortIfCancel } from "../utils.js";
 export async function runAddAuthAction() {
   const settings = getSettings();
   if (settings.appType !== "browser") {
-    return p.cancel(`Auth is not supported for your app type.`);
+    return cancel("Auth is not supported for your app type.");
   }
   if (settings.ui === "shadcn") {
-    return p.cancel(
-      "Adding auth is not yet supported for shadcn-based projects."
-    );
+    return cancel("Adding auth is not yet supported for shadcn-based projects.");
   }
 
   const authType =
     state.authType ??
     abortIfCancel(
-      await p.select({
+      await select({
         message: "What auth provider do you want to use?",
         options: [
           {
@@ -37,7 +35,7 @@ export async function runAddAuthAction() {
             hint: "Hosted auth service with many providers",
           },
         ],
-      })
+      }),
     );
 
   const type = z.enum(["clerk", "fmaddon"]).parse(authType);
@@ -45,15 +43,12 @@ export async function runAddAuthAction() {
 
   if (type === "fmaddon") {
     const emailProviderAnswer =
-      (state.emailProvider
-        ? state.emailProvider
-        : state.ci
-          ? "none"
-          : undefined) ??
+      state.emailProvider ??
+      (state.ci ? "none" : undefined) ??
       abortIfCancel(
-        await p.select({
+        await select({
           message: `What email provider do you want to use?\n${chalk.dim(
-            "Used to send email verification codes. If you skip this, the codes will be displayed here in your terminal."
+            "Used to send email verification codes. If you skip this, the codes will be displayed here in your terminal.",
           )}`,
           options: [
             {
@@ -68,12 +63,10 @@ export async function runAddAuthAction() {
             },
             { label: "Other / I'll do it myself later", value: "none" },
           ],
-        })
+        }),
       );
 
-    const emailProvider = z
-      .enum(["plunk", "resend", "none"])
-      .parse(emailProviderAnswer);
+    const emailProvider = z.enum(["plunk", "resend", "none"]).parse(emailProviderAnswer);
 
     state.emailProvider = emailProvider;
 
@@ -92,14 +85,8 @@ export const makeAddAuthCommand = () => {
   const addAuthCommand = new Command("auth")
     .description("Add authentication to your project")
     .option("--authType <authType>", "Type of auth provider to use")
-    .option(
-      "--emailProvider <emailProvider>",
-      "Email provider to use (only for FM Add-on Auth)"
-    )
-    .option(
-      "--apiKey <apiKey>",
-      "API key to use for the email provider (only for FM Add-on Auth)"
-    )
+    .option("--emailProvider <emailProvider>", "Email provider to use (only for FM Add-on Auth)")
+    .option("--apiKey <apiKey>", "API key to use for the email provider (only for FM Add-on Auth)")
     .addOption(ciOption)
     .addOption(debugOption)
 

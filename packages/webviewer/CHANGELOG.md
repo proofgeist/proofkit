@@ -1,5 +1,11 @@
 # @proofkit/webviewer
 
+## 3.0.7-beta.0
+
+### Patch Changes
+
+- 863e1e8: Update tooling to Biome
+
 ## 3.0.6
 
 ### Patch Changes

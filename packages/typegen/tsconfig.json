@@ -13,7 +13,8 @@
     "declaration": true,
 
     /* AND if you're building for a library in a monorepo: */
-    "declarationMap": true
+    "declarationMap": true,
+    "strictNullChecks": true
   },
   "exclude": ["*.config.ts", "test", "dist", "schema", "docs"],
   "include": ["./src/index.ts", "./src/**/*.ts", "vite.config.ts"]

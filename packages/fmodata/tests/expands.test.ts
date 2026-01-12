@@ -7,18 +7,12 @@
  * DO NOT RUN THESE TESTS YET - they define the API we want to build.
  */
 
-import { describe, it, expect, expectTypeOf, assert } from "vitest";
+import { eq, fmTableOccurrence, numberField, textField } from "@proofkit/fmodata";
+import { assert, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod/v4";
-import {
-  fmTableOccurrence,
-  textField,
-  numberField,
-  eq,
-} from "@proofkit/fmodata";
-import { createMockClient, users, contacts } from "./utils/test-setup";
-import { first } from "es-toolkit/compat";
-import { simpleMock } from "./utils/mock-fetch";
 import { mockResponses } from "./fixtures/responses";
+import { simpleMock } from "./utils/mock-fetch";
+import { createMockClient } from "./utils/test-setup";
 
 describe("Expand API Specification", () => {
   // Spec test table definitions (simplified for type testing)
@@ -124,11 +118,7 @@ describe("Expand API Specification", () => {
 
   describe("Simple expand (no callback)", () => {
     it("should generate query string for simple expand", () => {
-      const queryString = db
-        .from(contacts)
-        .list()
-        .expand(users)
-        .getQueryString();
+      const queryString = db.from(contacts).list().expand(users).getQueryString();
       expect(queryString).toBe("/contacts?$top=1000&$expand=users");
     });
 
@@ -156,18 +146,22 @@ describe("Expand API Specification", () => {
         });
     });
 
-    it("should have a properly typed response", async () => {
+    it("should have a properly typed response", () => {
+      // checking types only, don't actually make a request
       async () => {
-        // checking types only, don't actually make a request
         const result = await db
           .from(contacts)
           .list()
-          .expand(users, (b) =>
-            b.select({ username: users.username, email: users.email }),
-          )
+          .expand(users, (b) => b.select({ username: users.username, email: users.email }))
           .execute();
 
-        const firstRecord = result.data![0]!;
+        if (!result.data || result.data.length === 0) {
+          throw new Error("Expected result.data to be defined and non-empty");
+        }
+        const firstRecord = result.data[0];
+        if (!firstRecord) {
+          throw new Error("Expected firstRecord to be defined");
+        }
 
         // runtime tests to ensure the fields are not present
         // @ts-expect-error - these fields should not be present
@@ -185,7 +179,10 @@ describe("Expand API Specification", () => {
         // users was expanded, so it will be an array in the response
         expectTypeOf(firstRecord).toHaveProperty("users");
         expectTypeOf(firstRecord.users).toBeArray();
-        const firstUser = firstRecord.users[0]!;
+        const firstUser = firstRecord.users[0];
+        if (!firstUser) {
+          throw new Error("Expected firstUser to be defined");
+        }
       };
     });
 
@@ -193,14 +190,10 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b) =>
-          b.select({ username: users.username, email: users.email }),
-        )
+        .expand(users, (b) => b.select({ username: users.username, email: users.email }))
         .getQueryString();
 
-      expect(queryString).toBe(
-        "/contacts?$top=1000&$expand=users($select=username,email)",
-      );
+      expect(queryString).toBe("/contacts?$top=1000&$expand=users($select=username,email)");
     });
 
     it("should enforce callback returns builder", () => {
@@ -268,9 +261,7 @@ describe("Expand API Specification", () => {
         .expand(otherUsers)
         .getQueryString();
 
-      expect(queryString).toBe(
-        "/contacts?$top=1000&$expand=users($select=username),other_users",
-      );
+      expect(queryString).toBe("/contacts?$top=1000&$expand=users($select=username),other_users");
     });
 
     it("should type each expand callback independently", () => {
@@ -311,9 +302,18 @@ describe("Expand API Specification", () => {
       async () => {
         const result = await query.execute();
 
-        const firstRecord = result.data![0]!;
+        if (!result.data || result.data.length === 0) {
+          throw new Error("Expected result.data to be defined and non-empty");
+        }
+        const firstRecord = result.data[0];
+        if (!firstRecord) {
+          throw new Error("Expected firstRecord to be defined");
+        }
 
-        const firstUser = firstRecord.users[0]!;
+        const firstUser = firstRecord.users[0];
+        if (!firstUser) {
+          throw new Error("Expected firstUser to be defined");
+        }
 
         // @ts-expect-error - this field was not selected, so it shouldn't be in the type
         firstUser.id_customer;
@@ -350,7 +350,9 @@ describe("Expand API Specification", () => {
 
       // Type check: verify that only selected fields are typed correctly
       const firstUser = result.data.users?.[0];
-      assert(firstUser, "First user should be defined");
+      if (!firstUser) {
+        throw new Error("Expected firstUser to be defined");
+      }
       expectTypeOf(firstUser).toHaveProperty("name");
       expectTypeOf(firstUser).toHaveProperty("id");
       expectTypeOf(firstUser).toHaveProperty("user_customer");
@@ -431,9 +433,7 @@ describe("Expand API Specification", () => {
           // Verify runtime data exists
           expect(firstUser.id).toBe("1A269FA3-82E6-465A-94FA-39EE3F2F9B5D");
           expect(firstUser.name).toBe("Test User");
-          expect(firstUser.id_customer).toBe(
-            "3026B56E-0C6E-4F31-B666-EE8AC5B36542",
-          );
+          expect(firstUser.id_customer).toBe("3026B56E-0C6E-4F31-B666-EE8AC5B36542");
           expect(firstUser.user_customer).toBeDefined();
           expect(Array.isArray(firstUser.user_customer)).toBe(true);
           expect(firstUser.user_customer.length).toBe(1);
@@ -479,9 +479,7 @@ describe("Expand API Specification", () => {
         .expand(users, (b) =>
           b
             .select({ username: users.username })
-            .expand(userCustomer, (nested) =>
-              nested.select({ name: userCustomer.name }),
-            ),
+            .expand(userCustomer, (nested) => nested.select({ name: userCustomer.name })),
         )
         .getQueryString();
 
@@ -517,9 +515,7 @@ describe("Expand API Specification", () => {
             .where(eq(users.active, 1))
             .orderBy("username")
             .top(10)
-            .expand(userCustomer, (nested) =>
-              nested.select({ name: userCustomer.name }),
-            ),
+            .expand(userCustomer, (nested) => nested.select({ name: userCustomer.name })),
         )
         .getQueryString();
 
@@ -535,9 +531,7 @@ describe("Expand API Specification", () => {
       const queryString = db
         .from(contacts)
         .list()
-        .expand(users, (b) =>
-          b.select({ username: users.username }).where(eq(users.active, 1)),
-        )
+        .expand(users, (b) => b.select({ username: users.username }).where(eq(users.active, 1)))
         .expand(otherUsers, (b) => b.select({ email: otherUsers.email }).top(5))
         .getQueryString();
 
@@ -561,12 +555,7 @@ describe("Expand API Specification", () => {
     });
 
     it("should work with filter on parent query", () => {
-      const queryString = db
-        .from(contacts)
-        .list()
-        .where(eq(contacts.name, "Eric"))
-        .expand(users)
-        .getQueryString();
+      const queryString = db.from(contacts).list().where(eq(contacts.name, "Eric")).expand(users).getQueryString();
 
       expect(queryString).toContain("$filter=name eq");
       expect(queryString).toContain("$expand=users");

@@ -6,11 +6,7 @@ interface ConfigListProps {
   onAddConfig: () => void;
 }
 
-export function ConfigList({
-  configs,
-  onSelectConfig,
-  onAddConfig,
-}: ConfigListProps) {
+export function ConfigList({ configs, onSelectConfig, onAddConfig }: ConfigListProps) {
   const getConfigLabel = (config: unknown, index: number): string => {
     if (typeof config === "object" && config !== null) {
       const obj = config as Record<string, unknown>;
@@ -32,7 +28,7 @@ export function ConfigList({
     <div className="config-list">
       <div className="config-list-header">
         <h2>Configurations</h2>
-        <button onClick={onAddConfig} className="add-button">
+        <button className="add-button" onClick={onAddConfig} type="button">
           + Add Config
         </button>
       </div>
@@ -43,34 +39,15 @@ export function ConfigList({
           </div>
         ) : (
           configs.map((config, index) => (
-            <div
-              key={index}
-              className="config-list-item"
-              onClick={() => onSelectConfig(index)}
-            >
+            <button className="config-list-item" key={index} onClick={() => onSelectConfig(index)} type="button">
               <div className="config-list-item-content">
-                <span className="config-list-item-label">
-                  {getConfigLabel(config, index)}
-                </span>
+                <span className="config-list-item-label">{getConfigLabel(config, index)}</span>
                 <span className="config-list-item-arrow">→</span>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

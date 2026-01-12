@@ -1,31 +1,24 @@
+import {
+  type ColumnDef,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type PaginationState,
+  type SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardFooter,
-  CardHeader,
-  CardTable,
-  CardTitle,
-  CardToolbar,
-} from "@/components/ui/card";
+import { Card, CardFooter, CardHeader, CardTable, CardTitle, CardToolbar } from "@/components/ui/card";
 import { DataGrid } from "@/components/ui/data-grid";
 import { DataGridColumnHeader } from "@/components/ui/data-grid-column-header";
 import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ColumnDef,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  PaginationState,
-  SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
 
 interface IData {
   id: string;
@@ -218,9 +211,7 @@ export default function DataGridDemo() {
     pageIndex: 0,
     pageSize: 5,
   });
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "name", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: true }]);
   const [isLoading, setIsLoading] = useState(true);
 
   const handleToggleLoading = () => {
@@ -232,37 +223,24 @@ export default function DataGridDemo() {
       {
         accessorKey: "name",
         id: "name",
-        header: ({ column }) => (
-          <DataGridColumnHeader
-            title="User"
-            visibility={true}
-            column={column}
-          />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="User" visibility={true} />,
         cell: ({ row }) => {
           return (
             <div className="flex items-center gap-3">
               <Avatar className="size-8">
-                <AvatarImage
-                  src={`/media/avatars/${row.original.avatar}`}
-                  alt={row.original.name}
-                />
+                <AvatarImage alt={row.original.name} src={`/media/avatars/${row.original.avatar}`} />
                 <AvatarFallback>N</AvatarFallback>
               </Avatar>
               <div className="space-y-px">
-                <div className="font-medium text-foreground">
-                  {row.original.name}
-                </div>
-                <div className="text-muted-foreground">
-                  {row.original.email}
-                </div>
+                <div className="font-medium text-foreground">{row.original.name}</div>
+                <div className="text-muted-foreground">{row.original.email}</div>
               </div>
             </div>
           );
         },
         meta: {
           skeleton: (
-            <div className="flex items-center gap-3 h-[41px]">
+            <div className="flex h-[41px] items-center gap-3">
               <Skeleton className="size-8 rounded-full" />
               <div className="space-y-1">
                 <Skeleton className="h-5 w-24" />
@@ -279,18 +257,9 @@ export default function DataGridDemo() {
       {
         accessorKey: "email",
         id: "email",
-        header: ({ column }) => (
-          <DataGridColumnHeader
-            title="Email"
-            visibility={true}
-            column={column}
-          />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Email" visibility={true} />,
         cell: (info) => (
-          <a
-            href={`mailto:${info.getValue()}`}
-            className="hover:text-primary hover:underline"
-          >
+          <a className="hover:text-primary hover:underline" href={`mailto:${info.getValue()}`}>
             {info.getValue() as string}
           </a>
         ),
@@ -298,7 +267,7 @@ export default function DataGridDemo() {
         meta: {
           headerClassName: "",
           cellClassName: "text-left",
-          skeleton: <Skeleton className="w-28 h-7" />,
+          skeleton: <Skeleton className="h-7 w-28" />,
         },
         enableSorting: true,
         enableHiding: true,
@@ -307,20 +276,12 @@ export default function DataGridDemo() {
       {
         accessorKey: "location",
         id: "location",
-        header: ({ column }) => (
-          <DataGridColumnHeader
-            title="Location"
-            visibility={true}
-            column={column}
-          />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Location" visibility={true} />,
         cell: ({ row }) => {
           return (
             <div className="flex items-center gap-1.5">
               {row.original.flag}
-              <div className="font-medium text-foreground">
-                {row.original.location}
-              </div>
+              <div className="font-medium text-foreground">{row.original.location}</div>
             </div>
           );
         },
@@ -328,7 +289,7 @@ export default function DataGridDemo() {
         meta: {
           headerClassName: "",
           cellClassName: "text-start",
-          skeleton: <Skeleton className="w-28 h-7" />,
+          skeleton: <Skeleton className="h-7 w-28" />,
         },
         enableSorting: true,
         enableHiding: true,
@@ -337,32 +298,25 @@ export default function DataGridDemo() {
       {
         accessorKey: "status",
         id: "status",
-        header: ({ column }) => (
-          <DataGridColumnHeader
-            title="Status"
-            visibility={true}
-            column={column}
-          />
-        ),
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Status" visibility={true} />,
         cell: ({ row }) => {
           const status = row.original.status;
 
-          if (status == "active") {
+          if (status === "active") {
             return (
-              <Badge variant="primary" appearance="outline">
+              <Badge appearance="outline" variant="primary">
                 Approved
               </Badge>
             );
-          } else {
-            return (
-              <Badge variant="destructive" appearance="outline">
-                Pending
-              </Badge>
-            );
           }
+          return (
+            <Badge appearance="outline" variant="destructive">
+              Pending
+            </Badge>
+          );
         },
         meta: {
-          skeleton: <Skeleton className="w-16 h-7" />,
+          skeleton: <Skeleton className="h-7 w-16" />,
         },
         size: 100,
         enableSorting: true,
@@ -373,9 +327,7 @@ export default function DataGridDemo() {
     [],
   );
 
-  const [columnOrder, setColumnOrder] = useState<string[]>(
-    columns.map((column) => column.id as string),
-  );
+  const [columnOrder, setColumnOrder] = useState<string[]>(columns.map((column) => column.id as string));
 
   const table = useReactTable({
     columns,
@@ -398,9 +350,9 @@ export default function DataGridDemo() {
 
   return (
     <DataGrid
-      table={table}
-      recordCount={demoData?.length || 0}
       isLoading={isLoading}
+      recordCount={demoData?.length || 0}
+      table={table}
       tableClassNames={{
         edgeCell: "px-5",
       }}
@@ -414,7 +366,7 @@ export default function DataGridDemo() {
         <CardHeader className="py-3.5">
           <CardTitle>Employees</CardTitle>
           <CardToolbar>
-            <Button variant="outline" size="sm" onClick={handleToggleLoading}>
+            <Button onClick={handleToggleLoading} size="sm" variant="outline">
               {isLoading ? "Disable Loading" : "Enable Loading"}
             </Button>
           </CardToolbar>

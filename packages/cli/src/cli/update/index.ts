@@ -15,7 +15,7 @@ export const runUpgrade = async () => {
 
   try {
     await runAllAvailableUpgrades();
-    logger.info(chalk.green(`✔ Successfully upgraded components\n`));
+    logger.info(chalk.green("✔ Successfully upgraded components\n"));
   } catch (error) {
     logger.error("Failed to upgrade components:", error);
     process.exit(1);

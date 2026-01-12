@@ -1,9 +1,9 @@
-import path from "path";
-import * as p from "@clack/prompts";
+import path from "node:path";
+import { select, text } from "@clack/prompts";
 import { Command } from "commander";
 import { execa } from "execa";
 import fs from "fs-extra";
-import { type PackageJson } from "type-fest";
+import type { PackageJson } from "type-fest";
 
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { addAuth } from "~/generators/auth.js";
@@ -14,19 +14,13 @@ import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
-import { getRegistryUrl, shadcnInstall } from "~/helpers/shadcn-cli.js";
 import { buildPkgInstallerMap } from "~/installers/index.js";
 import { ensureWebViewerAddonInstalled } from "~/installers/proofkit-webviewer.js";
 import { initProgramState, state } from "~/state.js";
-import { addPackageDependency } from "~/utils/addPackageDependency.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
-import {
-  getSettings,
-  setSettings,
-  type Settings,
-} from "~/utils/parseSettings.js";
+import { type Settings, setSettings } from "~/utils/parseSettings.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { promptForFileMakerDataSource } from "./add/data-source/filemaker.js";
 import { abortIfCancel } from "./utils.js";
@@ -86,59 +80,20 @@ const defaultOptions: CliFlags = {
 export const makeInitCommand = () => {
   const initCommand = new Command("init")
     .description("Create a new project with ProofKit")
-    .argument(
-      "[dir]",
-      "The name of the application, as well as the name of the directory to create"
-    )
+    .argument("[dir]", "The name of the application, as well as the name of the directory to create")
     .option("--appType [type]", "The type of app to create", undefined)
     // hidden UI selector; default is shadcn; pass --ui mantine to opt-in legacy Mantine templates
     .option("--ui [ui]", undefined, undefined)
     .option("--server [url]", "The URL of your FileMaker Server", undefined)
-    .option(
-      "--adminApiKey [key]",
-      "Admin API key for OttoFMS. If provided, will skip login prompt",
-      undefined
-    )
-    .option(
-      "--fileName [name]",
-      "The name of the FileMaker file to use for the web app",
-      undefined
-    )
-    .option(
-      "--layoutName [name]",
-      "The name of the FileMaker layout to use for the web app",
-      undefined
-    )
-    .option(
-      "--schemaName [name]",
-      "The name for the generated layout client in your schemas",
-      undefined
-    )
-    .option(
-      "--dataApiKey [key]",
-      "The API key to use for the FileMaker Data API",
-      undefined
-    )
-    .option(
-      "--auth [type]",
-      "The authentication provider to use for the web app",
-      undefined
-    )
-    .option(
-      "--dataSource [type]",
-      "The data source to use for the web app (filemaker or none)",
-      undefined
-    )
-    .option(
-      "--noGit",
-      "Explicitly tell the CLI to not initialize a new git repo in the project",
-      false
-    )
-    .option(
-      "--noInstall",
-      "Explicitly tell the CLI to not run the package manager's install command",
-      false
-    )
+    .option("--adminApiKey [key]", "Admin API key for OttoFMS. If provided, will skip login prompt", undefined)
+    .option("--fileName [name]", "The name of the FileMaker file to use for the web app", undefined)
+    .option("--layoutName [name]", "The name of the FileMaker layout to use for the web app", undefined)
+    .option("--schemaName [name]", "The name for the generated layout client in your schemas", undefined)
+    .option("--dataApiKey [key]", "The API key to use for the FileMaker Data API", undefined)
+    .option("--auth [type]", "The authentication provider to use for the web app", undefined)
+    .option("--dataSource [type]", "The data source to use for the web app (filemaker or none)", undefined)
+    .option("--noGit", "Explicitly tell the CLI to not initialize a new git repo in the project", false)
+    .option("--noInstall", "Explicitly tell the CLI to not run the package manager's install command", false)
     .addOption(ciOption)
     .addOption(debugOption)
     .action(runInit);
@@ -183,18 +138,18 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   const projectName =
     name ||
     abortIfCancel(
-      await p.text({
+      await text({
         message: "What will your project be called?",
         defaultValue: DEFAULT_APP_NAME,
         validate: validateAppName,
-      })
+      }),
     ).toString();
 
   if (!state.appType) {
     state.appType = state.ci
       ? "browser"
       : (abortIfCancel(
-          await p.select({
+          await select({
             message: "What kind of app do you want to build?",
             options: [
               {
@@ -208,7 +163,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
                 hint: "Uses Vite, can be embedded in FileMaker or hosted",
               },
             ],
-          })
+          }),
         ) as "browser" | "webviewer");
   }
 
@@ -227,9 +182,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   setImportAlias(projectDir, "@/");
 
   // Write name to package.json
-  const pkgJson = fs.readJSONSync(
-    path.join(projectDir, "package.json")
-  ) as ProofKitPackageJSON;
+  const pkgJson = fs.readJSONSync(path.join(projectDir, "package.json")) as ProofKitPackageJSON;
   pkgJson.name = scopedAppName;
   pkgJson.proofkitMetadata = { initVersion: getVersion() };
 
@@ -269,14 +222,13 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
           replacedMainPage: false,
           registryTemplates: [],
         };
-  const { registryUrl } = setSettings(initialSettings);
+  setSettings(initialSettings);
 
   // for webviewer apps FM is required, so don't ask
-  let dataSource =
-    state.appType === "webviewer" ? "filemaker" : cliOptions.dataSource;
+  let dataSource = state.appType === "webviewer" ? "filemaker" : cliOptions.dataSource;
   if (!dataSource) {
     dataSource = abortIfCancel(
-      await p.select({
+      await select({
         message: "Do you want to connect to a FileMaker Database now?",
         options: [
           {
@@ -291,7 +243,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
             hint: "You'll be able to add a new data source later",
           },
         ],
-      })
+      }),
     ) as "filemaker" | "none" | "supabase";
   }
 
@@ -319,14 +271,6 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   await askForAuth({ projectDir });
 
   await installDependencies({ projectDir });
-
-  if (state.ui === "shadcn") {
-    await shadcnInstall([
-      `${getRegistryUrl()}/r/components/mode-toggle`,
-      "sonner",
-      "button",
-    ]);
-  }
 
   await runCodegenCommand();
 

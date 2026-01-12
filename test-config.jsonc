@@ -3,8 +3,8 @@
   "config": [
     {
       "adapter": {
-        "type": "webviewer",
-      },
-    },
-  ],
+        "type": "webviewer"
+      }
+    }
+  ]
 }

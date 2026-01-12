@@ -6,18 +6,17 @@
  * and return properly typed data.
  */
 
-import { describe, it, expect, assert } from "vitest";
 import {
-  FMServerConnection,
+  eq,
   fmTableOccurrence,
   textField,
+  type WebhookAddResponse,
   type WebhookInfo,
   type WebhookListResponse,
-  type WebhookAddResponse,
-  eq,
 } from "@proofkit/fmodata";
-import { createMockFetch } from "./utils/mock-fetch";
+import { assert, describe, expect, it } from "vitest";
 import { mockResponses } from "./fixtures/responses";
+import { createMockFetch } from "./utils/mock-fetch";
 import { createMockClient } from "./utils/test-setup";
 
 describe("WebhookManager", () => {
@@ -48,12 +47,15 @@ describe("WebhookManager", () => {
 
       const firstWebhook = result.WebHook[0];
       expect(firstWebhook).toBeDefined();
-      if (!firstWebhook) throw new Error("Expected firstWebhook to be defined");
+      if (!firstWebhook) {
+        throw new Error("Expected firstWebhook to be defined");
+      }
 
       // Use the first webhook from the mock response as the expected value
       const expectedFirstWebhook = expectedWebhooks[0];
-      if (!expectedFirstWebhook)
+      if (!expectedFirstWebhook) {
         throw new Error("Expected first webhook in mock response");
+      }
       expect(firstWebhook.webHookID).toBe(expectedFirstWebhook.webHookID);
       expect(firstWebhook.tableName).toBe("contacts");
       expect(firstWebhook.url).toBe("https://example.com/webhook");
@@ -97,8 +99,7 @@ describe("WebhookManager", () => {
       expect(result.webHookResult).toBeDefined();
 
       // Extract expected ID from mock response
-      const expectedWebhookID =
-        mockResponses["webhook-add"].response.webHookResult.webHookID;
+      const expectedWebhookID = mockResponses["webhook-add"].response.webHookResult.webHookID;
       expect(result.webHookResult.webHookID).toBe(expectedWebhookID);
     });
 
@@ -114,14 +115,13 @@ describe("WebhookManager", () => {
       );
 
       // Extract expected ID from mock response
-      const expectedWebhookID =
-        mockResponses["webhook-add"].response.webHookResult.webHookID;
+      const expectedWebhookID = mockResponses["webhook-add"].response.webHookResult.webHookID;
       expect(result.webHookResult.webHookID).toBe(expectedWebhookID);
     });
 
     it("should support the same filter/select DX as the main query builder", async () => {
       let requestBody: string | null = null;
-      const result = await db.webhook.add(
+      const _result = await db.webhook.add(
         {
           webhook: "https://example.com/webhook",
           tableName: contacts,
@@ -138,9 +138,7 @@ describe("WebhookManager", () => {
               }
             },
           },
-          fetchHandler: createMockFetch(
-            mockResponses["webhook-add-with-options"],
-          ),
+          fetchHandler: createMockFetch(mockResponses["webhook-add-with-options"]),
         },
       );
       assert(requestBody, "Request body should be defined");
@@ -172,8 +170,7 @@ describe("WebhookManager", () => {
       const typedResult: WebhookAddResponse = result;
 
       // Extract expected ID from mock response
-      const expectedWebhookID =
-        mockResponses["webhook-add"].response.webHookResult.webHookID;
+      const expectedWebhookID = mockResponses["webhook-add"].response.webHookResult.webHookID;
       expect(typedResult.webHookResult.webHookID).toBe(expectedWebhookID);
     });
   });
@@ -201,7 +198,7 @@ describe("WebhookManager", () => {
 
     it("should throw an error for non-existent webhook", async () => {
       await expect(
-        db.webhook.get(99999, {
+        db.webhook.get(99_999, {
           fetchHandler: createMockFetch(mockResponses["webhook-get-not-found"]),
         }),
       ).rejects.toThrow();
@@ -226,8 +223,7 @@ describe("WebhookManager", () => {
   describe("remove()", () => {
     it("should remove a webhook successfully", async () => {
       // Extract webhook ID from mock response
-      const webhookID =
-        mockResponses["webhook-delete"].response.webHookResult.webHookID;
+      const webhookID = mockResponses["webhook-delete"].response.webHookResult.webHookID;
 
       await expect(
         db.webhook.remove(webhookID, {
@@ -238,8 +234,7 @@ describe("WebhookManager", () => {
 
     it("should return void on success", async () => {
       // Extract webhook ID from mock response
-      const webhookID =
-        mockResponses["webhook-delete"].response.webHookResult.webHookID;
+      const webhookID = mockResponses["webhook-delete"].response.webHookResult.webHookID;
 
       const result = await db.webhook.remove(webhookID, {
         fetchHandler: createMockFetch(mockResponses["webhook-delete"]),
@@ -249,35 +244,35 @@ describe("WebhookManager", () => {
     });
   });
 
-  describe.skip("invoke()", () => {
-    // it("should invoke a webhook without rowIDs", async () => {
-    //   const result = await db.webhook.invoke(1, undefined, {
-    //     fetchHandler: createMockFetch(mockResponses["webhook-invoke"]),
-    //   });
-    //   expect(result).toBeDefined();
-    //   expect(typeof result).toBe("object");
-    //   if (result && typeof result === "object" && "status" in result) {
-    //     expect((result as any).status).toBe("success");
-    //   }
-    // });
-    // it("should invoke a webhook with rowIDs", async () => {
-    //   const result = await db.webhook.invoke(
-    //     1,
-    //     { rowIDs: [63, 61] },
-    //     {
-    //       fetchHandler: createMockFetch(mockResponses["webhook-invoke"]),
-    //     },
-    //   );
-    //   expect(result).toBeDefined();
-    //   expect(typeof result).toBe("object");
-    // });
-  });
+  // TODO: Re-enable these tests when webhook invoke functionality is implemented
+  // describe("invoke()", () => {
+  //   it("should invoke a webhook without rowIDs", async () => {
+  //     const result = await db.webhook.invoke(1, undefined, {
+  //       fetchHandler: createMockFetch(mockResponses["webhook-invoke"]),
+  //     });
+  //     expect(result).toBeDefined();
+  //     expect(typeof result).toBe("object");
+  //     if (result && typeof result === "object" && "status" in result) {
+  //       expect((result as any).status).toBe("success");
+  //     }
+  //   });
+  //   it("should invoke a webhook with rowIDs", async () => {
+  //     const result = await db.webhook.invoke(
+  //       1,
+  //       { rowIDs: [63, 61] },
+  //       {
+  //         fetchHandler: createMockFetch(mockResponses["webhook-invoke"]),
+  //       },
+  //     );
+  //     expect(result).toBeDefined();
+  //     expect(typeof result).toBe("object");
+  //   });
+  // });
 
   describe("integration", () => {
     it("should add, get, and remove a webhook in sequence", async () => {
       // Extract expected IDs from mock responses
-      const expectedAddID =
-        mockResponses["webhook-add"].response.webHookResult.webHookID;
+      const expectedAddID = mockResponses["webhook-add"].response.webHookResult.webHookID;
       const expectedGetID = mockResponses["webhook-get"].response.webHookID;
 
       // Add webhook
@@ -303,8 +298,7 @@ describe("WebhookManager", () => {
       expect(getResult.webHookID).toBe(expectedGetID);
 
       // Remove webhook - use the ID from the delete mock response
-      const expectedDeleteID =
-        mockResponses["webhook-delete"].response.webHookResult.webHookID;
+      const expectedDeleteID = mockResponses["webhook-delete"].response.webHookResult.webHookID;
       await expect(
         db.webhook.remove(expectedDeleteID, {
           fetchHandler: createMockFetch(mockResponses["webhook-delete"]),

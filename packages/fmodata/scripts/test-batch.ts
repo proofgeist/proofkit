@@ -8,13 +8,16 @@
  *   bun run scripts/test-batch.ts
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Regex patterns
+const TRAILING_SLASHES_REGEX = /\/+$/;
 
 // Load environment variables
 config({ path: path.resolve(__dirname, "../.env.local") });
@@ -28,10 +31,8 @@ if (!serverUrl) {
   throw new Error("FMODATA_SERVER_URL environment variable is required");
 }
 
-if (!username || !password) {
-  throw new Error(
-    "FMODATA_USERNAME and FMODATA_PASSWORD environment variables are required",
-  );
+if (!(username && password)) {
+  throw new Error("FMODATA_USERNAME and FMODATA_PASSWORD environment variables are required");
 }
 
 if (!database) {
@@ -40,9 +41,7 @@ if (!database) {
 
 // Generate a random boundary
 function generateBoundary(prefix: string): string {
-  const randomHex = Array.from({ length: 32 }, () =>
-    Math.floor(Math.random() * 16).toString(16),
-  ).join("");
+  const randomHex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
   return `${prefix}${randomHex}`;
 }
 
@@ -50,7 +49,10 @@ async function testSimpleBatch() {
   console.log("=== Testing Simple Batch Request ===\n");
 
   // Construct base URL
-  const cleanUrl = serverUrl!.replace(/\/+$/, "");
+  if (!serverUrl) {
+    throw new Error("serverUrl is required");
+  }
+  const cleanUrl = serverUrl.replace(TRAILING_SLASHES_REGEX, "");
   const baseUrl = `${cleanUrl}/fmi/odata/v4`;
   const fullBaseUrl = `${baseUrl}/${database}`;
   const batchUrl = `${fullBaseUrl}/$batch`;
@@ -89,7 +91,7 @@ async function testSimpleBatch() {
   const authString = `${username}:${password}`;
   const authHeader = `Basic ${Buffer.from(authString).toString("base64")}`;
 
-  console.log("Authorization:", authHeader.substring(0, 20) + "...");
+  console.log("Authorization:", `${authHeader.substring(0, 20)}...`);
 
   // Make the request
   try {
@@ -117,7 +119,9 @@ async function testSimpleBatch() {
     console.log(responseText);
     console.log("=== End Response Body ===\n");
 
-    if (!response.ok) {
+    if (response.ok) {
+      console.log("\n✅ Request succeeded!");
+    } else {
       console.error("\n❌ Request failed!");
       // Try to parse as JSON error
       try {
@@ -126,8 +130,6 @@ async function testSimpleBatch() {
       } catch {
         // Not JSON, already printed above
       }
-    } else {
-      console.log("\n✅ Request succeeded!");
     }
   } catch (error) {
     console.error("\n❌ Request threw error:");
@@ -138,7 +140,10 @@ async function testSimpleBatch() {
 async function testBatchWithChangeset() {
   console.log("\n\n=== Testing Batch with Changeset ===\n");
 
-  const cleanUrl = serverUrl!.replace(/\/+$/, "");
+  if (!serverUrl) {
+    throw new Error("serverUrl is required");
+  }
+  const cleanUrl = serverUrl.replace(TRAILING_SLASHES_REGEX, "");
   const baseUrl = `${cleanUrl}/fmi/odata/v4`;
   const fullBaseUrl = `${baseUrl}/${database}`;
   const batchUrl = `${fullBaseUrl}/$batch`;
@@ -219,7 +224,9 @@ async function testBatchWithChangeset() {
     console.log(responseText);
     console.log("=== End Response Body ===\n");
 
-    if (!response.ok) {
+    if (response.ok) {
+      console.log("\n✅ Request succeeded!");
+    } else {
       console.error("\n❌ Request failed!");
       try {
         const errorData = JSON.parse(responseText);
@@ -227,8 +234,6 @@ async function testBatchWithChangeset() {
       } catch {
         // Not JSON, already printed above
       }
-    } else {
-      console.log("\n✅ Request succeeded!");
     }
   } catch (error) {
     console.error("\n❌ Request threw error:");

@@ -30,7 +30,7 @@
     "test:watch": "vitest --typecheck",
     "test:build": "pnpm build && TEST_BUILD=true vitest run --typecheck",
     "test:watch:build": "TEST_BUILD=true vitest --typecheck",
-    "test:e2e": "doppler run -- vitest run tests/e2e.test.ts",
+    "test:e2e": "doppler run -- vitest run tests/e2e",
     "capture": "doppler run -- tsx scripts/capture-responses.ts",
     "knip": "knip",
     "pub:alpha": "bun run scripts/publish-alpha.ts",

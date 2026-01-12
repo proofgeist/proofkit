@@ -28,7 +28,7 @@ import { FMServerConnection } from "@proofkit/fmodata";
 import { config } from "dotenv";
 import { afterEach, describe, expect, it } from "vitest";
 
-config({ path: path.resolve(__dirname, "../.env.local") });
+config({ path: path.resolve(__dirname, "../../.env.local") });
 
 // Load environment variables
 const serverUrl = process.env.FMODATA_SERVER_URL;

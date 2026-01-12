@@ -16,10 +16,10 @@ import {
 } from "@proofkit/fmodata";
 import { afterEach, assert, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod/v4";
-import { apiKey, contacts, contactsTOWithIds, database, password, serverUrl, username, users } from "./e2e/setup";
-import { mockResponses } from "./fixtures/responses";
-import { jsonCodec } from "./utils/helpers";
-import { createMockFetch, simpleMock } from "./utils/mock-fetch";
+import { apiKey, contacts, contactsTOWithIds, database, password, serverUrl, username, users } from "./setup";
+import { mockResponses } from "../fixtures/responses";
+import { jsonCodec } from "../utils/helpers";
+import { createMockFetch, simpleMock } from "../utils/mock-fetch";
 
 if (!serverUrl) {
   throw new Error("FMODATA_SERVER_URL environment variable is required");

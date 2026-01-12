@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: library code */
 import { logger } from "better-auth";
-import { type CleanedWhere, createAdapter } from "better-auth/adapters";
+import { type CleanedWhere, createAdapter, type DBAdapterDebugLogOption } from "better-auth/adapters";
 import buildQuery from "odata-query";
 import { prettifyError, z } from "zod/v4";
 import { createRawFetch, type FmOdataConfig } from "./odata";
@@ -15,11 +15,11 @@ const configSchema = z.object({
   }),
 });
 
-interface FileMakerAdapterConfig {
+export interface FileMakerAdapterConfig {
   /**
    * Helps you debug issues with the adapter.
    */
-  debugLogs?: boolean | { isRunningAdapterTests?: boolean };
+  debugLogs?: DBAdapterDebugLogOption;
   /**
    * If the table names in the schema are plural.
    */
@@ -168,7 +168,7 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
     logging: config.debugLogs ? "verbose" : "none",
   });
 
-  return createAdapter({
+  const adapterFactory = createAdapter({
     config: {
       adapterId: "filemaker",
       adapterName: "FileMaker",
@@ -382,4 +382,8 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
       };
     },
   });
+
+  // Expose the FileMaker config for CLI access
+  (adapterFactory as any).filemakerConfig = config as FileMakerAdapterConfig;
+  return adapterFactory;
 };

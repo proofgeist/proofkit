@@ -1,20 +1,11 @@
+import type { DBFieldAttribute } from "better-auth/db";
 import chalk from "chalk";
 import type { Metadata } from "fm-odata-client";
 import z from "zod/v4";
 import type { createRawFetch } from "./odata";
 
-type BetterAuthTableField = {
-  fieldName?: string;
-  type: unknown;
-};
-
-type BetterAuthTableDef = {
-  modelName: string;
-  fields: Record<string, BetterAuthTableField>;
-  order?: number;
-};
-
-export type BetterAuthAuthTables = Record<string, BetterAuthTableDef>;
+/** Schema type returned by better-auth's getSchema function */
+type BetterAuthSchema = Record<string, { fields: Record<string, DBFieldAttribute>; order: number }>;
 
 function normalizeBetterAuthFieldType(fieldType: unknown): string {
   if (typeof fieldType === "string") return fieldType;
@@ -46,7 +37,7 @@ export async function getMetadata(fetch: ReturnType<typeof createRawFetch>["fetc
 
 export async function planMigration(
   fetch: ReturnType<typeof createRawFetch>["fetch"],
-  betterAuthSchema: BetterAuthAuthTables,
+  betterAuthSchema: BetterAuthSchema,
   databaseName: string,
 ): Promise<MigrationPlan> {
   const metadata = await getMetadata(fetch, databaseName);
@@ -104,7 +95,7 @@ export async function planMigration(
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))
     .map(([key, value]) => ({
       ...value,
-      keyName: key,
+      modelName: key, // Use the key as modelName since getSchema uses table names as keys
     }));
 
   const migrationPlan: MigrationPlan = [];

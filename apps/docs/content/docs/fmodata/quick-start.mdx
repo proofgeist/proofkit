@@ -33,7 +33,7 @@ Here's a minimal example to get you started with `@proofkit/fmodata`:
     ```typescript title="connection.ts" tab="Username/Password"
     import { FMServerConnection } from "@proofkit/fmodata";
 
-    const connection = new FMServerConnection({
+    export const connection = new FMServerConnection({
       serverUrl: process.env.FM_SERVER,
       auth: {
         username: process.env.FM_USERNAME,
@@ -45,7 +45,7 @@ Here's a minimal example to get you started with `@proofkit/fmodata`:
     ```typescript title="connection.ts" tab="API key"
     import { FMServerConnection } from "@proofkit/fmodata";
 
-    const connection = new FMServerConnection({
+    export const connection = new FMServerConnection({
       serverUrl: process.env.FM_SERVER,
       auth: {
         apiKey: process.env.OTTO_API_KEY,

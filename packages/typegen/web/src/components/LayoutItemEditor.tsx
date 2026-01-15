@@ -16,7 +16,7 @@ interface LayoutItemEditorProps {
 }
 
 export function LayoutItemEditor({ configIndex, layoutIndex, onRemove }: LayoutItemEditorProps) {
-  const { control, watch } = useFormContext<{ config: SingleConfig[] }>();
+  const { control, watch, setValue } = useFormContext<{ config: SingleConfig[] }>();
   const schemaName = watch(`config.${configIndex}.layouts.${layoutIndex}.schemaName`);
   const layoutName = watch(`config.${configIndex}.layouts.${layoutIndex}.layoutName`);
 
@@ -71,7 +71,15 @@ export function LayoutItemEditor({ configIndex, layoutIndex, onRemove }: LayoutI
                 </FormLabel>
                 <FormControl>
                   <Select
-                    onValueChange={(val) => field.onChange(val === "__default__" ? undefined : val)}
+                    onValueChange={(val) => {
+                      if (val === "__default__") {
+                        setValue(`config.${configIndex}.layouts.${layoutIndex}.valueLists`, undefined, {
+                          shouldDirty: true,
+                        });
+                      } else {
+                        field.onChange(val);
+                      }
+                    }}
                     value={field.value ?? "__default__"}
                   >
                     <SelectTrigger>
@@ -120,7 +128,9 @@ export function LayoutItemEditor({ configIndex, layoutIndex, onRemove }: LayoutI
                     <Select
                       onValueChange={(val) => {
                         if (val === "__default__") {
-                          field.onChange(undefined);
+                          setValue(`config.${configIndex}.layouts.${layoutIndex}.generateClient`, undefined, {
+                            shouldDirty: true,
+                          });
                         } else {
                           field.onChange(val === "true");
                         }

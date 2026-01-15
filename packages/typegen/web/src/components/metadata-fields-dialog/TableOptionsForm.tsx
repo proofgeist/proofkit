@@ -23,7 +23,7 @@ export function TableOptionsForm({
   open,
   topLevelIncludeAllFieldsByDefault,
 }: TableOptionsFormProps) {
-  const { control } = useFormContext<{ config: SingleConfig[] }>();
+  const { control, setValue } = useFormContext<{ config: SingleConfig[] }>();
 
   // Get the field names for the form fields
   const variableNameFieldName =
@@ -92,7 +92,7 @@ export function TableOptionsForm({
                   <Select
                     onValueChange={(val) => {
                       if (val === "__default__") {
-                        field.onChange(undefined);
+                        setValue(alwaysOverrideFieldNamesFieldName, undefined, { shouldDirty: true });
                       } else {
                         field.onChange(val === "true");
                       }
@@ -140,7 +140,7 @@ export function TableOptionsForm({
                   <Select
                     onValueChange={(val) => {
                       if (val === "__default__") {
-                        field.onChange(undefined);
+                        setValue(reduceMetadataFieldName, undefined, { shouldDirty: true });
                       } else {
                         field.onChange(val === "true");
                       }
@@ -189,7 +189,7 @@ export function TableOptionsForm({
                   <Select
                     onValueChange={(val) => {
                       if (val === "__default__") {
-                        field.onChange(undefined);
+                        setValue(includeAllFieldsByDefaultFieldName, undefined, { shouldDirty: true });
                       } else {
                         field.onChange(val === "true");
                       }

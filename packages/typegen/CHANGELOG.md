@@ -1,5 +1,11 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.6
+
+### Patch Changes
+
+- UI updates
+
 ## 1.1.0-beta.5
 
 ### Patch Changes

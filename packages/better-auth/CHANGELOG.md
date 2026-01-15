@@ -1,5 +1,11 @@
 # @proofkit/better-auth
 
+## 0.3.1-beta.1
+
+### Patch Changes
+
+- 2858f6a: Fix TypeScript build errors by making adapter/migration types resilient to upstream Better Auth changes.
+
 ## 0.3.1-beta.0
 
 ### Patch Changes

@@ -18,6 +18,7 @@
   },
   "changesets": [
     "add-format-command",
+    "better-auth-type-errors",
     "bright-dogs-teach",
     "brown-keys-float",
     "fix-typegen-auth-detection",

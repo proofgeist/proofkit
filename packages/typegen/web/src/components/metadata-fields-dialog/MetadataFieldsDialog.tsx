@@ -1,11 +1,12 @@
 import { useReactTable } from "@tanstack/react-table";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { useTableMetadata } from "../../hooks/useTableMetadata";
 import type { SingleConfig } from "../../lib/config-utils";
-import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogBody, DialogClose, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input, InputWrapper } from "../ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { FieldsDataGrid } from "./FieldsDataGrid";
 import { createFieldsColumns } from "./fieldsColumns";
 import { TableOptionsForm } from "./TableOptionsForm";
@@ -138,16 +139,26 @@ export function MetadataFieldsDialog({ open, onOpenChange, tableName, configInde
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="!top-[5vh] !translate-y-0 flex max-h-[90vh] w-full max-w-6xl flex-col"
+        className="top-[5vh]! flex max-h-[90vh] w-full max-w-6xl translate-y-0! flex-col"
+        showCloseButton={false}
         variant="default"
       >
-        <DialogHeader className="flex-shrink-0">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogClose className="absolute end-5 top-5 flex cursor-pointer items-center gap-1.5 rounded-sm opacity-60 outline-0 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden disabled:pointer-events-none">
+              <span className="text-muted-foreground text-xs">Close</span>
+              <X className="size-4" />
+            </DialogClose>
+          </TooltipTrigger>
+          <TooltipContent>Selections will persist when you close the dialog</TooltipContent>
+        </Tooltip>
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             Including {selectedFieldsCount} of {fieldsData.length} fields for {tableName || "Table"}
           </DialogTitle>
         </DialogHeader>
         <DialogBody className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto">
-          <div className="mb-2 flex-shrink-0 space-y-2">
+          <div className="mb-2 shrink-0 space-y-2">
             <InputWrapper>
               <Search className="size-4" />
               <Input

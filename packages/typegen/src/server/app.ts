@@ -113,6 +113,7 @@ export function createApiApp(context: ApiContext) {
       async (c) => {
         try {
           const data = c.req.valid("json");
+          console.log("[Server POST /config] Received data:", JSON.stringify(data, null, 2));
 
           // Transform validated data using runtime schema (applies transforms)
           const transformedData = {
@@ -124,9 +125,12 @@ export function createApiApp(context: ApiContext) {
                   ? config
                   : { ...(config as Record<string, unknown>), type: "fmdapi" as const };
               // Parse with runtime schema to apply transforms
-              return typegenConfigSingle.parse(configWithType);
+              const parsed = typegenConfigSingle.parse(configWithType);
+              console.log("[Server POST /config] After parse, config:", JSON.stringify(parsed, null, 2));
+              return parsed;
             }),
           };
+          console.log("[Server POST /config] Transformed data:", JSON.stringify(transformedData, null, 2));
 
           // Validate with Zod (data is already { config: [...], postGenerateCommand?: string })
           const validation = typegenConfig.safeParse(transformedData);
@@ -162,12 +166,14 @@ export function createApiApp(context: ApiContext) {
           const fullPath = path.resolve(context.cwd, context.configPath);
           // Add $schema at the top of the config
           const configData = validation.data as Record<string, unknown>;
+          console.log("[Server POST /config] Validation data to write:", JSON.stringify(configData, null, 2));
           const { $schema: _, ...rest } = configData;
           const configWithSchema = {
             $schema: "https://proofkit.dev/typegen-config-schema.json",
             ...rest,
           };
           const jsonContent = `${JSON.stringify(configWithSchema, null, 2)}\n`;
+          console.log("[Server POST /config] Final JSON content:\n", jsonContent);
 
           await fs.ensureDir(path.dirname(fullPath));
           await fs.writeFile(fullPath, jsonContent, "utf8");

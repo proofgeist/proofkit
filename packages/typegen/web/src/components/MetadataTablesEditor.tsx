@@ -472,7 +472,7 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
         id: "actions",
         header: () => null,
         enableSorting: false,
-        size: 150,
+        size: 1,
         cell: (info) => {
           const row = info.row.original;
           return (
@@ -494,7 +494,9 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
           );
         },
         meta: {
-          skeleton: <Skeleton className="h-9 w-32" />,
+          skeleton: <Skeleton className="h-8 w-[72px]" />,
+          cellClassName: "!w-px",
+          headerClassName: "!w-px",
         },
       },
     ],
@@ -511,6 +513,9 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
     globalFilterFn: "includesString",
     state: {
       globalFilter: searchFilter,
+      columnPinning: {
+        right: ["actions"],
+      },
     },
     onGlobalFilterChange: setSearchFilter,
   });
@@ -647,6 +652,7 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
               width: "auto",
               headerSticky: true,
               dense: true,
+              columnsPinnable: true,
             }}
           >
             <DataGridContainer>

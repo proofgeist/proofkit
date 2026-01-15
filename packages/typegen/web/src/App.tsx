@@ -153,14 +153,29 @@ function App() {
     },
   });
 
-  const handleSaveAll = form.handleSubmit(async (data) => {
+  const handleSaveAll = form.handleSubmit(async (_data) => {
+    // IMPORTANT: Use form.getValues() instead of the `data` parameter passed to handleSubmit.
+    // react-hook-form's handleSubmit callback receives stale data for dynamically added nested
+    // fields (like table-level options set via setValue in child components).
+    // form.getValues() returns the current live form state with all updates.
+    const currentConfigs = form.getValues("config");
+    const currentPostGenerateCommand = form.getValues("postGenerateCommand");
+    console.log(
+      "[App.handleSaveAll] Form data being submitted:",
+      JSON.stringify({ config: currentConfigs, postGenerateCommand: currentPostGenerateCommand }, null, 2),
+    );
+    console.log("[App.handleSaveAll] Form dirty fields:", form.formState.dirtyFields);
     try {
-      await saveMutation.mutateAsync({ configsToSave: data.config, postGenerateCommand: data.postGenerateCommand });
+      await saveMutation.mutateAsync({
+        configsToSave: currentConfigs,
+        postGenerateCommand: currentPostGenerateCommand,
+      });
       // Reset the form with the current form state to clear dirty state
-      // Use getValues() to get the current state, preserving any changes made during the save request
       // The accordion state is preserved because it's controlled and the component doesn't unmount
-      const currentConfigs = form.getValues("config");
-      const currentPostGenerateCommand = form.getValues("postGenerateCommand");
+      console.log(
+        "[App.handleSaveAll] After save, form values:",
+        JSON.stringify({ config: currentConfigs, postGenerateCommand: currentPostGenerateCommand }, null, 2),
+      );
       form.reset({ config: currentConfigs, postGenerateCommand: currentPostGenerateCommand });
     } catch (err) {
       // Error is handled by the mutation

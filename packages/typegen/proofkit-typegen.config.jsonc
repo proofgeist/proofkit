@@ -1,4 +1,5 @@
 {
+  "$schema": "https://proofkit.dev/typegen-config-schema.json",
   "config": [
     {
       "type": "fmodata",

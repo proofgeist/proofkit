@@ -6,23 +6,25 @@ import type { source } from "./source";
 const FRONTMATTER_REGEX = /^---[\s\S]*?---\n?([\s\S]*)$/;
 
 export async function getLLMText(page: InferPageType<typeof source>): Promise<string> {
-  // Read raw MDX content - page.path is like "fmdapi/index.mdx"
+  // Read raw MDX content - construct path from slugs
   let content = "";
-  try {
-    const mdxPath = nodePath.join(process.cwd(), "content/docs", page.file.path);
-    const raw = await fs.readFile(mdxPath, "utf-8");
-    // Remove frontmatter (--- ... ---)
-    const match = raw.match(FRONTMATTER_REGEX);
-    content = match?.[1]?.trim() ?? raw;
-  } catch {
-    // Fallback: try with page.path if file.path doesn't work
+  const filePath = `${page.slugs.join("/")}.mdx`;
+
+  // Try both direct path and index.mdx for directory pages
+  const pathsToTry = [
+    nodePath.join(process.cwd(), "content/docs", filePath),
+    nodePath.join(process.cwd(), "content/docs", page.slugs.join("/"), "index.mdx"),
+  ];
+
+  for (const mdxPath of pathsToTry) {
     try {
-      const mdxPath = nodePath.join(process.cwd(), "content/docs", page.path);
       const raw = await fs.readFile(mdxPath, "utf-8");
+      // Remove frontmatter (--- ... ---)
       const match = raw.match(FRONTMATTER_REGEX);
       content = match?.[1]?.trim() ?? raw;
+      break;
     } catch {
-      // Could not read file
+      // Try next path
     }
   }
 

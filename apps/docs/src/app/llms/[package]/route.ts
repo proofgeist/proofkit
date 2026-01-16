@@ -24,7 +24,7 @@ export async function GET(_request: Request, props: { params: Promise<{ package:
     notFound();
   }
 
-  const pages = source.getPages().filter((page) => page.file.path.startsWith(`${pkg}/`));
+  const pages = source.getPages().filter((page) => page.slugs[0] === pkg);
 
   if (pages.length === 0) {
     notFound();

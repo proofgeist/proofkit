@@ -47,10 +47,7 @@ export function CliCommand({
     <Tabs groupId="package-manager" id="package-manager" items={MANAGERS.map((m) => m.label)} persist>
       {MANAGERS.map((manager) => (
         <Tab key={manager.key} value={manager.label}>
-          <DynamicCodeBlock
-            code={`${exec ? `${manager.execPrefix} ${pkg}` : manager.prefix} ${command}`}
-            lang="bash"
-          />
+          <DynamicCodeBlock code={`${exec ? `${manager.execPrefix} ${pkg}` : manager.prefix} ${command}`} lang="bash" />
         </Tab>
       ))}
     </Tabs>

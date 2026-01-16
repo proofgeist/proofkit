@@ -11,6 +11,12 @@ import FileMakerLang from "./src/lib/FileMaker-tmLanguage.json";
 // Options: https://fumadocs.vercel.app/docs/mdx/collections#define-docs
 export const docs = defineDocs({
   dir: "content/docs",
+  docs: {
+    async: true,
+    postprocess: {
+      includeProcessedMarkdown: true,
+    },
+  },
 });
 
 export default defineConfig({

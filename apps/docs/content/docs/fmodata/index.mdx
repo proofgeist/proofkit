@@ -5,6 +5,7 @@ description: "@proofkit/fmodata"
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Card, Cards } from "fumadocs-ui/components/card";
+import { CliCommand } from "@/components/CliCommand";
 
 <Callout type="warning">
 This library is in beta status. We don't expect the method names or arguments to change further, but please submit feedback or report issues on the [community forum](https://community.ottomatic.cloud/c/proofkit/13) or on [GitHub](https://github.com/proofgeist/proofkit/issues).
@@ -31,6 +32,12 @@ To use this library you need:
 - A FileMaker account with `fmodata` privilege enabled
 - (if using OttoFMS) a Data API key setup for your FileMaker account with OData enabled
 
+
+## AI Agent Integration
+
+Install the ProofKit FMOData skill for better AI agent integration while developing with this package:
+
+<CliCommand command='add proofgeist/proofkit --skill "proofkit-fmodata"' exec execPackage="skills" />
 
 ## When to Use OData vs Data API
 

@@ -45,6 +45,28 @@ const coreRowModel = getCoreRowModel();
 const sortedRowModel = getSortedRowModel();
 const filteredRowModel = getFilteredRowModel();
 
+// Helper to highlight matching text in search results
+function HighlightedText({ text, highlight }: { text: string; highlight: string }) {
+  if (!highlight.trim()) {
+    return <>{text}</>;
+  }
+  const regex = new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark className="rounded-sm bg-yellow-200 dark:bg-yellow-800" key={i}>
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 // Helper component to fetch and display field count for a table
 function FieldCountCell({
   tableName,
@@ -422,7 +444,7 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
           const row = info.row.original;
           return (
             <span className={`font-medium ${row.isIncluded ? "" : "text-muted-foreground italic"}`}>
-              {info.getValue() as string}
+              <HighlightedText highlight={searchFilter} text={info.getValue() as string} />
             </span>
           );
         },
@@ -500,7 +522,7 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
         },
       },
     ],
-    [toggleTableInclude, includeAllTables, excludeAllTables, allIncluded, allExcluded, isLoadingTables],
+    [toggleTableInclude, includeAllTables, excludeAllTables, allIncluded, allExcluded, isLoadingTables, searchFilter],
   );
 
   // Create tables table instance

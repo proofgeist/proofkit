@@ -77,8 +77,8 @@ function App() {
   // Load and save config using custom hook
   const { configDataResponse, isError, error, refetch, saveMutation, isLoading, isRetrying } = useConfig();
 
-  // Track active accordion item to preserve state
-  const [activeAccordionItem, setActiveAccordionItem] = useState<number>(0);
+  // Track active accordion item to preserve state (empty string = all closed)
+  const [activeAccordionItem, setActiveAccordionItem] = useState<string>("0");
 
   // Use React Hook Form to manage the configs array and postGenerateCommand
   interface FormData {
@@ -128,7 +128,7 @@ function App() {
         await saveMutation.mutateAsync({ configsToSave: [newConfig], postGenerateCommand });
         await refetch();
         setTimeout(() => {
-          setActiveAccordionItem(0);
+          setActiveAccordionItem("0");
         }, 100);
       } catch (err) {
         const apiType = type === "fmdapi" ? "Data API" : "OData";
@@ -138,7 +138,7 @@ function App() {
       // File exists, just append to form
       append(newConfig);
       setTimeout(() => {
-        setActiveAccordionItem(fields.length);
+        setActiveAccordionItem(String(fields.length));
       }, 1);
     }
   };
@@ -342,9 +342,9 @@ function App() {
                 <Accordion
                   className="mx-auto w-full lg:w-[75%]"
                   collapsible
-                  onValueChange={(value) => setActiveAccordionItem(Number(value))}
+                  onValueChange={setActiveAccordionItem}
                   type="single"
-                  value={activeAccordionItem.toString()}
+                  value={activeAccordionItem}
                   variant="outline"
                 >
                   {fields.map((field, index) => {

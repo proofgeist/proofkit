@@ -544,6 +544,10 @@ export function MetadataTablesEditor({ configIndex }: MetadataTablesEditorProps)
             <div className="flex-1">
               <div className="font-medium">Failed to load tables</div>
               {errorTables instanceof Error && <div className="mt-1 text-xs opacity-90">{errorTables.message}</div>}
+              <Button className="mt-3" onClick={() => refetchTables()} size="sm" type="button" variant="outline">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Retry
+              </Button>
             </div>
           </div>
         </div>

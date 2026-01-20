@@ -4,7 +4,11 @@ import type { SingleConfig } from "./config-utils";
 
 // Create typed client using the server app type
 // This gives us full type inference from the server routes
-export const client = hc<ApiApp>("/");
+// Use credentials: "omit" to prevent browser from sending cookies
+// This avoids 431 errors when user has many cookies from other localhost apps
+export const client = hc<ApiApp>("/", {
+  fetch: (input, init) => fetch(input, { ...init, credentials: "omit" }),
+});
 
 export async function getConfig() {
   const res = await client.api.config.$get();

@@ -27,16 +27,20 @@ console.log(`  FMODATA_SERVER_URL: ${serverUrl ? "✓ set" : "✗ missing"}`);
 console.log(`  FMODATA_API_KEY: ${apiKey ? "✓ set" : "✗ missing"}`);
 console.log(`  FMODATA_DATABASE: ${database ? "✓ set" : "✗ missing"}`);
 
-if (!serverUrl || !apiKey || !database) {
+if (!(serverUrl && apiKey && database)) {
   console.error("Missing required env vars: FMODATA_SERVER_URL, FMODATA_API_KEY, FMODATA_DATABASE");
   process.exit(1);
 }
 
 const ffetch = createClient();
+const trailingSlashRegex = /\/+$/;
 
 async function makeRequest(path: string): Promise<{ status: number; data: unknown }> {
-  const cleanBaseUrl = serverUrl!.replace(/\/+$/, "");
-  const basePath = `${cleanBaseUrl}/otto/fmi/odata/v4/${encodeURIComponent(database!)}`;
+  if (!(serverUrl && database)) {
+    throw new Error("serverUrl and database must be set");
+  }
+  const cleanBaseUrl = serverUrl.replace(trailingSlashRegex, "");
+  const basePath = `${cleanBaseUrl}/otto/fmi/odata/v4/${encodeURIComponent(database)}`;
   const fullUrl = `${basePath}${path.startsWith("/") ? path : `/${path}`}`;
 
   console.log(`\n${"=".repeat(80)}`);
@@ -58,12 +62,12 @@ async function makeRequest(path: string): Promise<{ status: number; data: unknow
     }
 
     console.log(`Status: ${response.status}`);
-    console.log(`Response:`);
+    console.log("Response:");
     console.log(JSON.stringify(data, null, 2));
 
     return { status: response.status, data };
   } catch (error) {
-    console.error(`Error:`, error);
+    console.error("Error:", error);
     return { status: 0, data: null };
   }
 }

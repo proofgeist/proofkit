@@ -5,8 +5,37 @@
  * This validates that navigation properties can be accessed from record instances.
  */
 
+import { dateField, fmTableOccurrence, textField } from "@proofkit/fmodata";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { arbitraryTable, contacts, createMockClient, invoices, lineItems, users } from "./utils/test-setup";
+
+const contactsUsersPathRegex = /^\/contacts\/users/;
+
+// Tables with defaultSelect: "schema" to test issue #107
+const contactsWithSchema = fmTableOccurrence(
+  "contacts",
+  {
+    PrimaryKey: textField().primaryKey(),
+    name: textField(),
+    closedDate: dateField(),
+  },
+  {
+    defaultSelect: "schema",
+    navigationPaths: ["users"],
+  },
+);
+
+const usersWithSchema = fmTableOccurrence(
+  "users",
+  {
+    id: textField().primaryKey(),
+    name: textField(),
+  },
+  {
+    defaultSelect: "schema",
+    navigationPaths: ["contacts"],
+  },
+);
 
 describe("navigate", () => {
   const client = createMockClient();
@@ -148,5 +177,29 @@ describe("navigate", () => {
     // await nestedExpand.execute({
     //   fetchHandler: simpleMock({ status: 200, body: {} }),
     // });
+  });
+
+  // Issue #107: navigate() doesn't include parent table in URL path
+  // when defaultSelect is "schema" or an object
+  describe("with defaultSelect='schema' (#107)", () => {
+    it("should include parent table in URL path", () => {
+      const db = client.database("test_db");
+      const query = db
+        .from(contactsWithSchema)
+        .navigate(usersWithSchema)
+        .list()
+        .where("contacts/closedDate eq null")
+        .select({ name: usersWithSchema.name })
+        .top(10);
+
+      expect(query.getQueryString()).toContain("/contacts/users");
+    });
+
+    it("should include parent table in URL path without filter", () => {
+      const db = client.database("test_db");
+      const query = db.from(contactsWithSchema).navigate(usersWithSchema).list();
+
+      expect(query.getQueryString()).toMatch(contactsUsersPathRegex);
+    });
   });
 });

@@ -120,7 +120,17 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
         // Include special columns if enabled at database level
         const systemColumns = this.databaseIncludeSpecialColumns ? { ROWID: true, ROWMODID: true } : undefined;
 
-        return builder.select(allColumns, systemColumns).top(1000) as QueryBuilder<
+        const selectedBuilder = builder.select(allColumns, systemColumns).top(1000);
+        // Propagate navigation context if present
+        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+          (selectedBuilder as any).navigation = {
+            relation: this.navigateRelation,
+            sourceTableName: this.navigateSourceTableName,
+            basePath: this.navigateBasePath,
+          };
+        }
+        return selectedBuilder as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
           false,
@@ -134,7 +144,17 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       if (typeof defaultSelectValue === "object") {
         // defaultSelectValue is a select object (Record<string, Column>)
         // Cast to the declared return type - runtime behavior handles the actual selection
-        return builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>).top(1000) as QueryBuilder<
+        const selectedBuilder = builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>).top(1000);
+        // Propagate navigation context if present
+        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+          (selectedBuilder as any).navigation = {
+            relation: this.navigateRelation,
+            sourceTableName: this.navigateSourceTableName,
+            basePath: this.navigateBasePath,
+          };
+        }
+        return selectedBuilder as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
           false,

@@ -1,5 +1,11 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.24
+
+### Patch Changes
+
+- b727425: Fix navigate() not including parent table in URL when defaultSelect is "schema" or object (#107)
+
 ## 0.1.0-beta.23
 
 ### Patch Changes

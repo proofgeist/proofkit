@@ -21,6 +21,7 @@
     "better-auth-type-errors",
     "bright-dogs-teach",
     "brown-keys-float",
+    "fix-navigate-defaultselect-schema",
     "fix-typegen-431-error",
     "fix-typegen-auth-detection",
     "get-query-string-entity-ids-override",

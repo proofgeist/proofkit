@@ -24,9 +24,9 @@ export function useListTables(configIndex: number, enabled?: boolean) {
         throw new Error("Config not found or invalid type");
       }
 
-      const res = await client.api["list-tables"].$get({
-        query: {
-          config: JSON.stringify(config),
+      const res = await client.api["list-tables"].$post({
+        json: {
+          config,
         },
       });
 

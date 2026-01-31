@@ -47,7 +47,9 @@ export function getDefaultSelectFields(
       fields.push("ROWID", "ROWMODID");
     }
 
-    return fields;
+    // Return undefined (meaning "all") when schema has no fields with validators,
+    // rather than an empty array which would generate an empty $select=
+    return fields.length > 0 ? fields : undefined;
   }
 
   if (Array.isArray(defaultSelect)) {

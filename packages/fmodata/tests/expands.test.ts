@@ -7,7 +7,7 @@
  * DO NOT RUN THESE TESTS YET - they define the API we want to build.
  */
 
-import { eq, fmTableOccurrence, numberField, textField } from "@proofkit/fmodata";
+import { eq, FMServerConnection, fmTableOccurrence, numberField, textField } from "@proofkit/fmodata";
 import { assert, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod/v4";
 import { mockResponses } from "./fixtures/responses";
@@ -576,5 +576,100 @@ describe("Expand API Specification", () => {
       expect(queryString).toContain("$skip=10");
       expect(queryString).toContain("$expand=users($select=username)");
     });
+  });
+});
+
+/**
+ * GitHub Issue #109: Nested expand generates empty $select= causing OData parse error
+ *
+ * When expanding a table that has no readValidators and uses the default "schema"
+ * defaultSelect, getDefaultSelectFields returns an empty array. This causes
+ * buildExpandParts to generate "$select=" (empty) inside the expand, which
+ * FileMaker OData cannot parse.
+ *
+ * @see https://github.com/proofkit/proofkit/issues/109
+ */
+const EMPTY_SELECT_CLOSE_PAREN = /\$select=\)/;
+const EMPTY_SELECT_SEMICOLON = /\$select=;/;
+const EMPTY_SELECT_END = /\$select=$/;
+const EXPAND_CAPTURE = /\$expand=([^&]+)/;
+const SELECT_CAPTURE = /\$select=([^;)]+)/;
+
+describe("Issue #109: Empty $select in expand", () => {
+  // Tables matching the issue reproduction: entity IDs, no defaultSelect (defaults to "schema"),
+  // no readValidators on any fields
+  const Parent = fmTableOccurrence(
+    "Parent",
+    {
+      _pk: textField().primaryKey().entityId("FMFID:1"),
+    },
+    {
+      entityId: "FMTID:1",
+      navigationPaths: ["Child"],
+    },
+  );
+
+  const Child = fmTableOccurrence(
+    "Child",
+    {
+      _pk: textField().primaryKey().entityId("FMFID:2"),
+      data: textField().entityId("FMFID:3"),
+    },
+    {
+      entityId: "FMTID:2",
+      navigationPaths: ["Parent"],
+    },
+  );
+
+  const connection = new FMServerConnection({
+    serverUrl: "https://example.com",
+    auth: { username: "test", password: "test" },
+  });
+
+  const db = connection.database("Test.fmp12", { useEntityIds: true });
+
+  it("should not generate empty $select= inside expand on .get()", () => {
+    const queryString = db.from(Parent).get("test-id").expand(Child).getQueryString();
+
+    // The query should NOT contain an empty $select= (i.e. "$select=)" or "$select=;")
+    expect(queryString).not.toMatch(EMPTY_SELECT_CLOSE_PAREN);
+    expect(queryString).not.toMatch(EMPTY_SELECT_SEMICOLON);
+    expect(queryString).not.toMatch(EMPTY_SELECT_END);
+  });
+
+  it("should not generate empty $select= inside expand on .list()", () => {
+    const queryString = db.from(Parent).list().expand(Child).getQueryString();
+
+    expect(queryString).not.toMatch(EMPTY_SELECT_CLOSE_PAREN);
+    expect(queryString).not.toMatch(EMPTY_SELECT_SEMICOLON);
+  });
+
+  it("should either omit $select or include all fields in expand without callback", () => {
+    const queryString = db.from(Parent).get("test-id").expand(Child).getQueryString();
+
+    // If expand includes $select, it must have actual field names
+    if (queryString.includes("$expand=")) {
+      const expandMatch = queryString.match(EXPAND_CAPTURE);
+      expect(expandMatch).toBeTruthy();
+      const expandContent = expandMatch?.[1];
+      // If there's a $select inside the expand parens, it must not be empty
+      if (expandContent?.includes("$select=")) {
+        const selectMatch = expandContent.match(SELECT_CAPTURE);
+        expect(selectMatch).toBeTruthy();
+        expect(selectMatch?.[1]?.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("should not generate empty $select= in nested expand without explicit select", () => {
+    const queryString = db
+      .from(Parent)
+      .get("test-id")
+      .expand(Child, (b) => b.expand(Parent))
+      .getQueryString();
+
+    // Neither the Child expand nor the nested Parent expand should have empty $select=
+    expect(queryString).not.toMatch(EMPTY_SELECT_CLOSE_PAREN);
+    expect(queryString).not.toMatch(EMPTY_SELECT_SEMICOLON);
   });
 });

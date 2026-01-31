@@ -5,7 +5,6 @@ import { createContext, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 
 declare module "@tanstack/react-table" {
-  // biome-ignore lint/correctness/noUnusedVariables: TValue is required by library interface
   interface ColumnMeta<TData extends RowData, TValue> {
     headerTitle?: string;
     headerClassName?: string;

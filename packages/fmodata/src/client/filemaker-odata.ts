@@ -23,6 +23,8 @@ export class FMServerConnection implements ExecutionContext {
   private useEntityIds = false;
   private includeSpecialColumns = false;
   private readonly logger: InternalLogger;
+  /** @internal Stored so credential-override flows can inherit non-auth config. */
+  readonly _fetchClientOptions: FFetchOptions | undefined;
   constructor(config: {
     serverUrl: string;
     auth: Auth;
@@ -30,6 +32,7 @@ export class FMServerConnection implements ExecutionContext {
     logger?: Logger;
   }) {
     this.logger = createLogger(config.logger);
+    this._fetchClientOptions = config.fetchClientOptions;
     this.fetchClient = createClient({
       retries: 0,
       ...config.fetchClientOptions,

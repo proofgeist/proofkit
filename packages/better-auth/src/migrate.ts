@@ -16,14 +16,9 @@ function normalizeBetterAuthFieldType(fieldType: unknown): string {
   return String(fieldType);
 }
 
-export async function getMetadata(db: Database): Promise<Metadata | null> {
-  try {
-    const metadata = await db.getMetadata({ format: "json" });
-    return metadata;
-  } catch (err) {
-    console.error(chalk.red("Failed to get metadata:"), formatError(err));
-    return null;
-  }
+export async function getMetadata(db: Database): Promise<Metadata> {
+  const metadata = await db.getMetadata({ format: "json" });
+  return metadata;
 }
 
 /** Map a better-auth field type string to an fmodata Field type */
@@ -42,52 +37,48 @@ export async function planMigration(db: Database, betterAuthSchema: BetterAuthSc
 
   // Build a map from entity set name to entity type key
   const entitySetToType: Record<string, string> = {};
-  if (metadata) {
-    for (const [key, value] of Object.entries(metadata)) {
-      if (value.$Kind === "EntitySet" && value.$Type) {
-        // $Type is like 'betterauth_test.fmp12.proofkit_user_'
-        const typeKey = value.$Type.split(".").pop(); // e.g., 'proofkit_user_'
-        entitySetToType[key] = typeKey || key;
-      }
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value.$Kind === "EntitySet" && value.$Type) {
+      // $Type is like 'betterauth_test.fmp12.proofkit_user_'
+      const typeKey = value.$Type.split(".").pop(); // e.g., 'proofkit_user_'
+      entitySetToType[key] = typeKey || key;
     }
   }
 
-  const existingTables = metadata
-    ? Object.entries(entitySetToType).reduce(
-        (acc, [entitySetName, entityTypeKey]) => {
-          const entityType = metadata[entityTypeKey];
-          if (!entityType) {
-            return acc;
+  const existingTables = Object.entries(entitySetToType).reduce(
+    (acc, [entitySetName, entityTypeKey]) => {
+      const entityType = metadata[entityTypeKey];
+      if (!entityType) {
+        return acc;
+      }
+      const fields = Object.entries(entityType)
+        .filter(
+          ([_fieldKey, fieldValue]) =>
+            typeof fieldValue === "object" && fieldValue !== null && "$Type" in fieldValue,
+        )
+        .map(([fieldKey, fieldValue]) => {
+          let type = "string";
+          if (fieldValue.$Type === "Edm.String") {
+            type = "string";
+          } else if (fieldValue.$Type === "Edm.DateTimeOffset") {
+            type = "timestamp";
+          } else if (
+            fieldValue.$Type === "Edm.Decimal" ||
+            fieldValue.$Type === "Edm.Int32" ||
+            fieldValue.$Type === "Edm.Int64"
+          ) {
+            type = "numeric";
           }
-          const fields = Object.entries(entityType)
-            .filter(
-              ([_fieldKey, fieldValue]) =>
-                typeof fieldValue === "object" && fieldValue !== null && "$Type" in fieldValue,
-            )
-            .map(([fieldKey, fieldValue]) => {
-              let type = "string";
-              if (fieldValue.$Type === "Edm.String") {
-                type = "string";
-              } else if (fieldValue.$Type === "Edm.DateTimeOffset") {
-                type = "timestamp";
-              } else if (
-                fieldValue.$Type === "Edm.Decimal" ||
-                fieldValue.$Type === "Edm.Int32" ||
-                fieldValue.$Type === "Edm.Int64"
-              ) {
-                type = "numeric";
-              }
-              return {
-                name: fieldKey,
-                type,
-              };
-            });
-          acc[entitySetName] = fields;
-          return acc;
-        },
-        {} as Record<string, { name: string; type: string }[]>,
-      )
-    : {};
+          return {
+            name: fieldKey,
+            type,
+          };
+        });
+      acc[entitySetName] = fields;
+      return acc;
+    },
+    {} as Record<string, { name: string; type: string }[]>,
+  );
 
   const baTables = Object.entries(betterAuthSchema)
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))

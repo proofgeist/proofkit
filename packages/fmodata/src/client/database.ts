@@ -1,6 +1,7 @@
+import type { FFetchOptions } from "@fetchkit/ffetch";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { FMTable } from "../orm/table";
-import type { ExecutableBuilder, ExecutionContext, Metadata } from "../types";
+import type { ExecutableBuilder, ExecutionContext, Metadata, Result } from "../types";
 import { BatchBuilder } from "./batch-builder";
 import { EntitySet } from "./entity-set";
 import { SchemaManager } from "./schema-manager";
@@ -54,6 +55,13 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
   }
 
   /**
+   * @internal Used by adapter packages to access the database filename.
+   */
+  get _getDatabaseName(): string {
+    return this.databaseName;
+  }
+
+  /**
    * @internal Used by EntitySet to access database configuration
    */
   get _getUseEntityIds(): boolean {
@@ -65,6 +73,14 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
    */
   get _getIncludeSpecialColumns(): IncludeSpecialColumns {
     return this._includeSpecialColumns;
+  }
+
+  /**
+   * @internal Used by adapter packages for raw OData requests.
+   * Delegates to the connection's _makeRequest with the database name prepended.
+   */
+  async _makeRequest<T>(path: string, options?: RequestInit & FFetchOptions): Promise<Result<T>> {
+    return this.context._makeRequest<T>(`/${this.databaseName}${path}`, options);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration

@@ -1,7 +1,6 @@
 import type { CleanedWhere } from "better-auth/adapters";
 import { describe, expect, test } from "vitest";
 import { parseWhere } from "../src/adapter";
-import { validateUrl } from "../src/odata";
 
 describe("parseWhere", () => {
   test("should return empty string for empty where clause", () => {
@@ -206,26 +205,5 @@ describe("parseWhere", () => {
       const result = parseWhere(where);
       expect(result).toBe(expected);
     }
-  });
-});
-
-describe("utils: validateUrl", () => {
-  const validUrls = [
-    "https://example.com",
-    "https://example.com/path",
-    "https://example.com/path?query=value",
-    "https://example.com/path?query=value#fragment",
-    "https://acme-dev.ottomatic.cloud",
-  ];
-  test("should validate a valid URL", () => {
-    for (const url of validUrls) {
-      const result = validateUrl(url);
-      expect(result.isOk()).toBe(true);
-    }
-  });
-
-  test("should return an error for an invalid URL", () => {
-    const result = validateUrl("not-a-url");
-    expect(result.isErr()).toBe(true);
   });
 });

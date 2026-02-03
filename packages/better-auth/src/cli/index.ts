@@ -1,14 +1,14 @@
 #!/usr/bin/env node --no-warnings
 import { Command } from "@commander-js/extra-typings";
+import type { Database } from "@proofkit/fmodata";
+import { FMServerConnection } from "@proofkit/fmodata";
 import { logger } from "better-auth";
 import { getAdapter, getSchema } from "better-auth/db";
 import chalk from "chalk";
 import fs from "fs-extra";
 import prompts from "prompts";
-import type { FileMakerAdapterConfig } from "../adapter";
 import { getConfig } from "../better-auth-cli/utils/get-config";
 import { executeMigration, planMigration, prettyPrintMigrationPlan } from "../migrate";
-import { createRawFetch } from "../odata";
 import "dotenv/config";
 
 async function main() {
@@ -52,21 +52,45 @@ async function main() {
 
       const betterAuthSchema = getSchema(config);
 
-      const adapterConfig = (adapter as unknown as { filemakerConfig: FileMakerAdapterConfig }).filemakerConfig;
-      const { fetch } = createRawFetch({
-        ...adapterConfig.odata,
-        auth:
-          // If the username and password are provided in the CLI, use them to authenticate instead of what's in the config file.
-          options.username && options.password
-            ? {
-                username: options.username,
-                password: options.password,
-              }
-            : adapterConfig.odata.auth,
-        logging: "verbose", // Enable logging for CLI operations
-      });
+      // Extract Database from the adapter
+      const configDb = (adapter as unknown as { database: Database }).database;
+      let db: Database = configDb;
 
-      const migrationPlan = await planMigration(fetch, betterAuthSchema, adapterConfig.odata.database);
+      // If CLI credential overrides are provided, construct a new connection
+      if (options.username && options.password) {
+        // biome-ignore lint/suspicious/noExplicitAny: accessing internal getter
+        const dbName: string = (configDb as any)._getDatabaseName;
+        if (!dbName) {
+          logger.error("Could not determine database filename from adapter config.");
+          process.exit(1);
+        }
+
+        // Build the server URL from the existing db's context
+        // biome-ignore lint/suspicious/noExplicitAny: accessing internal method
+        const baseUrl: string | undefined = (configDb as any).context?._getBaseUrl?.();
+
+        if (!baseUrl) {
+          logger.error(
+            "Could not determine server URL from adapter config. Ensure your auth.ts uses FMServerConnection.",
+          );
+          process.exit(1);
+        }
+
+        // Extract server origin from base URL (e.g. "https://myserver.com/fmi/odata/v4" -> "https://myserver.com")
+        const serverUrl = new URL(baseUrl).origin;
+
+        const connection = new FMServerConnection({
+          serverUrl,
+          auth: {
+            username: options.username,
+            password: options.password,
+          },
+        });
+
+        db = connection.database(dbName);
+      }
+
+      const migrationPlan = await planMigration(db, betterAuthSchema);
 
       if (migrationPlan.length === 0) {
         logger.info("No changes to apply. Database is up to date.");
@@ -91,7 +115,7 @@ async function main() {
         }
       }
 
-      await executeMigration(fetch, migrationPlan);
+      await executeMigration(db, migrationPlan);
 
       logger.info("Migration applied successfully.");
     });

@@ -1,8 +1,6 @@
+import type { Database, Field, Metadata } from "@proofkit/fmodata";
 import type { DBFieldAttribute } from "better-auth/db";
 import chalk from "chalk";
-import type { Metadata } from "fm-odata-client";
-import z from "zod/v4";
-import type { createRawFetch } from "./odata";
 
 /** Schema type returned by better-auth's getSchema function */
 type BetterAuthSchema = Record<string, { fields: Record<string, DBFieldAttribute>; order: number }>;
@@ -17,34 +15,30 @@ function normalizeBetterAuthFieldType(fieldType: unknown): string {
   return String(fieldType);
 }
 
-export async function getMetadata(fetch: ReturnType<typeof createRawFetch>["fetch"], databaseName: string) {
+export async function getMetadata(db: Database): Promise<Metadata | null> {
   console.log("getting metadata...");
-  const result = await fetch("/$metadata", {
-    method: "GET",
-    headers: { accept: "application/json" },
-    output: z
-      .looseObject({
-        $Version: z.string(),
-        "@ServerVersion": z.string(),
-      })
-      .or(z.null())
-      .catch(null),
-  });
-
-  if (result.error) {
-    console.error("Failed to get metadata:", result.error);
+  try {
+    const metadata = await db.getMetadata({ format: "json" });
+    return metadata;
+  } catch {
+    console.error("Failed to get metadata");
     return null;
   }
-
-  return (result.data?.[databaseName] ?? null) as Metadata | null;
 }
 
-export async function planMigration(
-  fetch: ReturnType<typeof createRawFetch>["fetch"],
-  betterAuthSchema: BetterAuthSchema,
-  databaseName: string,
-): Promise<MigrationPlan> {
-  const metadata = await getMetadata(fetch, databaseName);
+/** Map a better-auth field type string to an fmodata Field type */
+function mapFieldType(t: string): "string" | "numeric" | "timestamp" {
+  if (t.includes("boolean") || t.includes("number")) {
+    return "numeric";
+  }
+  if (t.includes("date")) {
+    return "timestamp";
+  }
+  return "string";
+}
+
+export async function planMigration(db: Database, betterAuthSchema: BetterAuthSchema): Promise<MigrationPlan> {
+  const metadata = await getMetadata(db);
 
   // Build a map from entity set name to entity type key
   const entitySetToType: Record<string, string> = {};
@@ -71,9 +65,9 @@ export async function planMigration(
                 typeof fieldValue === "object" && fieldValue !== null && "$Type" in fieldValue,
             )
             .map(([fieldKey, fieldValue]) => {
-              let type = "varchar";
+              let type = "string";
               if (fieldValue.$Type === "Edm.String") {
-                type = "varchar";
+                type = "string";
               } else if (fieldValue.$Type === "Edm.DateTimeOffset") {
                 type = "timestamp";
               } else if (
@@ -99,30 +93,21 @@ export async function planMigration(
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))
     .map(([key, value]) => ({
       ...value,
-      modelName: key, // Use the key as modelName since getSchema uses table names as keys
+      modelName: key,
     }));
 
   const migrationPlan: MigrationPlan = [];
 
   for (const baTable of baTables) {
     const fields: FmField[] = Object.entries(baTable.fields).map(([key, field]) => {
-      // Better Auth's FieldType can be a string literal union or arrays.
-      // Normalize it to a string so our FM mapping logic remains stable.
-      // Use .includes() for all checks to handle array types like ["boolean", "null"] → "boolean|null"
       const t = normalizeBetterAuthFieldType(field.type);
-      let type: "varchar" | "numeric" | "timestamp" = "varchar";
-      if (t.includes("boolean") || t.includes("number")) {
-        type = "numeric";
-      } else if (t.includes("date")) {
-        type = "timestamp";
-      }
+      const type = mapFieldType(t);
       return {
         name: field.fieldName ?? key,
         type,
       };
     });
 
-    // get existing table or create it
     const tableExists = baTable.modelName in existingTables;
 
     if (tableExists) {
@@ -134,7 +119,6 @@ export async function planMigration(
         },
         {} as Record<string, string>,
       );
-      // Warn about type mismatches (optional, not in plan)
       for (const field of fields) {
         if (existingFields.includes(field.name) && existingFieldMap[field.name] !== field.type) {
           console.warn(
@@ -157,7 +141,7 @@ export async function planMigration(
         fields: [
           {
             name: "id",
-            type: "varchar",
+            type: "string",
             primary: true,
             unique: true,
           },
@@ -170,99 +154,51 @@ export async function planMigration(
   return migrationPlan;
 }
 
-export async function executeMigration(
-  fetch: ReturnType<typeof createRawFetch>["fetch"],
-  migrationPlan: MigrationPlan,
-) {
+export async function executeMigration(db: Database, migrationPlan: MigrationPlan) {
   for (const step of migrationPlan) {
+    // Convert plan fields to fmodata Field type
+    const fmodataFields: Field[] = step.fields.map((f) => ({
+      name: f.name,
+      type: f.type,
+      ...(f.primary ? { primary: true } : {}),
+      ...(f.unique ? { unique: true } : {}),
+    }));
+
     if (step.operation === "create") {
       console.log("Creating table:", step.tableName);
-      const result = await fetch("/FileMaker_Tables", {
-        method: "POST",
-        body: {
-          tableName: step.tableName,
-          fields: step.fields,
-        },
-      });
-
-      if (result.error) {
-        console.error(`Failed to create table ${step.tableName}:`, result.error);
-        throw new Error(`Migration failed: ${result.error}`);
+      try {
+        await db.schema.createTable(step.tableName, fmodataFields);
+      } catch (error) {
+        console.error(`Failed to create table ${step.tableName}:`, error);
+        throw new Error(`Migration failed: ${error}`);
       }
     } else if (step.operation === "update") {
       console.log("Adding fields to table:", step.tableName);
-      const result = await fetch(`/FileMaker_Tables/${step.tableName}`, {
-        method: "PATCH",
-        body: { fields: step.fields },
-      });
-
-      if (result.error) {
-        console.error(`Failed to update table ${step.tableName}:`, result.error);
-        throw new Error(`Migration failed: ${result.error}`);
+      try {
+        await db.schema.addFields(step.tableName, fmodataFields);
+      } catch (error) {
+        console.error(`Failed to update table ${step.tableName}:`, error);
+        throw new Error(`Migration failed: ${error}`);
       }
     }
   }
 }
 
-const genericFieldSchema = z.object({
-  name: z.string(),
-  nullable: z.boolean().optional(),
-  primary: z.boolean().optional(),
-  unique: z.boolean().optional(),
-  global: z.boolean().optional(),
-  repetitions: z.number().optional(),
-});
+interface FmField {
+  name: string;
+  type: "string" | "numeric" | "timestamp";
+  primary?: boolean;
+  unique?: boolean;
+}
 
-const stringFieldSchema = genericFieldSchema.extend({
-  type: z.literal("varchar"),
-  maxLength: z.number().optional(),
-  default: z.enum(["USER", "USERNAME", "CURRENT_USER"]).optional(),
-});
+const migrationStepTypes = ["create", "update"] as const;
+interface MigrationStep {
+  tableName: string;
+  operation: (typeof migrationStepTypes)[number];
+  fields: FmField[];
+}
 
-const numericFieldSchema = genericFieldSchema.extend({
-  type: z.literal("numeric"),
-});
-
-const dateFieldSchema = genericFieldSchema.extend({
-  type: z.literal("date"),
-  default: z.enum(["CURRENT_DATE", "CURDATE"]).optional(),
-});
-
-const timeFieldSchema = genericFieldSchema.extend({
-  type: z.literal("time"),
-  default: z.enum(["CURRENT_TIME", "CURTIME"]).optional(),
-});
-
-const timestampFieldSchema = genericFieldSchema.extend({
-  type: z.literal("timestamp"),
-  default: z.enum(["CURRENT_TIMESTAMP", "CURTIMESTAMP"]).optional(),
-});
-
-const containerFieldSchema = genericFieldSchema.extend({
-  type: z.literal("container"),
-  externalSecurePath: z.string().optional(),
-});
-
-const fieldSchema = z.discriminatedUnion("type", [
-  stringFieldSchema,
-  numericFieldSchema,
-  dateFieldSchema,
-  timeFieldSchema,
-  timestampFieldSchema,
-  containerFieldSchema,
-]);
-
-type FmField = z.infer<typeof fieldSchema>;
-
-const migrationPlanSchema = z
-  .object({
-    tableName: z.string(),
-    operation: z.enum(["create", "update"]),
-    fields: z.array(fieldSchema),
-  })
-  .array();
-
-export type MigrationPlan = z.infer<typeof migrationPlanSchema>;
+export type MigrationPlan = MigrationStep[];
 
 export function prettyPrintMigrationPlan(migrationPlan: MigrationPlan) {
   if (!migrationPlan.length) {

@@ -1,8 +1,7 @@
+import { FMServerConnection } from "@proofkit/fmodata";
 import { runAdapterTest } from "better-auth/adapters/test";
 import { beforeAll, describe, expect, it } from "vitest";
-import { z } from "zod/v4";
 import { FileMakerAdapter } from "../../src";
-import { createRawFetch } from "../../src/odata";
 
 if (!process.env.FM_SERVER) {
   throw new Error("FM_SERVER is not set");
@@ -17,23 +16,20 @@ if (!process.env.FM_PASSWORD) {
   throw new Error("FM_PASSWORD is not set");
 }
 
-const { fetch } = createRawFetch({
+const connection = new FMServerConnection({
   serverUrl: process.env.FM_SERVER,
   auth: {
     username: process.env.FM_USERNAME,
     password: process.env.FM_PASSWORD,
   },
-  database: process.env.FM_DATABASE,
-  logging: "verbose", // Enable verbose logging to see the response details
 });
+const db = connection.database(process.env.FM_DATABASE);
 
 describe("My Adapter Tests", async () => {
   beforeAll(async () => {
     // reset the database
     for (const table of ["user", "session", "account", "verification"]) {
-      const result = await fetch(`/${table}`, {
-        output: z.object({ value: z.array(z.any()) }),
-      });
+      const result = await db._makeRequest<{ value: { id: string }[] }>(`/${table}`);
 
       if (result.error) {
         console.log("Error fetching records:", result.error);
@@ -42,7 +38,7 @@ describe("My Adapter Tests", async () => {
 
       const records = result.data?.value || [];
       for (const record of records) {
-        const deleteResult = await fetch(`/${table}('${record.id}')`, {
+        const deleteResult = await db._makeRequest(`/${table}('${record.id}')`, {
           method: "DELETE",
         });
 
@@ -68,16 +64,9 @@ describe("My Adapter Tests", async () => {
 
   const adapter = FileMakerAdapter({
     debugLogs: {
-      isRunningAdapterTests: true, // This is our super secret flag to let us know to only log debug logs if a test fails.
+      isRunningAdapterTests: true,
     },
-    odata: {
-      auth: {
-        username: process.env.FM_USERNAME,
-        password: process.env.FM_PASSWORD,
-      },
-      database: process.env.FM_DATABASE,
-      serverUrl: process.env.FM_SERVER,
-    },
+    database: db,
   });
 
   await runAdapterTest({
@@ -102,14 +91,12 @@ describe("My Adapter Tests", async () => {
     });
 
     console.log(result);
-
-    // expect(result.data).toHaveLength(1);
   });
 });
 
 it("should properly filter by dates", async () => {
-  // delete all users - using buildQuery to construct the filter properly
-  const deleteAllResult = await fetch(`/user?$filter="id" ne '0'`, {
+  // delete all users
+  const deleteAllResult = await db._makeRequest(`/user?$filter="id" ne '0'`, {
     method: "DELETE",
   });
 
@@ -119,23 +106,19 @@ it("should properly filter by dates", async () => {
 
   // create user
   const date = new Date("2025-01-10").toISOString();
-  const createResult = await fetch("/user", {
+  const createResult = await db._makeRequest<{ id: string }>("/user", {
     method: "POST",
-    body: {
+    body: JSON.stringify({
       id: "filter-test",
       createdAt: date,
-    },
-    output: z.object({ id: z.string() }),
+    }),
   });
 
   if (createResult.error) {
     throw new Error(`Failed to create user: ${createResult.error}`);
   }
 
-  const result = await fetch("/user?$filter=createdAt ge 2025-01-05", {
-    method: "GET",
-    output: z.object({ value: z.array(z.any()) }),
-  });
+  const result = await db._makeRequest<{ value: unknown[] }>("/user?$filter=createdAt ge 2025-01-05");
 
   console.log(result);
 
@@ -146,7 +129,7 @@ it("should properly filter by dates", async () => {
   expect(result.data?.value).toHaveLength(1);
 
   // delete record
-  const deleteResult = await fetch(`/user('filter-test')`, {
+  const deleteResult = await db._makeRequest(`/user('filter-test')`, {
     method: "DELETE",
   });
 

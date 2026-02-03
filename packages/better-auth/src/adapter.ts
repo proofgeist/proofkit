@@ -1,19 +1,7 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: library code */
+import type { Database } from "@proofkit/fmodata";
 import { logger } from "better-auth";
 import { type CleanedWhere, createAdapter, type DBAdapterDebugLogOption } from "better-auth/adapters";
-import buildQuery from "odata-query";
-import { prettifyError, z } from "zod/v4";
-import { createRawFetch, type FmOdataConfig } from "./odata";
-
-const configSchema = z.object({
-  debugLogs: z.unknown().optional(),
-  usePlural: z.boolean().optional(),
-  odata: z.object({
-    serverUrl: z.url(),
-    auth: z.union([z.object({ username: z.string(), password: z.string() }), z.object({ apiKey: z.string() })]),
-    database: z.string().endsWith(".fmp12"),
-  }),
-});
 
 export interface FileMakerAdapterConfig {
   /**
@@ -24,26 +12,11 @@ export interface FileMakerAdapterConfig {
    * If the table names in the schema are plural.
    */
   usePlural?: boolean;
-
   /**
-   * Connection details for the FileMaker server.
+   * The fmodata Database instance to use for all OData requests.
    */
-  odata: FmOdataConfig;
+  database: Database;
 }
-
-export interface AdapterOptions {
-  config: FileMakerAdapterConfig;
-}
-
-const defaultConfig: Required<FileMakerAdapterConfig> = {
-  debugLogs: false,
-  usePlural: false,
-  odata: {
-    serverUrl: "",
-    auth: { username: "", password: "" },
-    database: "",
-  },
-};
 
 // Regex patterns for field validation and ISO date detection
 const FIELD_SPECIAL_CHARS_REGEX = /[\s_]/;
@@ -155,41 +128,59 @@ export function parseWhere(where?: CleanedWhere[]): string {
   return clauses.join(" ");
 }
 
-export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig) => {
-  const parsed = configSchema.loose().safeParse(_config);
-
-  if (!parsed.success) {
-    throw new Error(`Invalid configuration: ${prettifyError(parsed.error)}`);
+/**
+ * Build an OData query string from parameters.
+ */
+function buildQueryString(params: {
+  top?: number;
+  skip?: number;
+  filter?: string;
+  orderBy?: string;
+  select?: string[];
+}): string {
+  const parts: string[] = [];
+  if (params.top !== undefined) {
+    parts.push(`$top=${params.top}`);
   }
-  const config = parsed.data;
+  if (params.skip !== undefined) {
+    parts.push(`$skip=${params.skip}`);
+  }
+  if (params.filter) {
+    parts.push(`$filter=${params.filter}`);
+  }
+  if (params.orderBy) {
+    parts.push(`$orderby=${params.orderBy}`);
+  }
+  if (params.select?.length) {
+    parts.push(`$select=${params.select.join(",")}`);
+  }
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
+}
 
-  const { fetch } = createRawFetch({
-    ...config.odata,
-    logging: config.debugLogs ? "verbose" : "none",
-  });
+export const FileMakerAdapter = (config: FileMakerAdapterConfig) => {
+  if (!config.database || typeof config.database !== "object") {
+    throw new Error("FileMakerAdapter requires a `database` (fmodata Database instance).");
+  }
+
+  const db = config.database;
 
   const adapterFactory = createAdapter({
     config: {
       adapterId: "filemaker",
       adapterName: "FileMaker",
-      usePlural: config.usePlural ?? false, // Whether the table names in the schema are plural.
-      debugLogs: config.debugLogs ?? false, // Whether to enable debug logs.
-      supportsJSON: false, // Whether the database supports JSON. (Default: false)
-      supportsDates: false, // Whether the database supports dates. (Default: true)
-      supportsBooleans: false, // Whether the database supports booleans. (Default: true)
-      supportsNumericIds: false, // Whether the database supports auto-incrementing numeric IDs. (Default: true)
+      usePlural: config.usePlural ?? false,
+      debugLogs: config.debugLogs ?? false,
+      supportsJSON: false,
+      supportsDates: false,
+      supportsBooleans: false,
+      supportsNumericIds: false,
     },
     adapter: () => {
       return {
         create: async ({ data, model }) => {
-          if (model === "session") {
-            console.log("session", data);
-          }
-
-          const result = await fetch(`/${model}`, {
+          const result = await db._makeRequest<Record<string, any>>(`/${model}`, {
             method: "POST",
-            body: data,
-            output: z.looseObject({ id: z.string() }),
+            body: JSON.stringify(data),
           });
 
           if (result.error) {
@@ -202,15 +193,12 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
           const filter = parseWhere(where);
           logger.debug("$filter", filter);
 
-          const query = buildQuery({
+          const query = buildQueryString({
             filter: filter.length > 0 ? filter : undefined,
           });
 
-          const result = await fetch(`/${model}/$count${query}`, {
-            method: "GET",
-            output: z.object({ value: z.number() }),
-          });
-          if (!result.data) {
+          const result = await db._makeRequest<{ value: number }>(`/${model}/$count${query}`);
+          if (result.error) {
             throw new Error("Failed to count records");
           }
           return (result.data?.value as any) ?? 0;
@@ -219,15 +207,12 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
           const filter = parseWhere(where);
           logger.debug("$filter", filter);
 
-          const query = buildQuery({
+          const query = buildQueryString({
             top: 1,
             filter: filter.length > 0 ? filter : undefined,
           });
 
-          const result = await fetch(`/${model}${query}`, {
-            method: "GET",
-            output: z.object({ value: z.array(z.any()) }),
-          });
+          const result = await db._makeRequest<{ value: any[] }>(`/${model}${query}`);
           if (result.error) {
             throw new Error("Failed to find record");
           }
@@ -237,7 +222,7 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
           const filter = parseWhere(where);
           logger.debug("FIND MANY", { where, filter });
 
-          const query = buildQuery({
+          const query = buildQueryString({
             top: limit,
             skip: offset,
             orderBy: sortBy ? `${sortBy.field} ${sortBy.direction ?? "asc"}` : undefined,
@@ -245,10 +230,7 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
           });
           logger.debug("QUERY", query);
 
-          const result = await fetch(`/${model}${query}`, {
-            method: "GET",
-            output: z.object({ value: z.array(z.any()) }),
-          });
+          const result = await db._makeRequest<{ value: any[] }>(`/${model}${query}`);
           logger.debug("RESULT", result);
 
           if (result.error) {
@@ -259,54 +241,44 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
         },
         delete: async ({ model, where }) => {
           const filter = parseWhere(where);
-          console.log("DELETE", { model, where, filter });
           logger.debug("$filter", filter);
 
           // Find a single id matching the filter
-          const query = buildQuery({
+          const query = buildQueryString({
             top: 1,
             select: [`"id"`],
             filter: filter.length > 0 ? filter : undefined,
           });
 
-          const toDelete = await fetch(`/${model}${query}`, {
-            method: "GET",
-            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
-          });
+          const toDelete = await db._makeRequest<{ value: { id: string }[] }>(`/${model}${query}`);
 
           const id = toDelete.data?.value?.[0]?.id;
           if (!id) {
-            // Nothing to delete
             return;
           }
 
-          const result = await fetch(`/${model}('${id}')`, {
+          const result = await db._makeRequest(`/${model}('${id}')`, {
             method: "DELETE",
           });
           if (result.error) {
-            console.log("DELETE ERROR", result.error);
             throw new Error("Failed to delete record");
           }
         },
         deleteMany: async ({ model, where }) => {
           const filter = parseWhere(where);
-          console.log("DELETE MANY", { model, where, filter });
 
           // Find all ids matching the filter
-          const query = buildQuery({
+          const query = buildQueryString({
             select: [`"id"`],
             filter: filter.length > 0 ? filter : undefined,
           });
 
-          const rows = await fetch(`/${model}${query}`, {
-            method: "GET",
-            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
-          });
+          const rows = await db._makeRequest<{ value: { id: string }[] }>(`/${model}${query}`);
 
           const ids = rows.data?.value?.map((r: any) => r.id) ?? [];
           let deleted = 0;
           for (const id of ids) {
-            const res = await fetch(`/${model}('${id}')`, {
+            const res = await db._makeRequest(`/${model}('${id}')`, {
               method: "DELETE",
             });
             if (!res.error) {
@@ -319,16 +291,14 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
           const filter = parseWhere(where);
           logger.debug("UPDATE", { model, where, update });
           logger.debug("$filter", filter);
+
           // Find one id to update
-          const query = buildQuery({
+          const query = buildQueryString({
             select: [`"id"`],
             filter: filter.length > 0 ? filter : undefined,
           });
 
-          const existing = await fetch(`/${model}${query}`, {
-            method: "GET",
-            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
-          });
+          const existing = await db._makeRequest<{ value: { id: string }[] }>(`/${model}${query}`);
           logger.debug("EXISTING", existing.data);
 
           const id = existing.data?.value?.[0]?.id;
@@ -336,9 +306,9 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
             return null;
           }
 
-          const patchRes = await fetch(`/${model}('${id}')`, {
+          const patchRes = await db._makeRequest(`/${model}('${id}')`, {
             method: "PATCH",
-            body: update,
+            body: JSON.stringify(update),
           });
           logger.debug("PATCH RES", patchRes.data);
           if (patchRes.error) {
@@ -346,32 +316,27 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
           }
 
           // Read back the updated record
-          const readBack = await fetch(`/${model}('${id}')`, {
-            method: "GET",
-            output: z.record(z.string(), z.unknown()),
-          });
+          const readBack = await db._makeRequest<Record<string, unknown>>(`/${model}('${id}')`);
           logger.debug("READ BACK", readBack.data);
           return (readBack.data as any) ?? null;
         },
         updateMany: async ({ model, where, update }) => {
           const filter = parseWhere(where);
+
           // Find all ids matching the filter
-          const query = buildQuery({
+          const query = buildQueryString({
             select: [`"id"`],
             filter: filter.length > 0 ? filter : undefined,
           });
 
-          const rows = await fetch(`/${model}${query}`, {
-            method: "GET",
-            output: z.object({ value: z.array(z.object({ id: z.string() })) }),
-          });
+          const rows = await db._makeRequest<{ value: { id: string }[] }>(`/${model}${query}`);
 
           const ids = rows.data?.value?.map((r: any) => r.id) ?? [];
           let updated = 0;
           for (const id of ids) {
-            const res = await fetch(`/${model}('${id}')`, {
+            const res = await db._makeRequest(`/${model}('${id}')`, {
               method: "PATCH",
-              body: update,
+              body: JSON.stringify(update),
             });
             if (!res.error) {
               updated++;
@@ -383,7 +348,7 @@ export const FileMakerAdapter = (_config: FileMakerAdapterConfig = defaultConfig
     },
   });
 
-  // Expose the FileMaker config for CLI access
-  (adapterFactory as any).filemakerConfig = config as FileMakerAdapterConfig;
+  // Expose the Database instance for CLI access
+  (adapterFactory as any).database = db;
   return adapterFactory;
 };

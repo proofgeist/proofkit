@@ -53,8 +53,7 @@ export async function planMigration(db: Database, betterAuthSchema: BetterAuthSc
       }
       const fields = Object.entries(entityType)
         .filter(
-          ([_fieldKey, fieldValue]) =>
-            typeof fieldValue === "object" && fieldValue !== null && "$Type" in fieldValue,
+          ([_fieldKey, fieldValue]) => typeof fieldValue === "object" && fieldValue !== null && "$Type" in fieldValue,
         )
         .map(([fieldKey, fieldValue]) => {
           let type = "string";
@@ -232,8 +231,12 @@ export function prettyPrintMigrationPlan(
   console.log(chalk.bold.green("Migration plan:"));
   if (target?.serverUrl || target?.fileName) {
     const parts: string[] = [];
-    if (target.fileName) parts.push(chalk.cyan(target.fileName));
-    if (target.serverUrl) parts.push(chalk.gray(target.serverUrl));
+    if (target.fileName) {
+      parts.push(chalk.cyan(target.fileName));
+    }
+    if (target.serverUrl) {
+      parts.push(chalk.gray(target.serverUrl));
+    }
     console.log(`  Target: ${parts.join(" @ ")}`);
   }
   for (const step of migrationPlan) {

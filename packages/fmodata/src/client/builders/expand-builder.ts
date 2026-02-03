@@ -214,7 +214,9 @@ export class ExpandBuilder {
     if (opts.select) {
       const selectArray = Array.isArray(opts.select) ? opts.select.map(String) : [String(opts.select)];
       const selectFields = formatSelectFields(selectArray, config.targetTable, this.useEntityIds);
-      parts.push(`$select=${selectFields}`);
+      if (selectFields) {
+        parts.push(`$select=${selectFields}`);
+      }
     }
 
     if (opts.filter) {

@@ -20,8 +20,8 @@ export async function getMetadata(db: Database): Promise<Metadata | null> {
   try {
     const metadata = await db.getMetadata({ format: "json" });
     return metadata;
-  } catch {
-    console.error("Failed to get metadata");
+  } catch (err) {
+    console.error("Failed to get metadata:", err);
     return null;
   }
 }

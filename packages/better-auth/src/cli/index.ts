@@ -58,16 +58,17 @@ async function main() {
 
       // If CLI credential overrides are provided, construct a new connection
       if (options.username && options.password) {
-        // biome-ignore lint/suspicious/noExplicitAny: accessing internal getter
-        const dbName: string = (configDb as any)._getDatabaseName;
+        const dbName: string = (configDb as unknown as { _getDatabaseName: string })
+          ._getDatabaseName;
         if (!dbName) {
           logger.error("Could not determine database filename from adapter config.");
           process.exit(1);
         }
 
         // Build the server URL from the existing db's context
-        // biome-ignore lint/suspicious/noExplicitAny: accessing internal method
-        const baseUrl: string | undefined = (configDb as any).context?._getBaseUrl?.();
+        const baseUrl: string | undefined = (
+          configDb as unknown as { context?: { _getBaseUrl?: () => string } }
+        ).context?._getBaseUrl?.();
 
         if (!baseUrl) {
           logger.error(

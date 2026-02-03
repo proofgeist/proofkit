@@ -146,13 +146,13 @@ function buildQueryString(params: {
     parts.push(`$skip=${params.skip}`);
   }
   if (params.filter) {
-    parts.push(`$filter=${params.filter}`);
+    parts.push(`$filter=${encodeURIComponent(params.filter)}`);
   }
   if (params.orderBy) {
-    parts.push(`$orderby=${params.orderBy}`);
+    parts.push(`$orderby=${encodeURIComponent(params.orderBy)}`);
   }
   if (params.select?.length) {
-    parts.push(`$select=${params.select.join(",")}`);
+    parts.push(`$select=${params.select.map(encodeURIComponent).join(",")}`);
   }
   return parts.length > 0 ? `?${parts.join("&")}` : "";
 }

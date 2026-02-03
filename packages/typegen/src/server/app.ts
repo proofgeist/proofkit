@@ -432,42 +432,44 @@ export function createApiApp(context: ApiContext) {
         }
       },
     )
-    .get("/list-tables", zValidator("query", z.object({ config: z.string() })), async (c) => {
-      const input = c.req.valid("query");
-      // Parse the JSON-encoded config string
-      let config: z.infer<typeof typegenConfigSingle>;
-      try {
-        config = typegenConfigSingle.parse(JSON.parse(input.config));
-      } catch (_err) {
-        return c.json({ error: "Invalid config format" }, 400);
-      }
-      if (config.type !== "fmodata") {
-        return c.json({ error: "Invalid config type" }, 400);
-      }
-      try {
-        const result = createOdataClientFromConfig(config);
-        if ("error" in result) {
+    .post(
+      "/list-tables",
+      zValidator("json", z.object({ config: typegenConfigSingleRequestForValidation })),
+      async (c) => {
+        const rawInput = c.req.valid("json");
+        const configWithType =
+          "type" in rawInput.config && rawInput.config.type
+            ? rawInput.config
+            : { ...(rawInput.config as Record<string, unknown>), type: "fmdapi" as const };
+        const config = typegenConfigSingle.parse(configWithType);
+        if (config.type !== "fmodata") {
+          return c.json({ error: "Invalid config type" }, 400);
+        }
+        try {
+          const result = createOdataClientFromConfig(config);
+          if ("error" in result) {
+            return c.json(
+              {
+                error: result.error,
+                kind: result.kind,
+                suspectedField: result.suspectedField,
+              },
+              result.statusCode as ContentfulStatusCode,
+            );
+          }
+          const { db } = result;
+          const tableNames = await db.listTableNames();
+          return c.json({ tables: tableNames });
+        } catch (err) {
           return c.json(
             {
-              error: result.error,
-              kind: result.kind,
-              suspectedField: result.suspectedField,
+              error: err instanceof Error ? err.message : "Failed to list tables",
             },
-            result.statusCode as ContentfulStatusCode,
+            500,
           );
         }
-        const { db } = result;
-        const tableNames = await db.listTableNames();
-        return c.json({ tables: tableNames });
-      } catch (err) {
-        return c.json(
-          {
-            error: err instanceof Error ? err.message : "Failed to list tables",
-          },
-          500,
-        );
-      }
-    })
+      },
+    )
     // POST /api/test-connection
     .post(
       "/test-connection",

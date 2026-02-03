@@ -1,14 +1,14 @@
 #!/usr/bin/env node --no-warnings
 import { Command } from "@commander-js/extra-typings";
+import type { Database } from "@proofkit/fmodata";
+import { FMServerConnection } from "@proofkit/fmodata";
 import { logger } from "better-auth";
 import { getAdapter, getSchema } from "better-auth/db";
 import chalk from "chalk";
 import fs from "fs-extra";
 import prompts from "prompts";
-import type { FileMakerAdapterConfig } from "../adapter";
 import { getConfig } from "../better-auth-cli/utils/get-config";
 import { executeMigration, planMigration, prettyPrintMigrationPlan } from "../migrate";
-import { createRawFetch } from "../odata";
 import "dotenv/config";
 
 async function main() {
@@ -52,21 +52,55 @@ async function main() {
 
       const betterAuthSchema = getSchema(config);
 
-      const adapterConfig = (adapter as unknown as { filemakerConfig: FileMakerAdapterConfig }).filemakerConfig;
-      const { fetch } = createRawFetch({
-        ...adapterConfig.odata,
-        auth:
-          // If the username and password are provided in the CLI, use them to authenticate instead of what's in the config file.
-          options.username && options.password
-            ? {
-                username: options.username,
-                password: options.password,
-              }
-            : adapterConfig.odata.auth,
-        logging: "verbose", // Enable logging for CLI operations
-      });
+      // Extract Database from the adapter factory or resolved adapter.
+      // config.database is the FileMakerAdapter factory function (has .database set on it).
+      // adapter is the resolved adapter after getAdapter() calls the factory (also has .database).
+      // Try both: adapter first (post-call), then config.database (pre-call / factory function).
+      const configDb =
+        (adapter as unknown as { database?: Database }).database ??
+        (config.database as unknown as { database?: Database } | undefined)?.database;
+      if (!configDb || typeof configDb !== "object" || !("schema" in configDb)) {
+        logger.error(
+          "Could not extract Database instance from adapter. Ensure your auth.ts uses FileMakerAdapter with an fmodata Database.",
+        );
+        process.exit(1);
+      }
+      let db: Database = configDb;
 
-      const migrationPlan = await planMigration(fetch, betterAuthSchema, adapterConfig.odata.database);
+      // Extract database name and server URL for display
+      const dbName: string = (configDb as unknown as { _getDatabaseName: string })
+        ._getDatabaseName;
+      const baseUrl: string | undefined = (
+        configDb as unknown as { context?: { _getBaseUrl?: () => string } }
+      ).context?._getBaseUrl?.();
+      const serverUrl = baseUrl ? new URL(baseUrl).origin : undefined;
+
+      // If CLI credential overrides are provided, construct a new connection
+      if (options.username && options.password) {
+        if (!dbName) {
+          logger.error("Could not determine database filename from adapter config.");
+          process.exit(1);
+        }
+
+        if (!baseUrl) {
+          logger.error(
+            "Could not determine server URL from adapter config. Ensure your auth.ts uses FMServerConnection.",
+          );
+          process.exit(1);
+        }
+
+        const connection = new FMServerConnection({
+          serverUrl: serverUrl as string,
+          auth: {
+            username: options.username,
+            password: options.password,
+          },
+        });
+
+        db = connection.database(dbName);
+      }
+
+      const migrationPlan = await planMigration(db, betterAuthSchema);
 
       if (migrationPlan.length === 0) {
         logger.info("No changes to apply. Database is up to date.");
@@ -74,7 +108,7 @@ async function main() {
       }
 
       if (!options.yes) {
-        prettyPrintMigrationPlan(migrationPlan);
+        prettyPrintMigrationPlan(migrationPlan, { serverUrl, fileName: dbName });
 
         if (migrationPlan.length > 0) {
           console.log(chalk.gray("💡 Tip: You can use the --yes flag to skip this confirmation."));
@@ -91,12 +125,18 @@ async function main() {
         }
       }
 
-      await executeMigration(fetch, migrationPlan);
-
-      logger.info("Migration applied successfully.");
+      try {
+        await executeMigration(db, migrationPlan);
+        logger.info("Migration applied successfully.");
+      } catch {
+        process.exit(1);
+      }
     });
   await program.parseAsync(process.argv);
   process.exit(0);
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  logger.error(err.message ?? err);
+  process.exit(1);
+});

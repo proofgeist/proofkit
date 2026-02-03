@@ -1,108 +1,81 @@
 /**
- * Mock Fetch Utility for OData API
+ * Mock Database Utility for OData API
  *
- * Creates a mock fetch function that returns pre-recorded OData API responses.
- * Designed to be used with vitest's vi.stubGlobal to mock the global fetch.
- *
- * Usage:
- * ```ts
- * import { vi } from 'vitest';
- * import { createMockFetch, createMockFetchSequence } from './tests/utils/mock-fetch';
- * import { mockResponses } from './tests/fixtures/responses';
- *
- * // Mock a single response
- * vi.stubGlobal('fetch', createMockFetch(mockResponses['find-one-user']));
- *
- * // Mock a sequence of responses (for multi-call tests)
- * vi.stubGlobal('fetch', createMockFetchSequence([
- *   mockResponses['find-one-user'],
- *   mockResponses['update-user'],
- * ]));
- * ```
+ * Creates a mock Database object with _makeRequest that returns pre-recorded OData API responses.
+ * Matches requests by URL path and returns the corresponding fixture response.
  */
 
 import type { MockResponse } from "../fixtures/responses";
 
+type MakeRequestResult<T> = { data: T; error: undefined } | { data: undefined; error: Error };
+
+interface MockDatabase {
+  _makeRequest<T>(path: string, options?: RequestInit): Promise<MakeRequestResult<T>>;
+  // Stub properties for type compatibility
+  schema: {
+    createTable: () => Promise<unknown>;
+    addFields: () => Promise<unknown>;
+  };
+  getMetadata: () => Promise<unknown>;
+  _getDatabaseName: string;
+}
+
 /**
- * Creates a mock fetch function that returns the provided response
+ * Creates a mock Database that returns the provided response for any _makeRequest call
  */
-export function createMockFetch(response: MockResponse): typeof fetch {
-  return (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
-    const contentType = response.headers?.["content-type"] || "application/json";
-    const isJson = contentType.includes("application/json");
-
-    const headers = new Headers({
-      "content-type": contentType,
-    });
-
-    if (response.headers) {
-      for (const [key, value] of Object.entries(response.headers)) {
-        if (key !== "content-type" && value) {
-          headers.set(key, value);
-        }
+export function createMockDatabase(response: MockResponse): MockDatabase {
+  return {
+    _makeRequest: <T>(): Promise<MakeRequestResult<T>> => {
+      if (response.status >= 200 && response.status < 300) {
+        return Promise.resolve({ data: response.response as T, error: undefined });
       }
-    }
-
-    const responseBody = isJson ? JSON.stringify(response.response) : String(response.response);
-
-    return Promise.resolve(
-      new Response(responseBody, {
-        status: response.status,
-        statusText: response.status >= 200 && response.status < 300 ? "OK" : "Error",
-        headers,
-      }),
-    );
+      return Promise.resolve({ data: undefined, error: new Error(`HTTP ${response.status}`) });
+    },
+    schema: {
+      createTable: async () => ({}),
+      addFields: async () => ({}),
+    },
+    getMetadata: async () => ({}),
+    _getDatabaseName: "test.fmp12",
   };
 }
 
 /**
- * Creates a mock fetch function that returns responses in sequence
+ * Creates a mock Database that returns responses in sequence
  * Useful for tests that make multiple API calls
  */
-export function createMockFetchSequence(responses: MockResponse[]): typeof fetch {
+export function createMockDatabaseSequence(responses: MockResponse[]): MockDatabase {
   let callIndex = 0;
 
-  return (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
-    const response = responses[callIndex];
-    if (!response) {
-      throw new Error(
-        `Mock fetch called more times than expected. Call #${callIndex + 1}, but only ${responses.length} responses provided.`,
-      );
-    }
-    callIndex++;
-
-    const contentType = response.headers?.["content-type"] || "application/json";
-    const isJson = contentType.includes("application/json");
-
-    const headers = new Headers({
-      "content-type": contentType,
-    });
-
-    if (response.headers) {
-      for (const [key, value] of Object.entries(response.headers)) {
-        if (key !== "content-type" && value) {
-          headers.set(key, value);
-        }
+  return {
+    _makeRequest: <T>(): Promise<MakeRequestResult<T>> => {
+      const response = responses[callIndex];
+      if (!response) {
+        throw new Error(
+          `Mock _makeRequest called more times than expected. Call #${callIndex + 1}, but only ${responses.length} responses provided.`,
+        );
       }
-    }
+      callIndex++;
 
-    const responseBody = isJson ? JSON.stringify(response.response) : String(response.response);
-
-    return Promise.resolve(
-      new Response(responseBody, {
-        status: response.status,
-        statusText: response.status >= 200 && response.status < 300 ? "OK" : "Error",
-        headers,
-      }),
-    );
+      if (response.status >= 200 && response.status < 300) {
+        return Promise.resolve({ data: response.response as T, error: undefined });
+      }
+      return Promise.resolve({ data: undefined, error: new Error(`HTTP ${response.status}`) });
+    },
+    schema: {
+      createTable: async () => ({}),
+      addFields: async () => ({}),
+    },
+    getMetadata: async () => ({}),
+    _getDatabaseName: "test.fmp12",
   };
 }
 
 /**
- * Helper to create a simple OData success response
+ * Helper to create a mock Database with a simple OData success response
  */
-export function createODataSuccessMock(value: unknown[]): typeof fetch {
-  return createMockFetch({
+export function createODataSuccessMock(value: unknown[]): MockDatabase {
+  return createMockDatabase({
     url: "https://api.example.com/mock",
     method: "GET",
     status: 200,
@@ -112,10 +85,10 @@ export function createODataSuccessMock(value: unknown[]): typeof fetch {
 }
 
 /**
- * Helper to create an OData error response
+ * Helper to create a mock Database with an OData error response
  */
-export function createODataErrorMock(statusCode: number, message: string): typeof fetch {
-  return createMockFetch({
+export function createODataErrorMock(statusCode: number, message: string): MockDatabase {
+  return createMockDatabase({
     url: "https://api.example.com/mock",
     method: "GET",
     status: statusCode,

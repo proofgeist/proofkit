@@ -24,36 +24,38 @@ This automated setup expects you to have Next.js and shadcn/ui set up in your pr
 
 Run the following command to add the necessary packages and config files to your project. You will not need to follow the better-auth installation guide.
 <CliCommand command="add better-auth" exec />
- 
+
 # Step 1b: Manual Setup
 
 Follow the [Better-Auth installation guide](https://better-auth.com/docs/installation) to get started in your app, but come back here for special instructions for anything related to your Database Setup or schema migrations.
 
 ### Database Setup
 
-Ensure you have the @proofkit/better-auth package installed in your app.
-<PackageInstall packages="@proofkit/better-auth" />
+Ensure you have the @proofkit/better-auth and @proofkit/fmodata packages installed in your app.
+<PackageInstall packages="@proofkit/better-auth @proofkit/fmodata" />
 
 Configure your database connection in your `auth.ts` file. Be sure to set these value secrets in your environment variables. The credentials you use here need `fmodata` permissions enabled, and read/write access to the better-auth tables.
 ```ts title="auth.ts"
 import { betterAuth } from "better-auth";
+import { FMServerConnection } from "@proofkit/fmodata";
 import { FileMakerAdapter } from "@proofkit/better-auth";
 
-export const auth = betterAuth({
-  database: FileMakerAdapter({
-    odata: {
-      serverUrl: process.env.FM_SERVER_URL,
-      auth: {
-        // option 1: username/password credentials
-        username: process.env.FM_USERNAME,
-        password: process.env.FM_PASSWORD,
+const connection = new FMServerConnection({
+  serverUrl: process.env.FM_SERVER_URL!,
+  auth: {
+    // option 1: username/password credentials
+    username: process.env.FM_USERNAME!,
+    password: process.env.FM_PASSWORD!,
 
-        // option 2: Data API key (OttoFMS 4.11+, OData enabled for the key)
-        // apiKey: process.env.OTTO_API_KEY,
-      },
-      database: process.env.FM_DATABASE,
-    },
-  }),
+    // option 2: Data API key (OttoFMS 4.11+, OData enabled for the key)
+    // apiKey: process.env.OTTO_API_KEY!,
+  },
+});
+
+const db = connection.database(process.env.FM_DATABASE!);
+
+export const auth = betterAuth({
+  database: FileMakerAdapter({ database: db }),
   // ...rest of your config
 });
 ```

@@ -2,32 +2,25 @@
  * Unit tests for FileMaker adapter operations using mocked responses.
  * These tests verify adapter behavior without requiring a live FileMaker server.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Database } from "@proofkit/fmodata";
+import { describe, expect, it } from "vitest";
 import { FileMakerAdapter } from "../src/adapter";
 import { mockResponses } from "./fixtures/responses";
-import { createMockFetch, createMockFetchSequence } from "./utils/mock-fetch";
+import { createMockDatabase, createMockDatabaseSequence } from "./utils/mock-fetch";
 
-// Test adapter factory - creates adapter with test config
-function createTestAdapter() {
+// Test adapter factory - creates adapter with mock database
+function createTestAdapter(mockDb: unknown) {
   return FileMakerAdapter({
-    odata: {
-      serverUrl: "https://api.example.com",
-      auth: { apiKey: "test-api-key" },
-      database: "test.fmp12",
-    },
+    database: mockDb as Database,
     debugLogs: false,
   });
 }
 
 describe("FileMakerAdapter", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   describe("create", () => {
     it("should create a record and return data with id", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["create-user"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["create-user"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.create({
         model: "user",
@@ -43,8 +36,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should create a session record", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["create-session"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["create-session"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.create({
         model: "session",
@@ -62,8 +55,8 @@ describe("FileMakerAdapter", () => {
 
   describe("findOne", () => {
     it("should find a single record", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-one-user"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-one-user"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.findOne({
         model: "user",
@@ -76,8 +69,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should return null when no record found", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-one-user-not-found"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-one-user-not-found"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.findOne({
         model: "user",
@@ -90,8 +83,8 @@ describe("FileMakerAdapter", () => {
 
   describe("findMany", () => {
     it("should find multiple records", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-users"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-many-users"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.findMany({
         model: "user",
@@ -102,8 +95,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should return empty array when no records found", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-users-empty"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-many-users-empty"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.findMany({
         model: "user",
@@ -114,8 +107,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should apply limit", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-with-limit"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-many-with-limit"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.findMany({
         model: "user",
@@ -126,8 +119,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should apply sort", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-many-sorted-desc"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-many-sorted-desc"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.findMany({
         model: "user",
@@ -144,8 +137,8 @@ describe("FileMakerAdapter", () => {
 
   describe("count", () => {
     it("should count records", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["count-users"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["count-users"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.count({
         model: "user",
@@ -158,15 +151,12 @@ describe("FileMakerAdapter", () => {
   describe("update", () => {
     it("should update a record and return updated data", async () => {
       // Update requires: find record -> patch -> read back
-      vi.stubGlobal(
-        "fetch",
-        createMockFetchSequence([
-          mockResponses["update-find-user"],
-          mockResponses["update-patch-user"],
-          mockResponses["update-read-back-user"],
-        ]),
-      );
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabaseSequence([
+        mockResponses["update-find-user"],
+        mockResponses["update-patch-user"],
+        mockResponses["update-read-back-user"],
+      ]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.update({
         model: "user",
@@ -180,8 +170,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should return null when record to update not found", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["find-one-user-not-found"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["find-one-user-not-found"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.update({
         model: "user",
@@ -196,11 +186,8 @@ describe("FileMakerAdapter", () => {
   describe("delete", () => {
     it("should delete a record", async () => {
       // Delete requires: find record -> delete
-      vi.stubGlobal(
-        "fetch",
-        createMockFetchSequence([mockResponses["delete-find-user"], mockResponses["delete-user"]]),
-      );
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabaseSequence([mockResponses["delete-find-user"], mockResponses["delete-user"]]);
+      const adapter = createTestAdapter(mockDb)({});
 
       // Should not throw
       await adapter.delete({
@@ -210,8 +197,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should do nothing when record to delete not found", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["delete-find-not-found"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["delete-find-not-found"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       // Should not throw
       await adapter.delete({
@@ -224,15 +211,12 @@ describe("FileMakerAdapter", () => {
   describe("deleteMany", () => {
     it("should delete multiple records", async () => {
       // DeleteMany requires: find all -> delete each
-      vi.stubGlobal(
-        "fetch",
-        createMockFetchSequence([
-          mockResponses["delete-many-find-users"],
-          mockResponses["delete-user-123"],
-          mockResponses["delete-user-456"],
-        ]),
-      );
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabaseSequence([
+        mockResponses["delete-many-find-users"],
+        mockResponses["delete-user-123"],
+        mockResponses["delete-user-456"],
+      ]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.deleteMany({
         model: "user",
@@ -243,8 +227,8 @@ describe("FileMakerAdapter", () => {
     });
 
     it("should return 0 when no records to delete", async () => {
-      vi.stubGlobal("fetch", createMockFetch(mockResponses["delete-find-not-found"]));
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabase(mockResponses["delete-find-not-found"]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.deleteMany({
         model: "user",
@@ -258,15 +242,12 @@ describe("FileMakerAdapter", () => {
   describe("updateMany", () => {
     it("should update multiple records", async () => {
       // UpdateMany requires: find all -> patch each
-      vi.stubGlobal(
-        "fetch",
-        createMockFetchSequence([
-          mockResponses["delete-many-find-users"], // reuse the find response
-          mockResponses["update-patch-user"],
-          mockResponses["update-patch-user"],
-        ]),
-      );
-      const adapter = createTestAdapter()({});
+      const mockDb = createMockDatabaseSequence([
+        mockResponses["delete-many-find-users"], // reuse the find response
+        mockResponses["update-patch-user"],
+        mockResponses["update-patch-user"],
+      ]);
+      const adapter = createTestAdapter(mockDb)({});
 
       const result = await adapter.updateMany({
         model: "user",
@@ -280,27 +261,11 @@ describe("FileMakerAdapter", () => {
 });
 
 describe("FileMakerAdapter configuration", () => {
-  it("should throw on invalid config", () => {
-    expect(() =>
-      FileMakerAdapter({
-        odata: {
-          serverUrl: "not-a-url",
-          auth: { apiKey: "test" },
-          database: "test.fmp12",
-        },
-      }),
-    ).toThrow();
+  it("should throw on missing database", () => {
+    expect(() => FileMakerAdapter({} as any)).toThrow();
   });
 
-  it("should throw when database lacks .fmp12 extension", () => {
-    expect(() =>
-      FileMakerAdapter({
-        odata: {
-          serverUrl: "https://api.example.com",
-          auth: { apiKey: "test" },
-          database: "test",
-        },
-      }),
-    ).toThrow();
+  it("should throw on null database", () => {
+    expect(() => FileMakerAdapter({ database: null } as any)).toThrow();
   });
 });

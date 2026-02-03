@@ -1,5 +1,13 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.9
+
+### Patch Changes
+
+- eb7d751: Fix list-tables endpoint 431 error by converting from GET to POST
+- Updated dependencies [69fd3fb]
+  - @proofkit/fmodata@0.1.0-beta.25
+
 ## 1.1.0-beta.8
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @proofkit/better-auth
 
+## 0.4.0-beta.2
+
+### Minor Changes
+
+- 69fd3fb: BREAKING(@proofkit/better-auth): Use fmodata Database object instead of raw OData config.
+  Config now requires `database` (fmodata Database instance) instead of
+  `odata: { serverUrl, auth, database }`.
+  Enables fetch override via FMServerConnection's fetchClientOptions.
+
+### Patch Changes
+
+- Updated dependencies [69fd3fb]
+  - @proofkit/fmodata@0.1.0-beta.25
+
 ## 0.3.1-beta.1
 
 ### Patch Changes

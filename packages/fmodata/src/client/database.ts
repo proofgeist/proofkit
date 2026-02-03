@@ -79,7 +79,7 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
    * @internal Used by adapter packages for raw OData requests.
    * Delegates to the connection's _makeRequest with the database name prepended.
    */
-  async _makeRequest<T>(path: string, options?: RequestInit & FFetchOptions): Promise<Result<T>> {
+  _makeRequest<T>(path: string, options?: RequestInit & FFetchOptions): Promise<Result<T>> {
     return this.context._makeRequest<T>(`/${this.databaseName}${path}`, options);
   }
 

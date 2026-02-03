@@ -1,4 +1,5 @@
 import type { Database, Field, Metadata } from "@proofkit/fmodata";
+import { isFMODataError, isODataError } from "@proofkit/fmodata";
 import type { DBFieldAttribute } from "better-auth/db";
 import chalk from "chalk";
 
@@ -16,12 +17,11 @@ function normalizeBetterAuthFieldType(fieldType: unknown): string {
 }
 
 export async function getMetadata(db: Database): Promise<Metadata | null> {
-  console.log("getting metadata...");
   try {
     const metadata = await db.getMetadata({ format: "json" });
     return metadata;
   } catch (err) {
-    console.error("Failed to get metadata:", err);
+    console.error(chalk.red("Failed to get metadata:"), formatError(err));
     return null;
   }
 }
@@ -169,16 +169,14 @@ export async function executeMigration(db: Database, migrationPlan: MigrationPla
       try {
         await db.schema.createTable(step.tableName, fmodataFields);
       } catch (error) {
-        console.error(`Failed to create table ${step.tableName}:`, error);
-        throw new Error(`Migration failed: ${error}`);
+        throw migrationError("create", step.tableName, error);
       }
     } else if (step.operation === "update") {
       console.log("Adding fields to table:", step.tableName);
       try {
         await db.schema.addFields(step.tableName, fmodataFields);
       } catch (error) {
-        console.error(`Failed to update table ${step.tableName}:`, error);
-        throw new Error(`Migration failed: ${error}`);
+        throw migrationError("update", step.tableName, error);
       }
     }
   }
@@ -200,12 +198,53 @@ interface MigrationStep {
 
 export type MigrationPlan = MigrationStep[];
 
-export function prettyPrintMigrationPlan(migrationPlan: MigrationPlan) {
+function formatError(error: unknown): string {
+  if (isODataError(error)) {
+    const code = error.code ? ` (${error.code})` : "";
+    return `${error.message}${code}`;
+  }
+  if (isFMODataError(error)) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function migrationError(operation: string, tableName: string, error: unknown): Error {
+  const action = operation === "create" ? "create table" : "update table";
+  const base = `Failed to ${action} "${tableName}"`;
+
+  if (isODataError(error) && error.code === "207") {
+    console.error(
+      chalk.red(`\n${base}: Cannot modify schema.`),
+      chalk.yellow("\nThe account used does not have schema modification privileges."),
+      chalk.gray(
+        "\nUse --username and --password to provide Full Access credentials, or grant schema modification privileges to the current account.",
+      ),
+    );
+  } else {
+    console.error(chalk.red(`\n${base}:`), formatError(error));
+  }
+  return new Error(`Migration failed: ${formatError(error)}`);
+}
+
+export function prettyPrintMigrationPlan(
+  migrationPlan: MigrationPlan,
+  target?: { serverUrl?: string; fileName?: string },
+) {
   if (!migrationPlan.length) {
     console.log("No changes to apply. Database is up to date.");
     return;
   }
   console.log(chalk.bold.green("Migration plan:"));
+  if (target?.serverUrl || target?.fileName) {
+    const parts: string[] = [];
+    if (target.fileName) parts.push(chalk.cyan(target.fileName));
+    if (target.serverUrl) parts.push(chalk.gray(target.serverUrl));
+    console.log(`  Target: ${parts.join(" @ ")}`);
+  }
   for (const step of migrationPlan) {
     const emoji = step.operation === "create" ? "✅" : "✏️";
     console.log(

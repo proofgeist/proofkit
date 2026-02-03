@@ -52,23 +52,35 @@ async function main() {
 
       const betterAuthSchema = getSchema(config);
 
-      // Extract Database from the adapter
-      const configDb = (adapter as unknown as { database: Database }).database;
+      // Extract Database from the adapter factory or resolved adapter.
+      // config.database is the FileMakerAdapter factory function (has .database set on it).
+      // adapter is the resolved adapter after getAdapter() calls the factory (also has .database).
+      // Try both: adapter first (post-call), then config.database (pre-call / factory function).
+      const configDb =
+        (adapter as unknown as { database?: Database }).database ??
+        (config.database as unknown as { database?: Database } | undefined)?.database;
+      if (!configDb || typeof configDb !== "object" || !("schema" in configDb)) {
+        logger.error(
+          "Could not extract Database instance from adapter. Ensure your auth.ts uses FileMakerAdapter with an fmodata Database.",
+        );
+        process.exit(1);
+      }
       let db: Database = configDb;
+
+      // Extract database name and server URL for display
+      const dbName: string = (configDb as unknown as { _getDatabaseName: string })
+        ._getDatabaseName;
+      const baseUrl: string | undefined = (
+        configDb as unknown as { context?: { _getBaseUrl?: () => string } }
+      ).context?._getBaseUrl?.();
+      const serverUrl = baseUrl ? new URL(baseUrl).origin : undefined;
 
       // If CLI credential overrides are provided, construct a new connection
       if (options.username && options.password) {
-        const dbName: string = (configDb as unknown as { _getDatabaseName: string })
-          ._getDatabaseName;
         if (!dbName) {
           logger.error("Could not determine database filename from adapter config.");
           process.exit(1);
         }
-
-        // Build the server URL from the existing db's context
-        const baseUrl: string | undefined = (
-          configDb as unknown as { context?: { _getBaseUrl?: () => string } }
-        ).context?._getBaseUrl?.();
 
         if (!baseUrl) {
           logger.error(
@@ -77,11 +89,8 @@ async function main() {
           process.exit(1);
         }
 
-        // Extract server origin from base URL (e.g. "https://myserver.com/fmi/odata/v4" -> "https://myserver.com")
-        const serverUrl = new URL(baseUrl).origin;
-
         const connection = new FMServerConnection({
-          serverUrl,
+          serverUrl: serverUrl as string,
           auth: {
             username: options.username,
             password: options.password,
@@ -99,7 +108,7 @@ async function main() {
       }
 
       if (!options.yes) {
-        prettyPrintMigrationPlan(migrationPlan);
+        prettyPrintMigrationPlan(migrationPlan, { serverUrl, fileName: dbName });
 
         if (migrationPlan.length > 0) {
           console.log(chalk.gray("💡 Tip: You can use the --yes flag to skip this confirmation."));
@@ -116,12 +125,18 @@ async function main() {
         }
       }
 
-      await executeMigration(db, migrationPlan);
-
-      logger.info("Migration applied successfully.");
+      try {
+        await executeMigration(db, migrationPlan);
+        logger.info("Migration applied successfully.");
+      } catch {
+        process.exit(1);
+      }
     });
   await program.parseAsync(process.argv);
   process.exit(0);
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  logger.error(err.message ?? err);
+  process.exit(1);
+});

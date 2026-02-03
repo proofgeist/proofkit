@@ -348,7 +348,15 @@ export const FileMakerAdapter = (config: FileMakerAdapterConfig) => {
     },
   });
 
-  // Expose the Database instance for CLI access
-  (adapterFactory as any).database = db;
-  return adapterFactory;
+  // Expose the Database instance for CLI access.
+  // Set on both the factory function (for pre-getAdapter extraction)
+  // and the returned adapter (for post-getAdapter extraction).
+  const originalFactory = adapterFactory;
+  const wrappedFactory = ((options: unknown) => {
+    const adapter = (originalFactory as (opts: unknown) => Record<string, unknown>)(options);
+    adapter.database = db;
+    return adapter;
+  }) as typeof adapterFactory;
+  (wrappedFactory as unknown as { database: Database }).database = db;
+  return wrappedFactory;
 };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node --no-warnings
 import { Command } from "@commander-js/extra-typings";
-import type { Database } from "@proofkit/fmodata";
+import type { Database, FFetchOptions } from "@proofkit/fmodata";
 import { FMServerConnection } from "@proofkit/fmodata";
 import { logger } from "better-auth";
 import { getAdapter, getSchema } from "better-auth/db";
@@ -67,12 +67,15 @@ async function main() {
       }
       let db: Database = configDb;
 
-      // Extract database name and server URL for display
-      const dbName: string = (configDb as unknown as { _getDatabaseName: string })
-        ._getDatabaseName;
-      const baseUrl: string | undefined = (
-        configDb as unknown as { context?: { _getBaseUrl?: () => string } }
-      ).context?._getBaseUrl?.();
+      // Extract database name and server URL for display.
+      // Try the public getter first (_getDatabaseName), fall back to the private field (databaseName).
+      const dbObj = configDb as unknown as {
+        _getDatabaseName?: string;
+        databaseName?: string;
+        context?: { _getBaseUrl?: () => string; _fetchClientOptions?: unknown };
+      };
+      const dbName: string = dbObj._getDatabaseName ?? dbObj.databaseName ?? "";
+      const baseUrl: string | undefined = dbObj.context?._getBaseUrl?.();
       const serverUrl = baseUrl ? new URL(baseUrl).origin : undefined;
 
       // If CLI credential overrides are provided, construct a new connection
@@ -89,18 +92,26 @@ async function main() {
           process.exit(1);
         }
 
+        const fetchClientOptions = dbObj.context?._fetchClientOptions as FFetchOptions | undefined;
         const connection = new FMServerConnection({
           serverUrl: serverUrl as string,
           auth: {
             username: options.username,
             password: options.password,
           },
+          fetchClientOptions,
         });
 
         db = connection.database(dbName);
       }
 
-      const migrationPlan = await planMigration(db, betterAuthSchema);
+      let migrationPlan: Awaited<ReturnType<typeof planMigration>>;
+      try {
+        migrationPlan = await planMigration(db, betterAuthSchema);
+      } catch (err) {
+        logger.error(`Failed to read database schema: ${err instanceof Error ? err.message : err}`);
+        process.exit(1);
+      }
 
       if (migrationPlan.length === 0) {
         logger.info("No changes to apply. Database is up to date.");

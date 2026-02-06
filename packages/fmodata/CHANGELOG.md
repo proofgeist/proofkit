@@ -1,5 +1,11 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.26
+
+### Minor Changes
+
+- 553d386: Add OData string functions: `matchesPattern`, `tolower`, `toupper`, `trim`
+
 ## 0.1.0-beta.25
 
 ### Patch Changes

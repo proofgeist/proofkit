@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/cli",
-  "version": "2.0.0-beta.14",
+  "version": "2.0.0-beta.15",
   "description": "Create web application with the ProofKit stack",
   "license": "MIT",
   "repository": {

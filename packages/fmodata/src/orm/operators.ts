@@ -1,6 +1,5 @@
 import { needsFieldQuoting } from "../client/builders/select-utils";
-import type { Column } from "./column";
-import { isColumn } from "./column";
+import { type Column, ColumnFunction, isColumn, isColumnFunction } from "./column";
 
 /**
  * FilterExpression represents a filter condition that can be used in where() clauses.
@@ -48,6 +47,8 @@ export class FilterExpression {
         return this._functionOp("startswith", useEntityIds);
       case "endsWith":
         return this._functionOp("endswith", useEntityIds);
+      case "matchesPattern":
+        return this._functionOp("matchesPattern", useEntityIds);
 
       // Null checks
       case "isNull":
@@ -152,6 +153,10 @@ export class FilterExpression {
     useEntityIds?: boolean, // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     column?: Column<any, any, any, any>,
   ): string {
+    if (isColumnFunction(operand)) {
+      return operand.toFilterString(useEntityIds);
+    }
+
     if (isColumn(operand)) {
       const fieldIdentifier = operand.getFieldIdentifier(useEntityIds);
       // Quote field names in OData filters per FileMaker OData API requirements
@@ -315,6 +320,59 @@ export function startsWith<TOutput, TInput>(column: Column<TOutput, TInput>, val
  */
 export function endsWith<TOutput, TInput>(column: Column<TOutput, TInput>, value: NoInfer<TInput>): FilterExpression {
   return new FilterExpression("endsWith", [column, value]);
+}
+
+/**
+ * Matches pattern operator - checks if a string column matches a regex pattern.
+ *
+ * @example
+ * matchesPattern(users.name, "^A.*e$") // name matches regex pattern
+ */
+export function matchesPattern<TOutput extends string | null, TInput>(
+  column: Column<TOutput, TInput>,
+  pattern: string,
+): FilterExpression {
+  return new FilterExpression("matchesPattern", [column, pattern]);
+}
+
+// ============================================================================
+// String Transform Functions
+// ============================================================================
+
+/**
+ * Wraps a column with OData `tolower()` for case-insensitive comparisons.
+ *
+ * @example
+ * eq(tolower(users.name), "john") // tolower(name) eq 'john'
+ */
+export function tolower<TOutput extends string | null, TInput, TableName extends string, IsContainer extends boolean>(
+  column: Column<TOutput, TInput, TableName, IsContainer>,
+): ColumnFunction<TOutput, TInput, TableName, IsContainer> {
+  return new ColumnFunction("tolower", column);
+}
+
+/**
+ * Wraps a column with OData `toupper()` for case-insensitive comparisons.
+ *
+ * @example
+ * eq(toupper(users.name), "JOHN") // toupper(name) eq 'JOHN'
+ */
+export function toupper<TOutput extends string | null, TInput, TableName extends string, IsContainer extends boolean>(
+  column: Column<TOutput, TInput, TableName, IsContainer>,
+): ColumnFunction<TOutput, TInput, TableName, IsContainer> {
+  return new ColumnFunction("toupper", column);
+}
+
+/**
+ * Wraps a column with OData `trim()` to remove leading/trailing whitespace.
+ *
+ * @example
+ * eq(trim(users.name), "John") // trim(name) eq 'John'
+ */
+export function trim<TOutput extends string | null, TInput, TableName extends string, IsContainer extends boolean>(
+  column: Column<TOutput, TInput, TableName, IsContainer>,
+): ColumnFunction<TOutput, TInput, TableName, IsContainer> {
+  return new ColumnFunction("trim", column);
 }
 
 // ============================================================================

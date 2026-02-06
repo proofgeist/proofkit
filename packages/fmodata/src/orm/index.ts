@@ -2,7 +2,7 @@
 // Field builders - main API for defining table schemas
 
 // Column references - used in queries and filters
-export { Column, isColumn } from "./column";
+export { Column, ColumnFunction, isColumn, isColumnFunction } from "./column";
 export {
   type ContainerDbType,
   calcField,
@@ -32,6 +32,7 @@ export {
   isOrderByExpression,
   lt,
   lte,
+  matchesPattern,
   ne,
   not,
   notInArray,
@@ -39,6 +40,9 @@ export {
   OrderByExpression,
   or,
   startsWith,
+  tolower,
+  toupper,
+  trim,
 } from "./operators";
 
 // Table definition - fmTableOccurrence function

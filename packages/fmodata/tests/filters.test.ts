@@ -25,11 +25,15 @@ import {
   isNull,
   lt,
   lte,
+  matchesPattern,
   ne,
   notInArray,
   or,
   startsWith,
   textField,
+  tolower,
+  toupper,
+  trim,
 } from "@proofkit/fmodata";
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
@@ -468,5 +472,59 @@ describe("Filter Tests", () => {
       .getQueryString();
     expect(queryStringNotInArray).toContain("$filter");
     expect(queryStringNotInArray).toContain("static-value");
+  });
+
+  it("should support matchesPattern operator", () => {
+    const query = db.from(contacts).list().where(matchesPattern(contacts.name, "^A.*e$"));
+    expect(query.getQueryString()).toContain("matchesPattern(name, '^A.*e$')");
+  });
+
+  it("should support tolower transform with eq", () => {
+    const query = db.from(contacts).list().where(eq(tolower(contacts.name), "john"));
+    expect(query.getQueryString()).toContain("tolower(name) eq 'john'");
+  });
+
+  it("should support toupper transform with eq", () => {
+    const query = db.from(contacts).list().where(eq(toupper(contacts.name), "JOHN"));
+    expect(query.getQueryString()).toContain("toupper(name) eq 'JOHN'");
+  });
+
+  it("should support trim transform with eq", () => {
+    const query = db.from(contacts).list().where(eq(trim(contacts.name), "John"));
+    expect(query.getQueryString()).toContain("trim(name) eq 'John'");
+  });
+
+  it("should support nested transforms", () => {
+    const query = db.from(contacts).list().where(eq(tolower(trim(contacts.name)), "john"));
+    expect(query.getQueryString()).toContain("tolower(trim(name)) eq 'john'");
+  });
+
+  it("should quote field names inside transforms", () => {
+    const weirdTable = fmTableOccurrence(
+      "weird_table",
+      {
+        id: textField().primaryKey(),
+        "name with spaces": textField(),
+      },
+      { defaultSelect: "all" },
+    );
+    const query = db.from(weirdTable).list().where(eq(tolower(weirdTable["name with spaces"]), "john"));
+    expect(query.getQueryString()).toContain('tolower("name with spaces") eq \'john\'');
+  });
+
+  it("should support transforms with other operators", () => {
+    const containsQuery = db.from(contacts).list().where(contains(tolower(contacts.name), "john"));
+    expect(containsQuery.getQueryString()).toContain("contains(tolower(name), 'john')");
+
+    const startsQuery = db.from(contacts).list().where(startsWith(toupper(contacts.name), "J"));
+    expect(startsQuery.getQueryString()).toContain("startswith(toupper(name), 'J')");
+
+    const neQuery = db.from(contacts).list().where(ne(trim(contacts.name), "John"));
+    expect(neQuery.getQueryString()).toContain("trim(name) ne 'John'");
+  });
+
+  it("should support transforms with entity IDs", () => {
+    const query = db.from(usersTOWithIds).list().where(eq(tolower(usersTOWithIds.name), "john"));
+    expect(query.getQueryString()).toContain("tolower(FMFID:6) eq 'john'");
   });
 });

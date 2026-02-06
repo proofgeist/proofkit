@@ -7,10 +7,15 @@ import {
   fmTableOccurrence,
   gt,
   isColumn,
+  isColumnFunction,
+  matchesPattern,
   numberField,
   or,
   textField,
   timestampField,
+  tolower,
+  toupper,
+  trim,
 } from "@proofkit/fmodata";
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
@@ -244,6 +249,35 @@ describe("ORM API", () => {
     it("should escape single quotes in strings", () => {
       const expr = eq(users.name, "O'Brien");
       expect(expr.toODataFilter(false)).toBe("name eq 'O''Brien'");
+    });
+
+    it("should create matchesPattern operator", () => {
+      const expr = matchesPattern(users.name, "^A.*e$");
+      expect(expr.operator).toBe("matchesPattern");
+      expect(expr.toODataFilter(false)).toBe("matchesPattern(name, '^A.*e$')");
+    });
+
+    it("should create tolower column function", () => {
+      const col = tolower(users.name);
+      expect(isColumnFunction(col)).toBe(true);
+      expect(isColumn(col)).toBe(true);
+      expect(col.toFilterString(false)).toBe("tolower(name)");
+
+      const expr = eq(col, "john");
+      expect(expr.toODataFilter(false)).toBe("tolower(name) eq 'john'");
+    });
+
+    it("should serialize nested column functions", () => {
+      const col = tolower(trim(users.name));
+      expect(col.toFilterString(false)).toBe("tolower(trim(name))");
+
+      const expr = eq(col, "john");
+      expect(expr.toODataFilter(false)).toBe("tolower(trim(name)) eq 'john'");
+    });
+
+    it("should use entity IDs in column functions", () => {
+      const col = toupper(users.name);
+      expect(col.toFilterString(true)).toBe("toupper(FMFID:2)");
     });
   });
 

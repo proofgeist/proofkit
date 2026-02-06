@@ -58,6 +58,7 @@ Quick reference for all available methods and operators in `@proofkit/fmodata`.
 | `contains(column, value)` | Contains substring | `contains(users.name, "John")` |
 | `startsWith(column, value)` | Starts with | `startsWith(users.email, "admin")` |
 | `endsWith(column, value)` | Ends with | `endsWith(users.email, ".com")` |
+| `matchesPattern(column, pattern)` | Matches regex pattern | `matchesPattern(users.name, "^A.*e$")` |
 
 ### Array Operators
 
@@ -80,6 +81,25 @@ Quick reference for all available methods and operators in `@proofkit/fmodata`.
 | `and(...filters)` | Logical AND | `and(eq(users.active, true), gt(users.age, 18))` |
 | `or(...filters)` | Logical OR | `or(eq(users.role, "admin"), eq(users.role, "moderator"))` |
 | `not(filter)` | Logical NOT | `not(eq(users.active, false))` |
+
+### String Transform Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `tolower(column)` | Convert to lowercase | `eq(tolower(users.name), "john")` |
+| `toupper(column)` | Convert to uppercase | `eq(toupper(users.name), "JOHN")` |
+| `trim(column)` | Remove leading/trailing whitespace | `eq(trim(users.name), "John")` |
+
+String transforms can be nested and used with any operator:
+
+```typescript
+// Nested transforms
+eq(tolower(trim(users.name)), "john")
+
+// With other operators
+contains(tolower(users.name), "john")
+startsWith(toupper(users.email), "ADMIN")
+```
 
 ## Sort Helpers
 

@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import { needsFieldQuoting } from "../client/builders/select-utils";
 
 /**
  * Column represents a type-safe reference to a table field.
@@ -87,6 +88,56 @@ export class Column<
 // biome-ignore lint/suspicious/noExplicitAny: Type guard accepting any value type, generic constraint accepting any Column configuration
 export function isColumn(value: any): value is Column<any, any, any, any> {
   return value instanceof Column;
+}
+
+/**
+ * ColumnFunction wraps a Column with an OData string function (tolower, toupper, trim).
+ * Since it extends Column, it passes `isColumn()` checks and works with all existing operators.
+ * Supports nesting: `tolower(trim(col))` → `tolower(trim(name))`.
+ */
+export class ColumnFunction<
+  // biome-ignore lint/suspicious/noExplicitAny: Default type parameter for flexibility
+  TOutput = any,
+  TInput = TOutput,
+  TableName extends string = string,
+  IsContainer extends boolean = false,
+> extends Column<TOutput, TInput, TableName, IsContainer> {
+  readonly fnName: string;
+  readonly innerColumn: Column<TOutput, TInput, TableName, IsContainer>;
+
+  constructor(
+    fnName: string,
+    innerColumn: Column<TOutput, TInput, TableName, IsContainer>,
+  ) {
+    super({
+      fieldName: innerColumn.fieldName,
+      entityId: innerColumn.entityId,
+      tableName: innerColumn.tableName,
+      tableEntityId: innerColumn.tableEntityId,
+      inputValidator: innerColumn.inputValidator,
+    });
+    this.fnName = fnName;
+    this.innerColumn = innerColumn;
+  }
+
+  toFilterString(useEntityIds?: boolean): string {
+    if (isColumnFunction(this.innerColumn)) {
+      return `${this.fnName}(${this.innerColumn.toFilterString(useEntityIds)})`;
+    }
+    const fieldIdentifier = this.innerColumn.getFieldIdentifier(useEntityIds);
+    const quoted = needsFieldQuoting(fieldIdentifier)
+      ? `"${fieldIdentifier}"`
+      : fieldIdentifier;
+    return `${this.fnName}(${quoted})`;
+  }
+}
+
+/**
+ * Type guard to check if a value is a ColumnFunction instance.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Type guard accepting any value type
+export function isColumnFunction(value: any): value is ColumnFunction<any, any, any, any> {
+  return value instanceof ColumnFunction;
 }
 
 /**

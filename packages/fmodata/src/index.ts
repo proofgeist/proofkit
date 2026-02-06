@@ -61,6 +61,7 @@ export {
   asc,
   // Column references
   type Column,
+  type ColumnFunction,
   calcField,
   containerField,
   contains,
@@ -88,10 +89,12 @@ export {
   type InferTableSchema,
   inArray,
   isColumn,
+  isColumnFunction,
   isNotNull,
   isNull,
   lt,
   lte,
+  matchesPattern,
   ne,
   not,
   notInArray,
@@ -104,6 +107,9 @@ export {
   textField,
   timeField,
   timestampField,
+  tolower,
+  toupper,
+  trim,
 } from "./orm/index";
 // Utility types for type annotations
 export type {

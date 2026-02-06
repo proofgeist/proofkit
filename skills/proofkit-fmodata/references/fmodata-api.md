@@ -164,11 +164,32 @@ import { eq, ne, gt, gte, lt, lte } from "@proofkit/fmodata";
 ### String
 
 ```typescript
-import { contains, startsWith, endsWith } from "@proofkit/fmodata";
+import { contains, startsWith, endsWith, matchesPattern } from "@proofkit/fmodata";
 
 .where(contains(Users.email, "@example.com"))
 .where(startsWith(Users.name, "John"))
 .where(endsWith(Users.email, ".com"))
+.where(matchesPattern(Users.name, "^A.*e$"))
+```
+
+### String Transforms
+
+```typescript
+import { tolower, toupper, trim } from "@proofkit/fmodata";
+
+// Case-insensitive comparison
+.where(eq(tolower(Users.name), "john"))
+.where(eq(toupper(Users.name), "JOHN"))
+
+// Trim whitespace
+.where(eq(trim(Users.name), "John"))
+
+// Nest transforms
+.where(eq(tolower(trim(Users.name)), "john"))
+
+// Use with any operator
+.where(contains(tolower(Users.name), "john"))
+.where(startsWith(toupper(Users.email), "ADMIN"))
 ```
 
 ### Array

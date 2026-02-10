@@ -16,6 +16,7 @@
 import {
   and,
   contains,
+  dateField,
   endsWith,
   eq,
   fmTableOccurrence,
@@ -31,6 +32,7 @@ import {
   or,
   startsWith,
   textField,
+  timestampField,
   tolower,
   toupper,
   trim,
@@ -526,5 +528,44 @@ describe("Filter Tests", () => {
   it("should support transforms with entity IDs", () => {
     const query = db.from(usersTOWithIds).list().where(eq(tolower(usersTOWithIds.name), "john"));
     expect(query.getQueryString()).toContain("tolower(FMFID:6) eq 'john'");
+  });
+
+  it("should not quote date values in filters", () => {
+    // FileMaker OData API expects date values WITHOUT single quotes:
+    //   invoiceDate gt 2024-01-01       ✅ correct
+    //   invoiceDate gt '2024-01-01'     ❌ FileMaker gets confused
+    //
+    // Currently dateField() input type is string, so the value hits the
+    // string branch in _operandToString and gets single-quoted. This test
+    // documents the desired behavior.
+    const dateTable = fmTableOccurrence("invoices", {
+      id: textField().primaryKey(),
+      invoiceDate: dateField(),
+      dueDate: dateField(),
+      createdAt: timestampField(),
+    });
+    // Fresh db to avoid state pollution from prior tests mutating useEntityIds
+    const freshDb = createMockClient().database("test.fmp12");
+
+    const gtQuery = freshDb.from(dateTable).list().where(gt(dateTable.invoiceDate, "2024-01-01"));
+    expect(gtQuery.getQueryString()).toContain("invoiceDate gt 2024-01-01");
+
+    const ltQuery = freshDb.from(dateTable).list().where(lt(dateTable.dueDate, "2025-12-31"));
+    expect(ltQuery.getQueryString()).toContain("dueDate lt 2025-12-31");
+
+    const gteQuery = freshDb.from(dateTable).list().where(gte(dateTable.invoiceDate, "2024-06-15"));
+    expect(gteQuery.getQueryString()).toContain("invoiceDate ge 2024-06-15");
+
+    const lteQuery = freshDb.from(dateTable).list().where(lte(dateTable.dueDate, "2024-06-15"));
+    expect(lteQuery.getQueryString()).toContain("dueDate le 2024-06-15");
+
+    const eqQuery = freshDb.from(dateTable).list().where(eq(dateTable.invoiceDate, "2024-01-01"));
+    expect(eqQuery.getQueryString()).toContain("invoiceDate eq 2024-01-01");
+
+    const tsQuery = freshDb
+      .from(dateTable)
+      .list()
+      .where(gt(dateTable.createdAt, "2024-01-01T00:00:00Z"));
+    expect(tsQuery.getQueryString()).toContain("createdAt gt 2024-01-01T00:00:00Z");
   });
 });

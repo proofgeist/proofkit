@@ -85,13 +85,13 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
 
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   from<T extends FMTable<any, any>>(table: T): EntitySet<T, IncludeSpecialColumns> {
-    // Only override database-level useEntityIds if table explicitly sets it
-    // (not if it's undefined, which would override the database setting)
+    // Resolve useEntityIds per-call without mutating shared Database state
+    let useEntityIds = this._useEntityIds;
     if (Object.hasOwn(table, FMTable.Symbol.UseEntityIds)) {
       // biome-ignore lint/suspicious/noExplicitAny: Type assertion for Symbol property access
       const tableUseEntityIds = (table as any)[FMTable.Symbol.UseEntityIds];
       if (typeof tableUseEntityIds === "boolean") {
-        this._useEntityIds = tableUseEntityIds;
+        useEntityIds = tableUseEntityIds;
       }
     }
     return new EntitySet<T, IncludeSpecialColumns>({
@@ -99,6 +99,7 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
       databaseName: this.databaseName,
       context: this.context,
       database: this,
+      useEntityIds,
     });
   }
 

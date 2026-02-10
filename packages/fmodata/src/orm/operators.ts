@@ -187,6 +187,12 @@ export class FilterExpression {
       }
     }
 
+    // Date/time/timestamp values must be unquoted in OData filters
+    const ft = column?.fieldType;
+    if (ft === "date" || ft === "time" || ft === "timestamp") {
+      return String(value);
+    }
+
     if (typeof value === "string") {
       return `'${value.replace(/'/g, "''")}'`; // Escape single quotes
     }

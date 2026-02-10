@@ -53,7 +53,6 @@ jobs:
   test:
     if: github.ref != 'refs/heads/beads-sync'
     runs-on: ubuntu-latest
-    needs: [lint, typecheck]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,7 +72,26 @@ jobs:
   build:
     if: github.ref != 'refs/heads/beads-sync'
     runs-on: ubuntu-latest
-    needs: [test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+  publish:
+    if: github.ref != 'refs/heads/beads-sync'
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

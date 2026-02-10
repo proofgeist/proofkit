@@ -25,7 +25,7 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
   readonly webhook: WebhookManager;
   private readonly databaseName: string;
   private readonly context: ExecutionContext;
-  private _useEntityIds: boolean;
+  private readonly _useEntityIds: boolean;
   private readonly _includeSpecialColumns: IncludeSpecialColumns;
 
   constructor(

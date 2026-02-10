@@ -108,10 +108,7 @@ export class ColumnFunction<
   readonly fnName: string;
   readonly innerColumn: Column<TOutput, TInput, TableName, IsContainer>;
 
-  constructor(
-    fnName: string,
-    innerColumn: Column<TOutput, TInput, TableName, IsContainer>,
-  ) {
+  constructor(fnName: string, innerColumn: Column<TOutput, TInput, TableName, IsContainer>) {
     super({
       fieldName: innerColumn.fieldName,
       entityId: innerColumn.entityId,
@@ -129,9 +126,7 @@ export class ColumnFunction<
       return `${this.fnName}(${this.innerColumn.toFilterString(useEntityIds)})`;
     }
     const fieldIdentifier = this.innerColumn.getFieldIdentifier(useEntityIds);
-    const quoted = needsFieldQuoting(fieldIdentifier)
-      ? `"${fieldIdentifier}"`
-      : fieldIdentifier;
+    const quoted = needsFieldQuoting(fieldIdentifier) ? `"${fieldIdentifier}"` : fieldIdentifier;
     return `${this.fnName}(${quoted})`;
   }
 }

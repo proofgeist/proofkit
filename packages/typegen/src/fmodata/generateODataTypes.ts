@@ -840,11 +840,12 @@ function matchFieldByName(existingFields: Map<string, ParsedField>, fieldName: s
 function extractMethodNamesFromChain(chain: string): Set<string> {
   const names = new Set<string>();
   const pattern = /\.(\w+)\s*(?:<[^>]*>)?\s*\(/g;
-  let m: RegExpExecArray | null;
-  while ((m = pattern.exec(chain)) !== null) {
+  let m = pattern.exec(chain);
+  while (m !== null) {
     if (m[1]) {
       names.add(m[1]);
     }
+    m = pattern.exec(chain);
   }
   return names;
 }

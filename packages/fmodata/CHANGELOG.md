@@ -1,5 +1,11 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.27
+
+### Patch Changes
+
+- 840c7c1: Fix unquoted date/time/timestamp values in OData filters and fix `Database.from()` mutating shared `_useEntityIds` state
+
 ## 0.1.0-beta.26
 
 ### Minor Changes

@@ -22,6 +22,7 @@
     "better-auth-type-errors",
     "bright-dogs-teach",
     "brown-keys-float",
+    "fix-date-filter-quoting",
     "fix-navigate-defaultselect-schema",
     "fix-typegen-431-error",
     "fix-typegen-auth-detection",

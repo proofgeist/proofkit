@@ -7,7 +7,16 @@
 
 import { dateField, fmTableOccurrence, textField } from "@proofkit/fmodata";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { arbitraryTable, contacts, createMockClient, invoices, lineItems, users } from "./utils/test-setup";
+import {
+  arbitraryTable,
+  contacts,
+  contactsTOWithIds,
+  createMockClient,
+  invoices,
+  lineItems,
+  users,
+  usersTOWithIds,
+} from "./utils/test-setup";
 
 const contactsUsersPathRegex = /^\/contacts\/users/;
 
@@ -177,6 +186,31 @@ describe("navigate", () => {
     // await nestedExpand.execute({
     //   fetchHandler: simpleMock({ status: 200, body: {} }),
     // });
+  });
+
+  it("should preserve useEntityIds from parent EntitySet through navigate", () => {
+    const db = client.database("test_db");
+    const query = db.from(contactsTOWithIds).navigate(usersTOWithIds).list();
+    const qs = query.getQueryString();
+
+    // Should use FMTID for table names, not field names
+    expect(qs).toContain("FMTID:200"); // contacts table entity ID
+    expect(qs).toContain("FMTID:1065093"); // users table entity ID
+    expect(qs).not.toContain("/contacts/");
+    expect(qs).not.toContain("/users?");
+  });
+
+  it("should preserve useEntityIds through record navigate", () => {
+    const db = client.database("test_db");
+    const qs = db
+      .from(contactsTOWithIds)
+      .get("rec-1")
+      .navigate(usersTOWithIds)
+      .select({ name: usersTOWithIds.name })
+      .getQueryString();
+
+    expect(qs).toContain("FMTID:200"); // contacts source
+    expect(qs).toContain("FMTID:1065093"); // users relation
   });
 
   // Issue #107: navigate() doesn't include parent table in URL path

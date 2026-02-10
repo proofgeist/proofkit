@@ -10,6 +10,7 @@ import type {
 } from "../orm/table";
 import { FMTable as FMTableClass, getDefaultSelect, getTableColumns, getTableName, getTableSchema } from "../orm/table";
 import type { ExecutionContext } from "../types";
+import { resolveTableId } from "./builders/table-utils";
 import type { Database } from "./database";
 import { DeleteBuilder } from "./delete-builder";
 import { InsertBuilder } from "./insert-builder";
@@ -361,12 +362,22 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       databaseName: this.databaseName,
       context: this.context,
       database: this.database,
+      useEntityIds: this.databaseUseEntityIds,
     });
+    // Resolve navigation names using entity IDs when appropriate
+    const resolvedRelation = resolveTableId(targetTable, relationName, this.context, this.databaseUseEntityIds);
+    const resolvedSourceName = resolveTableId(
+      this.occurrence,
+      getTableName(this.occurrence),
+      this.context,
+      this.databaseUseEntityIds,
+    );
+
     // Store the navigation info in the EntitySet
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (entitySet as any).isNavigateFromEntitySet = true;
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-    (entitySet as any).navigateRelation = relationName;
+    (entitySet as any).navigateRelation = resolvedRelation;
 
     // Build the full base path for chained navigations
     if (this.isNavigateFromEntitySet && this.navigateBasePath) {
@@ -382,9 +393,9 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateSourceTableName = this.navigateSourceTableName;
     } else {
-      // Initial navigation - source is just the table name
+      // Initial navigation - source is just the table name (resolved to entity ID if needed)
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-      (entitySet as any).navigateSourceTableName = getTableName(this.occurrence);
+      (entitySet as any).navigateSourceTableName = resolvedSourceName;
     }
     return entitySet;
   }

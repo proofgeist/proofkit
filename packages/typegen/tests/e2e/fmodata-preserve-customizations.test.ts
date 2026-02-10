@@ -176,6 +176,55 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
     }
   });
 
+  it("preserves user .transform() on Edm.Boolean fields (not confused with nested .transform)", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
+
+    try {
+      const entitySetName = "MyTable";
+      const entityTypeName = "NS.MyTable";
+      const metadata = makeMetadata({
+        entitySetName,
+        entityTypeName,
+        fields: [{ name: "is_active", type: "Edm.Boolean", fieldId: "F1" }],
+      });
+
+      const existingFilePath = path.join(tmpDir, "MyTable.ts");
+      await fs.writeFile(
+        existingFilePath,
+        [
+          `import { fmTableOccurrence, numberField } from "@proofkit/fmodata";`,
+          `import { z } from "zod/v4";`,
+          "",
+          `export const MyTable = fmTableOccurrence("MyTable", {`,
+          `  is_active: numberField().readValidator(z.coerce.boolean()).writeValidator(z.boolean().transform((v) => (v ? 1 : 0))).entityId("F1").transform((v) => !!v),`,
+          "}, {",
+          `  entityId: "T1",`,
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      await generateODataTypes(metadata, {
+        type: "fmodata",
+        path: tmpDir,
+        clearOldFiles: false,
+        tables: [{ tableName: "MyTable" }],
+      });
+
+      const regenerated = await fs.readFile(existingFilePath, "utf8");
+      // The user-added .transform() should be preserved
+      expect(regenerated).toContain(".transform((v) => !!v)");
+      // readValidator and writeValidator should each appear exactly once
+      const readValidatorCount = (regenerated.match(/readValidator/g) || []).length;
+      const writeValidatorCount = (regenerated.match(/writeValidator/g) || []).length;
+      expect(readValidatorCount).toBe(1);
+      expect(writeValidatorCount).toBe(1);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("preserves aliased imports when regenerating files", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
 

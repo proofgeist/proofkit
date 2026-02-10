@@ -839,13 +839,84 @@ function matchFieldByName(existingFields: Map<string, ParsedField>, fieldName: s
  */
 function extractMethodNamesFromChain(chain: string): Set<string> {
   const names = new Set<string>();
-  const pattern = /\.(\w+)\s*(?:<[^>]*>)?\s*\(/g;
-  let m = pattern.exec(chain);
-  while (m !== null) {
-    if (m[1]) {
-      names.add(m[1]);
+  let depth = 0;
+  let i = 0;
+
+  function skipStringLiteral(quote: string): void {
+    i++; // skip opening quote
+    while (i < chain.length) {
+      if (chain[i] === "\\") {
+        i += 2;
+        continue;
+      }
+      if (chain[i] === quote) {
+        i++;
+        break;
+      }
+      i++;
     }
-    m = pattern.exec(chain);
+  }
+
+  while (i < chain.length) {
+    const ch = chain[i] ?? "";
+    // Skip string literals (handles quotes inside parens correctly)
+    if (ch === "'" || ch === '"' || ch === "`") {
+      skipStringLiteral(ch);
+      continue;
+    }
+    if (ch === "(") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (ch === ")") {
+      depth--;
+      i++;
+      continue;
+    }
+    // Only match `.methodName(` at the top-level chain (depth 0)
+    if (ch === "." && depth === 0) {
+      i++;
+      const nameStart = i;
+      while (i < chain.length && REGEX_IDENT_CHAR.test(chain[i] ?? "")) {
+        i++;
+      }
+      if (i > nameStart) {
+        const name = chain.slice(nameStart, i);
+        while (i < chain.length && REGEX_WHITESPACE.test(chain[i] ?? "")) {
+          i++;
+        }
+        // Skip optional generic type args <...>
+        if (i < chain.length && chain[i] === "<") {
+          let angleDepth = 0;
+          while (i < chain.length) {
+            const c = chain[i] ?? "";
+            if (c === "'" || c === '"' || c === "`") {
+              skipStringLiteral(c);
+              continue;
+            }
+            if (c === "<") {
+              angleDepth++;
+            } else if (c === ">") {
+              angleDepth--;
+              if (angleDepth === 0) {
+                i++;
+                break;
+              }
+            }
+            i++;
+          }
+          while (i < chain.length && REGEX_WHITESPACE.test(chain[i] ?? "")) {
+            i++;
+          }
+        }
+        if (i < chain.length && chain[i] === "(") {
+          names.add(name);
+        }
+      }
+      continue;
+    }
+    i++;
   }
   return names;
 }

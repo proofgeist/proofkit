@@ -396,6 +396,7 @@ export function fmTableOccurrence<
       tableName: name,
       tableEntityId: options?.entityId,
       inputValidator: config.inputValidator,
+      fieldType: config.fieldType,
     });
   }
 
@@ -734,6 +735,7 @@ export function getTableColumns<T extends FMTable<any, any>>(
       tableName,
       tableEntityId,
       inputValidator: config.inputValidator,
+      fieldType: config.fieldType,
     });
   }
 

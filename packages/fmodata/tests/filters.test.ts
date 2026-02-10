@@ -16,6 +16,7 @@
 import {
   and,
   contains,
+  dateField,
   endsWith,
   eq,
   fmTableOccurrence,
@@ -31,6 +32,7 @@ import {
   or,
   startsWith,
   textField,
+  timestampField,
   tolower,
   toupper,
   trim,
@@ -480,22 +482,34 @@ describe("Filter Tests", () => {
   });
 
   it("should support tolower transform with eq", () => {
-    const query = db.from(contacts).list().where(eq(tolower(contacts.name), "john"));
+    const query = db
+      .from(contacts)
+      .list()
+      .where(eq(tolower(contacts.name), "john"));
     expect(query.getQueryString()).toContain("tolower(name) eq 'john'");
   });
 
   it("should support toupper transform with eq", () => {
-    const query = db.from(contacts).list().where(eq(toupper(contacts.name), "JOHN"));
+    const query = db
+      .from(contacts)
+      .list()
+      .where(eq(toupper(contacts.name), "JOHN"));
     expect(query.getQueryString()).toContain("toupper(name) eq 'JOHN'");
   });
 
   it("should support trim transform with eq", () => {
-    const query = db.from(contacts).list().where(eq(trim(contacts.name), "John"));
+    const query = db
+      .from(contacts)
+      .list()
+      .where(eq(trim(contacts.name), "John"));
     expect(query.getQueryString()).toContain("trim(name) eq 'John'");
   });
 
   it("should support nested transforms", () => {
-    const query = db.from(contacts).list().where(eq(tolower(trim(contacts.name)), "john"));
+    const query = db
+      .from(contacts)
+      .list()
+      .where(eq(tolower(trim(contacts.name)), "john"));
     expect(query.getQueryString()).toContain("tolower(trim(name)) eq 'john'");
   });
 
@@ -508,23 +522,74 @@ describe("Filter Tests", () => {
       },
       { defaultSelect: "all" },
     );
-    const query = db.from(weirdTable).list().where(eq(tolower(weirdTable["name with spaces"]), "john"));
-    expect(query.getQueryString()).toContain('tolower("name with spaces") eq \'john\'');
+    const query = db
+      .from(weirdTable)
+      .list()
+      .where(eq(tolower(weirdTable["name with spaces"]), "john"));
+    expect(query.getQueryString()).toContain("tolower(\"name with spaces\") eq 'john'");
   });
 
   it("should support transforms with other operators", () => {
-    const containsQuery = db.from(contacts).list().where(contains(tolower(contacts.name), "john"));
+    const containsQuery = db
+      .from(contacts)
+      .list()
+      .where(contains(tolower(contacts.name), "john"));
     expect(containsQuery.getQueryString()).toContain("contains(tolower(name), 'john')");
 
-    const startsQuery = db.from(contacts).list().where(startsWith(toupper(contacts.name), "J"));
+    const startsQuery = db
+      .from(contacts)
+      .list()
+      .where(startsWith(toupper(contacts.name), "J"));
     expect(startsQuery.getQueryString()).toContain("startswith(toupper(name), 'J')");
 
-    const neQuery = db.from(contacts).list().where(ne(trim(contacts.name), "John"));
+    const neQuery = db
+      .from(contacts)
+      .list()
+      .where(ne(trim(contacts.name), "John"));
     expect(neQuery.getQueryString()).toContain("trim(name) ne 'John'");
   });
 
   it("should support transforms with entity IDs", () => {
-    const query = db.from(usersTOWithIds).list().where(eq(tolower(usersTOWithIds.name), "john"));
+    const query = db
+      .from(usersTOWithIds)
+      .list()
+      .where(eq(tolower(usersTOWithIds.name), "john"));
     expect(query.getQueryString()).toContain("tolower(FMFID:6) eq 'john'");
+  });
+
+  it("should not quote date values in filters", () => {
+    // FileMaker OData API expects date values WITHOUT single quotes:
+    //   invoiceDate gt 2024-01-01       ✅ correct
+    //   invoiceDate gt '2024-01-01'     ❌ FileMaker gets confused
+    //
+    // Currently dateField() input type is string, so the value hits the
+    // string branch in _operandToString and gets single-quoted. This test
+    // documents the desired behavior.
+    const dateTable = fmTableOccurrence("invoices", {
+      id: textField().primaryKey(),
+      invoiceDate: dateField(),
+      dueDate: dateField(),
+      createdAt: timestampField(),
+    });
+    // Fresh db to avoid state pollution from prior tests mutating useEntityIds
+    const freshDb = createMockClient().database("test.fmp12");
+
+    const gtQuery = freshDb.from(dateTable).list().where(gt(dateTable.invoiceDate, "2024-01-01"));
+    expect(gtQuery.getQueryString()).toContain("invoiceDate gt 2024-01-01");
+
+    const ltQuery = freshDb.from(dateTable).list().where(lt(dateTable.dueDate, "2025-12-31"));
+    expect(ltQuery.getQueryString()).toContain("dueDate lt 2025-12-31");
+
+    const gteQuery = freshDb.from(dateTable).list().where(gte(dateTable.invoiceDate, "2024-06-15"));
+    expect(gteQuery.getQueryString()).toContain("invoiceDate ge 2024-06-15");
+
+    const lteQuery = freshDb.from(dateTable).list().where(lte(dateTable.dueDate, "2024-06-15"));
+    expect(lteQuery.getQueryString()).toContain("dueDate le 2024-06-15");
+
+    const eqQuery = freshDb.from(dateTable).list().where(eq(dateTable.invoiceDate, "2024-01-01"));
+    expect(eqQuery.getQueryString()).toContain("invoiceDate eq 2024-01-01");
+
+    const tsQuery = freshDb.from(dateTable).list().where(gt(dateTable.createdAt, "2024-01-01T00:00:00Z"));
+    expect(tsQuery.getQueryString()).toContain("createdAt gt 2024-01-01T00:00:00Z");
   });
 });

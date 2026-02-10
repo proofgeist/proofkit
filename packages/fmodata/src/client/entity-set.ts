@@ -57,13 +57,14 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
     context: ExecutionContext;
     // biome-ignore lint/suspicious/noExplicitAny: Database type is optional and can be any Database instance
     database?: any;
+    useEntityIds?: boolean;
   }) {
     this.occurrence = config.occurrence;
     this.databaseName = config.databaseName;
     this.context = config.context;
     this.database = config.database;
-    // Get useEntityIds from database if available, otherwise default to false
-    this.databaseUseEntityIds = config.database?._getUseEntityIds ?? false;
+    // Use explicit useEntityIds if provided, otherwise fall back to database setting
+    this.databaseUseEntityIds = config.useEntityIds ?? config.database?._getUseEntityIds ?? false;
     // Get includeSpecialColumns from database if available, otherwise default to false
     this.databaseIncludeSpecialColumns = (config.database?._getIncludeSpecialColumns ??
       false) as DatabaseIncludeSpecialColumns;

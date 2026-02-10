@@ -23,6 +23,7 @@ export class Column<
   readonly tableEntityId?: `FMTID:${string}`;
   // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   readonly inputValidator?: StandardSchemaV1<TInput, any>;
+  readonly fieldType?: string;
 
   // Phantom types for TypeScript inference - never actually hold values
   readonly _phantomOutput!: TOutput;
@@ -36,12 +37,14 @@ export class Column<
     tableEntityId?: `FMTID:${string}`;
     // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
     inputValidator?: StandardSchemaV1<TInput, any>;
+    fieldType?: string;
   }) {
     this.fieldName = config.fieldName;
     this.entityId = config.entityId;
     this.tableName = config.tableName;
     this.tableEntityId = config.tableEntityId;
     this.inputValidator = config.inputValidator;
+    this.fieldType = config.fieldType;
   }
 
   /**
@@ -105,16 +108,14 @@ export class ColumnFunction<
   readonly fnName: string;
   readonly innerColumn: Column<TOutput, TInput, TableName, IsContainer>;
 
-  constructor(
-    fnName: string,
-    innerColumn: Column<TOutput, TInput, TableName, IsContainer>,
-  ) {
+  constructor(fnName: string, innerColumn: Column<TOutput, TInput, TableName, IsContainer>) {
     super({
       fieldName: innerColumn.fieldName,
       entityId: innerColumn.entityId,
       tableName: innerColumn.tableName,
       tableEntityId: innerColumn.tableEntityId,
       inputValidator: innerColumn.inputValidator,
+      fieldType: innerColumn.fieldType,
     });
     this.fnName = fnName;
     this.innerColumn = innerColumn;
@@ -125,9 +126,7 @@ export class ColumnFunction<
       return `${this.fnName}(${this.innerColumn.toFilterString(useEntityIds)})`;
     }
     const fieldIdentifier = this.innerColumn.getFieldIdentifier(useEntityIds);
-    const quoted = needsFieldQuoting(fieldIdentifier)
-      ? `"${fieldIdentifier}"`
-      : fieldIdentifier;
+    const quoted = needsFieldQuoting(fieldIdentifier) ? `"${fieldIdentifier}"` : fieldIdentifier;
     return `${this.fnName}(${quoted})`;
   }
 }
@@ -152,6 +151,7 @@ export function createColumn<TOutput, TInput, TName extends string, IsContainer 
   tableEntityId?: `FMTID:${string}`;
   // biome-ignore lint/suspicious/noExplicitAny: Required for type inference with infer
   inputValidator?: StandardSchemaV1<TInput, any>;
+  fieldType?: string;
 }): Column<TOutput, TInput, TName, IsContainer> {
   return new Column(config) as Column<TOutput, TInput, TName, IsContainer>;
 }

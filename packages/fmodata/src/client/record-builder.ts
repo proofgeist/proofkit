@@ -445,9 +445,8 @@ export class RecordBuilder<
       databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
-    // Store the navigation info - we'll use it in execute
-    // Use relation name as-is (entity ID handling is done in QueryBuilder)
-    const relationId = relationName;
+    // Store the navigation info - resolve entity ID for relation if needed
+    const relationId = resolveTableId(targetTable, relationName, this.context, this.databaseUseEntityIds);
 
     // If this RecordBuilder came from a navigated EntitySet, we need to preserve that base path
     let sourceTableName: string;

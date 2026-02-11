@@ -1,5 +1,11 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.13
+
+### Patch Changes
+
+- 4928637: Fix typegen duplicating readValidator/writeValidator on Edm.Boolean fields during regeneration
+
 ## 1.1.0-beta.12
 
 ### Patch Changes

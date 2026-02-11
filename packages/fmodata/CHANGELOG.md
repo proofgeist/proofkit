@@ -1,5 +1,11 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.28
+
+### Patch Changes
+
+- 6c6b569: Fix navigate() losing per-table useEntityIds after Database.from() mutation fix
+
 ## 0.1.0-beta.27
 
 ### Patch Changes

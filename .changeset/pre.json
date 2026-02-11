@@ -24,6 +24,7 @@
     "brown-keys-float",
     "fix-date-filter-quoting",
     "fix-navigate-defaultselect-schema",
+    "fix-navigate-useentityids",
     "fix-typegen-431-error",
     "fix-typegen-auth-detection",
     "get-query-string-entity-ids-override",

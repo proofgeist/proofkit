@@ -315,7 +315,7 @@ function generateTableOccurrence(
 
     // Preserve user customizations from existing field
     if (matchedExistingField) {
-      line = preserveUserCustomizations(matchedExistingField, line);
+      line = preserveUserCustomizations(matchedExistingField, line, fieldBuilder);
     }
 
     // Add comma if not the last field
@@ -435,7 +435,11 @@ interface ParsedTableOccurrence {
 /**
  * Extracts user customizations (like .inputValidator() and .outputValidator()) from a method chain
  */
-function extractUserCustomizations(chainText: string, baseChainEnd: number): string {
+function extractUserCustomizations(
+  chainText: string,
+  baseChainEnd: number,
+  additionalStandardMethods?: Set<string>,
+): string {
   // We want to preserve user-added chained calls even if they were placed:
   // - before a standard method (e.g. textField().inputValidator(...).entityId(...))
   // - on fields that have no standard methods at all (possible when reduceMetadata is true)
@@ -447,6 +451,11 @@ function extractUserCustomizations(chainText: string, baseChainEnd: number): str
   // that can be appended to the regenerated chain.
 
   const standardMethodNames = new Set(["primaryKey", "readOnly", "notNull", "entityId", "comment"]);
+  if (additionalStandardMethods) {
+    for (const m of additionalStandardMethods) {
+      standardMethodNames.add(m);
+    }
+  }
 
   const start = Math.max(0, Math.min(baseChainEnd, chainText.length));
   const tail = chainText.slice(start);
@@ -825,9 +834,101 @@ function matchFieldByName(existingFields: Map<string, ParsedField>, fieldName: s
 }
 
 /**
+ * Extracts method names called in a chain expression.
+ * e.g. "numberField().readValidator(...).writeValidator(...)" => {"readValidator", "writeValidator"}
+ */
+function extractMethodNamesFromChain(chain: string): Set<string> {
+  const names = new Set<string>();
+  let depth = 0;
+  let i = 0;
+
+  function skipStringLiteral(quote: string): void {
+    i++; // skip opening quote
+    while (i < chain.length) {
+      if (chain[i] === "\\") {
+        i += 2;
+        continue;
+      }
+      if (chain[i] === quote) {
+        i++;
+        break;
+      }
+      i++;
+    }
+  }
+
+  while (i < chain.length) {
+    const ch = chain[i] ?? "";
+    // Skip string literals (handles quotes inside parens correctly)
+    if (ch === "'" || ch === '"' || ch === "`") {
+      skipStringLiteral(ch);
+      continue;
+    }
+    if (ch === "(") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (ch === ")") {
+      depth--;
+      i++;
+      continue;
+    }
+    // Only match `.methodName(` at the top-level chain (depth 0)
+    if (ch === "." && depth === 0) {
+      i++;
+      const nameStart = i;
+      while (i < chain.length && REGEX_IDENT_CHAR.test(chain[i] ?? "")) {
+        i++;
+      }
+      if (i > nameStart) {
+        const name = chain.slice(nameStart, i);
+        while (i < chain.length && REGEX_WHITESPACE.test(chain[i] ?? "")) {
+          i++;
+        }
+        // Skip optional generic type args <...>
+        if (i < chain.length && chain[i] === "<") {
+          let angleDepth = 0;
+          while (i < chain.length) {
+            const c = chain[i] ?? "";
+            if (c === "'" || c === '"' || c === "`") {
+              skipStringLiteral(c);
+              continue;
+            }
+            if (c === "<") {
+              angleDepth++;
+            } else if (c === ">") {
+              angleDepth--;
+              if (angleDepth === 0) {
+                i++;
+                break;
+              }
+            }
+            i++;
+          }
+          while (i < chain.length && REGEX_WHITESPACE.test(chain[i] ?? "")) {
+            i++;
+          }
+        }
+        if (i < chain.length && chain[i] === "(") {
+          names.add(name);
+        }
+      }
+      continue;
+    }
+    i++;
+  }
+  return names;
+}
+
+/**
  * Preserves user customizations from an existing field chain
  */
-function preserveUserCustomizations(existingField: ParsedField | undefined, newChain: string): string {
+function preserveUserCustomizations(
+  existingField: ParsedField | undefined,
+  newChain: string,
+  fieldBuilder: string,
+): string {
   if (!existingField) {
     return newChain;
   }
@@ -848,7 +949,10 @@ function preserveUserCustomizations(existingField: ParsedField | undefined, newC
   const existingChainText = existingField.fullChainText;
   const existingBaseEnd = existingChainText.startsWith(baseBuilderPrefix) ? baseBuilderPrefix.length : 0;
 
-  const userCustomizations = extractUserCustomizations(existingChainText, existingBaseEnd);
+  // Methods in the generated field builder (e.g. readValidator, writeValidator for
+  // Edm.Boolean) are generator-owned and must not be duplicated as user customizations.
+  const generatorMethods = extractMethodNamesFromChain(fieldBuilder);
+  const userCustomizations = extractUserCustomizations(existingChainText, existingBaseEnd, generatorMethods);
 
   if (!userCustomizations) {
     return newChain;

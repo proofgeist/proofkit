@@ -32,6 +32,7 @@ import {
   or,
   startsWith,
   textField,
+  timeField,
   timestampField,
   tolower,
   toupper,
@@ -627,5 +628,38 @@ describe("Filter Tests", () => {
       .where(gt(dateTable.createdAt, timestampStart))
       .getQueryString();
     expect(gtTimestampQuery).toContain("createdAt gt 2024-01-01T12:34:56.000Z");
+  });
+
+  it("should only allow Date values with temporal columns", () => {
+    const typedTable = fmTableOccurrence("typed_table", {
+      id: textField().primaryKey(),
+      notes: textField(),
+      invoiceDate: dateField(),
+      alarmTime: timeField(),
+      createdAt: timestampField(),
+    });
+    const now = new Date("2024-01-01T12:34:56.000Z");
+
+    // Temporal fields should accept Date values
+    gt(typedTable.invoiceDate, now);
+    gte(typedTable.alarmTime, now);
+    lt(typedTable.createdAt, now);
+    lte(typedTable.invoiceDate, now);
+    eq(typedTable.createdAt, now);
+    ne(typedTable.alarmTime, now);
+
+    // Non-temporal fields must reject Date values
+    // @ts-expect-error - Date values should not be allowed for text columns
+    gt(typedTable.notes, now);
+    // @ts-expect-error - Date values should not be allowed for text columns
+    gte(typedTable.notes, now);
+    // @ts-expect-error - Date values should not be allowed for text columns
+    lt(typedTable.notes, now);
+    // @ts-expect-error - Date values should not be allowed for text columns
+    lte(typedTable.notes, now);
+    // @ts-expect-error - Date values should not be allowed for text columns
+    eq(typedTable.notes, now);
+    // @ts-expect-error - Date values should not be allowed for text columns
+    ne(typedTable.notes, now);
   });
 });

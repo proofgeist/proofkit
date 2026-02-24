@@ -185,39 +185,42 @@ export function numberField(): FieldBuilder<number | null, number | null, number
 
 /**
  * Create a date field (Edm.Date in FileMaker OData).
- * By default, date fields are nullable and represented as ISO date strings (YYYY-MM-DD).
+ * By default, date fields are nullable and represented as ISO date strings (YYYY-MM-DD),
+ * while accepting either ISO strings or Date objects as input.
  *
  * @example
- * dateField()         // string | null (ISO date format)
+ * dateField()         // output: string | null (ISO date format), input: string | Date | null
  * dateField().notNull() // string
  */
-export function dateField(): FieldBuilder<string | null, string | null, string | null, false> {
-  return new FieldBuilder<string | null, string | null, string | null, false>("date");
+export function dateField(): FieldBuilder<string | null, string | Date | null, string | null, false> {
+  return new FieldBuilder<string | null, string | Date | null, string | null, false>("date");
 }
 
 /**
  * Create a time field (Edm.TimeOfDay in FileMaker OData).
- * By default, time fields are nullable and represented as ISO time strings (HH:mm:ss).
+ * By default, time fields are nullable and represented as ISO time strings (HH:mm:ss),
+ * while accepting either ISO strings or Date objects as input.
  *
  * @example
- * timeField()         // string | null (ISO time format)
+ * timeField()         // output: string | null (ISO time format), input: string | Date | null
  * timeField().notNull() // string
  */
-export function timeField(): FieldBuilder<string | null, string | null, string | null, false> {
-  return new FieldBuilder<string | null, string | null, string | null, false>("time");
+export function timeField(): FieldBuilder<string | null, string | Date | null, string | null, false> {
+  return new FieldBuilder<string | null, string | Date | null, string | null, false>("time");
 }
 
 /**
  * Create a timestamp field (Edm.DateTimeOffset in FileMaker OData).
- * By default, timestamp fields are nullable and represented as ISO 8601 strings.
+ * By default, timestamp fields are nullable and represented as ISO 8601 strings,
+ * while accepting either ISO strings or Date objects as input.
  *
  * @example
- * timestampField()         // string | null (ISO 8601 format)
+ * timestampField()         // output: string | null (ISO 8601 format), input: string | Date | null
  * timestampField().notNull() // string
  * timestampField().readOnly() // typical for CreationTimestamp
  */
-export function timestampField(): FieldBuilder<string | null, string | null, string | null, false> {
-  return new FieldBuilder<string | null, string | null, string | null, false>("timestamp");
+export function timestampField(): FieldBuilder<string | null, string | Date | null, string | null, false> {
+  return new FieldBuilder<string | null, string | Date | null, string | null, false>("timestamp");
 }
 
 /**

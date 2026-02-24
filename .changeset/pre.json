@@ -27,6 +27,8 @@
     "fix-navigate-useentityids",
     "fix-typegen-431-error",
     "fix-typegen-auth-detection",
+    "fix-typegen-boolean-validator-duplication",
+    "fmodata-date-filter-date-param",
     "get-query-string-entity-ids-override",
     "happy-rocks-watch",
     "list-tables-post",

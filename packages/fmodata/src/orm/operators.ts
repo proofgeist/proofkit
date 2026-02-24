@@ -147,6 +147,19 @@ export class FilterExpression {
     throw new Error("NOT operator requires a FilterExpression operand");
   }
 
+  private _formatTemporalValue(value: unknown, fieldType: "date" | "time" | "timestamp"): string {
+    if (!(value instanceof Date)) {
+      return String(value);
+    }
+    if (fieldType === "date") {
+      return value.toISOString().slice(0, 10);
+    }
+    if (fieldType === "time") {
+      return value.toISOString().slice(11, 19);
+    }
+    return value.toISOString();
+  }
+
   private _operandToString(
     // biome-ignore lint/suspicious/noExplicitAny: Operand can be Column, FilterExpression, or any value type
     operand: any,
@@ -187,10 +200,11 @@ export class FilterExpression {
       }
     }
 
-    // Date/time/timestamp values must be unquoted in OData filters
+    // Date/time/timestamp values must be unquoted in OData filters.
+    // Date objects are normalized to OData-friendly ISO fragments by field type.
     const ft = column?.fieldType;
     if (ft === "date" || ft === "time" || ft === "timestamp") {
-      return String(value);
+      return this._formatTemporalValue(value, ft);
     }
 
     if (typeof value === "string") {

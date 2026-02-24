@@ -592,4 +592,40 @@ describe("Filter Tests", () => {
     const tsQuery = freshDb.from(dateTable).list().where(gt(dateTable.createdAt, "2024-01-01T00:00:00Z"));
     expect(tsQuery.getQueryString()).toContain("createdAt gt 2024-01-01T00:00:00Z");
   });
+
+  it("should accept Date objects for date and timestamp comparisons", () => {
+    const dateTable = fmTableOccurrence("invoices", {
+      id: textField().primaryKey(),
+      invoiceDate: dateField(),
+      dueDate: dateField(),
+      createdAt: timestampField(),
+    });
+    const freshDb = createMockClient().database("test.fmp12");
+
+    const dateStart = new Date("2024-01-01T00:00:00.000Z");
+    const dateEnd = new Date("2024-12-31T00:00:00.000Z");
+    const timestampStart = new Date("2024-01-01T12:34:56.000Z");
+
+    const gtDateQuery = freshDb.from(dateTable).list().where(gt(dateTable.invoiceDate, dateStart)).getQueryString();
+    expect(gtDateQuery).toContain("invoiceDate gt 2024-01-01");
+
+    const ltDateQuery = freshDb.from(dateTable).list().where(lt(dateTable.dueDate, dateEnd)).getQueryString();
+    expect(ltDateQuery).toContain("dueDate lt 2024-12-31");
+
+    const gteDateQuery = freshDb.from(dateTable).list().where(gte(dateTable.invoiceDate, dateStart)).getQueryString();
+    expect(gteDateQuery).toContain("invoiceDate ge 2024-01-01");
+
+    const lteDateQuery = freshDb.from(dateTable).list().where(lte(dateTable.dueDate, dateEnd)).getQueryString();
+    expect(lteDateQuery).toContain("dueDate le 2024-12-31");
+
+    const eqDateQuery = freshDb.from(dateTable).list().where(eq(dateTable.invoiceDate, dateStart)).getQueryString();
+    expect(eqDateQuery).toContain("invoiceDate eq 2024-01-01");
+
+    const gtTimestampQuery = freshDb
+      .from(dateTable)
+      .list()
+      .where(gt(dateTable.createdAt, timestampStart))
+      .getQueryString();
+    expect(gtTimestampQuery).toContain("createdAt gt 2024-01-01T12:34:56.000Z");
+  });
 });

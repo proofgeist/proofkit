@@ -313,8 +313,8 @@ export function listField<TItem = string, TAllowNull extends boolean = false>(
         }
 
         if (!itemValidator) {
-          const nonStringItem = input.find((item) => typeof item !== "string");
-          if (nonStringItem !== undefined) {
+          const hasNonStringItem = input.some((item) => typeof item !== "string");
+          if (hasNonStringItem) {
             return { issues: [issue("Expected all list items to be strings without an itemValidator")] };
           }
           const serialized = input.map((item) => normalizeFileMakerNewlines(item)).join(FILEMAKER_LIST_DELIMITER);

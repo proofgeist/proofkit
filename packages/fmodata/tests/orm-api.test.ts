@@ -109,6 +109,20 @@ describe("ORM API", () => {
       const writeResult = await config.inputValidator?.["~standard"].validate([1, 2, 3]);
       expect(writeResult).toEqual({ value: "1\r2\r3" });
     });
+
+    it("should reject undefined list items without throwing when no itemValidator is provided", async () => {
+      const field = listField();
+      const config = field._getConfig();
+
+      const writeResult = await config.inputValidator?.["~standard"].validate([
+        "A",
+        undefined,
+        "C",
+      ] as unknown as string[]);
+      expect(writeResult).toEqual({
+        issues: [{ message: "Expected all list items to be strings without an itemValidator" }],
+      });
+    });
   });
 
   describe("Table Definition", () => {

@@ -270,4 +270,54 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("preserves custom validators and removes stale files when clearOldFiles is true", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
+
+    try {
+      const entitySetName = "MyTable";
+      const entityTypeName = "NS.MyTable";
+      const metadata = makeMetadata({
+        entitySetName,
+        entityTypeName,
+        fields: [{ name: "FieldA", type: "Edm.String", fieldId: "F1" }],
+      });
+
+      const existingFilePath = path.join(tmpDir, "MyTable.ts");
+      await fs.writeFile(
+        existingFilePath,
+        [
+          `import { fmTableOccurrence, textField } from "@proofkit/fmodata";`,
+          `import { z } from "zod/v4";`,
+          "",
+          `export const MyTable = fmTableOccurrence("MyTable", {`,
+          `  "FieldA": textField().inputValidator(z.string()).entityId("F1"),`,
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const staleFilePath = path.join(tmpDir, "OldTable.ts");
+      await fs.writeFile(staleFilePath, `export const OldTable = "stale";\n`, "utf8");
+
+      await generateODataTypes(metadata, {
+        type: "fmodata",
+        path: tmpDir,
+        clearOldFiles: true,
+        tables: [{ tableName: "MyTable" }],
+      });
+
+      const regenerated = await fs.readFile(existingFilePath, "utf8");
+      expect(regenerated).toContain(`FieldA: textField().entityId("F1").inputValidator(z.string())`);
+
+      const staleExists = await fs
+        .access(staleFilePath)
+        .then(() => true)
+        .catch(() => false);
+      expect(staleExists).toBe(false);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });

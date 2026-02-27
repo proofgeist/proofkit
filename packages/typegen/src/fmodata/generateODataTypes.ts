@@ -1055,16 +1055,12 @@ export async function generateODataTypes(
   const resolvedOutputPath = resolve(cwd, outputPath);
   await mkdir(resolvedOutputPath, { recursive: true });
 
-  if (clearOldFiles) {
-    // Clear the directory if requested (but keep the directory itself)
-    fs.emptyDirSync(resolvedOutputPath);
-  }
-
   // Create ts-morph project for file manipulation
   const project = new Project({});
 
   // Generate one file per table occurrence
   const exportStatements: string[] = [];
+  const keptFiles = new Set<string>();
 
   for (const generated of generatedTOs) {
     const fileName = `${sanitizeFileName(generated.varName)}.ts`;
@@ -1072,7 +1068,7 @@ export async function generateODataTypes(
 
     // Check if file exists and parse it
     let existingFields: ParsedTableOccurrence | undefined;
-    if (fs.existsSync(filePath) && !clearOldFiles) {
+    if (fs.existsSync(filePath)) {
       try {
         const existingSourceFile = project.addSourceFileAtPath(filePath);
         const parsed = parseExistingTableFile(existingSourceFile);
@@ -1389,6 +1385,7 @@ export async function generateODataTypes(
     project.createSourceFile(filePath, fileContent, {
       overwrite: true,
     });
+    keptFiles.add(filePath);
 
     // Collect export statement for index file
     exportStatements.push(`export { ${regenerated.varName} } from "./${sanitizeFileName(regenerated.varName)}";`);
@@ -1406,7 +1403,32 @@ ${exportStatements.join("\n")}
   project.createSourceFile(indexPath, indexContent, {
     overwrite: true,
   });
+  keptFiles.add(indexPath);
 
   // Format and save files
   await formatAndSaveSourceFiles(project, cwd);
+
+  if (clearOldFiles) {
+    // For fmodata generation, preserve customizations by merging first,
+    // then remove files/directories that were not regenerated this run.
+    const keepSet = new Set(Array.from(keptFiles).map((p) => resolve(p)));
+    const deleteStaleEntries = (dirPath: string): void => {
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const entryPath = resolve(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          deleteStaleEntries(entryPath);
+          const remainingEntries = fs.readdirSync(entryPath);
+          if (remainingEntries.length === 0 && !keepSet.has(entryPath)) {
+            fs.removeSync(entryPath);
+          }
+          continue;
+        }
+        if (!keepSet.has(entryPath)) {
+          fs.removeSync(entryPath);
+        }
+      }
+    };
+    deleteStaleEntries(resolvedOutputPath);
+  }
 }

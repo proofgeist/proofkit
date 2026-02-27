@@ -491,7 +491,7 @@ describe("fmodata typegen - snapshot tests", () => {
             { fieldName: "email", typeOverride: "timestamp" },
             { fieldName: "age", typeOverride: "boolean" },
             { fieldName: "balance", typeOverride: "boolean" },
-            { fieldName: "birth_date", typeOverride: "text" },
+            { fieldName: "birth_date", typeOverride: "list" },
             { fieldName: "notes", typeOverride: "container" },
           ],
         },

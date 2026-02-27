@@ -4,18 +4,22 @@
   "properties": {
     "postGenerateCommand": {
       "description": "Optional CLI command to run after files are generated. Commonly used for formatting. Example: 'pnpm biome format --write .' or 'npx prettier --write src/'",
-      "type": "string"
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema0"
+        }
+      ]
     },
     "config": {
       "anyOf": [
         {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/__schema0"
+            "$ref": "#/definitions/__schema1"
           }
         },
         {
-          "$ref": "#/definitions/__schema0"
+          "$ref": "#/definitions/__schema1"
         }
       ]
     }
@@ -24,6 +28,9 @@
   "additionalProperties": false,
   "definitions": {
     "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
       "oneOf": [
         {
           "type": "object",
@@ -36,7 +43,7 @@
               "type": "string"
             },
             "envNames": {
-              "$ref": "#/definitions/__schema1"
+              "$ref": "#/definitions/__schema2"
             },
             "layouts": {
               "default": [],
@@ -45,25 +52,36 @@
                 "type": "object",
                 "properties": {
                   "layoutName": {
-                    "description": "The layout name from your FileMaker solution",
-                    "type": "string"
+                    "type": "string",
+                    "description": "The layout name from your FileMaker solution"
                   },
                   "schemaName": {
-                    "description": "A friendly name for the generated layout-specific client",
-                    "type": "string"
+                    "type": "string",
+                    "description": "A friendly name for the generated layout-specific client"
                   },
                   "valueLists": {
                     "description": "If set to 'strict', the value lists will be validated to ensure that the values are correct. If set to 'allowEmpty', the value lists will be validated to ensure that the values are correct, but empty value lists will be allowed. If set to 'ignore', the value lists will not be validated and typed as `string`.",
-                    "type": "string",
-                    "enum": ["strict", "allowEmpty", "ignore"]
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/__schema4"
+                      }
+                    ]
                   },
                   "generateClient": {
                     "description": "If true, a layout-specific client will be generated (unless set to `false` at the top level)",
-                    "type": "boolean"
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/__schema5"
+                      }
+                    ]
                   },
                   "strictNumbers": {
                     "description": "If true, number fields will be typed as `number | null`. It's false by default because sometimes very large number will be returned as scientific notation via the Data API and therefore the type will be `number | string`.",
-                    "type": "boolean"
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/__schema6"
+                      }
+                    ]
                   }
                 },
                 "required": ["layoutName", "schemaName"],
@@ -71,38 +89,42 @@
               }
             },
             "path": {
-              "$ref": "#/definitions/__schema2"
+              "$ref": "#/definitions/__schema7"
             },
             "clearOldFiles": {
-              "$ref": "#/definitions/__schema3"
+              "$ref": "#/definitions/__schema9"
             },
             "validator": {
               "description": "If set to 'zod', 'zod/v4', or 'zod/v3', the validator will be generated using zod, otherwise it will generated Typescript types only and no runtime validation will be performed",
-              "default": "zod/v4",
-              "anyOf": [
+              "allOf": [
                 {
-                  "type": "string",
-                  "enum": ["zod", "zod/v4", "zod/v3"]
-                },
-                {
-                  "type": "boolean",
-                  "const": false
+                  "$ref": "#/definitions/__schema11"
                 }
               ]
             },
             "clientSuffix": {
               "description": "The suffix to be added to the schema name for each layout",
-              "default": "Layout",
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema12"
+                }
+              ]
             },
             "generateClient": {
               "description": "If true, a layout-specific client will be generated for each layout provided, otherwise it will only generate the types. This option can be overridden for each layout individually.",
-              "default": true,
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema13"
+                }
+              ]
             },
             "webviewerScriptName": {
               "description": "The name of the webviewer script to be used. If this key is set, the generated client will use the @proofkit/webviewer adapter instead of the OttoFMS or Fetch adapter, which will only work when loaded inside of a FileMaker webviewer.",
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema14"
+                }
+              ]
             }
           },
           "required": ["type", "layouts"],
@@ -121,92 +143,48 @@
             "envNames": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema1"
+                  "$ref": "#/definitions/__schema2"
                 }
               ]
             },
             "path": {
-              "$ref": "#/definitions/__schema2"
+              "$ref": "#/definitions/__schema7"
             },
             "reduceMetadata": {
               "description": "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema15"
+                }
+              ]
             },
             "clearOldFiles": {
-              "$ref": "#/definitions/__schema3"
+              "$ref": "#/definitions/__schema9"
             },
             "alwaysOverrideFieldNames": {
               "description": "If true (default), field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
-              "default": true,
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema16"
+                }
+              ]
             },
             "tables": {
-              "description": "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
               "default": [],
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "tableName": {
-                    "description": "The entity set name (table occurrence name) to generate. This table will be included in metadata download and type generation.",
-                    "type": "string"
-                  },
-                  "variableName": {
-                    "description": "Override the generated TypeScript variable name. The original entity set name is still used for the OData path.",
-                    "type": "string"
-                  },
-                  "fields": {
-                    "description": "Field-specific overrides as an array",
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "fieldName": {
-                          "description": "The field name this override applies to",
-                          "type": "string"
-                        },
-                        "exclude": {
-                          "description": "If true, this field will be excluded from generation",
-                          "type": "boolean"
-                        },
-                        "typeOverride": {
-                          "description": "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container",
-                          "type": "string",
-                          "enum": [
-                            "text",
-                            "number",
-                            "boolean",
-                            "date",
-                            "timestamp",
-                            "container"
-                          ]
-                        }
-                      },
-                      "required": ["fieldName"],
-                      "additionalProperties": false
-                    }
-                  },
-                  "reduceMetadata": {
-                    "description": "If undefined, the top-level setting will be used. If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
-                    "type": "boolean"
-                  },
-                  "alwaysOverrideFieldNames": {
-                    "description": "If undefined, the top-level setting will be used. If true, field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
-                    "type": "boolean"
-                  },
-                  "includeAllFieldsByDefault": {
-                    "description": "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
-                    "type": "boolean"
-                  }
-                },
-                "required": ["tableName"],
-                "additionalProperties": false
-              }
+              "description": "Required array of tables to generate. Only the tables specified here will be downloaded and generated. Each table can have field-level overrides for excluding fields, renaming variables, and overriding field types.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema17"
+                }
+              ]
             },
             "includeAllFieldsByDefault": {
               "description": "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
-              "default": true,
-              "type": "boolean"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/__schema25"
+                }
+              ]
             }
           },
           "required": ["type", "tables"],
@@ -214,8 +192,15 @@
         }
       ]
     },
-    "__schema1": {
+    "__schema2": {
       "description": "If you're using other environment variables than the default, custom the NAMES of them here for the typegen to lookup their values when it runs.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema3"
+        }
+      ]
+    },
+    "__schema3": {
       "type": "object",
       "properties": {
         "server": {
@@ -242,14 +227,184 @@
       },
       "additionalProperties": false
     },
-    "__schema2": {
+    "__schema4": {
+      "type": "string",
+      "enum": ["strict", "allowEmpty", "ignore"]
+    },
+    "__schema5": {
+      "type": "boolean"
+    },
+    "__schema6": {
+      "type": "boolean"
+    },
+    "__schema7": {
       "description": "The folder path to output the generated files",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ]
+    },
+    "__schema8": {
       "default": "schema",
       "type": "string"
     },
-    "__schema3": {
+    "__schema9": {
       "description": "If false, the path will not be cleared before the new files are written. Only the `client` and `generated` directories are cleared to allow for potential overrides to be kept.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema10"
+        }
+      ]
+    },
+    "__schema10": {
       "default": false,
+      "type": "boolean"
+    },
+    "__schema11": {
+      "default": "zod/v4",
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": ["zod", "zod/v4", "zod/v3"]
+        },
+        {
+          "type": "boolean",
+          "const": false
+        }
+      ]
+    },
+    "__schema12": {
+      "default": "Layout",
+      "type": "string"
+    },
+    "__schema13": {
+      "default": true,
+      "type": "boolean"
+    },
+    "__schema14": {
+      "type": "string"
+    },
+    "__schema15": {
+      "type": "boolean"
+    },
+    "__schema16": {
+      "default": true,
+      "type": "boolean"
+    },
+    "__schema17": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tableName": {
+            "type": "string",
+            "description": "The entity set name (table occurrence name) to generate. This table will be included in metadata download and type generation."
+          },
+          "variableName": {
+            "description": "Override the generated TypeScript variable name. The original entity set name is still used for the OData path.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema18"
+              }
+            ]
+          },
+          "fields": {
+            "description": "Field-specific overrides as an array",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema19"
+              }
+            ]
+          },
+          "reduceMetadata": {
+            "description": "If undefined, the top-level setting will be used. If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema22"
+              }
+            ]
+          },
+          "alwaysOverrideFieldNames": {
+            "description": "If undefined, the top-level setting will be used. If true, field names will always be updated to match metadata, even when matching by entity ID. If false, existing field names are preserved when matching by entity ID.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema23"
+              }
+            ]
+          },
+          "includeAllFieldsByDefault": {
+            "description": "If true, all fields will be included by default. If false, only fields that are explicitly listed in the `fields` array will be included.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema24"
+              }
+            ]
+          }
+        },
+        "required": ["tableName"],
+        "additionalProperties": false
+      }
+    },
+    "__schema18": {
+      "type": "string"
+    },
+    "__schema19": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fieldName": {
+            "type": "string",
+            "description": "The field name this override applies to"
+          },
+          "exclude": {
+            "description": "If true, this field will be excluded from generation",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema20"
+              }
+            ]
+          },
+          "typeOverride": {
+            "description": "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container, list",
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema21"
+              }
+            ]
+          }
+        },
+        "required": ["fieldName"],
+        "additionalProperties": false
+      }
+    },
+    "__schema20": {
+      "type": "boolean"
+    },
+    "__schema21": {
+      "type": "string",
+      "enum": [
+        "text",
+        "number",
+        "boolean",
+        "date",
+        "timestamp",
+        "container",
+        "list"
+      ]
+    },
+    "__schema22": {
+      "type": "boolean"
+    },
+    "__schema23": {
+      "type": "boolean"
+    },
+    "__schema24": {
+      "type": "boolean"
+    },
+    "__schema25": {
+      "default": true,
       "type": "boolean"
     }
   }

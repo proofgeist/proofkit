@@ -5,6 +5,7 @@ import {
   dateField,
   timestampField,
   containerField,
+  listField,
 } from "@proofkit/fmodata";
 import { z } from "zod/v4";
 
@@ -29,7 +30,7 @@ export const Customers = fmTableOccurrence(
       .readValidator(z.coerce.boolean())
       .writeValidator(z.boolean().transform((v) => (v ? 1 : 0)))
       .entityId("FMFID:100007"),
-    birth_date: textField().entityId("FMFID:100008"),
+    birth_date: listField().entityId("FMFID:100008"),
     created_at: timestampField().notNull().entityId("FMFID:100009"),
     modified_at: timestampField().entityId("FMFID:100010"),
     full_name: textField().readOnly().entityId("FMFID:100011"),

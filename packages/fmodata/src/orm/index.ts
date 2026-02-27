@@ -9,6 +9,8 @@ export {
   containerField,
   dateField,
   FieldBuilder,
+  type ListFieldOptions,
+  listField,
   numberField,
   textField,
   timeField,

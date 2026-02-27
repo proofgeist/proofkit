@@ -320,4 +320,90 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("preserves listField options when typeOverride remains list", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
+
+    try {
+      const metadata = makeMetadata({
+        entitySetName: "MyTable",
+        entityTypeName: "NS.MyTable",
+        fields: [{ name: "tags", type: "Edm.String", fieldId: "F1" }],
+      });
+
+      const existingFilePath = path.join(tmpDir, "MyTable.ts");
+      await fs.writeFile(
+        existingFilePath,
+        [
+          `import { fmTableOccurrence, listField } from "@proofkit/fmodata";`,
+          `import { z } from "zod/v4";`,
+          "",
+          `export const MyTable = fmTableOccurrence("MyTable", {`,
+          `  tags: listField({ itemValidator: z.enum(["A", "B", "C"]), allowNull: true }).entityId("F1").transform((vals) => vals),`,
+          "}, {",
+          `  entityId: "T1",`,
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      await generateODataTypes(metadata, {
+        type: "fmodata",
+        path: tmpDir,
+        clearOldFiles: false,
+        tables: [{ tableName: "MyTable", fields: [{ fieldName: "tags", typeOverride: "list" }] }],
+      });
+
+      const regenerated = await fs.readFile(existingFilePath, "utf8");
+      expect(regenerated).toContain(`tags: listField({ itemValidator: z.enum(["A", "B", "C"]), allowNull: true })`);
+      expect(regenerated).toContain(".transform((vals) => vals)");
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("drops listField options when typeOverride changes away from list", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
+
+    try {
+      const metadata = makeMetadata({
+        entitySetName: "MyTable",
+        entityTypeName: "NS.MyTable",
+        fields: [{ name: "tags", type: "Edm.String", fieldId: "F1" }],
+      });
+
+      const existingFilePath = path.join(tmpDir, "MyTable.ts");
+      await fs.writeFile(
+        existingFilePath,
+        [
+          `import { fmTableOccurrence, listField } from "@proofkit/fmodata";`,
+          `import { z } from "zod/v4";`,
+          "",
+          `export const MyTable = fmTableOccurrence("MyTable", {`,
+          `  tags: listField({ itemValidator: z.enum(["A", "B", "C"]), allowNull: true }).entityId("F1"),`,
+          "}, {",
+          `  entityId: "T1",`,
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      await generateODataTypes(metadata, {
+        type: "fmodata",
+        path: tmpDir,
+        clearOldFiles: false,
+        tables: [{ tableName: "MyTable", fields: [{ fieldName: "tags", typeOverride: "text" }] }],
+      });
+
+      const regenerated = await fs.readFile(existingFilePath, "utf8");
+      expect(regenerated).toContain(`tags: textField().entityId("F1")`);
+      expect(regenerated).not.toContain("listField(");
+      expect(regenerated).not.toContain("itemValidator");
+      expect(regenerated).not.toContain("allowNull");
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });

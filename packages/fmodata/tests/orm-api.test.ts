@@ -8,6 +8,7 @@ import {
   gt,
   isColumn,
   isColumnFunction,
+  listField,
   matchesPattern,
   numberField,
   or,
@@ -66,6 +67,61 @@ describe("ORM API", () => {
       const config = field._getConfig();
       expect(config.outputValidator).toBe(readValidator);
       expect(config.inputValidator).toBe(writeValidator);
+    });
+
+    it("should normalize list fields to empty arrays by default", async () => {
+      const field = listField();
+      const config = field._getConfig();
+
+      const readValidator = config.outputValidator;
+      const writeValidator = config.inputValidator;
+      expect(readValidator).toBeDefined();
+      expect(writeValidator).toBeDefined();
+
+      const readNull = await readValidator?.["~standard"].validate(null);
+      expect(readNull).toEqual({ value: [] });
+
+      const readNewlines = await readValidator?.["~standard"].validate("A\r\nB\nC");
+      expect(readNewlines).toEqual({ value: ["A", "B", "C"] });
+
+      const writeArray = await writeValidator?.["~standard"].validate(["A", "B", "C"]);
+      expect(writeArray).toEqual({ value: "A\rB\rC" });
+    });
+
+    it("should allow nullable list fields via allowNull option", async () => {
+      const field = listField({ allowNull: true });
+      const config = field._getConfig();
+
+      const readNull = await config.outputValidator?.["~standard"].validate(null);
+      expect(readNull).toEqual({ value: null });
+
+      const writeNull = await config.inputValidator?.["~standard"].validate(null);
+      expect(writeNull).toEqual({ value: null });
+    });
+
+    it("should validate and transform list items with itemValidator", async () => {
+      const field = listField({ itemValidator: z.coerce.number().int() });
+      const config = field._getConfig();
+
+      const readResult = await config.outputValidator?.["~standard"].validate("1\r2\r3");
+      expect(readResult).toEqual({ value: [1, 2, 3] });
+
+      const writeResult = await config.inputValidator?.["~standard"].validate([1, 2, 3]);
+      expect(writeResult).toEqual({ value: "1\r2\r3" });
+    });
+
+    it("should reject undefined list items without throwing when no itemValidator is provided", async () => {
+      const field = listField();
+      const config = field._getConfig();
+
+      const writeResult = await config.inputValidator?.["~standard"].validate([
+        "A",
+        undefined,
+        "C",
+      ] as unknown as string[]);
+      expect(writeResult).toEqual({
+        issues: [{ message: "Expected all list items to be strings without an itemValidator" }],
+      });
     });
   });
 

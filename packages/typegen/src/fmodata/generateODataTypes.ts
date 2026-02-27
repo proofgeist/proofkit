@@ -22,6 +22,7 @@ const REGEX_ENTITY_ID = /\.entityId\(['"]([^'"]+)['"]\)/;
 const REGEX_FROM_MODULE = /from\s+['"]([^'"]+)['"]/;
 const REGEX_NAMED_IMPORTS = /\{([^}]+)\}/;
 const REGEX_IMPORT_ALIAS = /^(\w+)(?:\s+as\s+\w+)?$/;
+const REGEX_LEADING_WHITESPACE = /^\s*/;
 
 interface GeneratedTO {
   varName: string;
@@ -38,7 +39,7 @@ interface GeneratedTO {
  * Maps type override enum values to field builder functions from @proofkit/fmodata
  */
 function mapTypeOverrideToFieldBuilder(
-  typeOverride: "text" | "number" | "boolean" | "date" | "timestamp" | "container",
+  typeOverride: "text" | "number" | "boolean" | "date" | "timestamp" | "container" | "list",
 ): string {
   switch (typeOverride) {
     case "text":
@@ -53,6 +54,8 @@ function mapTypeOverrideToFieldBuilder(
       return "timestampField()";
     case "container":
       return "containerField()";
+    case "list":
+      return "listField()";
     default:
       return "textField()";
   }
@@ -74,6 +77,7 @@ function applyAliasToFieldBuilder(fieldBuilder: string, importAliases: Map<strin
     ["dateField", "dateField"],
     ["timestampField", "timestampField"],
     ["containerField", "containerField"],
+    ["listField", "listField"],
   ]);
 
   // Try to find and replace each field builder with its alias
@@ -94,7 +98,7 @@ function applyAliasToFieldBuilder(fieldBuilder: string, importAliases: Map<strin
  */
 function mapODataTypeToFieldBuilder(
   edmType: string,
-  typeOverride?: "text" | "number" | "boolean" | "date" | "timestamp" | "container",
+  typeOverride?: "text" | "number" | "boolean" | "date" | "timestamp" | "container" | "list",
 ): string {
   // If typeOverride is provided, use it instead of the inferred type
   if (typeOverride) {
@@ -259,13 +263,21 @@ function generateTableOccurrence(
     }
 
     // Apply typeOverride if provided, otherwise use inferred type
-    let fieldBuilder = mapODataTypeToFieldBuilder(
+    const generatedFieldBuilder = mapODataTypeToFieldBuilder(
       metadata.$Type,
-      fieldOverride?.typeOverride as "text" | "number" | "boolean" | "date" | "timestamp" | "container" | undefined,
+      fieldOverride?.typeOverride as
+        | "text"
+        | "number"
+        | "boolean"
+        | "date"
+        | "timestamp"
+        | "container"
+        | "list"
+        | undefined,
     );
 
     // Apply import aliases if present
-    fieldBuilder = applyAliasToFieldBuilder(fieldBuilder, importAliases);
+    const fieldBuilder = applyAliasToFieldBuilder(generatedFieldBuilder, importAliases);
 
     // Track which field builders are used
     if (fieldBuilder.includes("textField()")) {
@@ -278,6 +290,8 @@ function generateTableOccurrence(
       usedFieldBuilders.add("timestampField");
     } else if (fieldBuilder.includes("containerField()")) {
       usedFieldBuilders.add("containerField");
+    } else if (fieldBuilder.includes("listField()")) {
+      usedFieldBuilders.add("listField");
     }
 
     // Track if z.coerce.boolean() is used
@@ -315,7 +329,7 @@ function generateTableOccurrence(
 
     // Preserve user customizations from existing field
     if (matchedExistingField) {
-      line = preserveUserCustomizations(matchedExistingField, line, fieldBuilder);
+      line = preserveUserCustomizations(matchedExistingField, line, fieldBuilder, generatedFieldBuilder);
     }
 
     // Add comma if not the last field
@@ -389,6 +403,9 @@ function generateImports(usedFieldBuilders: Set<string>, needsZod: boolean): str
   }
   if (usedFieldBuilders.has("containerField")) {
     fieldBuilderImports.push("containerField");
+  }
+  if (usedFieldBuilders.has("listField")) {
+    fieldBuilderImports.push("listField");
   }
 
   const imports = [`import { ${fieldBuilderImports.join(", ")} } from "@proofkit/fmodata"`];
@@ -922,32 +939,147 @@ function extractMethodNamesFromChain(chain: string): Set<string> {
 }
 
 /**
+ * Extract the leading function call from a chain (e.g. `listField({...})`).
+ */
+function extractLeadingCall(chain: string): { name: string; text: string; end: number } | null {
+  const trimmed = chain.trimStart();
+  const leadingWhitespaceLength = chain.length - trimmed.length;
+
+  let i = 0;
+  while (i < trimmed.length && REGEX_IDENT_CHAR.test(trimmed[i] ?? "")) {
+    i++;
+  }
+  if (i === 0) {
+    return null;
+  }
+
+  const name = trimmed.slice(0, i);
+  while (i < trimmed.length && REGEX_WHITESPACE.test(trimmed[i] ?? "")) {
+    i++;
+  }
+
+  if (trimmed[i] !== "(") {
+    return null;
+  }
+
+  let depth = 0;
+  let idx = i;
+  while (idx < trimmed.length) {
+    const ch = trimmed[idx] ?? "";
+    if (ch === "'" || ch === '"' || ch === "`") {
+      const quote = ch;
+      idx++;
+      while (idx < trimmed.length) {
+        const qch = trimmed[idx] ?? "";
+        if (qch === "\\") {
+          idx += 2;
+          continue;
+        }
+        if (qch === quote) {
+          idx++;
+          break;
+        }
+        idx++;
+      }
+      continue;
+    }
+
+    if (ch === "(") {
+      depth++;
+    } else if (ch === ")") {
+      depth--;
+      if (depth === 0) {
+        const end = idx + 1;
+        return {
+          name,
+          text: trimmed.slice(0, end),
+          end: end + leadingWhitespaceLength,
+        };
+      }
+    }
+    idx++;
+  }
+
+  return null;
+}
+
+function splitFieldLinePrefix(newChain: string): { prefix: string; initializer: string } | null {
+  const separatorIndex = newChain.indexOf(":");
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  const prefix = newChain.slice(0, separatorIndex + 1);
+  const remainder = newChain.slice(separatorIndex + 1);
+  const leadingWhitespace = remainder.match(REGEX_LEADING_WHITESPACE)?.[0] ?? "";
+  const initializer = remainder.slice(leadingWhitespace.length);
+
+  return {
+    prefix: prefix + leadingWhitespace,
+    initializer,
+  };
+}
+
+/**
  * Preserves user customizations from an existing field chain
  */
 function preserveUserCustomizations(
   existingField: ParsedField | undefined,
   newChain: string,
   fieldBuilder: string,
+  generatedFieldBuilder?: string,
 ): string {
   if (!existingField) {
     return newChain;
+  }
+
+  let effectiveNewChain = newChain;
+  const isGeneratedListField = (generatedFieldBuilder ?? fieldBuilder).includes("listField(");
+  if (isGeneratedListField) {
+    const split = splitFieldLinePrefix(effectiveNewChain);
+    const existingLeadingCall = extractLeadingCall(existingField.fullChainText);
+    const generatedLeadingCall = split ? extractLeadingCall(split.initializer) : null;
+
+    // If this field is still list-typed, preserve user-authored listField({...}) options
+    // by reusing the existing leading call and keeping the new generated suffix.
+    if (
+      split &&
+      existingLeadingCall &&
+      generatedLeadingCall &&
+      existingLeadingCall.name === generatedLeadingCall.name
+    ) {
+      const newInitializer =
+        existingLeadingCall.text +
+        split.initializer.slice(generatedLeadingCall.end).replace(REGEX_LEADING_WHITESPACE, "");
+      effectiveNewChain = split.prefix + newInitializer;
+    }
   }
 
   const standardMethods = [".primaryKey()", ".readOnly()", ".notNull()", ".entityId(", ".comment("];
 
   // Determine where the generator-owned base builder chain ends in the new chain
   // (before any standard methods added by the generator).
-  let baseChainEnd = newChain.length;
+  let baseChainEnd = effectiveNewChain.length;
   for (const method of standardMethods) {
-    const idx = newChain.indexOf(method);
+    const idx = effectiveNewChain.indexOf(method);
     if (idx !== -1 && idx < baseChainEnd) {
       baseChainEnd = idx;
     }
   }
 
-  const baseBuilderPrefix = newChain.slice(0, baseChainEnd);
+  const baseBuilderPrefix = effectiveNewChain.slice(0, baseChainEnd);
   const existingChainText = existingField.fullChainText;
-  const existingBaseEnd = existingChainText.startsWith(baseBuilderPrefix) ? baseBuilderPrefix.length : 0;
+  let existingBaseEnd = existingChainText.startsWith(baseBuilderPrefix) ? baseBuilderPrefix.length : 0;
+
+  // For builder calls with nested method calls in arguments (e.g. listField({ itemValidator: z.enum(...) })),
+  // use the end of the existing leading builder call as the base boundary. This prevents nested calls
+  // inside arguments from being misidentified as outer user customizations.
+  const split = splitFieldLinePrefix(effectiveNewChain);
+  const existingLeadingCall = extractLeadingCall(existingChainText);
+  const generatedLeadingCall = split ? extractLeadingCall(split.initializer) : null;
+  if (existingLeadingCall && generatedLeadingCall && existingLeadingCall.name === generatedLeadingCall.name) {
+    existingBaseEnd = existingLeadingCall.end;
+  }
 
   // Methods in the generated field builder (e.g. readValidator, writeValidator for
   // Edm.Boolean) are generator-owned and must not be duplicated as user customizations.
@@ -955,11 +1087,11 @@ function preserveUserCustomizations(
   const userCustomizations = extractUserCustomizations(existingChainText, existingBaseEnd, generatorMethods);
 
   if (!userCustomizations) {
-    return newChain;
+    return effectiveNewChain;
   }
 
   // Append extracted user customizations to the regenerated chain
-  return newChain + userCustomizations;
+  return effectiveNewChain + userCustomizations;
 }
 
 /**

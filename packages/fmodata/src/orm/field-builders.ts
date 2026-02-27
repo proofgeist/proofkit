@@ -7,6 +7,72 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
  */
 export type ContainerDbType = string & { readonly __container: true };
 
+const FILEMAKER_LIST_DELIMITER = "\r";
+const FILEMAKER_NEWLINE_REGEX = /\r\n|\n/g;
+
+type ValidationResult<T> = { value: T } | { issues: readonly StandardSchemaV1.Issue[] };
+
+export interface ListFieldOptions<TItem = string, TAllowNull extends boolean = false> {
+  itemValidator?: StandardSchemaV1<unknown, TItem>;
+  allowNull?: TAllowNull;
+}
+
+function normalizeFileMakerNewlines(value: string): string {
+  return value.replace(FILEMAKER_NEWLINE_REGEX, FILEMAKER_LIST_DELIMITER);
+}
+
+function splitFileMakerList(value: string): string[] {
+  const normalized = normalizeFileMakerNewlines(value);
+  if (normalized === "") {
+    return [];
+  }
+  return normalized.split(FILEMAKER_LIST_DELIMITER);
+}
+
+function issue(message: string): StandardSchemaV1.Issue {
+  return { message };
+}
+
+function validateItemsWithSchema<TItem>(
+  items: string[],
+  itemValidator: StandardSchemaV1<unknown, TItem>,
+): ValidationResult<TItem[]> | Promise<ValidationResult<TItem[]>> {
+  const validations = items.map((item) => itemValidator["~standard"].validate(item));
+  const hasAsyncValidation = validations.some((result) => result instanceof Promise);
+
+  const finalize = (results: Array<{ value: TItem } | { issues: readonly StandardSchemaV1.Issue[] }>) => {
+    const transformed: TItem[] = [];
+    const issues: StandardSchemaV1.Issue[] = [];
+
+    results.forEach((result, index) => {
+      if ("issues" in result && result.issues) {
+        for (const validationIssue of result.issues) {
+          issues.push({
+            ...validationIssue,
+            path: validationIssue.path ? [index, ...validationIssue.path] : [index],
+          });
+        }
+        return;
+      }
+      if ("value" in result) {
+        transformed.push(result.value);
+      }
+    });
+
+    if (issues.length > 0) {
+      return { issues };
+    }
+
+    return { value: transformed };
+  };
+
+  if (hasAsyncValidation) {
+    return Promise.all(validations).then((results) => finalize(results));
+  }
+
+  return finalize(validations as Array<{ value: TItem } | { issues: readonly StandardSchemaV1.Issue[] }>);
+}
+
 /**
  * FieldBuilder provides a fluent API for defining table fields with type-safe metadata.
  * Supports chaining methods to configure primary keys, nullability, read-only status, entity IDs, and validators.
@@ -168,6 +234,140 @@ export class FieldBuilder<TOutput = any, TInput = TOutput, TDbType = TOutput, TR
  */
 export function textField(): FieldBuilder<string | null, string | null, string | null, false> {
   return new FieldBuilder<string | null, string | null, string | null, false>("text");
+}
+
+type ListOutput<TItem, TAllowNull extends boolean> = TAllowNull extends true ? TItem[] | null : TItem[];
+type ListInput<TItem, TAllowNull extends boolean> = TAllowNull extends true ? TItem[] | null : TItem[];
+
+/**
+ * Create a text-backed FileMaker return-delimited list field.
+ * By default, null/empty input is normalized to an empty array (`allowNull: false`).
+ *
+ * @example
+ * listField() // output: string[], input: string[]
+ * listField({ allowNull: true }) // output/input: string[] | null
+ * listField({ itemValidator: z.coerce.number().int() }) // output/input: number[]
+ */
+export function listField(): FieldBuilder<string[], string[], string | null, false>;
+export function listField<TAllowNull extends boolean = false>(
+  options: ListFieldOptions<string, TAllowNull>,
+): FieldBuilder<ListOutput<string, TAllowNull>, ListInput<string, TAllowNull>, string | null, false>;
+export function listField<TItem, TAllowNull extends boolean = false>(options: {
+  itemValidator: StandardSchemaV1<unknown, TItem>;
+  allowNull?: TAllowNull;
+}): FieldBuilder<ListOutput<TItem, TAllowNull>, ListInput<TItem, TAllowNull>, string | null, false>;
+export function listField<TItem = string, TAllowNull extends boolean = false>(
+  options?: ListFieldOptions<TItem, TAllowNull>,
+): FieldBuilder<ListOutput<TItem, TAllowNull>, ListInput<TItem, TAllowNull>, string | null, false> {
+  const allowNull = options?.allowNull ?? false;
+  const itemValidator = options?.itemValidator as StandardSchemaV1<unknown, TItem> | undefined;
+
+  const readListSchema: StandardSchemaV1<string | null, ListOutput<TItem, TAllowNull>> = {
+    "~standard": {
+      version: 1,
+      vendor: "proofkit",
+      validate(input) {
+        if (input === null || input === undefined || input === "") {
+          return { value: (allowNull ? null : []) as ListOutput<TItem, TAllowNull> };
+        }
+
+        if (typeof input !== "string") {
+          return { issues: [issue("Expected a FileMaker list string or null")] };
+        }
+
+        const items = splitFileMakerList(input);
+        if (!itemValidator) {
+          return { value: items as ListOutput<TItem, TAllowNull> };
+        }
+
+        const validatedItems = validateItemsWithSchema(items, itemValidator);
+        if (validatedItems instanceof Promise) {
+          return validatedItems.then((result) => {
+            if ("issues" in result) {
+              return result;
+            }
+            return { value: result.value as ListOutput<TItem, TAllowNull> };
+          });
+        }
+
+        if ("issues" in validatedItems) {
+          return validatedItems;
+        }
+
+        return { value: validatedItems.value as ListOutput<TItem, TAllowNull> };
+      },
+    },
+  };
+
+  const writeListSchema: StandardSchemaV1<ListInput<TItem, TAllowNull>, string | null> = {
+    "~standard": {
+      version: 1,
+      vendor: "proofkit",
+      validate(input) {
+        if (input === null || input === undefined) {
+          return { value: allowNull ? null : "" };
+        }
+
+        if (!Array.isArray(input)) {
+          return { issues: [issue("Expected an array for FileMaker list field input")] };
+        }
+
+        if (!itemValidator) {
+          const nonStringItem = input.find((item) => typeof item !== "string");
+          if (nonStringItem !== undefined) {
+            return { issues: [issue("Expected all list items to be strings without an itemValidator")] };
+          }
+          const serialized = input.map((item) => normalizeFileMakerNewlines(item)).join(FILEMAKER_LIST_DELIMITER);
+          return { value: serialized };
+        }
+
+        const validateInputItems = input.map((item) => itemValidator["~standard"].validate(item));
+        const hasAsyncValidation = validateInputItems.some((result) => result instanceof Promise);
+
+        const serializeValidated = (
+          results: Array<{ value: TItem } | { issues: readonly StandardSchemaV1.Issue[] }>,
+        ): { value: string } | { issues: readonly StandardSchemaV1.Issue[] } => {
+          const validatedItems: TItem[] = [];
+          const issues: StandardSchemaV1.Issue[] = [];
+
+          results.forEach((result, index) => {
+            if ("issues" in result && result.issues) {
+              for (const validationIssue of result.issues) {
+                issues.push({
+                  ...validationIssue,
+                  path: validationIssue.path ? [index, ...validationIssue.path] : [index],
+                });
+              }
+              return;
+            }
+
+            if ("value" in result) {
+              validatedItems.push(result.value);
+            }
+          });
+
+          if (issues.length > 0) {
+            return { issues };
+          }
+
+          const serialized = validatedItems
+            .map((item) => normalizeFileMakerNewlines(typeof item === "string" ? item : String(item)))
+            .join(FILEMAKER_LIST_DELIMITER);
+          return { value: serialized };
+        };
+
+        if (hasAsyncValidation) {
+          return Promise.all(validateInputItems).then((results) => serializeValidated(results));
+        }
+
+        return serializeValidated(
+          validateInputItems as Array<{ value: TItem } | { issues: readonly StandardSchemaV1.Issue[] }>,
+        );
+      },
+    },
+  };
+
+  return textField().readValidator(readListSchema).writeValidator(writeListSchema);
 }
 
 /**

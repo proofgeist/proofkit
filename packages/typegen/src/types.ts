@@ -104,11 +104,12 @@ const fieldOverride = z.object({
       "date", // dateField()
       "timestamp", // timestampField()
       "container", // containerField()
+      "list", // listField()
     ])
     .optional()
     .meta({
       description:
-        "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container",
+        "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container, list",
     }),
 });
 

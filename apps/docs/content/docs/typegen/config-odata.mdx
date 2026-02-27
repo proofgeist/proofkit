@@ -212,10 +212,10 @@ Within each table's `fields` array, you can specify field-level overrides.
       description: "If true, this field will be excluded from generation",
     },
     typeOverride: {
-      type: `"text" | "number" | "boolean" | "date" | "timestamp" | "container"`,
+      type: `"text" | "number" | "boolean" | "date" | "timestamp" | "container" | "list"`,
       required: false,
       description:
-        "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container",
+        "Override the inferred field type from metadata. Options: text, number, boolean, date, timestamp, container, list",
     },
   }}
 />
@@ -235,6 +235,7 @@ Override the inferred field type from metadata. The available options are:
 - `"date"`: Treats the field as a date field
 - `"timestamp"`: Treats the field as a timestamp field
 - `"container"`: Treats the field as a container field
+- `"list"`: Treats the field as a FileMaker return-delimited list via `listField()` (defaults to `string[]`)
 
 <Callout type="info">
   The typegen tool will attempt to infer the correct field type from the OData metadata. Use `typeOverride` only when you need to override the inferred type.

@@ -25,6 +25,7 @@ import {
   fmTableOccurrence,
   getTableColumns,
   type InferTableSchema,
+  listField,
   numberField,
   textField,
 } from "@proofkit/fmodata";
@@ -213,6 +214,27 @@ describe("fmodata", () => {
       const queryBuilder = entitySet.list();
       expect(queryBuilder.getQueryString).toBeDefined();
       expect(typeof queryBuilder.getQueryString()).toBe("string");
+    });
+
+    it("should infer listField nullability and item types from options", () => {
+      const table = fmTableOccurrence("ListTypes", {
+        tags: listField(),
+        optionalTags: listField({ allowNull: true }),
+        ids: listField({ itemValidator: z.coerce.number().int() }),
+        optionalIds: listField({ itemValidator: z.coerce.number().int(), allowNull: true }),
+      });
+
+      expectTypeOf(table.tags).toEqualTypeOf<typeof table.tags>();
+      expectTypeOf(table.tags._phantomOutput).toEqualTypeOf<string[]>();
+      expectTypeOf(table.optionalTags._phantomOutput).toEqualTypeOf<string[] | null>();
+      expectTypeOf(table.ids._phantomOutput).toEqualTypeOf<number[]>();
+      expectTypeOf(table.optionalIds._phantomOutput).toEqualTypeOf<number[] | null>();
+
+      const _typeChecks = () => {
+        // @ts-expect-error - listField options must be an object when options are provided
+        listField(z.string());
+      };
+      _typeChecks;
     });
   });
 

@@ -133,6 +133,7 @@ export function createFieldsColumns({
               <SelectItem value="date">Date</SelectItem>
               <SelectItem value="timestamp">Timestamp</SelectItem>
               <SelectItem value="container">Container</SelectItem>
+              <SelectItem value="list">List</SelectItem>
             </SelectContent>
           </Select>
         );

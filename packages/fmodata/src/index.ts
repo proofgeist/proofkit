@@ -92,6 +92,8 @@ export {
   isColumnFunction,
   isNotNull,
   isNull,
+  type ListFieldOptions,
+  listField,
   lt,
   lte,
   matchesPattern,

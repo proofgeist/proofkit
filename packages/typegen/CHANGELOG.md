@@ -1,5 +1,13 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.14
+
+### Patch Changes
+
+- 4e048d1: Fix fmodata type generation to preserve existing field-level customizations even when `clearOldFiles` is enabled.
+
+  Stale files in the output directory are now removed after regeneration, so dead generated files are still cleaned up without discarding validator customizations from existing schemas.
+
 ## 1.1.0-beta.13
 
 ### Patch Changes

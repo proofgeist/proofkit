@@ -1,5 +1,11 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.31
+
+### Patch Changes
+
+- 2cddedf: Fix `getMetadata()` key lookup when FileMaker Server returns the database name without `.fmp12` extension. Upgrade better-auth to 1.5.x (`createAdapter` → `createAdapterFactory`, removed `getAdapter`).
+
 ## 0.1.0-beta.29
 
 ### Patch Changes

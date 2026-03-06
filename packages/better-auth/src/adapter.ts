@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: library code */
 import type { Database } from "@proofkit/fmodata";
 import { logger } from "better-auth";
-import { type CleanedWhere, createAdapter, type DBAdapterDebugLogOption } from "better-auth/adapters";
+import { type CleanedWhere, createAdapterFactory, type DBAdapterDebugLogOption } from "better-auth/adapters";
 
 export interface FileMakerAdapterConfig {
   /**
@@ -164,7 +164,7 @@ export const FileMakerAdapter = (config: FileMakerAdapterConfig) => {
 
   const db = config.database;
 
-  const adapterFactory = createAdapter({
+  const adapterFactory = createAdapterFactory({
     config: {
       adapterId: "filemaker",
       adapterName: "FileMaker",

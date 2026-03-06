@@ -3,7 +3,7 @@ import { Command } from "@commander-js/extra-typings";
 import type { Database, FFetchOptions } from "@proofkit/fmodata";
 import { FMServerConnection } from "@proofkit/fmodata";
 import { logger } from "better-auth";
-import { getAdapter, getSchema } from "better-auth/db";
+import { getSchema } from "better-auth/db";
 import chalk from "chalk";
 import fs from "fs-extra";
 import prompts from "prompts";
@@ -40,12 +40,21 @@ async function main() {
         return;
       }
 
-      const adapter = await getAdapter(config).catch((e) => {
-        logger.error(e.message);
+      // Resolve adapter directly (getAdapter removed in Better Auth 1.5)
+      const databaseFactory = config.database;
+      if (!databaseFactory || typeof databaseFactory !== "function") {
+        logger.error("No database adapter found in auth config.");
         process.exit(1);
-      });
+      }
+      let adapter: { id?: string; database?: unknown };
+      try {
+        adapter = (databaseFactory as (opts: unknown) => { id?: string; database?: unknown })(config);
+      } catch (e) {
+        logger.error(e instanceof Error ? e.message : String(e));
+        process.exit(1);
+      }
 
-      if (adapter.id !== "filemaker") {
+      if (adapter?.id !== "filemaker") {
         logger.error("This generator is only compatible with the FileMaker adapter.");
         return;
       }

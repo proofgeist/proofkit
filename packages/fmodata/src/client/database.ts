@@ -7,6 +7,8 @@ import { EntitySet } from "./entity-set";
 import { SchemaManager } from "./schema-manager";
 import { WebhookManager } from "./webhook-builder";
 
+const FMP12_EXT_REGEX = /\.fmp12$/i;
+
 interface MetadataArgs {
   format?: "xml" | "json";
   /**
@@ -137,15 +139,16 @@ export class Database<IncludeSpecialColumns extends boolean = false> {
       throw result.error;
     }
 
-    if (args?.format === "json") {
-      const data = result.data as Record<string, Metadata>;
-      const metadata = data[this.databaseName];
-      if (!metadata) {
-        throw new Error(`Metadata for database "${this.databaseName}" not found in response`);
-      }
-      return metadata;
+    if (args?.format === "xml") {
+      return result.data as string;
     }
-    return result.data as string;
+
+    const data = result.data as Record<string, Metadata>;
+    const metadata = data[this.databaseName] ?? data[this.databaseName.replace(FMP12_EXT_REGEX, "")];
+    if (!metadata) {
+      throw new Error(`Metadata for database "${this.databaseName}" not found in response`);
+    }
+    return metadata;
   }
 
   /**

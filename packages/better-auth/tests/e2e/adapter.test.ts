@@ -1,7 +1,9 @@
 import { FMServerConnection } from "@proofkit/fmodata";
-import { runAdapterTest } from "better-auth/adapters/test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { FileMakerAdapter } from "../../src";
+
+// Note: runAdapterTest was removed in Better Auth 1.5. Adapter behavior is covered by
+// unit tests (adapter.test.ts) and the custom e2e tests below.
 
 if (!process.env.FM_SERVER) {
   throw new Error("FM_SERVER is not set");
@@ -25,7 +27,7 @@ const connection = new FMServerConnection({
 });
 const db = connection.database(process.env.FM_DATABASE);
 
-describe("My Adapter Tests", async () => {
+describe("My Adapter Tests", () => {
   beforeAll(async () => {
     // reset the database
     for (const table of ["user", "session", "account", "verification"]) {
@@ -67,13 +69,6 @@ describe("My Adapter Tests", async () => {
       isRunningAdapterTests: true,
     },
     database: db,
-  });
-
-  await runAdapterTest({
-    // biome-ignore lint/suspicious/useAwait: must be an async function
-    getAdapter: async (betterAuthOptions = {}) => {
-      return adapter(betterAuthOptions);
-    },
   });
 
   it("should sort descending", async () => {

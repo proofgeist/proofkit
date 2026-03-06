@@ -62,10 +62,11 @@ describe("FileMakerAdapter", () => {
         model: "user",
         where: [{ field: "email", operator: "eq", value: "test@example.com", connector: "AND" }],
       });
+      const user = result as { id: string; email: string } | null;
 
-      expect(result).toBeDefined();
-      expect(result?.id).toBe("user-123");
-      expect(result?.email).toBe("test@example.com");
+      expect(user).toBeDefined();
+      expect(user?.id).toBe("user-123");
+      expect(user?.email).toBe("test@example.com");
     });
 
     it("should return null when no record found", async () => {
@@ -163,10 +164,11 @@ describe("FileMakerAdapter", () => {
         where: [{ field: "id", operator: "eq", value: "user-123", connector: "AND" }],
         update: { email: "updated@example.com", name: "Updated User" },
       });
+      const user = result as { email: string; name: string } | null;
 
-      expect(result).toBeDefined();
-      expect(result?.email).toBe("updated@example.com");
-      expect(result?.name).toBe("Updated User");
+      expect(user).toBeDefined();
+      expect(user?.email).toBe("updated@example.com");
+      expect(user?.name).toBe("Updated User");
     });
 
     it("should return null when record to update not found", async () => {

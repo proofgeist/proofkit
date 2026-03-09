@@ -18,9 +18,9 @@ export interface Webhook<TableName = string> {
  * Webhook information returned by the API
  */
 export interface WebhookInfo {
-  webHookID: number;
+  webhookID: number;
   tableName: string;
-  url: string;
+  webhook: string;
   headers?: Record<string, string>;
   notifySchemaChanges: boolean;
   select: string;
@@ -32,16 +32,16 @@ export interface WebhookInfo {
  * Response from listing all webhooks
  */
 export interface WebhookListResponse {
-  Status: string;
-  WebHook: WebhookInfo[];
+  status: string;
+  webhooks: WebhookInfo[];
 }
 
 /**
  * Response from adding a webhook
  */
 export interface WebhookAddResponse {
-  webHookResult: {
-    webHookID: number;
+  webhookResult: {
+    webhookID: number;
   };
 }
 
@@ -71,7 +71,7 @@ export class WebhookManager {
    *   tableName: contactsTable,
    *   headers: { "X-Custom-Header": "value" },
    * });
-   * // result.webHookResult.webHookID contains the new webhook ID
+   * // result.webhookResult.webhookID contains the new webhook ID
    * ```
    * @example
    * ```ts
@@ -186,7 +186,7 @@ export class WebhookManager {
    * @example
    * ```ts
    * const webhook = await db.webhook.get(1);
-   * // webhook.webHookID, webhook.tableName, webhook.url, etc.
+   * // webhook.webhookID, webhook.tableName, webhook.webhook, etc.
    * ```
    */
   async get(webhookId: number, options?: ExecuteMethodOptions): Promise<WebhookInfo> {
@@ -208,8 +208,8 @@ export class WebhookManager {
    * @example
    * ```ts
    * const result = await db.webhook.list();
-   * // result.Status contains the status
-   * // result.WebHook contains the array of webhooks
+   * // result.status contains the status
+   * // result.webhooks contains the array of webhooks
    * ```
    */
   async list(options?: ExecuteMethodOptions): Promise<WebhookListResponse> {

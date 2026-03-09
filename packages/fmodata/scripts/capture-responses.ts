@@ -429,7 +429,7 @@ const queriesToCapture: {
 
       // Clone the response before extracting the data
       const cloned = response.clone();
-      const newWebhookId = (await cloned.json()).webHookResult.webHookID;
+      const newWebhookId = (await cloned.json()).webhookResult.webhookID;
       await client(`/Webhook.Delete(${newWebhookId})`);
 
       return { url, method: "POST", response };
@@ -457,7 +457,7 @@ const queriesToCapture: {
 
       // Clone the response before extracting the data
       const cloned = response.clone();
-      const newWebhookId = (await cloned.json()).webHookResult.webHookID;
+      const newWebhookId = (await cloned.json()).webhookResult.webhookID;
       await client(`/Webhook.Delete(${newWebhookId})`);
 
       return { url, method: "POST", response };
@@ -469,7 +469,7 @@ const queriesToCapture: {
     execute: async (client) => {
       const listResponse = await client("/Webhook.GetAll");
       const listData = await listResponse.json();
-      const webhookId = listData.WebHook?.[0]?.webHookID;
+      const webhookId = listData.webhooks?.[0]?.webhookID;
       if (!webhookId) {
         throw new Error("No webhook ID found");
       }
@@ -498,7 +498,7 @@ const queriesToCapture: {
     execute: async (client) => {
       const listResponse = await client("/Webhook.GetAll");
       const listData = await listResponse.json();
-      const webhookId = listData.WebHook?.[0]?.webHookID;
+      const webhookId = listData.webhooks?.[0]?.webhookID;
       if (!webhookId) {
         throw new Error("No webhook ID found");
       }

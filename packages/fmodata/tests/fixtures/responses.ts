@@ -653,12 +653,12 @@ export const mockResponses = {
     },
     response: {
       "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook Processor",
-      Status: "ACTIVE",
-      WebHook: [
+      status: "ACTIVE",
+      webhooks: [
         {
-          webHookID: 1,
+          webhookID: 1,
           tableName: "contacts",
-          url: "https://example.com/webhook",
+          webhook: "https://example.com/webhook",
           headers: {
             "X-Custom-Header": "test-value",
           },
@@ -668,9 +668,9 @@ export const mockResponses = {
           pendingOperations: [],
         },
         {
-          webHookID: 2,
+          webhookID: 2,
           tableName: "contacts",
-          url: "https://example.com/webhook",
+          webhook: "https://example.com/webhook",
           headers: {
             "X-Custom-Header": "test-value",
           },
@@ -680,9 +680,9 @@ export const mockResponses = {
           pendingOperations: [],
         },
         {
-          webHookID: 3,
+          webhookID: 3,
           tableName: "contacts",
-          url: "https://example.com/webhook",
+          webhook: "https://example.com/webhook",
           headers: {
             "X-Custom-Header": "test-value",
           },
@@ -692,9 +692,9 @@ export const mockResponses = {
           pendingOperations: [],
         },
         {
-          webHookID: 6,
+          webhookID: 6,
           tableName: "contacts",
-          url: "https://example.com/webhook",
+          webhook: "https://example.com/webhook",
           headers: {
             "X-Custom-Header": "test-value",
           },
@@ -704,9 +704,9 @@ export const mockResponses = {
           pendingOperations: [],
         },
         {
-          webHookID: 4,
+          webhookID: 4,
           tableName: "contacts",
-          url: "https://example.com/webhook",
+          webhook: "https://example.com/webhook",
           headers: {
             "X-Custom-Header": "test-value",
           },
@@ -716,9 +716,9 @@ export const mockResponses = {
           pendingOperations: [],
         },
         {
-          webHookID: 7,
+          webhookID: 7,
           tableName: "contacts",
-          url: "https://example.com/webhook",
+          webhook: "https://example.com/webhook",
           headers: {
             "X-Custom-Header": "test-value",
           },
@@ -739,8 +739,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      webHookResult: {
-        webHookID: 5,
+      webhookResult: {
+        webhookID: 5,
       },
     },
   },
@@ -753,8 +753,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      webHookResult: {
-        webHookID: 8,
+      webhookResult: {
+        webhookID: 8,
       },
     },
   },
@@ -768,9 +768,9 @@ export const mockResponses = {
     },
     response: {
       "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#WebHook",
-      webHookID: 1,
+      webhookID: 1,
       tableName: "contacts",
-      url: "https://example.com/webhook",
+      webhook: "https://example.com/webhook",
       headers: {
         "X-Custom-Header": "test-value",
       },
@@ -804,8 +804,8 @@ export const mockResponses = {
       "content-type": "application/json;charset=utf-8",
     },
     response: {
-      webHookResult: {
-        webHookID: 1,
+      webhookResult: {
+        webhookID: 1,
       },
     },
   },

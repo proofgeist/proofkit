@@ -87,7 +87,9 @@ async function testWebhookMethods() {
       console.log("Result structure:");
       console.log(JSON.stringify(listResult, null, 2));
       console.log("\nTypeScript type should be:");
-      console.log("  { Status: string; WebHook: Array<{ webHookID: number; tableName: string; url: string; ... }> }");
+      console.log(
+        "  { status: string; webhooks: Array<{ webhookID: number; tableName: string; webhook: string; ... }> }",
+      );
       console.log("\n");
     } catch (error: unknown) {
       console.log("❌ list() failed:", error instanceof Error ? error.message : String(error));
@@ -97,7 +99,7 @@ async function testWebhookMethods() {
 
     // Test 2: Add a webhook
     console.log("=== Test 2: Add Webhook ===\n");
-    let webhookId: string | number | undefined;
+    let webhookId: number | undefined;
     try {
       const addResult = await db.webhook.add({
         webhook: "https://example.com/webhook",
@@ -110,15 +112,15 @@ async function testWebhookMethods() {
       console.log("Result structure:");
       console.log(JSON.stringify(addResult, null, 2));
       console.log("\nTypeScript type should be:");
-      console.log("  { webHookResult: { webHookID: number } }");
+      console.log("  { webhookResult: { webhookID: number } }");
 
       // Try to extract webhook ID from nested structure
       if (typeof addResult === "object" && addResult !== null) {
-        const result = addResult as Record<string, unknown>;
-        if ("webHookResult" in result) {
-          const webHookResult = result.webHookResult as Record<string, unknown>;
-          if (webHookResult && "webHookID" in webHookResult) {
-            webhookId = webHookResult.webHookID as number;
+        const result = addResult as unknown as Record<string, unknown>;
+        if ("webhookResult" in result) {
+          const webhookResult = result.webhookResult as Record<string, unknown>;
+          if (webhookResult && "webhookID" in webhookResult) {
+            webhookId = webhookResult.webhookID as number;
           }
         } else if ("id" in result) {
           webhookId = result.id as number;
@@ -148,7 +150,7 @@ async function testWebhookMethods() {
         console.log(JSON.stringify(getResult, null, 2));
         console.log("\nTypeScript type should be:");
         console.log(
-          "  { webHookID: number; tableName: string; url: string; headers?: Record<string, string>; notifySchemaChanges: boolean; select: string; filter: string; pendingOperations: unknown[] }",
+          "  { webhookID: number; tableName: string; webhook: string; headers?: Record<string, string>; notifySchemaChanges: boolean; select: string; filter: string; pendingOperations: unknown[] }",
         );
         console.log("\n");
       } catch (error: unknown) {
@@ -227,8 +229,11 @@ async function testWebhookMethods() {
     } catch (error: unknown) {
       console.log("✅ get() failed as expected");
       console.log("Error type:", error?.constructor?.name ?? typeof error);
-      console.log("Error message:", error.message);
-      console.log("Error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.log("Error message:", error instanceof Error ? error.message : String(error));
+      console.log(
+        "Error:",
+        JSON.stringify(error, error instanceof Error ? Object.getOwnPropertyNames(error) : undefined, 2),
+      );
       console.log("\n");
     }
   } catch (error: unknown) {

@@ -36,16 +36,16 @@ describe("WebhookManager", () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.Status).toBe("ACTIVE");
-      expect(Array.isArray(result.WebHook)).toBe(true);
-      expect(result.WebHook.length).toBeGreaterThan(0);
+      expect(result.status).toBe("ACTIVE");
+      expect(Array.isArray(result.webhooks)).toBe(true);
+      expect(result.webhooks.length).toBeGreaterThan(0);
 
       // Extract expected data from mock response
       const mockData = mockResponses["webhook-list"].response;
-      const expectedWebhooks = mockData.WebHook;
-      expect(result.WebHook.length).toBe(expectedWebhooks.length);
+      const expectedWebhooks = mockData.webhooks;
+      expect(result.webhooks.length).toBe(expectedWebhooks.length);
 
-      const firstWebhook = result.WebHook[0];
+      const firstWebhook = result.webhooks[0];
       expect(firstWebhook).toBeDefined();
       if (!firstWebhook) {
         throw new Error("Expected firstWebhook to be defined");
@@ -56,9 +56,9 @@ describe("WebhookManager", () => {
       if (!expectedFirstWebhook) {
         throw new Error("Expected first webhook in mock response");
       }
-      expect(firstWebhook.webHookID).toBe(expectedFirstWebhook.webHookID);
+      expect(firstWebhook.webhookID).toBe(expectedFirstWebhook.webhookID);
       expect(firstWebhook.tableName).toBe("contacts");
-      expect(firstWebhook.url).toBe("https://example.com/webhook");
+      expect(firstWebhook.webhook).toBe("https://example.com/webhook");
       expect(firstWebhook.headers).toEqual({ "X-Custom-Header": "test-value" });
       expect(firstWebhook.notifySchemaChanges).toBe(false);
       expect(firstWebhook.select).toBe("");
@@ -73,12 +73,12 @@ describe("WebhookManager", () => {
 
       // Type check - result should be WebhookListResponse
       const typedResult: WebhookListResponse = result;
-      expect(typedResult.Status).toBe("ACTIVE");
+      expect(typedResult.status).toBe("ACTIVE");
 
       // Extract expected ID from mock response
       const mockData = mockResponses["webhook-list"].response;
-      const expectedFirstWebhookID = mockData.WebHook[0]?.webHookID;
-      expect(typedResult.WebHook[0]?.webHookID).toBe(expectedFirstWebhookID);
+      const expectedFirstWebhookID = mockData.webhooks[0]?.webhookID;
+      expect(typedResult.webhooks[0]?.webhookID).toBe(expectedFirstWebhookID);
     });
   });
 
@@ -96,11 +96,11 @@ describe("WebhookManager", () => {
       );
 
       expect(result).toBeDefined();
-      expect(result.webHookResult).toBeDefined();
+      expect(result.webhookResult).toBeDefined();
 
       // Extract expected ID from mock response
-      const expectedWebhookID = mockResponses["webhook-add"].response.webHookResult.webHookID;
-      expect(result.webHookResult.webHookID).toBe(expectedWebhookID);
+      const expectedWebhookID = mockResponses["webhook-add"].response.webhookResult.webhookID;
+      expect(result.webhookResult.webhookID).toBe(expectedWebhookID);
     });
 
     it("should extract table name from FMTable instance", async () => {
@@ -115,13 +115,13 @@ describe("WebhookManager", () => {
       );
 
       // Extract expected ID from mock response
-      const expectedWebhookID = mockResponses["webhook-add"].response.webHookResult.webHookID;
-      expect(result.webHookResult.webHookID).toBe(expectedWebhookID);
+      const expectedWebhookID = mockResponses["webhook-add"].response.webhookResult.webhookID;
+      expect(result.webhookResult.webhookID).toBe(expectedWebhookID);
     });
 
     it("should support the same filter/select DX as the main query builder", async () => {
       let requestBody: string | null = null;
-      const _result = await db.webhook.add(
+      await db.webhook.add(
         {
           webhook: "https://example.com/webhook",
           tableName: contacts,
@@ -170,8 +170,8 @@ describe("WebhookManager", () => {
       const typedResult: WebhookAddResponse = result;
 
       // Extract expected ID from mock response
-      const expectedWebhookID = mockResponses["webhook-add"].response.webHookResult.webHookID;
-      expect(typedResult.webHookResult.webHookID).toBe(expectedWebhookID);
+      const expectedWebhookID = mockResponses["webhook-add"].response.webhookResult.webhookID;
+      expect(typedResult.webhookResult.webhookID).toBe(expectedWebhookID);
     });
   });
 
@@ -179,16 +179,16 @@ describe("WebhookManager", () => {
     it("should get a webhook by ID", async () => {
       // Extract webhook ID from mock response URL or response data
       const mockData = mockResponses["webhook-get"].response;
-      const webhookID = mockData.webHookID;
+      const webhookID = mockData.webhookID;
 
       const result = await db.webhook.get(webhookID, {
         fetchHandler: createMockFetch(mockResponses["webhook-get"]),
       });
 
       expect(result).toBeDefined();
-      expect(result.webHookID).toBe(webhookID);
+      expect(result.webhookID).toBe(webhookID);
       expect(result.tableName).toBe("contacts");
-      expect(result.url).toBe("https://example.com/webhook");
+      expect(result.webhook).toBe("https://example.com/webhook");
       expect(result.headers).toEqual({ "X-Custom-Header": "test-value" });
       expect(result.notifySchemaChanges).toBe(false);
       expect(result.select).toBe("");
@@ -207,7 +207,7 @@ describe("WebhookManager", () => {
     it("should have correct TypeScript types", async () => {
       // Extract webhook ID from mock response
       const mockData = mockResponses["webhook-get"].response;
-      const webhookID = mockData.webHookID;
+      const webhookID = mockData.webhookID;
 
       const result = await db.webhook.get(webhookID, {
         fetchHandler: createMockFetch(mockResponses["webhook-get"]),
@@ -215,7 +215,7 @@ describe("WebhookManager", () => {
 
       // Type check - result should be WebhookInfo
       const typedResult: WebhookInfo = result;
-      expect(typedResult.webHookID).toBe(webhookID);
+      expect(typedResult.webhookID).toBe(webhookID);
       expect(typedResult.tableName).toBe("contacts");
     });
   });
@@ -223,7 +223,7 @@ describe("WebhookManager", () => {
   describe("remove()", () => {
     it("should remove a webhook successfully", async () => {
       // Extract webhook ID from mock response
-      const webhookID = mockResponses["webhook-delete"].response.webHookResult.webHookID;
+      const webhookID = mockResponses["webhook-delete"].response.webhookResult.webhookID;
 
       await expect(
         db.webhook.remove(webhookID, {
@@ -234,7 +234,7 @@ describe("WebhookManager", () => {
 
     it("should return void on success", async () => {
       // Extract webhook ID from mock response
-      const webhookID = mockResponses["webhook-delete"].response.webHookResult.webHookID;
+      const webhookID = mockResponses["webhook-delete"].response.webhookResult.webhookID;
 
       const result = await db.webhook.remove(webhookID, {
         fetchHandler: createMockFetch(mockResponses["webhook-delete"]),
@@ -272,8 +272,8 @@ describe("WebhookManager", () => {
   describe("integration", () => {
     it("should add, get, and remove a webhook in sequence", async () => {
       // Extract expected IDs from mock responses
-      const expectedAddID = mockResponses["webhook-add"].response.webHookResult.webHookID;
-      const expectedGetID = mockResponses["webhook-get"].response.webHookID;
+      const expectedAddID = mockResponses["webhook-add"].response.webhookResult.webhookID;
+      const expectedGetID = mockResponses["webhook-get"].response.webhookID;
 
       // Add webhook
       const addResult = await db.webhook.add(
@@ -286,7 +286,7 @@ describe("WebhookManager", () => {
         },
       );
 
-      expect(addResult.webHookResult.webHookID).toBe(expectedAddID);
+      expect(addResult.webhookResult.webhookID).toBe(expectedAddID);
 
       // Get webhook - use the ID from the add result, but verify it matches expected get ID
       // Note: In a real scenario, the get would use the add result ID, but for mocking
@@ -295,10 +295,10 @@ describe("WebhookManager", () => {
         fetchHandler: createMockFetch(mockResponses["webhook-get"]),
       });
 
-      expect(getResult.webHookID).toBe(expectedGetID);
+      expect(getResult.webhookID).toBe(expectedGetID);
 
       // Remove webhook - use the ID from the delete mock response
-      const expectedDeleteID = mockResponses["webhook-delete"].response.webHookResult.webHookID;
+      const expectedDeleteID = mockResponses["webhook-delete"].response.webhookResult.webhookID;
       await expect(
         db.webhook.remove(expectedDeleteID, {
           fetchHandler: createMockFetch(mockResponses["webhook-delete"]),

@@ -25,7 +25,7 @@ const result = await db.webhook.add({
 });
 
 // Access the created webhook ID
-console.log(result.webHookResult.webHookID);
+console.log(result.webhookResult.webhookID);
 ```
 
 
@@ -83,13 +83,13 @@ Get all webhooks configured for the database:
 ```typescript
 const result = await db.webhook.list();
 
-console.log(result.Status); // Status of the operation
-console.log(result.WebHook); // Array of webhook configurations
+console.log(result.status); // Status of the operation
+console.log(result.webhooks); // Array of webhook configurations
 
-result.WebHook.forEach((webhook) => {
-  console.log(`Webhook ${webhook.webHookID}:`);
+result.webhooks.forEach((webhook) => {
+  console.log(`Webhook ${webhook.webhookID}:`);
   console.log(`  Table: ${webhook.tableName}`);
-  console.log(`  URL: ${webhook.url}`);
+  console.log(`  URL: ${webhook.webhook}`);
   console.log(`  Notify Schema Changes: ${webhook.notifySchemaChanges}`);
   console.log(`  Select: ${webhook.select}`);
   console.log(`  Filter: ${webhook.filter}`);
@@ -104,9 +104,9 @@ Retrieve a specific webhook by ID:
 ```typescript
 const webhook = await db.webhook.get(1);
 
-console.log(webhook.webHookID);
+console.log(webhook.webhookID);
 console.log(webhook.tableName);
-console.log(webhook.url);
+console.log(webhook.webhook);
 console.log(webhook.headers);
 console.log(webhook.notifySchemaChanges);
 console.log(webhook.select);
@@ -153,16 +153,16 @@ const addResult = await db.webhook.add({
   notifySchemaChanges: false,
 });
 
-const webhookId = addResult.webHookResult.webHookID;
+const webhookId = addResult.webhookResult.webhookID;
 console.log(`Created webhook with ID: ${webhookId}`);
 
 // List all webhooks
 const listResult = await db.webhook.list();
-console.log(`Total webhooks: ${listResult.WebHook.length}`);
+console.log(`Total webhooks: ${listResult.webhooks.length}`);
 
 // Get the webhook we just created
 const webhook = await db.webhook.get(webhookId);
-console.log(`Webhook URL: ${webhook.url}`);
+console.log(`Webhook URL: ${webhook.webhook}`);
 
 // Manually invoke the webhook for specific records
 await db.webhook.invoke(webhookId, { rowIDs: [1, 2, 3] });

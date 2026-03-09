@@ -1,5 +1,21 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.31
+
+### Minor Changes
+
+- c5efdbd: fix(fmodata): align webhook types with actual FM OData API response
+
+  BREAKING: `WebhookListResponse`, `WebhookInfo`, and `WebhookAddResponse` property names changed to match what the API actually returns:
+
+  - `Status` → `status`, `WebHook` → `webhooks`
+  - `webHookID` → `webhookID`, `url` → `webhook`
+  - `webHookResult` → `webhookResult`
+
+### Patch Changes
+
+- 2cddedf: Fix `getMetadata()` key lookup when FileMaker Server returns the database name without `.fmp12` extension. Upgrade better-auth to 1.5.x (`createAdapter` → `createAdapterFactory`, removed `getAdapter`).
+
 ## 0.1.0-beta.29
 
 ### Patch Changes

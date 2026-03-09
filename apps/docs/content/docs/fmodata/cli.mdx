@@ -1,0 +1,360 @@
+---
+title: CLI
+description: Run fmodata operations from the command line — queries, scripts, webhooks, metadata, and schema changes
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+The `@proofkit/fmodata` package ships a built-in CLI binary called **`fmodata`**. It exposes every library operation — querying records, running scripts, managing webhooks, inspecting metadata, and modifying schema — as a non-interactive command suitable for scripting, CI pipelines, and quick one-off database operations.
+
+## Installation
+
+The binary is included automatically when you install the package:
+
+```bash
+pnpm add @proofkit/fmodata
+# or
+npm install @proofkit/fmodata
+```
+
+If you want it available globally:
+
+```bash
+pnpm add -g @proofkit/fmodata
+```
+
+## Connection Configuration
+
+All commands share the same global connection options. Each flag has an environment variable fallback so you can set credentials once and run many commands.
+
+| Flag | Env var | Description |
+|---|---|---|
+| `--server <url>` | `FM_SERVER` | FileMaker Server URL (e.g. `https://fm.example.com`) |
+| `--database <name>` | `FM_DATABASE` | Database filename (e.g. `MyApp.fmp12`) |
+| `--username <user>` | `FM_USERNAME` | FileMaker account username |
+| `--password <pass>` | `FM_PASSWORD` | FileMaker account password |
+| `--api-key <key>` | `OTTO_API_KEY` | OttoFMS API key (preferred over username/password) |
+
+<Callout type="info" title="Auth priority">
+When both `--api-key` and `--username` are present, the API key is used.
+</Callout>
+
+**Example — using environment variables:**
+
+```bash
+export FM_SERVER=https://fm.example.com
+export FM_DATABASE=MyApp.fmp12
+export OTTO_API_KEY=otto_...
+
+fmodata metadata tables
+```
+
+**Example — passing flags directly:**
+
+```bash
+fmodata --server https://fm.example.com \
+        --database MyApp.fmp12 \
+        --api-key otto_... \
+        metadata tables
+```
+
+## Output Formats
+
+By default all commands print **JSON** to stdout. Add `--table` to render results as a human-readable ASCII table instead.
+
+```bash
+# JSON (default)
+fmodata metadata tables
+
+# ASCII table
+fmodata metadata tables --table
+```
+
+Errors are written to **stderr** and the process exits with code `1`.
+
+---
+
+## Commands
+
+### `query`
+
+CRUD operations against any table. Use `--table-name` to avoid ambiguity with the `--table` output flag.
+
+#### `query list`
+
+Fetch records from a table.
+
+```bash
+fmodata query list --table-name contacts
+fmodata query list --table-name contacts --top 10 --skip 20
+fmodata query list --table-name contacts --select "name,email"
+fmodata query list --table-name contacts --where "name eq 'Alice'"
+fmodata query list --table-name contacts --order-by "name:asc"
+fmodata query list --table-name contacts --order-by "createdAt:desc,name:asc"
+```
+
+| Option | Description |
+|---|---|
+| `--table-name <name>` | **Required.** Table to query |
+| `--top <n>` | Maximum records to return |
+| `--skip <n>` | Records to skip (for pagination) |
+| `--select <fields>` | Comma-separated field names |
+| `--where <expr>` | OData `$filter` expression |
+| `--order-by <field>` | `field:asc` or `field:desc`, comma-separated for multi-sort |
+
+#### `query insert`
+
+Insert a single record.
+
+```bash
+fmodata query insert --table-name contacts --data '{"name":"Alice","email":"alice@example.com"}'
+```
+
+| Option | Description |
+|---|---|
+| `--table-name <name>` | **Required.** Target table |
+| `--data <json>` | **Required.** Record fields as a JSON object |
+
+#### `query update`
+
+Update records matching a filter (or all records if `--where` is omitted).
+
+```bash
+fmodata query update \
+  --table-name contacts \
+  --data '{"status":"inactive"}' \
+  --where "lastLogin lt 2024-01-01"
+```
+
+| Option | Description |
+|---|---|
+| `--table-name <name>` | **Required.** Target table |
+| `--data <json>` | **Required.** Fields to update as a JSON object |
+| `--where <expr>` | OData `$filter` expression (omit to update all rows) |
+
+#### `query delete`
+
+Delete records matching a filter.
+
+```bash
+fmodata query delete --table-name contacts --where "status eq 'archived'"
+```
+
+| Option | Description |
+|---|---|
+| `--table-name <name>` | **Required.** Target table |
+| `--where <expr>` | OData `$filter` expression |
+
+<Callout type="warning">
+Omitting `--where` from `query delete` will delete **all records** in the table.
+</Callout>
+
+---
+
+### `script`
+
+#### `script run`
+
+Execute a FileMaker script and print the result code and return value.
+
+```bash
+# No parameter
+fmodata script run MyScriptName
+
+# String parameter
+fmodata script run SendEmail --param '"hello@example.com"'
+
+# JSON object parameter
+fmodata script run ProcessOrder --param '{"orderId":"123","action":"approve"}'
+```
+
+| Option | Description |
+|---|---|
+| `--param <json>` | Script parameter — parsed as JSON, falls back to plain string |
+
+The output is a JSON object:
+
+```json
+{
+  "resultCode": 0,
+  "result": "optional-return-value"
+}
+```
+
+<Callout type="info">
+OData does not support script names with special characters (`@`, `&`, `/`) or names beginning with a number.
+</Callout>
+
+---
+
+### `webhook`
+
+#### `webhook list`
+
+List all webhooks registered on the database.
+
+```bash
+fmodata webhook list
+fmodata webhook list --table
+```
+
+#### `webhook get`
+
+Get details for a specific webhook by its numeric ID.
+
+```bash
+fmodata webhook get 42
+```
+
+#### `webhook add`
+
+Register a new webhook on a table.
+
+```bash
+fmodata webhook add \
+  --table-name contacts \
+  --url https://example.com/hooks/contacts
+
+# With field selection and custom headers
+fmodata webhook add \
+  --table-name contacts \
+  --url https://example.com/hooks/contacts \
+  --select "name,email,modifiedAt" \
+  --header "Authorization=Bearer token123" \
+  --header "X-App-ID=my-app"
+```
+
+| Option | Description |
+|---|---|
+| `--table-name <name>` | **Required.** Table to monitor |
+| `--url <url>` | **Required.** Webhook endpoint URL |
+| `--select <fields>` | Comma-separated field names to include in the payload |
+| `--header <k=v>` | Custom request header in `key=value` format (repeatable) |
+
+#### `webhook remove`
+
+Delete a webhook by ID.
+
+```bash
+fmodata webhook remove 42
+```
+
+---
+
+### `metadata`
+
+#### `metadata get`
+
+Retrieve OData metadata for the database.
+
+```bash
+# JSON (default)
+fmodata metadata get
+
+# XML
+fmodata metadata get --format xml
+```
+
+| Option | Description |
+|---|---|
+| `--format <format>` | `json` (default) or `xml` |
+
+#### `metadata tables`
+
+List all table names in the database. This is the quickest way to inspect what's available.
+
+```bash
+fmodata metadata tables
+fmodata metadata tables --table
+```
+
+---
+
+### `schema`
+
+Schema modification commands are **safe by default**: without `--confirm` they perform a **dry run** and print what _would_ happen without making any changes.
+
+#### `schema list-tables`
+
+List all tables (alias for `metadata tables`).
+
+```bash
+fmodata schema list-tables
+```
+
+#### `schema create-table`
+
+Create a new table. The `--fields` option accepts the same JSON field definition used by the TypeScript API.
+
+```bash
+# Dry run (no changes)
+fmodata schema create-table \
+  --name NewTable \
+  --fields '[{"name":"id","type":"string","primary":true},{"name":"label","type":"string"}]'
+
+# Execute for real
+fmodata schema create-table \
+  --name NewTable \
+  --fields '[{"name":"id","type":"string","primary":true},{"name":"label","type":"string"}]' \
+  --confirm
+```
+
+| Option | Description |
+|---|---|
+| `--name <name>` | **Required.** New table name |
+| `--fields <json>` | **Required.** Array of field definitions (see [Schema Management](/docs/fmodata/schema-management)) |
+| `--confirm` | Execute the operation (without this flag it's a dry run) |
+
+#### `schema add-fields`
+
+Add fields to an existing table.
+
+```bash
+# Dry run
+fmodata schema add-fields \
+  --table-name contacts \
+  --fields '[{"name":"phone","type":"string","nullable":true}]'
+
+# Execute
+fmodata schema add-fields \
+  --table-name contacts \
+  --fields '[{"name":"phone","type":"string","nullable":true}]' \
+  --confirm
+```
+
+| Option | Description |
+|---|---|
+| `--table-name <name>` | **Required.** Existing table name |
+| `--fields <json>` | **Required.** Array of field definitions |
+| `--confirm` | Execute the operation (without this flag it's a dry run) |
+
+<Callout type="info" title="Schema operations require elevated permissions">
+Creating tables and adding fields require a FileMaker account with DDL (Data Definition Language) privileges. Operations will throw an error if the account lacks sufficient permissions.
+</Callout>
+
+---
+
+## Using in CI / Scripts
+
+Because all connection options accept environment variables, the CLI integrates cleanly into CI pipelines:
+
+```bash
+# GitHub Actions example
+- name: Run post-deploy script
+  env:
+    FM_SERVER: ${{ secrets.FM_SERVER }}
+    FM_DATABASE: ${{ secrets.FM_DATABASE }}
+    OTTO_API_KEY: ${{ secrets.OTTO_API_KEY }}
+  run: |
+    npx fmodata script run PostDeploy --param '"${{ github.sha }}"'
+```
+
+```bash
+# Quick schema check in a shell script
+#!/usr/bin/env bash
+set -euo pipefail
+
+TABLES=$(fmodata metadata tables)
+echo "Tables in $FM_DATABASE: $TABLES"
+```

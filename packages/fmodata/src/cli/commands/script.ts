@@ -12,7 +12,7 @@ export function makeScriptCommand(): Command {
     .description("Run a FileMaker script")
     .option("--param <json>", "Script parameter as JSON string or plain value")
     .action(async (scriptName: string, opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         let scriptParam: string | number | Record<string, unknown> | undefined;
@@ -24,7 +24,7 @@ export function makeScriptCommand(): Command {
           }
         }
         const result = await db.runScript(scriptName, { scriptParam });
-        printResult(result, { table: globalOpts.table ?? false });
+        printResult(result, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }

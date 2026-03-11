@@ -11,11 +11,11 @@ export function makeWebhookCommand(): Command {
     .command("list")
     .description("List all webhooks")
     .action(async (_opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         const result = await db.webhook.list();
-        printResult(result, { table: globalOpts.table ?? false });
+        printResult(result, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -25,11 +25,11 @@ export function makeWebhookCommand(): Command {
     .command("get <id>")
     .description("Get a webhook by ID")
     .action(async (id: string, _opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         const result = await db.webhook.get(Number(id));
-        printResult(result, { table: globalOpts.table ?? false });
+        printResult(result, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -38,7 +38,7 @@ export function makeWebhookCommand(): Command {
   webhook
     .command("add")
     .description("Add a new webhook")
-    .requiredOption("--table-name <name>", "Table to monitor")
+    .requiredOption("--table <name>", "Table to monitor")
     .requiredOption("--url <url>", "Webhook URL to call")
     .option("--select <fields>", "Comma-separated field names to include")
     .option("--header <kv>", "Header in key=value format (repeatable)", (val, acc: string[]) => {
@@ -46,7 +46,7 @@ export function makeWebhookCommand(): Command {
       return acc;
     }, [])
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
 
@@ -63,7 +63,7 @@ export function makeWebhookCommand(): Command {
         // Build a minimal FMTable-like proxy for the tableName
         // webhook.add() only reads the name via Symbol, so this is safe at runtime
         const tableProxy = {
-          [Symbol.for("fmodata:FMTableName")]: opts.tableName,
+          [Symbol.for("fmodata:FMTableName")]: opts.table,
         } as unknown as import("../../orm/table").FMTable<Record<string, never>, string>;
 
         const webhookPayload: import("../../client/webhook-builder").Webhook<typeof tableProxy> = {
@@ -79,7 +79,7 @@ export function makeWebhookCommand(): Command {
         }
 
         const result = await db.webhook.add(webhookPayload);
-        printResult(result, { table: globalOpts.table ?? false });
+        printResult(result, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -89,11 +89,11 @@ export function makeWebhookCommand(): Command {
     .command("remove <id>")
     .description("Remove a webhook by ID")
     .action(async (id: string, _opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         await db.webhook.remove(Number(id));
-        printResult({ removed: true, id: Number(id) }, { table: globalOpts.table ?? false });
+        printResult({ removed: true, id: Number(id) }, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }

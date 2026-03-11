@@ -1,11 +1,11 @@
 import Table from "cli-table3";
 
 export interface OutputOptions {
-  table: boolean;
+  pretty: boolean;
 }
 
 export function printResult(data: unknown, opts: OutputOptions): void {
-  if (opts.table) {
+  if (opts.pretty) {
     printTable(data);
   } else {
     console.log(JSON.stringify(data, null, 2));

@@ -12,11 +12,11 @@ export function makeSchemaCommand(): Command {
     .command("list-tables")
     .description("List all tables in the database")
     .action(async (_opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         const tables = await db.listTableNames();
-        printResult(tables, { table: globalOpts.table ?? false });
+        printResult(tables, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -29,7 +29,7 @@ export function makeSchemaCommand(): Command {
     .requiredOption("--fields <json>", "Fields definition as JSON array")
     .option("--confirm", "Execute the operation (without this flag, shows what would be created)")
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         let fields: Field[];
         try {
@@ -40,13 +40,13 @@ export function makeSchemaCommand(): Command {
 
         if (!opts.confirm) {
           console.log("[dry-run] Would create table:");
-          printResult({ tableName: opts.name, fields }, { table: globalOpts.table ?? false });
+          printResult({ tableName: opts.name, fields }, { pretty: globalOpts.pretty ?? false });
           return;
         }
 
         const { db } = buildConnection(globalOpts);
         const result = await db.schema.createTable(opts.name as string, fields);
-        printResult(result, { table: globalOpts.table ?? false });
+        printResult(result, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -55,11 +55,11 @@ export function makeSchemaCommand(): Command {
   schema
     .command("add-fields")
     .description("Add fields to an existing table (requires --confirm to execute; dry-run by default)")
-    .requiredOption("--table-name <name>", "Table name")
+    .requiredOption("--table <name>", "Table name")
     .requiredOption("--fields <json>", "Fields to add as JSON array")
     .option("--confirm", "Execute the operation (without this flag, shows what would be added)")
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         let fields: Field[];
         try {
@@ -70,13 +70,13 @@ export function makeSchemaCommand(): Command {
 
         if (!opts.confirm) {
           console.log("[dry-run] Would add fields to table:");
-          printResult({ tableName: opts.tableName, fields }, { table: globalOpts.table ?? false });
+          printResult({ tableName: opts.table, fields }, { pretty: globalOpts.pretty ?? false });
           return;
         }
 
         const { db } = buildConnection(globalOpts);
-        const result = await db.schema.addFields(opts.tableName as string, fields);
-        printResult(result, { table: globalOpts.table ?? false });
+        const result = await db.schema.addFields(opts.table as string, fields);
+        printResult(result, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }

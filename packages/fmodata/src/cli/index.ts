@@ -18,7 +18,7 @@ program
   .option("--username <user>", `FM username [env: ${ENV_NAMES.username}]`)
   .option("--password <pass>", `FM password [env: ${ENV_NAMES.password}]`)
   .option("--api-key <key>", `OttoFMS API key [env: ${ENV_NAMES.apiKey}]`)
-  .option("--table", "Output as table (default: JSON)", false);
+  .option("--pretty", "Output as table (default: JSON)", false);
 
 program.addCommand(makeQueryCommand());
 program.addCommand(makeScriptCommand());

@@ -36,14 +36,14 @@ export function makeQueryCommand(): Command {
   query
     .command("list")
     .description("List records from a table")
-    .requiredOption("--table-name <name>", "Table name")
+    .requiredOption("--table <name>", "Table name")
     .option("--top <n>", "Max records to return", Number)
     .option("--skip <n>", "Records to skip", Number)
     .option("--select <fields>", "Comma-separated field names")
     .option("--where <expr>", "OData filter expression")
     .option("--order-by <field>", "Order by field (format: field:asc|desc, or comma-separated)")
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         const qs = buildQueryString({
@@ -53,9 +53,9 @@ export function makeQueryCommand(): Command {
           where: opts.where as string | undefined,
           orderBy: opts.orderBy as string | undefined,
         });
-        const result = await db._makeRequest<{ value: unknown[] }>(`/${opts.tableName}${qs}`);
+        const result = await db._makeRequest<{ value: unknown[] }>(`/${opts.table}${qs}`);
         if (result.error) throw result.error;
-        printResult(result.data.value ?? result.data, { table: globalOpts.table ?? false });
+        printResult(result.data.value ?? result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -64,10 +64,10 @@ export function makeQueryCommand(): Command {
   query
     .command("insert")
     .description("Insert a record into a table")
-    .requiredOption("--table-name <name>", "Table name")
+    .requiredOption("--table <name>", "Table name")
     .requiredOption("--data <json>", "Record data as JSON object")
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         let data: Record<string, unknown>;
@@ -76,12 +76,12 @@ export function makeQueryCommand(): Command {
         } catch {
           throw new Error("--data must be a valid JSON object");
         }
-        const result = await db._makeRequest<unknown>(`/${opts.tableName}`, {
+        const result = await db._makeRequest<unknown>(`/${opts.table}`, {
           method: "POST",
           body: JSON.stringify(data),
         });
         if (result.error) throw result.error;
-        printResult(result.data, { table: globalOpts.table ?? false });
+        printResult(result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -90,11 +90,11 @@ export function makeQueryCommand(): Command {
   query
     .command("update")
     .description("Update records in a table")
-    .requiredOption("--table-name <name>", "Table name")
+    .requiredOption("--table <name>", "Table name")
     .requiredOption("--data <json>", "Update data as JSON object")
     .option("--where <expr>", "OData filter expression")
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         let data: Record<string, unknown>;
@@ -104,12 +104,12 @@ export function makeQueryCommand(): Command {
           throw new Error("--data must be a valid JSON object");
         }
         const qs = opts.where ? `?$filter=${opts.where}` : "";
-        const result = await db._makeRequest<unknown>(`/${opts.tableName}${qs}`, {
+        const result = await db._makeRequest<unknown>(`/${opts.table}${qs}`, {
           method: "PATCH",
           body: JSON.stringify(data),
         });
         if (result.error) throw result.error;
-        printResult(result.data, { table: globalOpts.table ?? false });
+        printResult(result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }
@@ -118,18 +118,18 @@ export function makeQueryCommand(): Command {
   query
     .command("delete")
     .description("Delete records from a table")
-    .requiredOption("--table-name <name>", "Table name")
+    .requiredOption("--table <name>", "Table name")
     .option("--where <expr>", "OData filter expression")
     .action(async (opts, cmd) => {
-      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { table: boolean };
+      const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
         const qs = opts.where ? `?$filter=${opts.where}` : "";
-        const result = await db._makeRequest<unknown>(`/${opts.tableName}${qs}`, {
+        const result = await db._makeRequest<unknown>(`/${opts.table}${qs}`, {
           method: "DELETE",
         });
         if (result.error) throw result.error;
-        printResult(result.data, { table: globalOpts.table ?? false });
+        printResult(result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
       }

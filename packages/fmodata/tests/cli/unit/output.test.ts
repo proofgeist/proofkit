@@ -14,7 +14,7 @@ describe("printResult", () => {
 
   it("prints JSON by default", () => {
     const data = [{ name: "Alice", age: 30 }];
-    printResult(data, { table: false });
+    printResult(data, { pretty: false });
     expect(stdoutSpy).toHaveBeenCalledWith(JSON.stringify(data, null, 2));
   });
 
@@ -23,7 +23,7 @@ describe("printResult", () => {
       { name: "Alice", age: 30 },
       { name: "Bob", age: 25 },
     ];
-    printResult(data, { table: true });
+    printResult(data, { pretty: true });
     const output = stdoutSpy.mock.calls[0]?.[0] as string;
     expect(output).toContain("name");
     expect(output).toContain("age");
@@ -33,7 +33,7 @@ describe("printResult", () => {
 
   it("prints key-value table for single object", () => {
     const data = { status: "ok", count: 42 };
-    printResult(data, { table: true });
+    printResult(data, { pretty: true });
     const output = stdoutSpy.mock.calls[0]?.[0] as string;
     expect(output).toContain("Key");
     expect(output).toContain("Value");
@@ -42,7 +42,7 @@ describe("printResult", () => {
   });
 
   it("falls back to JSON for non-object data in table mode", () => {
-    printResult(["a", "b", "c"], { table: true });
+    printResult(["a", "b", "c"], { pretty: true });
     const output = stdoutSpy.mock.calls[0]?.[0] as string;
     expect(output).toContain('"a"');
   });

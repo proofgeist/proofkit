@@ -61,14 +61,14 @@ fmodata --server https://fm.example.com \
 
 ## Output Formats
 
-By default all commands print **JSON** to stdout. Add `--table` to render results as a human-readable ASCII table instead.
+By default all commands print **JSON** to stdout. Add `--pretty` to render results as a human-readable ASCII table instead.
 
 ```bash
 # JSON (default)
 fmodata metadata tables
 
 # ASCII table
-fmodata metadata tables --table
+fmodata metadata tables --pretty
 ```
 
 Errors are written to **stderr** and the process exits with code `1`.
@@ -79,24 +79,24 @@ Errors are written to **stderr** and the process exits with code `1`.
 
 ### `query`
 
-CRUD operations against any table. Use `--table-name` to avoid ambiguity with the `--table` output flag.
+CRUD operations against any table.
 
 #### `query list`
 
 Fetch records from a table.
 
 ```bash
-fmodata query list --table-name contacts
-fmodata query list --table-name contacts --top 10 --skip 20
-fmodata query list --table-name contacts --select "name,email"
-fmodata query list --table-name contacts --where "name eq 'Alice'"
-fmodata query list --table-name contacts --order-by "name:asc"
-fmodata query list --table-name contacts --order-by "createdAt:desc,name:asc"
+fmodata query list --table contacts
+fmodata query list --table contacts --top 10 --skip 20
+fmodata query list --table contacts --select "name,email"
+fmodata query list --table contacts --where "name eq 'Alice'"
+fmodata query list --table contacts --order-by "name:asc"
+fmodata query list --table contacts --order-by "createdAt:desc,name:asc"
 ```
 
 | Option | Description |
 |---|---|
-| `--table-name <name>` | **Required.** Table to query |
+| `--table <name>` | **Required.** Table to query |
 | `--top <n>` | Maximum records to return |
 | `--skip <n>` | Records to skip (for pagination) |
 | `--select <fields>` | Comma-separated field names |
@@ -108,12 +108,12 @@ fmodata query list --table-name contacts --order-by "createdAt:desc,name:asc"
 Insert a single record.
 
 ```bash
-fmodata query insert --table-name contacts --data '{"name":"Alice","email":"alice@example.com"}'
+fmodata query insert --table contacts --data '{"name":"Alice","email":"alice@example.com"}'
 ```
 
 | Option | Description |
 |---|---|
-| `--table-name <name>` | **Required.** Target table |
+| `--table <name>` | **Required.** Target table |
 | `--data <json>` | **Required.** Record fields as a JSON object |
 
 #### `query update`
@@ -122,14 +122,14 @@ Update records matching a filter (or all records if `--where` is omitted).
 
 ```bash
 fmodata query update \
-  --table-name contacts \
+  --table contacts \
   --data '{"status":"inactive"}' \
   --where "lastLogin lt 2024-01-01"
 ```
 
 | Option | Description |
 |---|---|
-| `--table-name <name>` | **Required.** Target table |
+| `--table <name>` | **Required.** Target table |
 | `--data <json>` | **Required.** Fields to update as a JSON object |
 | `--where <expr>` | OData `$filter` expression (omit to update all rows) |
 
@@ -138,12 +138,12 @@ fmodata query update \
 Delete records matching a filter.
 
 ```bash
-fmodata query delete --table-name contacts --where "status eq 'archived'"
+fmodata query delete --table contacts --where "status eq 'archived'"
 ```
 
 | Option | Description |
 |---|---|
-| `--table-name <name>` | **Required.** Target table |
+| `--table <name>` | **Required.** Target table |
 | `--where <expr>` | OData `$filter` expression |
 
 <Callout type="warning">
@@ -196,7 +196,7 @@ List all webhooks registered on the database.
 
 ```bash
 fmodata webhook list
-fmodata webhook list --table
+fmodata webhook list --pretty
 ```
 
 #### `webhook get`
@@ -213,12 +213,12 @@ Register a new webhook on a table.
 
 ```bash
 fmodata webhook add \
-  --table-name contacts \
+  --table contacts \
   --url https://example.com/hooks/contacts
 
 # With field selection and custom headers
 fmodata webhook add \
-  --table-name contacts \
+  --table contacts \
   --url https://example.com/hooks/contacts \
   --select "name,email,modifiedAt" \
   --header "Authorization=Bearer token123" \
@@ -227,7 +227,7 @@ fmodata webhook add \
 
 | Option | Description |
 |---|---|
-| `--table-name <name>` | **Required.** Table to monitor |
+| `--table <name>` | **Required.** Table to monitor |
 | `--url <url>` | **Required.** Webhook endpoint URL |
 | `--select <fields>` | Comma-separated field names to include in the payload |
 | `--header <k=v>` | Custom request header in `key=value` format (repeatable) |
@@ -266,7 +266,7 @@ List all table names in the database. This is the quickest way to inspect what's
 
 ```bash
 fmodata metadata tables
-fmodata metadata tables --table
+fmodata metadata tables --pretty
 ```
 
 ---
@@ -313,19 +313,19 @@ Add fields to an existing table.
 ```bash
 # Dry run
 fmodata schema add-fields \
-  --table-name contacts \
+  --table contacts \
   --fields '[{"name":"phone","type":"string","nullable":true}]'
 
 # Execute
 fmodata schema add-fields \
-  --table-name contacts \
+  --table contacts \
   --fields '[{"name":"phone","type":"string","nullable":true}]' \
   --confirm
 ```
 
 | Option | Description |
 |---|---|
-| `--table-name <name>` | **Required.** Existing table name |
+| `--table <name>` | **Required.** Existing table name |
 | `--fields <json>` | **Required.** Array of field definitions |
 | `--confirm` | Execute the operation (without this flag it's a dry run) |
 

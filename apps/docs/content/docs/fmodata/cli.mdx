@@ -358,3 +358,108 @@ set -euo pipefail
 TABLES=$(fmodata metadata tables)
 echo "Tables in $FM_DATABASE: $TABLES"
 ```
+
+---
+
+## Using with an AI Agent
+
+Because `fmodata` is a standard shell tool that reads from environment variables and writes JSON to stdout, it works as a natural tool for AI coding agents (Claude Code, Claude Desktop with MCP, custom agents built on the Claude API, etc.).
+
+### Claude Code
+
+If your project has `@proofkit/fmodata` installed, Claude Code can run `fmodata` commands directly in the terminal during a conversation. Set your credentials in the environment first:
+
+```bash
+export FM_SERVER=https://fm.example.com
+export FM_DATABASE=MyApp.fmp12
+export OTTO_API_KEY=otto_...
+```
+
+Then just describe what you want in plain language:
+
+> "List the first 5 records from the `contacts` table and show me which fields are available."
+
+Claude will run something like:
+
+```bash
+fmodata query list --table contacts --top 5
+```
+
+…and use the JSON output to reason about the schema and answer your question.
+
+### MCP Tool Server
+
+You can expose `fmodata` as a set of MCP tools so any MCP-compatible host (Claude Desktop, IDEs, custom agents) can call FileMaker operations directly. Create an MCP server that shells out to the CLI:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { execFileSync } from "node:child_process";
+import { z } from "zod";
+
+const server = new McpServer({ name: "fmodata", version: "1.0.0" });
+
+server.tool(
+  "query_list",
+  "List records from a FileMaker table",
+  {
+    table: z.string().describe("Table name"),
+    where: z.string().optional().describe("OData $filter expression"),
+    top: z.number().optional().describe("Max records to return"),
+  },
+  async ({ table, where, top }) => {
+    const args = ["query", "list", "--table", table];
+    if (where) args.push("--where", where);
+    if (top) args.push("--top", String(top));
+
+    const output = execFileSync("fmodata", args, { encoding: "utf8" });
+    return { content: [{ type: "text", text: output }] };
+  },
+);
+
+server.tool(
+  "run_script",
+  "Execute a FileMaker script",
+  {
+    scriptName: z.string(),
+    param: z.string().optional().describe("Script parameter as JSON"),
+  },
+  async ({ scriptName, param }) => {
+    const args = ["script", "run", scriptName];
+    if (param) args.push("--param", param);
+
+    const output = execFileSync("fmodata", args, { encoding: "utf8" });
+    return { content: [{ type: "text", text: output }] };
+  },
+);
+```
+
+<Callout type="info" title="Why the CLI is a good MCP tool boundary">
+Each `fmodata` command is atomic, stateless, and returns clean JSON — exactly the shape MCP tools expect. The agent never needs to understand OData internals; it just passes field names and filter strings as arguments.
+</Callout>
+
+### Giving an Agent Context
+
+The more context an agent has about your database, the more useful it can be. Provide a brief schema description alongside the CLI:
+
+```
+You have access to the `fmodata` CLI connected to our production FileMaker database.
+
+Key tables:
+- contacts  (name, email, phone, status, id_company)
+- companies (name, industry, arr, id_owner)
+- deals     (title, stage, amount, close_date, id_contact)
+
+Use `fmodata metadata tables` to list all tables.
+Use `fmodata query list --table <name> --top 1` to inspect a table's fields.
+OData filter syntax: eq, ne, lt, gt, contains(), startswith()
+```
+
+### Safety Considerations
+
+<Callout type="warning" title="Scope what the agent can do">
+Grant agents only the permissions they need:
+
+- **Read-only tasks**: restrict to `query list`, `metadata get/tables`
+- **Automation tasks**: allow `query insert/update` and `script run`
+- **Schema changes**: keep `schema create-table` and `schema add-fields` behind a human approval step — the `--confirm` flag exists specifically to make this easy to enforce
+</Callout>

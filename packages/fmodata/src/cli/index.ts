@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { makeMetadataCommand } from "./commands/metadata";
-import { makeQueryCommand } from "./commands/query";
+import { makeRecordsCommand } from "./commands/query";
 import { makeSchemaCommand } from "./commands/schema";
 import { makeScriptCommand } from "./commands/script";
 import { makeWebhookCommand } from "./commands/webhook";
@@ -20,7 +20,7 @@ program
   .option("--api-key <key>", `OttoFMS API key [env: ${ENV_NAMES.apiKey}]`)
   .option("--pretty", "Output as table (default: JSON)", false);
 
-program.addCommand(makeQueryCommand());
+program.addCommand(makeRecordsCommand());
 program.addCommand(makeScriptCommand());
 program.addCommand(makeWebhookCommand());
 program.addCommand(makeMetadataCommand());

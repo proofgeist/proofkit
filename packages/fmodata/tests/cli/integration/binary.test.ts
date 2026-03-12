@@ -26,12 +26,12 @@ describe("CLI binary integration", () => {
     expect(output).toContain("Usage");
   });
 
-  it("fmodata query --help shows query subcommands", () => {
+  it("fmodata records --help shows records subcommands", () => {
     if (!existsSync(CLI_PATH)) {
       console.warn("Skipping: CLI binary not built");
       return;
     }
-    const output = execSync(`node ${CLI_PATH} query --help`, { encoding: "utf8" });
+    const output = execSync(`node ${CLI_PATH} records --help`, { encoding: "utf8" });
     expect(output).toContain("list");
     expect(output).toContain("insert");
     expect(output).toContain("update");

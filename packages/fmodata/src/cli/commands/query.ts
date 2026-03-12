@@ -30,8 +30,8 @@ function buildQueryString(params: {
   return parts.length > 0 ? `?${parts.join("&")}` : "";
 }
 
-export function makeQueryCommand(): Command {
-  const query = new Command("query").description("FileMaker OData query operations");
+export function makeRecordsCommand(): Command {
+  const query = new Command("records").description("FileMaker record operations (list, insert, update, delete)");
 
   query
     .command("list")

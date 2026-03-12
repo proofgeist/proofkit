@@ -77,21 +77,21 @@ Errors are written to **stderr** and the process exits with code `1`.
 
 ## Commands
 
-### `query`
+### `records`
 
 CRUD operations against any table.
 
-#### `query list`
+#### `records list`
 
 Fetch records from a table.
 
 ```bash
-fmodata query list --table contacts
-fmodata query list --table contacts --top 10 --skip 20
-fmodata query list --table contacts --select "name,email"
-fmodata query list --table contacts --where "name eq 'Alice'"
-fmodata query list --table contacts --order-by "name:asc"
-fmodata query list --table contacts --order-by "createdAt:desc,name:asc"
+fmodata records list --table contacts
+fmodata records list --table contacts --top 10 --skip 20
+fmodata records list --table contacts --select "name,email"
+fmodata records list --table contacts --where "name eq 'Alice'"
+fmodata records list --table contacts --order-by "name:asc"
+fmodata records list --table contacts --order-by "createdAt:desc,name:asc"
 ```
 
 | Option | Description |
@@ -103,12 +103,12 @@ fmodata query list --table contacts --order-by "createdAt:desc,name:asc"
 | `--where <expr>` | OData `$filter` expression |
 | `--order-by <field>` | `field:asc` or `field:desc`, comma-separated for multi-sort |
 
-#### `query insert`
+#### `records insert`
 
 Insert a single record.
 
 ```bash
-fmodata query insert --table contacts --data '{"name":"Alice","email":"alice@example.com"}'
+fmodata records insert --table contacts --data '{"name":"Alice","email":"alice@example.com"}'
 ```
 
 | Option | Description |
@@ -116,12 +116,12 @@ fmodata query insert --table contacts --data '{"name":"Alice","email":"alice@exa
 | `--table <name>` | **Required.** Target table |
 | `--data <json>` | **Required.** Record fields as a JSON object |
 
-#### `query update`
+#### `records update`
 
 Update records matching a filter (or all records if `--where` is omitted).
 
 ```bash
-fmodata query update \
+fmodata records update \
   --table contacts \
   --data '{"status":"inactive"}' \
   --where "lastLogin lt 2024-01-01"
@@ -133,12 +133,12 @@ fmodata query update \
 | `--data <json>` | **Required.** Fields to update as a JSON object |
 | `--where <expr>` | OData `$filter` expression (omit to update all rows) |
 
-#### `query delete`
+#### `records delete`
 
 Delete records matching a filter.
 
 ```bash
-fmodata query delete --table contacts --where "status eq 'archived'"
+fmodata records delete --table contacts --where "status eq 'archived'"
 ```
 
 | Option | Description |
@@ -382,7 +382,7 @@ Then just describe what you want in plain language:
 Claude will run something like:
 
 ```bash
-fmodata query list --table contacts --top 5
+fmodata records list --table contacts --top 5
 ```
 
 …and use the JSON output to reason about the schema and answer your question.
@@ -407,7 +407,7 @@ server.tool(
     top: z.number().optional().describe("Max records to return"),
   },
   async ({ table, where, top }) => {
-    const args = ["query", "list", "--table", table];
+    const args = ["records", "list", "--table", table];
     if (where) args.push("--where", where);
     if (top) args.push("--top", String(top));
 
@@ -450,7 +450,7 @@ Key tables:
 - deals     (title, stage, amount, close_date, id_contact)
 
 Use `fmodata metadata tables` to list all tables.
-Use `fmodata query list --table <name> --top 1` to inspect a table's fields.
+Use `fmodata records list --table <name> --top 1` to inspect a table's fields.
 OData filter syntax: eq, ne, lt, gt, contains(), startswith()
 ```
 
@@ -459,7 +459,7 @@ OData filter syntax: eq, ne, lt, gt, contains(), startswith()
 <Callout type="warning" title="Scope what the agent can do">
 Grant agents only the permissions they need:
 
-- **Read-only tasks**: restrict to `query list`, `metadata get/tables`
-- **Automation tasks**: allow `query insert/update` and `script run`
+- **Read-only tasks**: restrict to `records list`, `metadata get/tables`
+- **Automation tasks**: allow `records insert/update` and `script run`
 - **Schema changes**: keep `schema create-table` and `schema add-fields` behind a human approval step — the `--confirm` flag exists specifically to make this easy to enforce
 </Callout>

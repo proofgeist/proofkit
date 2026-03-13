@@ -368,7 +368,7 @@ importers:
         version: 11.0.0-rc.441(@trpc/server@11.0.0-rc.441)
       '@trpc/next':
         specifier: 11.0.0-rc.441
-        version: 11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        version: 11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@trpc/react-query':
         specifier: 11.0.0-rc.441
         version: 11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -413,7 +413,7 @@ importers:
         version: 16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next-auth:
         specifier: ^4.24.13
-        version: 4.24.13(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        version: 4.24.13(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       postgres:
         specifier: ^3.4.8
         version: 3.4.8
@@ -523,6 +523,9 @@ importers:
       '@fetchkit/ffetch':
         specifier: ^4.2.0
         version: 4.2.0
+      cli-table3:
+        specifier: ^0.6.5
+        version: 0.6.5
       commander:
         specifier: ^14.0.2
         version: 14.0.2
@@ -551,9 +554,6 @@ importers:
       '@types/node':
         specifier: ^22.19.5
         version: 22.19.5
-      cli-table3:
-        specifier: ^0.6.5
-        version: 0.6.5
       fast-xml-parser:
         specifier: ^5.3.3
         version: 5.3.3
@@ -5522,6 +5522,7 @@ packages:
   glob@11.1.0:
     resolution: {integrity: sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw==}
     engines: {node: 20 || >=22}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   globby@11.1.0:
@@ -11059,7 +11060,7 @@ snapshots:
     dependencies:
       '@trpc/server': 11.0.0-rc.441
 
-  '@trpc/next@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+  '@trpc/next@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@trpc/client': 11.0.0-rc.441(@trpc/server@11.0.0-rc.441)
       '@trpc/server': 11.0.0-rc.441
@@ -14113,7 +14114,7 @@ snapshots:
     optionalDependencies:
       '@rollup/rollup-linux-x64-gnu': 4.55.1
 
-  next-auth@4.24.13(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  next-auth@4.24.13(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
       '@babel/runtime': 7.28.4
       '@panva/hkdf': 1.2.1

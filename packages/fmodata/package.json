@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@fetchkit/ffetch": "^4.2.0",
+    "cli-table3": "^0.6.5",
     "commander": "^14.0.2",
     "dotenv": "^16.6.1",
     "es-toolkit": "^1.43.0",
@@ -60,7 +61,6 @@
     "@standard-schema/spec": "^1.1.0",
     "@tanstack/vite-config": "^0.2.1",
     "@types/node": "^22.19.5",
-    "cli-table3": "^0.6.5",
     "fast-xml-parser": "^5.3.3",
     "publint": "^0.3.16",
     "tsdown": "^0.14.2",

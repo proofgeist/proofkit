@@ -12,10 +12,18 @@ function buildQueryString(params: {
   orderBy?: string;
 }): string {
   const parts: string[] = [];
-  if (params.top !== undefined) parts.push(`$top=${params.top}`);
-  if (params.skip !== undefined) parts.push(`$skip=${params.skip}`);
-  if (params.select) parts.push(`$select=${params.select}`);
-  if (params.where) parts.push(`$filter=${params.where}`);
+  if (params.top !== undefined) {
+    parts.push(`$top=${encodeURIComponent(String(params.top))}`);
+  }
+  if (params.skip !== undefined) {
+    parts.push(`$skip=${encodeURIComponent(String(params.skip))}`);
+  }
+  if (params.select) {
+    parts.push(`$select=${encodeURIComponent(params.select)}`);
+  }
+  if (params.where) {
+    parts.push(`$filter=${encodeURIComponent(params.where)}`);
+  }
   if (params.orderBy) {
     // Accept "field:asc" or "field:desc" or plain "field"
     const orderStr = params.orderBy
@@ -25,7 +33,7 @@ function buildQueryString(params: {
         return dir ? `${field} ${dir}` : field;
       })
       .join(",");
-    parts.push(`$orderby=${orderStr}`);
+    parts.push(`$orderby=${encodeURIComponent(orderStr)}`);
   }
   return parts.length > 0 ? `?${parts.join("&")}` : "";
 }
@@ -54,7 +62,9 @@ export function makeRecordsCommand(): Command {
           orderBy: opts.orderBy as string | undefined,
         });
         const result = await db._makeRequest<{ value: unknown[] }>(`/${opts.table}${qs}`);
-        if (result.error) throw result.error;
+        if (result.error) {
+          throw result.error;
+        }
         printResult(result.data.value ?? result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
@@ -80,7 +90,9 @@ export function makeRecordsCommand(): Command {
           method: "POST",
           body: JSON.stringify(data),
         });
-        if (result.error) throw result.error;
+        if (result.error) {
+          throw result.error;
+        }
         printResult(result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
@@ -103,12 +115,14 @@ export function makeRecordsCommand(): Command {
         } catch {
           throw new Error("--data must be a valid JSON object");
         }
-        const qs = opts.where ? `?$filter=${opts.where}` : "";
+        const qs = buildQueryString({ where: opts.where as string | undefined });
         const result = await db._makeRequest<unknown>(`/${opts.table}${qs}`, {
           method: "PATCH",
           body: JSON.stringify(data),
         });
-        if (result.error) throw result.error;
+        if (result.error) {
+          throw result.error;
+        }
         printResult(result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);
@@ -124,11 +138,13 @@ export function makeRecordsCommand(): Command {
       const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
         const { db } = buildConnection(globalOpts);
-        const qs = opts.where ? `?$filter=${opts.where}` : "";
+        const qs = buildQueryString({ where: opts.where as string | undefined });
         const result = await db._makeRequest<unknown>(`/${opts.table}${qs}`, {
           method: "DELETE",
         });
-        if (result.error) throw result.error;
+        if (result.error) {
+          throw result.error;
+        }
         printResult(result.data, { pretty: globalOpts.pretty ?? false });
       } catch (err) {
         handleCliError(err);

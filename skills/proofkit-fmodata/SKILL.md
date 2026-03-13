@@ -225,6 +225,8 @@ Key behaviors:
 - Output is **JSON** by default; `--pretty` renders an ASCII table
 - Errors go to **stderr**, exit code 1
 - `schema create-table` / `schema add-fields` are **dry-run** without `--confirm`
+- Auth precedence: `--api-key` / `OTTO_API_KEY` wins over username/password auth; if API key is present, missing `FM_PASSWORD` does not block auth
+- Query option values for `--select`, `--where`, and `--order-by` are URL-encoded before request dispatch
 
 For AI agent usage, MCP tool wrapping, and full option tables see the docs:
 - `https://proofkit.dev/llms/fmodata` (search for "CLI")

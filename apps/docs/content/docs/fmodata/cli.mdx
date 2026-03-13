@@ -37,7 +37,7 @@ All commands share the same global connection options. Each flag has an environm
 | `--api-key <key>` | `OTTO_API_KEY` | OttoFMS API key (preferred over username/password) |
 
 <Callout type="info" title="Auth priority">
-When both `--api-key` and `--username` are present, the API key is used.
+When both `--api-key` and `--username` are present, the API key is used. If an API key is present, missing `FM_PASSWORD` does not block authentication.
 </Callout>
 
 **Example — using environment variables:**
@@ -102,6 +102,10 @@ fmodata records list --table contacts --order-by "createdAt:desc,name:asc"
 | `--select <fields>` | Comma-separated field names |
 | `--where <expr>` | OData `$filter` expression |
 | `--order-by <field>` | `field:asc` or `field:desc`, comma-separated for multi-sort |
+
+<Callout type="info" title="Query argument encoding">
+Values passed to `--select`, `--where`, and `--order-by` are URL-encoded by the CLI before sending the request.
+</Callout>
 
 #### `records insert`
 

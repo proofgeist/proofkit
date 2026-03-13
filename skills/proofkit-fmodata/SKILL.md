@@ -1,6 +1,6 @@
 ---
 name: proofkit-fmodata
-description: Type-safe FileMaker OData client with Drizzle-inspired ORM and TypeScript code generation. Use when working with FileMaker databases in TypeScript projects, querying FM data, defining typed schemas, generating types from FM layouts, or troubleshooting fmodata/typegen issues. Triggers on FileMaker + TypeScript integration tasks.
+description: Type-safe FileMaker OData client with Drizzle-inspired ORM, TypeScript code generation, and a CLI binary. Use when working with FileMaker databases in TypeScript projects, querying FM data, defining typed schemas, generating types from FM layouts, scripting FM operations from the shell or CI, or troubleshooting fmodata/typegen issues.
 ---
 
 # ProofKit FMOData
@@ -194,6 +194,40 @@ if (result.error) {
 - Add `.top(n)` to limit results
 - Use `.select()` to fetch only needed fields
 - Avoid expanding large related record sets
+
+## CLI (`fmodata` binary)
+
+`@proofkit/fmodata` ships a `fmodata` binary for shell scripting, CI pipelines, and one-off operations. All commands accept `--server/--database/--api-key` flags or the same env vars used by the library (`FM_SERVER`, `FM_DATABASE`, `OTTO_API_KEY` / `FM_USERNAME` + `FM_PASSWORD`).
+
+```bash
+# Quick reference
+fmodata records list   --table <name> [--top N] [--skip N] [--select f1,f2] [--where <expr>] [--order-by field:asc]
+fmodata records insert --table <name> --data '<json>'
+fmodata records update --table <name> --data '<json>' [--where <expr>]
+fmodata records delete --table <name> [--where <expr>]
+
+fmodata script run <scriptName> [--param '<json>']
+
+fmodata webhook list
+fmodata webhook get <id>
+fmodata webhook add  --table <name> --url <url> [--select f1,f2] [--header k=v ...]
+fmodata webhook remove <id>
+
+fmodata metadata get    [--format json|xml]
+fmodata metadata tables
+
+fmodata schema list-tables
+fmodata schema create-table --name <name> --fields '<json>' [--confirm]
+fmodata schema add-fields   --table <name> --fields '<json>' [--confirm]
+```
+
+Key behaviors:
+- Output is **JSON** by default; `--pretty` renders an ASCII table
+- Errors go to **stderr**, exit code 1
+- `schema create-table` / `schema add-fields` are **dry-run** without `--confirm`
+
+For AI agent usage, MCP tool wrapping, and full option tables see the docs:
+- `https://proofkit.dev/llms/fmodata` (search for "CLI")
 
 ## References
 

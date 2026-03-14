@@ -4,8 +4,10 @@ import { buildConnection } from "../utils/connection";
 import { handleCliError } from "../utils/errors";
 import { printResult } from "../utils/output";
 
+const WEBHOOK_ID_RE = /^\d+$/;
+
 function parseWebhookId(id: string): number {
-  if (!/^\d+$/.test(id)) {
+  if (!WEBHOOK_ID_RE.test(id)) {
     throw new Error(`Invalid webhook ID: "${id}" — must be a positive integer`);
   }
   return Number(id);

@@ -34,14 +34,19 @@ export function makeSchemaCommand(): Command {
         let fields: Field[];
         try {
           const parsed: unknown = JSON.parse(opts.fields);
-          if (!Array.isArray(parsed)) throw new Error();
+          if (!Array.isArray(parsed)) {
+            throw new Error("invalid");
+          }
           fields = parsed as Field[];
         } catch {
           throw new Error("--fields must be a valid JSON array");
         }
 
         if (!opts.confirm) {
-          printResult({ dryRun: true, action: "create-table", tableName: opts.name, fields }, { pretty: globalOpts.pretty ?? false });
+          printResult(
+            { dryRun: true, action: "create-table", tableName: opts.name, fields },
+            { pretty: globalOpts.pretty ?? false },
+          );
           return;
         }
 
@@ -65,14 +70,19 @@ export function makeSchemaCommand(): Command {
         let fields: Field[];
         try {
           const parsed: unknown = JSON.parse(opts.fields);
-          if (!Array.isArray(parsed)) throw new Error();
+          if (!Array.isArray(parsed)) {
+            throw new Error("invalid");
+          }
           fields = parsed as Field[];
         } catch {
           throw new Error("--fields must be a valid JSON array");
         }
 
         if (!opts.confirm) {
-          printResult({ dryRun: true, action: "add-fields", tableName: opts.table, fields }, { pretty: globalOpts.pretty ?? false });
+          printResult(
+            { dryRun: true, action: "add-fields", tableName: opts.table, fields },
+            { pretty: globalOpts.pretty ?? false },
+          );
           return;
         }
 

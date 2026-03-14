@@ -85,7 +85,7 @@ export function makeRecordsCommand(): Command {
         try {
           const parsed: unknown = JSON.parse(opts.data);
           if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-            throw new Error();
+            throw new Error("invalid");
           }
           data = parsed as Record<string, unknown>;
         } catch {
@@ -119,7 +119,7 @@ export function makeRecordsCommand(): Command {
         try {
           const parsed: unknown = JSON.parse(opts.data);
           if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-            throw new Error();
+            throw new Error("invalid");
           }
           data = parsed as Record<string, unknown>;
         } catch {

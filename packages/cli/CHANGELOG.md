@@ -1,5 +1,12 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.21
+
+### Patch Changes
+
+- Updated dependencies [2df365d]
+  - @proofkit/typegen@1.1.0-beta.16
+
 ## 2.0.0-beta.20
 
 ### Patch Changes

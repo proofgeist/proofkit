@@ -1,5 +1,14 @@
 # @proofkit/better-auth
 
+## 0.4.0-beta.8
+
+### Patch Changes
+
+- Updated dependencies [78a9f70]
+- Updated dependencies [de21bbe]
+- Updated dependencies [1acca57]
+  - @proofkit/fmodata@0.1.0-beta.32
+
 ## 0.4.0-beta.7
 
 ### Minor Changes

@@ -1,5 +1,26 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.32
+
+### Minor Changes
+
+- 78a9f70: Add CLI binary with commands for records, schema, metadata, scripts, and webhooks
+
+  - New `fmodata` command-line interface for database operations
+  - Records command: Query, create, update, delete FileMaker records
+  - Schema command: Inspect and manage database schema
+  - Metadata command: Access FileMaker metadata and system information
+  - Scripts command: Execute FileMaker scripts
+  - Webhooks command: Manage webhook subscriptions and configuration
+
+- de21bbe: Add select("all") to override defaultSelect on a per-query basis
+
+### Patch Changes
+
+- 1acca57: Update docs AI agent integration instructions
+
+  Updated quick-start and index docs to reference npx @tanstack/intent@latest instead of npx skills
+
 ## 0.1.0-beta.31
 
 ### Minor Changes

@@ -1,5 +1,2 @@
 # mdx
 *.mdx linguist-detectable=false
-
-# Use bd merge for beads JSONL files
-.beads/issues.jsonl merge=beads

@@ -112,6 +112,12 @@ describe("fmodata", () => {
       expect(query2).toBeDefined();
       expect(query3).toBeDefined();
 
+      // select("all") should be accepted and return full schema type
+      const allQuery = entitySet.list().select("all");
+      expectTypeOf(allQuery.execute).returns.resolves.toMatchTypeOf<{
+        data: { id: string; name: string | null; email: string | null; age: number | null }[] | undefined;
+      }>();
+
       // These should be TypeScript errors - fields not in schema
       const _typeChecks = () => {
         // @ts-expect-error - should pass an object
@@ -120,9 +126,9 @@ describe("fmodata", () => {
         entitySet.list().select("");
         // @ts-expect-error - should pass an object with column references
         entitySet.list().select({ invalidField: true });
+        // @ts-expect-error - column must be from the correct table
         entitySet.list().select({
           age: users.age,
-          // @ts-expect-error - column must be from the correct table
           name: contacts.name,
         });
       };
@@ -188,9 +194,9 @@ describe("fmodata", () => {
         entitySet.list().select("");
         // @ts-expect-error - should pass an object with column references
         entitySet.list().select({ invalidField: true });
+        // @ts-expect-error - column must be from the correct table
         entitySet.list().select({
           anyName: products.productName,
-          // @ts-expect-error - column must be from the correct table
           name: contacts.name,
         });
       };

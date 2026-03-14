@@ -47,9 +47,3 @@ function printTable(data: unknown): void {
   // Fallback — just print as JSON
   console.log(JSON.stringify(data, null, 2));
 }
-
-export function printError(err: unknown): void {
-  const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`Error: ${message}\n`);
-  process.exit(1);
-}

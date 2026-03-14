@@ -166,7 +166,7 @@ export class QueryBuilder<
     newBuilder.singleMode = (changes.singleMode ?? this.singleMode) as any;
     // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
     newBuilder.isCountMode = (changes.isCountMode ?? this.isCountMode) as any;
-    newBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
+    newBuilder.fieldMapping = "fieldMapping" in changes ? changes.fieldMapping : this.fieldMapping;
     newBuilder.systemColumns = changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns;
     // Copy navigation metadata
     newBuilder.navigation = this.navigation;
@@ -175,7 +175,7 @@ export class QueryBuilder<
   }
 
   /**
-   * Select fields using column references.
+   * Select fields using column references, or pass "all" to clear any defaultSelect and fetch all fields.
    * Allows renaming fields by using different keys in the object.
    * Container fields cannot be selected and will cause a type error.
    *
@@ -192,10 +192,25 @@ export class QueryBuilder<
    *   { ROWID: true, ROWMODID: true }
    * )
    *
-   * @param fields - Object mapping output keys to column references (container fields excluded)
+   * @example
+   * // Override defaultSelect to fetch all fields
+   * db.from(users).list().select("all")
+   *
+   * @param fields - Object mapping output keys to column references (container fields excluded), or "all" to select all fields
    * @param systemColumns - Optional object to request system columns (ROWID, ROWMODID)
    * @returns QueryBuilder with updated selected fields
    */
+  select(
+    fields: "all",
+  ): QueryBuilder<
+    Occ,
+    keyof InferSchemaOutputFromFMTable<Occ>,
+    SingleMode,
+    IsCount,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    undefined
+  >;
   select<
     // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     TSelect extends Record<string, Column<any, any, ExtractTableName<Occ>, false>>,
@@ -204,7 +219,20 @@ export class QueryBuilder<
   >(
     fields: TSelect,
     systemColumns?: TSystemCols,
-  ): QueryBuilder<Occ, TSelect, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, TSystemCols> {
+  ): QueryBuilder<Occ, TSelect, SingleMode, IsCount, Expands, DatabaseIncludeSpecialColumns, TSystemCols>;
+  // biome-ignore lint/suspicious/noExplicitAny: Implementation signature hidden from callers
+  select(fields: any, systemColumns?: any): any {
+    if (fields === "all") {
+      return this.cloneWithChanges({
+        queryOptions: {
+          select: undefined,
+        },
+        fieldMapping: undefined,
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
+        systemColumns: undefined as any,
+      });
+    }
+
     const tableName = getTableName(this.occurrence);
     const { selectedFields, fieldMapping } = processSelectWithRenames(fields, tableName, this.logger);
 

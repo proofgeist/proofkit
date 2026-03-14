@@ -117,12 +117,13 @@ describe("navigate", () => {
     // contacts -> invoices navigation
     const invoiceQuery = db.from(contacts).navigate(invoices).list();
     expectTypeOf(invoiceQuery.select).parameter(0).not.toEqualTypeOf<string>();
+    // valid fields from navigated table should work
     invoiceQuery.select({
       invoiceNumber: invoices.invoiceNumber,
       total: invoices.total,
-      // @ts-expect-error - not valid since we navigated to invoices, not contacts
-      other: contacts.name,
     });
+    // @ts-expect-error - contacts.name not valid for invoices table
+    invoiceQuery.select({ other: contacts.name });
 
     // invoices -> lineItems navigation
     const lineItemsQuery = db.from(invoices).navigate(lineItems).list();

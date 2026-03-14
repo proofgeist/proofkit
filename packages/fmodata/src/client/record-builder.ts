@@ -207,8 +207,8 @@ export class RecordBuilder<
 
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     const mutableBuilder = newBuilder as any;
-    mutableBuilder.selectedFields = changes.selectedFields ?? this.selectedFields;
-    mutableBuilder.fieldMapping = changes.fieldMapping ?? this.fieldMapping;
+    mutableBuilder.selectedFields = "selectedFields" in changes ? changes.selectedFields : this.selectedFields;
+    mutableBuilder.fieldMapping = "fieldMapping" in changes ? changes.fieldMapping : this.fieldMapping;
     mutableBuilder.systemColumns = changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns;
     mutableBuilder.expandConfigs = [...this.expandConfigs];
     // Preserve navigation context
@@ -266,7 +266,7 @@ export class RecordBuilder<
   }
 
   /**
-   * Select fields using column references.
+   * Select fields using column references, or pass "all" to clear any defaultSelect and fetch all fields.
    * Allows renaming fields by using different keys in the object.
    * Container fields cannot be selected and will cause a type error.
    *
@@ -283,10 +283,25 @@ export class RecordBuilder<
    *   { ROWID: true, ROWMODID: true }
    * )
    *
-   * @param fields - Object mapping output keys to column references (container fields excluded)
+   * @example
+   * // Override defaultSelect to fetch all fields
+   * db.from(contacts).get("uuid").select("all")
+   *
+   * @param fields - Object mapping output keys to column references (container fields excluded), or "all" to select all fields
    * @param systemColumns - Optional object to request system columns (ROWID, ROWMODID)
    * @returns RecordBuilder with updated selected fields
    */
+  select(
+    fields: "all",
+  ): RecordBuilder<
+    Occ,
+    false,
+    FieldColumn,
+    keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+    Expands,
+    DatabaseIncludeSpecialColumns,
+    undefined
+  >;
   select<
     // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
     TSelect extends Record<string, Column<any, any, ExtractTableName<Occ>, false>>,
@@ -294,7 +309,18 @@ export class RecordBuilder<
   >(
     fields: TSelect,
     systemColumns?: TSystemCols,
-  ): RecordBuilder<Occ, false, FieldColumn, TSelect, Expands, DatabaseIncludeSpecialColumns, TSystemCols> {
+  ): RecordBuilder<Occ, false, FieldColumn, TSelect, Expands, DatabaseIncludeSpecialColumns, TSystemCols>;
+  // biome-ignore lint/suspicious/noExplicitAny: Implementation signature hidden from callers
+  select(fields: any, systemColumns?: any): any {
+    if (fields === "all") {
+      return this.cloneWithChanges({
+        selectedFields: undefined,
+        fieldMapping: undefined,
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
+        systemColumns: undefined as any,
+      });
+    }
+
     const tableName = getTableName(this.table);
     const { selectedFields, fieldMapping } = processSelectWithRenames(fields, tableName, this.logger);
 

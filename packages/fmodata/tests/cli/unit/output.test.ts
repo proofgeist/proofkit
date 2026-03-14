@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { printError, printResult } from "../../../src/cli/utils/output";
+import { printResult } from "../../../src/cli/utils/output";
 
 describe("printResult", () => {
   let stdoutSpy: ReturnType<typeof vi.spyOn>;
@@ -48,21 +48,5 @@ describe("printResult", () => {
     expect(output).toContain("a");
     expect(output).toContain("b");
     expect(output).toContain("c");
-  });
-});
-
-describe("printError", () => {
-  it("writes to stderr and exits", () => {
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called");
-    });
-
-    expect(() => printError(new Error("something went wrong"))).toThrow("process.exit called");
-    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("something went wrong"));
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    stderrSpy.mockRestore();
-    exitSpy.mockRestore();
   });
 });

@@ -66,6 +66,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@tanstack/intent": "^0.0.19",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.19.5",
     "@upstash/redis": "^1.36.1",
@@ -84,7 +85,10 @@
     "dist-browser",
     "tokenStore",
     "utils",
-    "stubs"
+    "stubs",
+    "skills",
+    "bin",
+    "!skills/_artifacts"
   ],
   "keywords": [
     "filemaker",
@@ -95,6 +99,10 @@
     "fmrest",
     "fmdapi",
     "proofgeist",
-    "fm-dapi"
-  ]
+    "fm-dapi",
+    "tanstack-intent"
+  ],
+  "bin": {
+    "intent": "./bin/intent.js"
+  }
 }

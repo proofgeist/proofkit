@@ -1,0 +1,362 @@
+---
+name: odata-query-optimization
+description: >
+  OData performance patterns for @proofkit/fmodata. Covers defaultSelect schema vs all,
+  select() for minimal field fetching, select("all") override, pagination with top/skip,
+  default 1000 record limit, batch operations for reducing round trips, entity IDs FMFID
+  FMTID for rename resilience, null field query performance, getQueryString() debugging,
+  relationship query performance testing, FileMaker OData optimization, avoiding OData
+  service overload during testing.
+type: core
+library: proofkit
+library_version: "0.1.0-beta.31"
+requires:
+  - fmodata-client
+sources:
+  - "proofgeist/proofkit:packages/fmodata/src/client/builders/query-builder.ts"
+  - "proofgeist/proofkit:packages/fmodata/src/client/entity-set.ts"
+  - "proofgeist/proofkit:packages/fmodata/src/orm/table.ts"
+  - "proofgeist/proofkit:apps/docs/content/docs/fmodata/*.mdx"
+---
+
+## Setup
+
+This skill assumes a working fmodata client (see fmodata-client). Optimization starts at the schema level with `defaultSelect` and continues per-query with `select()`.
+
+### defaultSelect on schema
+
+```ts
+import { fmTableOccurrence, textField, numberField } from "@proofkit/fmodata";
+
+// "schema" (default) — only fetches fields defined in the schema via $select
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey().entityId("FMFID:12039485"),
+  name: textField().notNull().entityId("FMFID:34323433"),
+  email: textField().entityId("FMFID:12232424"),
+  age: numberField().entityId("FMFID:43234355"),
+}, {
+  defaultSelect: "schema", // default — adds $select with all schema fields
+  entityId: "FMTID:12432533",
+});
+
+// "all" — no $select applied, FileMaker returns every field on the layout
+const usersAll = fmTableOccurrence("users", {
+  id: textField().primaryKey(),
+  name: textField().notNull(),
+}, {
+  defaultSelect: "all", // slower: returns all layout fields, not just schema fields
+});
+```
+
+### Per-query select override
+
+```ts
+// Override defaultSelect for a single query — fetch only what you need
+const result = await db.from(users).list()
+  .select({ name: users.name, email: users.email })
+  .execute();
+
+// Override defaultSelect:"schema" to fetch all fields for this query
+const result = await db.from(users).list()
+  .select("all")
+  .execute();
+```
+
+## Core Patterns
+
+### 1. Selective fetching with select()
+
+Fewer fields = smaller response = faster queries. Always prefer explicit `select()` when you need a subset of fields.
+
+```ts
+// Fetch only 2 fields instead of all schema fields
+const result = await db.from(users).list()
+  .select({ name: users.name, email: users.email })
+  .execute();
+
+// Rename fields in the result object
+const result = await db.from(users).list()
+  .select({ userName: users.name, userEmail: users.email })
+  .execute();
+// result.data[0].userName, result.data[0].userEmail
+
+// Exclude specific fields using destructuring + getTableColumns
+import { getTableColumns } from "@proofkit/fmodata";
+const { age, ...cols } = getTableColumns(users);
+const result = await db.from(users).list().select(cols).execute();
+```
+
+### 2. Pagination with top/skip/count
+
+`list()` applies `.top(1000)` by default. Override for smaller pages or to fetch more.
+
+```ts
+// Page 1: first 50 records
+const page1 = await db.from(users).list().top(50).skip(0).execute();
+
+// Page 2: next 50
+const page2 = await db.from(users).list().top(50).skip(50).execute();
+
+// Get total count (separate request, returns number)
+const countResult = await db.from(users).list().count().execute();
+// countResult.data === 1523
+
+// Fetch more than 1000 (override default limit)
+const allRecords = await db.from(users).list().top(5000).execute();
+```
+
+### 3. Batch operations for reducing round trips
+
+Combine multiple queries into a single HTTP request. Write operations are transactional.
+
+```ts
+const contactsQuery = db.from(contacts).list().top(5);
+const usersQuery = db.from(users).list().top(5);
+
+// Single HTTP request for both queries
+const result = await db.batch([contactsQuery, usersQuery]).execute();
+
+const [contactsResult, usersResult] = result.results;
+if (contactsResult.data) { /* ... */ }
+if (usersResult.data) { /* ... */ }
+
+// Mix reads and writes — writes are atomic
+const result = await db.batch([
+  db.from(contacts).list().top(10),
+  db.from(contacts).insert({ name: "Alice", email: "alice@example.com" }),
+  db.from(users).update({ active: true }).byId("user-123"),
+]).execute();
+```
+
+### 4. Entity IDs for rename resilience
+
+Entity IDs (FMTID/FMFID) prevent breakage when FileMaker fields or table occurrences are renamed.
+
+```ts
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey().entityId("FMFID:12039485"),
+  name: textField().notNull().entityId("FMFID:34323433"),
+}, {
+  entityId: "FMTID:12432533",
+});
+
+// Enable at database level
+const db = connection.database("MyDatabase", { useEntityIds: true });
+
+// Or per-request
+const result = await db.from(users).list().execute({ useEntityIds: true });
+```
+
+### 5. Debugging with getQueryString()
+
+Inspect the generated OData URL without executing the request.
+
+```ts
+import { eq, asc } from "@proofkit/fmodata";
+
+const queryString = db.from(users).list()
+  .select({ name: users.name, email: users.email })
+  .where(eq(users.active, true))
+  .orderBy(asc(users.name))
+  .top(10)
+  .getQueryString();
+
+console.log(queryString);
+// "/users?$select=name,email&$filter=active eq true&$orderby=name&$top=10"
+
+// View with entity IDs resolved to see what's actually sent
+const entityIdQuery = db.from(users).list()
+  .getQueryString({ useEntityIds: false });
+```
+
+## Common Mistakes
+
+### [HIGH] Not accounting for default 1000 record limit
+
+Wrong:
+```ts
+// Expects all 5000 records but only gets 1000
+const result = await db.from(users).list().execute();
+```
+
+Correct:
+```ts
+// Explicitly set top() to fetch more than 1000
+const result = await db.from(users).list().top(5000).execute();
+
+// Or paginate through results
+let allRecords = [];
+let skip = 0;
+const pageSize = 1000;
+while (true) {
+  const page = await db.from(users).list().top(pageSize).skip(skip).execute();
+  if (!page.data || page.data.length === 0) break;
+  allRecords.push(...page.data);
+  if (page.data.length < pageSize) break;
+  skip += pageSize;
+}
+```
+
+`list()` internally calls `.top(1000)` as a safety limit. If you need more records, override with an explicit `.top()` or paginate.
+
+Source: `packages/fmodata/src/client/entity-set.ts` (line 185), `packages/fmodata/src/client/query/query-builder.ts` (line 50)
+
+### [MEDIUM] includeSpecialColumns silently dropped with explicit select()
+
+Wrong:
+```ts
+const db = connection.database("MyDatabase", { includeSpecialColumns: true });
+
+// Expects ROWID and ROWMODID but they are silently excluded
+const result = await db.from(users).list()
+  .select({ name: users.name })
+  .execute();
+```
+
+Correct:
+```ts
+// Pass system columns as second argument to select()
+const result = await db.from(users).list()
+  .select(
+    { name: users.name },
+    { ROWID: true, ROWMODID: true }
+  )
+  .execute();
+
+// Or don't use select() — special columns appear when no $select is applied
+const result = await db.from(users).list().execute();
+```
+
+Per OData spec, special columns are only included when no `$select` query parameter is applied. Using `.select()` generates a `$select`, so special columns must be explicitly requested via the second argument.
+
+Source: `apps/docs/content/docs/fmodata/extra-properties.mdx`
+
+### [MEDIUM] Entity IDs on tables without configured IDs
+
+Wrong:
+```ts
+// Table has no entityId or fmfIds configured
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey(),
+  name: textField(),
+});
+
+// Throws immediately — no FMTID/FMFID available
+const result = await db.from(users).list().execute({ useEntityIds: true });
+```
+
+Correct:
+```ts
+// Configure entity IDs on the schema
+const users = fmTableOccurrence("users", {
+  id: textField().primaryKey().entityId("FMFID:12039485"),
+  name: textField().entityId("FMFID:34323433"),
+}, {
+  entityId: "FMTID:12432533",
+});
+
+// Now useEntityIds works
+const result = await db.from(users).list().execute({ useEntityIds: true });
+```
+
+Entity IDs require both a table-level `entityId` (FMTID) and per-field `.entityId()` (FMFID) to be set. Use `@proofkit/typegen` to generate these automatically.
+
+Source: `apps/docs/content/docs/fmodata/entity-ids.mdx`, `packages/fmodata/src/orm/table.ts`
+
+### [HIGH] Filtering on null fields causes severe performance degradation
+
+Wrong:
+```ts
+import { isNull } from "@proofkit/fmodata";
+
+// Extremely slow on large datasets — FileMaker OData handles null checks poorly
+const result = await db.from(users).list()
+  .where(isNull(users.deletedAt))
+  .execute();
+```
+
+Correct:
+```ts
+import { eq } from "@proofkit/fmodata";
+
+// Use a calc field in FileMaker that returns 1 when deletedAt is empty
+// e.g., IsEmpty(deletedAt) calc field → isActive
+const result = await db.from(users).list()
+  .where(eq(users.isActive, 1))
+  .execute();
+```
+
+FileMaker's OData implementation has severe performance issues when filtering on null/empty fields. Create a calculation field in FileMaker that evaluates the null condition and filter on that instead.
+
+Source: FileMaker OData performance testing (known limitation)
+
+### [HIGH] Overwhelming OData service during testing
+
+Wrong:
+```ts
+// Rapid-fire queries in a loop without any throttling
+for (const id of userIds) {
+  const result = await db.from(users).get(id).execute();
+  // ... process
+}
+```
+
+Correct:
+```ts
+// Use batch operations to reduce round trips
+const queries = userIds.map(id => db.from(users).get(id));
+const result = await db.batch(queries).execute();
+
+// Or paginate with reasonable page sizes and delays between pages
+for (let skip = 0; skip < total; skip += 100) {
+  const result = await db.from(users).list().top(100).skip(skip).execute();
+  // ... process page
+  await new Promise(resolve => setTimeout(resolve, 100)); // throttle
+}
+```
+
+Rapid sequential queries can degrade the FileMaker OData service. Use batch operations to combine multiple requests, and add throttling when iterating through large datasets during testing or migration.
+
+Source: FileMaker OData service behavior (known limitation)
+
+### [MEDIUM] Not testing relationship query performance
+
+Wrong:
+```ts
+// Assumes expand performance is predictable
+const result = await db.from(invoices).list()
+  .expand(lineItems)
+  .top(500)
+  .execute();
+```
+
+Correct:
+```ts
+// Test with small datasets first and measure performance
+const test = await db.from(invoices).list()
+  .expand(lineItems)
+  .top(10)
+  .execute();
+// Measure timing, then scale up cautiously
+
+// Debug the generated query
+const queryString = db.from(invoices).list()
+  .expand(lineItems)
+  .top(10)
+  .getQueryString();
+console.log(queryString);
+
+// Consider fetching related records separately if expand is too slow
+const invoiceResult = await db.from(invoices).list().top(100).execute();
+const lineItemResult = await db.from(lineItems).list()
+  .where(inArray(lineItems.invoiceId, invoiceIds))
+  .execute();
+```
+
+Relationship query performance via `expand()` is unpredictable in FileMaker's OData implementation. Always test with production-sized data. If performance is poor, fetch related records in separate queries or use batch operations.
+
+Source: FileMaker OData relationship performance (must be tested case-by-case)
+
+## References
+
+- **fmodata-client** — Client setup, connection configuration, database initialization. Understanding the client is prerequisite to applying these optimization patterns.

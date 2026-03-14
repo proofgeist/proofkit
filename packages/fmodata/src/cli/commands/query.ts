@@ -117,7 +117,7 @@ export function makeRecordsCommand(): Command {
       try {
         if (!(opts.where || opts.confirm)) {
           printResult(
-            { dryRun: true, action: "update", table: opts.table, affectsAllRows: true },
+            { dryRun: true, action: "update", table: opts.table, affectsAllRows: true, hint: "Add --where to filter or --confirm to update all records" },
             { pretty: globalOpts.pretty ?? false },
           );
           return;
@@ -159,7 +159,7 @@ export function makeRecordsCommand(): Command {
       try {
         if (!(opts.where || opts.confirm)) {
           printResult(
-            { dryRun: true, action: "delete", table: opts.table, affectsAllRows: true },
+            { dryRun: true, action: "delete", table: opts.table, affectsAllRows: true, hint: "Add --where to filter or --confirm to delete all records" },
             { pretty: globalOpts.pretty ?? false },
           );
           return;

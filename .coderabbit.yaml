@@ -11,4 +11,4 @@ reviews:
   poem: false
   high_level_summary: true
   path_filters:
-    - "!apps/demo/**" # exclude the demo app from reivews
+    - "!apps/demo/**" # exclude the demo app from reviews

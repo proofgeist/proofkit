@@ -2,15 +2,35 @@ import { type CodeBlockWriter, type SourceFile, VariableDeclarationKind } from "
 import { defaultEnvNames } from "./constants";
 import type { BuildSchemaArgs } from "./types";
 
+const defaultWebviewerScriptName = "execute_data_api";
+
+function normalizeScriptName(scriptName?: string) {
+  const normalized = scriptName?.trim();
+  return normalized ? normalized : undefined;
+}
+
+function getGeneratedWebviewerScriptName(args: Pick<BuildSchemaArgs, "webviewerScriptName" | "fmHttp">) {
+  const explicitWebviewerScriptName = normalizeScriptName(args.webviewerScriptName);
+  if (explicitWebviewerScriptName) {
+    return explicitWebviewerScriptName;
+  }
+  if (args.fmHttp) {
+    return normalizeScriptName(args.fmHttp.scriptName) ?? defaultWebviewerScriptName;
+  }
+  return undefined;
+}
+
 export function buildLayoutClient(sourceFile: SourceFile, args: BuildSchemaArgs) {
-  const { schemaName, portalSchema, envNames, type, webviewerScriptName, layoutName } = args;
+  const { schemaName, portalSchema, envNames, type, webviewerScriptName, fmHttp, layoutName } = args;
+  const generatedWebviewerScriptName = getGeneratedWebviewerScriptName({ webviewerScriptName, fmHttp });
+  const usesWebviewerAdapter = generatedWebviewerScriptName !== undefined;
 
   const fmdapiImport = sourceFile.addImportDeclaration({
     moduleSpecifier: "@proofkit/fmdapi",
     namedImports: ["DataApi"],
   });
   const hasPortals = (portalSchema ?? []).length > 0;
-  if (webviewerScriptName) {
+  if (usesWebviewerAdapter) {
     sourceFile.addImportDeclaration({
       moduleSpecifier: "@proofkit/webviewer/adapter",
       namedImports: ["WebViewerAdapter"],
@@ -45,7 +65,7 @@ export function buildLayoutClient(sourceFile: SourceFile, args: BuildSchemaArgs)
     }
   }
 
-  if (!webviewerScriptName) {
+  if (!usesWebviewerAdapter) {
     addTypeGuardStatements(sourceFile, {
       envVarName: envNames.db ?? defaultEnvNames.db,
     });
@@ -110,11 +130,12 @@ function addTypeGuardStatements(sourceFile: SourceFile, { envVarName }: { envVar
 }
 
 function buildAdapter(writer: CodeBlockWriter, args: BuildSchemaArgs): string {
-  const { envNames, webviewerScriptName } = args;
+  const { envNames } = args;
+  const generatedWebviewerScriptName = getGeneratedWebviewerScriptName(args);
 
-  if (webviewerScriptName) {
+  if (generatedWebviewerScriptName !== undefined) {
     writer.write("new WebViewerAdapter({scriptName: ");
-    writer.quote(webviewerScriptName);
+    writer.quote(generatedWebviewerScriptName);
     writer.write("})");
   } else if (typeof envNames.auth === "object" && "apiKey" in envNames.auth && envNames.auth.apiKey !== undefined) {
     writer

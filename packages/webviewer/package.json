@@ -4,7 +4,10 @@
   "description": "A utility to fetch data from FileMaker webviewer",
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "skills",
+    "bin",
+    "!skills/_artifacts"
   ],
   "private": false,
   "exports": {
@@ -36,6 +39,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.17.4",
     "@proofkit/fmdapi": "workspace:*",
+    "@tanstack/intent": "^0.0.19",
     "@tanstack/vite-config": "^0.2.1",
     "@types/filemaker-webviewer": "^1.0.3",
     "@types/node": "^22.19.5",
@@ -74,6 +78,10 @@
     "filemaker",
     "proofgeist",
     "webviewer",
-    "fm"
-  ]
+    "fm",
+    "tanstack-intent"
+  ],
+  "bin": {
+    "intent": "./bin/intent.js"
+  }
 }

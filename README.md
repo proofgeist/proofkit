@@ -30,6 +30,10 @@ For questions, support, and discussion, join the [Ottomatic Community](https://c
 - **Shared Configs:** TypeScript, ESLint, and Prettier configurations are shared across the repo.
 - **Tooling:** Uses [pnpm](https://pnpm.io/), [Turborepo](https://turbo.build/), and [Changesets](https://github.com/changesets/changesets) for efficient monorepo management and automated releases.
 
+## AI Agent Integration
+
+If you use an AI coding agent, run `npx @tanstack/intent@latest install` to load ProofKit skills into your agent for better code generation.
+
 ## Contributing
 
 We welcome contributions! Please open issues or pull requests on [GitHub](https://github.com/proofgeist/proofkit). For questions, join the [community forum](https://community.ottomatic.cloud/c/proofkit/13) in the **ProofKit** category.

@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { FMTable } from "../../orm/table";
 import type { ConnectionOptions } from "../utils/connection";
 import { buildConnection } from "../utils/connection";
 import { handleCliError } from "../utils/errors";
@@ -78,7 +79,7 @@ export function makeWebhookCommand(): Command {
         // Build a minimal FMTable-like proxy for the tableName
         // webhook.add() only reads the name via Symbol, so this is safe at runtime
         const tableProxy = {
-          [Symbol.for("fmodata:FMTableName")]: opts.table,
+          [FMTable.Symbol.Name]: opts.table,
         } as unknown as import("../../orm/table").FMTable<Record<string, never>, string>;
 
         const webhookPayload: import("../../client/webhook-builder").Webhook<typeof tableProxy> = {

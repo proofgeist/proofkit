@@ -177,6 +177,28 @@ describe("RecordBuilder Select/Expand", () => {
       expect(queryString).not.toContain("PrimaryKey");
       expect(queryString).not.toContain("hobby");
     });
+
+    it('should clear defaultSelect when select("all") is called on get()', () => {
+      const queryString = db.from(contactsWithSchemaSelect).get("test-uuid").select("all").getQueryString();
+
+      // select("all") should remove $select entirely
+      expect(queryString).toBe("/contacts('test-uuid')");
+      expect(queryString).not.toContain("$select=");
+    });
+
+    it('should clear defaultSelect when select("all") is called on list()', () => {
+      const queryString = db.from(contactsWithSchemaSelect).list().select("all").getQueryString();
+
+      // select("all") should remove $select entirely
+      expect(queryString).not.toContain("$select=");
+    });
+
+    it('should clear custom defaultSelect when select("all") is called', () => {
+      const queryString = db.from(contactsWithArraySelect).get("test-uuid").select("all").getQueryString();
+
+      expect(queryString).toBe("/contacts('test-uuid')");
+      expect(queryString).not.toContain("$select=");
+    });
   });
 
   describe("defaultSelect within expand()", () => {

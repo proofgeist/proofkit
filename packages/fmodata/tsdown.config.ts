@@ -6,6 +6,7 @@ export default defineConfig({
   target: "esnext",
   outDir: "dist/cli",
   clean: false,
+  splitting: false,
   banner: {
     js: "#!/usr/bin/env node",
   },

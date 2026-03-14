@@ -111,9 +111,17 @@ export function makeRecordsCommand(): Command {
     .requiredOption("--table <name>", "Table name")
     .requiredOption("--data <json>", "Update data as JSON object")
     .option("--where <expr>", "OData filter expression")
+    .option("--confirm", "Execute without --where (affects all records)")
     .action(async (opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
+        if (!(opts.where || opts.confirm)) {
+          printResult(
+            { dryRun: true, action: "update", table: opts.table, affectsAllRows: true, hint: "Add --where to filter or --confirm to update all records" },
+            { pretty: globalOpts.pretty ?? false },
+          );
+          return;
+        }
         const { db } = buildConnection(globalOpts);
         let data: Record<string, unknown>;
         try {
@@ -145,9 +153,17 @@ export function makeRecordsCommand(): Command {
     .description("Delete records from a table")
     .requiredOption("--table <name>", "Table name")
     .option("--where <expr>", "OData filter expression")
+    .option("--confirm", "Execute without --where (affects all records)")
     .action(async (opts, cmd) => {
       const globalOpts = cmd.parent?.parent?.opts() as ConnectionOptions & { pretty: boolean };
       try {
+        if (!(opts.where || opts.confirm)) {
+          printResult(
+            { dryRun: true, action: "delete", table: opts.table, affectsAllRows: true, hint: "Add --where to filter or --confirm to delete all records" },
+            { pretty: globalOpts.pretty ?? false },
+          );
+          return;
+        }
         const { db } = buildConnection(globalOpts);
         const qs = buildQueryString({ where: opts.where as string | undefined });
         const table = encodeURIComponent(opts.table as string);

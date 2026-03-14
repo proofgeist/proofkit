@@ -1,0 +1,469 @@
+---
+title: CLI
+description: Run fmodata operations from the command line — queries, scripts, webhooks, metadata, and schema changes
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+The `@proofkit/fmodata` package ships a built-in CLI binary called **`fmodata`**. It exposes every library operation — querying records, running scripts, managing webhooks, inspecting metadata, and modifying schema — as a non-interactive command suitable for scripting, CI pipelines, and quick one-off database operations.
+
+## Installation
+
+The binary is included automatically when you install the package:
+
+```bash
+pnpm add @proofkit/fmodata
+# or
+npm install @proofkit/fmodata
+```
+
+If you want it available globally:
+
+```bash
+pnpm add -g @proofkit/fmodata
+```
+
+## Connection Configuration
+
+All commands share the same global connection options. Each flag has an environment variable fallback so you can set credentials once and run many commands.
+
+| Flag | Env var | Description |
+|---|---|---|
+| `--server <url>` | `FM_SERVER` | FileMaker Server URL (e.g. `https://fm.example.com`) |
+| `--database <name>` | `FM_DATABASE` | Database filename (e.g. `MyApp.fmp12`) |
+| `--username <user>` | `FM_USERNAME` | FileMaker account username |
+| `--password <pass>` | `FM_PASSWORD` | FileMaker account password |
+| `--api-key <key>` | `OTTO_API_KEY` | OttoFMS API key (preferred over username/password) |
+
+<Callout type="info" title="Auth priority">
+When both `--api-key` and `--username` are present, the API key is used. If an API key is present, missing `FM_PASSWORD` does not block authentication.
+</Callout>
+
+**Example — using environment variables:**
+
+```bash
+export FM_SERVER=https://fm.example.com
+export FM_DATABASE=MyApp.fmp12
+export OTTO_API_KEY=otto_...
+
+fmodata metadata tables
+```
+
+**Example — passing flags directly:**
+
+```bash
+fmodata --server https://fm.example.com \
+        --database MyApp.fmp12 \
+        --api-key otto_... \
+        metadata tables
+```
+
+## Output Formats
+
+By default all commands print **JSON** to stdout. Add `--pretty` to render results as a human-readable ASCII table instead.
+
+```bash
+# JSON (default)
+fmodata metadata tables
+
+# ASCII table
+fmodata metadata tables --pretty
+```
+
+Errors are written to **stderr** and the process exits with code `1`.
+
+---
+
+## Commands
+
+### `records`
+
+CRUD operations against any table.
+
+#### `records list`
+
+Fetch records from a table.
+
+```bash
+fmodata records list --table contacts
+fmodata records list --table contacts --top 10 --skip 20
+fmodata records list --table contacts --select "name,email"
+fmodata records list --table contacts --where "name eq 'Alice'"
+fmodata records list --table contacts --order-by "name:asc"
+fmodata records list --table contacts --order-by "createdAt:desc,name:asc"
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Table to query |
+| `--top <n>` | Maximum records to return |
+| `--skip <n>` | Records to skip (for pagination) |
+| `--select <fields>` | Comma-separated field names |
+| `--where <expr>` | OData `$filter` expression |
+| `--order-by <field>` | `field:asc` or `field:desc`, comma-separated for multi-sort |
+
+<Callout type="info" title="Query argument encoding">
+Values passed to `--select`, `--where`, and `--order-by` are URL-encoded by the CLI before sending the request.
+</Callout>
+
+#### `records insert`
+
+Insert a single record.
+
+```bash
+fmodata records insert --table contacts --data '{"name":"Alice","email":"alice@example.com"}'
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Target table |
+| `--data <json>` | **Required.** Record fields as a JSON object |
+
+#### `records update`
+
+Update records matching a filter (or all records if `--where` is omitted).
+
+```bash
+fmodata records update \
+  --table contacts \
+  --data '{"status":"inactive"}' \
+  --where "lastLogin lt 2024-01-01"
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Target table |
+| `--data <json>` | **Required.** Fields to update as a JSON object |
+| `--where <expr>` | OData `$filter` expression (omit to update all rows) |
+
+#### `records delete`
+
+Delete records matching a filter.
+
+```bash
+fmodata records delete --table contacts --where "status eq 'archived'"
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Target table |
+| `--where <expr>` | OData `$filter` expression |
+
+<Callout type="warning">
+Omitting `--where` from `records delete` will delete **all records** in the table.
+</Callout>
+
+---
+
+### `script`
+
+#### `script run`
+
+Execute a FileMaker script and print the result code and return value.
+
+```bash
+# No parameter
+fmodata script run MyScriptName
+
+# String parameter
+fmodata script run SendEmail --param '"hello@example.com"'
+
+# JSON object parameter
+fmodata script run ProcessOrder --param '{"orderId":"123","action":"approve"}'
+```
+
+| Option | Description |
+|---|---|
+| `--param <json>` | Script parameter — parsed as JSON, falls back to plain string |
+
+The output is a JSON object:
+
+```json
+{
+  "resultCode": 0,
+  "result": "optional-return-value"
+}
+```
+
+<Callout type="info">
+OData does not support script names with special characters (`@`, `&`, `/`) or names beginning with a number.
+</Callout>
+
+---
+
+### `webhook`
+
+#### `webhook list`
+
+List all webhooks registered on the database.
+
+```bash
+fmodata webhook list
+fmodata webhook list --pretty
+```
+
+#### `webhook get`
+
+Get details for a specific webhook by its numeric ID.
+
+```bash
+fmodata webhook get 42
+```
+
+#### `webhook add`
+
+Register a new webhook on a table.
+
+```bash
+fmodata webhook add \
+  --table contacts \
+  --url https://example.com/hooks/contacts
+
+# With field selection and custom headers
+fmodata webhook add \
+  --table contacts \
+  --url https://example.com/hooks/contacts \
+  --select "name,email,modifiedAt" \
+  --header "Authorization=Bearer token123" \
+  --header "X-App-ID=my-app"
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Table to monitor |
+| `--url <url>` | **Required.** Webhook endpoint URL |
+| `--select <fields>` | Comma-separated field names to include in the payload |
+| `--header <k=v>` | Custom request header in `key=value` format (repeatable) |
+
+#### `webhook remove`
+
+Delete a webhook by ID.
+
+```bash
+fmodata webhook remove 42
+```
+
+---
+
+### `metadata`
+
+#### `metadata get`
+
+Retrieve OData metadata for the database.
+
+```bash
+# JSON (default)
+fmodata metadata get
+
+# XML
+fmodata metadata get --format xml
+```
+
+| Option | Description |
+|---|---|
+| `--format <format>` | `json` (default) or `xml` |
+
+#### `metadata tables`
+
+List all table names in the database. This is the quickest way to inspect what's available.
+
+```bash
+fmodata metadata tables
+fmodata metadata tables --pretty
+```
+
+---
+
+### `schema`
+
+Schema modification commands are **safe by default**: without `--confirm` they perform a **dry run** and print what _would_ happen without making any changes.
+
+#### `schema list-tables`
+
+List all tables (alias for `metadata tables`).
+
+```bash
+fmodata schema list-tables
+```
+
+#### `schema create-table`
+
+Create a new table. The `--fields` option accepts the same JSON field definition used by the TypeScript API.
+
+```bash
+# Dry run (no changes)
+fmodata schema create-table \
+  --name NewTable \
+  --fields '[{"name":"id","type":"string","primary":true},{"name":"label","type":"string"}]'
+
+# Execute for real
+fmodata schema create-table \
+  --name NewTable \
+  --fields '[{"name":"id","type":"string","primary":true},{"name":"label","type":"string"}]' \
+  --confirm
+```
+
+| Option | Description |
+|---|---|
+| `--name <name>` | **Required.** New table name |
+| `--fields <json>` | **Required.** Array of field definitions (see [Schema Management](/docs/fmodata/schema-management)) |
+| `--confirm` | Execute the operation (without this flag it's a dry run) |
+
+#### `schema add-fields`
+
+Add fields to an existing table.
+
+```bash
+# Dry run
+fmodata schema add-fields \
+  --table contacts \
+  --fields '[{"name":"phone","type":"string","nullable":true}]'
+
+# Execute
+fmodata schema add-fields \
+  --table contacts \
+  --fields '[{"name":"phone","type":"string","nullable":true}]' \
+  --confirm
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Existing table name |
+| `--fields <json>` | **Required.** Array of field definitions |
+| `--confirm` | Execute the operation (without this flag it's a dry run) |
+
+<Callout type="info" title="Schema operations require elevated permissions">
+Creating tables and adding fields require a FileMaker account with DDL (Data Definition Language) privileges. Operations will throw an error if the account lacks sufficient permissions.
+</Callout>
+
+---
+
+## Using in CI / Scripts
+
+Because all connection options accept environment variables, the CLI integrates cleanly into CI pipelines:
+
+```bash
+# GitHub Actions example
+- name: Run post-deploy script
+  env:
+    FM_SERVER: ${{ secrets.FM_SERVER }}
+    FM_DATABASE: ${{ secrets.FM_DATABASE }}
+    OTTO_API_KEY: ${{ secrets.OTTO_API_KEY }}
+  run: |
+    npx fmodata script run PostDeploy --param '"${{ github.sha }}"'
+```
+
+```bash
+# Quick schema check in a shell script
+#!/usr/bin/env bash
+set -euo pipefail
+
+TABLES=$(fmodata metadata tables)
+echo "Tables in $FM_DATABASE: $TABLES"
+```
+
+---
+
+## Using with an AI Agent
+
+Because `fmodata` is a standard shell tool that reads from environment variables and writes JSON to stdout, it works as a natural tool for AI coding agents (Claude Code, Claude Desktop with MCP, custom agents built on the Claude API, etc.).
+
+### Claude Code
+
+If your project has `@proofkit/fmodata` installed, Claude Code can run `fmodata` commands directly in the terminal during a conversation. Set your credentials in the environment first:
+
+```bash
+export FM_SERVER=https://fm.example.com
+export FM_DATABASE=MyApp.fmp12
+export OTTO_API_KEY=otto_...
+```
+
+Then just describe what you want in plain language:
+
+> "List the first 5 records from the `contacts` table and show me which fields are available."
+
+Claude will run something like:
+
+```bash
+fmodata records list --table contacts --top 5
+```
+
+…and use the JSON output to reason about the schema and answer your question.
+
+### MCP Tool Server
+
+You can expose `fmodata` as a set of MCP tools so any MCP-compatible host (Claude Desktop, IDEs, custom agents) can call FileMaker operations directly. Create an MCP server that shells out to the CLI:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { execFileSync } from "node:child_process";
+import { z } from "zod";
+
+const server = new McpServer({ name: "fmodata", version: "1.0.0" });
+
+server.tool(
+  "query_list",
+  "List records from a FileMaker table",
+  {
+    table: z.string().describe("Table name"),
+    where: z.string().optional().describe("OData $filter expression"),
+    top: z.number().optional().describe("Max records to return"),
+  },
+  async ({ table, where, top }) => {
+    const args = ["records", "list", "--table", table];
+    if (where) args.push("--where", where);
+    if (top) args.push("--top", String(top));
+
+    const output = execFileSync("fmodata", args, { encoding: "utf8" });
+    return { content: [{ type: "text", text: output }] };
+  },
+);
+
+server.tool(
+  "run_script",
+  "Execute a FileMaker script",
+  {
+    scriptName: z.string(),
+    param: z.string().optional().describe("Script parameter as JSON"),
+  },
+  async ({ scriptName, param }) => {
+    const args = ["script", "run", scriptName];
+    if (param) args.push("--param", param);
+
+    const output = execFileSync("fmodata", args, { encoding: "utf8" });
+    return { content: [{ type: "text", text: output }] };
+  },
+);
+```
+
+<Callout type="info" title="Why the CLI is a good MCP tool boundary">
+Each `fmodata` command is atomic, stateless, and returns clean JSON — exactly the shape MCP tools expect. The agent never needs to understand OData internals; it just passes field names and filter strings as arguments.
+</Callout>
+
+### Giving an Agent Context
+
+The more context an agent has about your database, the more useful it can be. Provide a brief schema description alongside the CLI:
+
+```
+You have access to the `fmodata` CLI connected to our production FileMaker database.
+
+Key tables:
+- contacts  (name, email, phone, status, id_company)
+- companies (name, industry, arr, id_owner)
+- deals     (title, stage, amount, close_date, id_contact)
+
+Use `fmodata metadata tables` to list all tables.
+Use `fmodata records list --table <name> --top 1` to inspect a table's fields.
+OData filter syntax: eq, ne, lt, gt, contains(), startswith()
+```
+
+### Safety Considerations
+
+<Callout type="warning" title="Scope what the agent can do">
+Grant agents only the permissions they need:
+
+- **Read-only tasks**: restrict to `records list`, `metadata get/tables`
+- **Automation tasks**: allow `records insert/update` and `script run`
+- **Schema changes**: keep `schema create-table` and `schema add-fields` behind a human approval step — the `--confirm` flag exists specifically to make this easy to enforce
+</Callout>

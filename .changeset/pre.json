@@ -22,6 +22,7 @@
     "better-auth-type-errors",
     "bright-dogs-teach",
     "brown-keys-float",
+    "expose-typegen-buildschema-root-export",
     "fix-date-filter-quoting",
     "fix-fmodata-clearoldfiles-preserve-customizations",
     "fix-metadata-key-lookup-better-auth-1.5",
@@ -31,6 +32,7 @@
     "fix-typegen-auth-detection",
     "fix-typegen-boolean-validator-duplication",
     "fix-webhook-response-types",
+    "fmodata-cli-binary",
     "fmodata-date-filter-date-param",
     "get-query-string-entity-ids-override",
     "happy-rocks-watch",
@@ -41,8 +43,10 @@
     "olive-coins-trade",
     "quick-ends-drop",
     "real-ideas-sort",
+    "select-all-override",
     "swift-swans-rush",
     "tough-forks-start",
-    "ui-default-shadcn"
+    "ui-default-shadcn",
+    "update-fmodata-docs-ai-agent"
   ]
 }

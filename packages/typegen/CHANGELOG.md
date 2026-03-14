@@ -1,5 +1,15 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.16
+
+### Patch Changes
+
+- 2df365d: Export `buildSchema` from the root `@proofkit/typegen` entrypoint so consumers can call it directly without importing internal package paths.
+- Updated dependencies [78a9f70]
+- Updated dependencies [de21bbe]
+- Updated dependencies [1acca57]
+  - @proofkit/fmodata@0.1.0-beta.32
+
 ## 1.1.0-beta.15
 
 ### Patch Changes

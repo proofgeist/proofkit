@@ -53,6 +53,7 @@
   },
   "devDependencies": {
     "@standard-schema/spec": "^1.1.0",
+    "@tanstack/intent": "^0.0.19",
     "@tanstack/vite-config": "^0.2.1",
     "@types/node": "^22.19.5",
     "fast-xml-parser": "^5.3.3",
@@ -69,7 +70,10 @@
   },
   "files": [
     "src",
-    "dist"
+    "dist",
+    "skills",
+    "bin",
+    "!skills/_artifacts"
   ],
   "keywords": [
     "filemaker",
@@ -77,6 +81,10 @@
     "fm",
     "odata",
     "proofgeist",
-    "proofkit"
-  ]
+    "proofkit",
+    "tanstack-intent"
+  ],
+  "bin": {
+    "intent": "./bin/intent.js"
+  }
 }

@@ -1,0 +1,488 @@
+---
+name: fmodata-client
+description: >
+  fmodata OData FMServerConnection fmTableOccurrence field builders textField numberField dateField
+  timestampField containerField calcField listField query builder execute() filter operators eq ne gt
+  gte lt lte contains startsWith endsWith matchesPattern inArray notInArray isNull isNotNull and or
+  not tolower toupper trim CRUD insert update delete byId where navigate expand relationships batch
+  Result error handling neverthrow pattern FMODataError HTTPError ODataError ValidationError
+  BatchTruncatedError entity IDs FMTID FMFID defaultSelect readValidator writeValidator orderBy asc
+  desc top skip single maybeSingle count getSingleField FileMaker OData API schema management
+  webhooks getTableColumns select("all")
+type: core
+library: proofkit
+library_version: "0.1.0-beta.31"
+requires:
+  - typegen-setup
+sources:
+  - "proofgeist/proofkit:packages/fmodata/src/**/*.ts"
+  - "proofgeist/proofkit:apps/docs/content/docs/fmodata/*.mdx"
+---
+
+## Setup
+
+### 1. Create a server connection
+
+```ts
+import { FMServerConnection } from "@proofkit/fmodata";
+
+const connection = new FMServerConnection({
+  serverUrl: "https://your-server.com",
+  auth: { username: "admin", password: "secret" },
+  // OR with OttoFMS API key:
+  // auth: { apiKey: "your-otto-api-key" },
+  fetchClientOptions: {
+    retries: 2,
+    timeout: 30000,
+  },
+});
+```
+
+### 2. Create a database reference
+
+```ts
+const db = connection.database("MyDatabase.fmp12", {
+  useEntityIds: true,           // use FMTID/FMFID instead of names
+  includeSpecialColumns: false,  // include ROWID/ROWMODID
+});
+```
+
+### 3. Define table schemas with fmTableOccurrence
+
+```ts
+import {
+  fmTableOccurrence,
+  textField,
+  numberField,
+  timestampField,
+  containerField,
+  calcField,
+  listField,
+} from "@proofkit/fmodata";
+import { z } from "zod/v4";
+
+const contacts = fmTableOccurrence(
+  "contacts",
+  {
+    id: textField().primaryKey().entityId("FMFID:1"),
+    name: textField().notNull().entityId("FMFID:2"),
+    email: textField().notNull().entityId("FMFID:3"),
+    phone: textField().entityId("FMFID:4"),
+    age: numberField().entityId("FMFID:5"),
+    active: numberField()
+      .readValidator(z.coerce.boolean())
+      .writeValidator(z.boolean().transform((v) => (v ? 1 : 0)))
+      .entityId("FMFID:6"),
+    tags: listField({ itemValidator: z.string() }),
+    photo: containerField(),
+    fullName: calcField(),
+    createdAt: timestampField().readOnly().entityId("FMFID:10"),
+  },
+  {
+    entityId: "FMTID:100",
+    defaultSelect: "schema",
+    navigationPaths: ["invoices", "notes"],
+  },
+);
+```
+
+Field builders: `textField()`, `numberField()`, `dateField()`, `timeField()`, `timestampField()`, `containerField()`, `calcField()`, `listField()`.
+
+Chainable methods: `.primaryKey()`, `.notNull()`, `.readOnly()`, `.entityId("FMFID:...")`, `.readValidator(schema)`, `.writeValidator(schema)`, `.comment("...")`.
+
+`defaultSelect` options:
+- `"schema"` (default) -- always sends `$select` with only schema-defined fields
+- `"all"` -- no `$select`, returns all non-container fields from FM
+- `(cols) => ({ ... })` -- custom subset of columns
+
+## Core Patterns
+
+### Querying (list / get / select / where / execute)
+
+```ts
+import { eq, gt, and, contains, asc, desc, getTableColumns } from "@proofkit/fmodata";
+
+// List with filter, sort, pagination
+const result = await db
+  .from(contacts)
+  .list()
+  .select({ name: contacts.name, email: contacts.email })
+  .where(and(eq(contacts.active, true), gt(contacts.age, 18)))
+  .orderBy(asc(contacts.name), desc(contacts.age))
+  .top(50)
+  .skip(0)
+  .execute();
+
+if (result.data) {
+  for (const row of result.data) {
+    console.log(row.name, row.email);
+  }
+}
+
+// Get single record by ID
+const one = await db.from(contacts).get("abc-123").execute();
+
+// single() -- error if != 1 result; maybeSingle() -- null if 0, error if > 1
+const exact = await db
+  .from(contacts)
+  .list()
+  .where(eq(contacts.email, "a@b.com"))
+  .single()
+  .execute();
+
+// Count
+const count = await db.from(contacts).list().count().execute();
+
+// Override defaultSelect for one query
+const all = await db.from(contacts).list().select("all").execute();
+
+// Get single field (required for container fields)
+const photo = await db
+  .from(contacts)
+  .get("abc-123")
+  .getSingleField(contacts.photo)
+  .execute();
+
+// Select all columns except some
+const { photo: _, ...cols } = getTableColumns(contacts);
+const withoutPhoto = await db.from(contacts).list().select(cols).execute();
+```
+
+### CRUD (insert / update / delete)
+
+```ts
+// Insert -- notNull fields are required, readOnly/primaryKey excluded
+const inserted = await db
+  .from(contacts)
+  .insert({ name: "Alice", email: "alice@co.com", active: true })
+  .execute();
+
+// Update by ID (default: returns { updatedCount })
+const updated = await db
+  .from(contacts)
+  .update({ phone: "+1-555-0100" })
+  .byId("abc-123")
+  .execute();
+
+// Update by filter
+const bulk = await db
+  .from(contacts)
+  .update({ active: false })
+  .where((q) => q.where(eq(contacts.active, true)))
+  .execute();
+
+// Delete by ID
+const deleted = await db.from(contacts).delete().byId("abc-123").execute();
+
+// Delete by filter
+const bulkDel = await db
+  .from(contacts)
+  .delete()
+  .where((q) => q.where(eq(contacts.active, false)))
+  .execute();
+```
+
+### Error handling (Result pattern)
+
+Every `.execute()` returns `Result<T>`:
+```ts
+type Result<T> = { data: T; error: undefined } | { data: undefined; error: FMODataErrorType };
+```
+
+Always check `result.error` before accessing `result.data`. Use type guards or `instanceof`:
+
+```ts
+import { isHTTPError, isODataError, isValidationError, isBatchTruncatedError } from "@proofkit/fmodata";
+
+const result = await db.from(contacts).list().execute();
+
+if (result.error) {
+  if (isHTTPError(result.error)) {
+    console.log(result.error.status, result.error.statusText);
+  } else if (isODataError(result.error)) {
+    console.log(result.error.code, result.error.details);
+  } else if (isValidationError(result.error)) {
+    console.log(result.error.field, result.error.issues);
+  }
+  return;
+}
+
+// result.data is guaranteed non-undefined here
+console.log(result.data);
+```
+
+### Relationships (navigate / expand)
+
+Define `navigationPaths` on table occurrences, then use `navigate()` or `expand()`.
+
+```ts
+// navigate -- changes query context to related table
+const orders = await db
+  .from(contacts)
+  .get("abc-123")
+  .navigate(invoices)
+  .execute();
+
+// expand -- includes related records inline
+const withInvoices = await db
+  .from(contacts)
+  .list()
+  .expand(invoices, (b) =>
+    b
+      .select({ total: invoices.total, date: invoices.date })
+      .where(gt(invoices.total, 100))
+      .top(5),
+  )
+  .execute();
+
+// Nested expand
+const nested = await db
+  .from(contacts)
+  .list()
+  .expand(invoices, (ib) =>
+    ib.expand(lineItems, (lb) => lb.select({ desc: lineItems.description })),
+  )
+  .execute();
+```
+
+### Batch operations
+
+```ts
+const result = await db
+  .batch([
+    db.from(contacts).list().top(5),
+    db.from(contacts).insert({ name: "New", email: "new@co.com" }),
+    db.from(contacts).update({ active: false }).byId("old-id"),
+  ])
+  .execute();
+
+const [r1, r2, r3] = result.results;
+console.log(result.successCount, result.errorCount, result.truncated);
+```
+
+## Common Mistakes
+
+### [CRITICAL] Forgetting .execute() on query builders
+
+Wrong:
+```ts
+const data = await db.from(contacts).list().where(eq(contacts.active, true));
+```
+
+Correct:
+```ts
+const result = await db.from(contacts).list().where(eq(contacts.active, true)).execute();
+```
+
+Query builders are lazy; they return a builder object, not data. `.execute()` triggers the HTTP request and returns `Result<T>`.
+
+Source: `packages/fmodata/src/client/query/query-builder.ts`
+
+### [CRITICAL] Ignoring Result error -- data is null when error present
+
+Wrong:
+```ts
+const result = await db.from(contacts).list().execute();
+console.log(result.data.length);
+```
+
+Correct:
+```ts
+const result = await db.from(contacts).list().execute();
+if (result.error) {
+  console.error(result.error.message);
+  return;
+}
+console.log(result.data.length);
+```
+
+`Result` is a discriminated union. When `error` is defined, `data` is `undefined`. Accessing `.data` without checking `error` causes runtime TypeError.
+
+Source: `packages/fmodata/src/types.ts`
+
+### [CRITICAL] Using Drizzle ORM patterns instead of fmodata patterns
+
+Wrong:
+```ts
+import { eq } from "drizzle-orm";
+const rows = await db.select().from(contacts).where(eq(contacts.name, "Alice"));
+```
+
+Correct:
+```ts
+import { eq } from "@proofkit/fmodata";
+const result = await db.from(contacts).list().where(eq(contacts.name, "Alice")).select({ name: contacts.name }).execute();
+```
+
+fmodata has a different chain order: `db.from(table).list().where().select().execute()`. Operators must be imported from `@proofkit/fmodata`, not `drizzle-orm`. fmodata uses `list()` not `select()` to start a query, and always ends with `.execute()`.
+
+Source: `packages/fmodata/src/client/entity-set.ts`
+
+### [CRITICAL] Using raw JS operators instead of OData filter functions
+
+Wrong:
+```ts
+.where(contacts.name === "Alice")
+.where(contacts.age > 18)
+```
+
+Correct:
+```ts
+import { eq, gt } from "@proofkit/fmodata";
+.where(eq(contacts.name, "Alice"))
+.where(gt(contacts.age, 18))
+```
+
+JavaScript comparison operators return booleans at build time, not filter expressions. Use the imported operator functions which produce OData `$filter` query strings.
+
+Source: `packages/fmodata/src/orm/operators.ts`
+
+### [HIGH] Container fields in select() calls
+
+Wrong:
+```ts
+const result = await db
+  .from(contacts)
+  .list()
+  .select({ photo: contacts.photo, name: contacts.name })
+  .execute();
+```
+
+Correct:
+```ts
+// Get container field separately
+const photo = await db
+  .from(contacts)
+  .get("abc-123")
+  .getSingleField(contacts.photo)
+  .execute();
+```
+
+Container fields (Edm.Stream) cannot be included in `$select`. The FileMaker OData API requires fetching them individually via `.getSingleField()`. TypeScript will show a compile error if you try to select a container field.
+
+Source: `packages/fmodata/src/orm/table.ts` (ValidateNoContainerFields type)
+
+### [HIGH] Expecting batch to continue after first error
+
+Wrong:
+```ts
+const result = await db.batch([op1, op2, op3]).execute();
+// Assuming all three ran regardless of errors
+const allData = result.results.map((r) => r.data);
+```
+
+Correct:
+```ts
+const result = await db.batch([op1, op2, op3]).execute();
+if (result.truncated) {
+  console.warn(`Stopped at index ${result.firstErrorIndex}`);
+}
+for (const r of result.results) {
+  if (isBatchTruncatedError(r.error)) {
+    console.log(`Op ${r.error.operationIndex} never ran`);
+  }
+}
+```
+
+FileMaker stops batch processing on first error. Subsequent operations get `BatchTruncatedError` with `status: 0`. Check `result.truncated` and handle each result individually.
+
+Source: `packages/fmodata/src/errors.ts` (BatchTruncatedError)
+
+### [MEDIUM] Script names with special characters via OData
+
+Wrong:
+```ts
+await db.runScript("My Script (v2)");
+```
+
+Correct:
+```ts
+await db.runScript("MyScript_v2");
+```
+
+OData script endpoint uses `Script.{name}` URL pattern. Spaces, parentheses, and special characters can cause URL encoding issues. Prefer alphanumeric + underscore names for scripts called via OData.
+
+Source: `packages/fmodata/src/client/database.ts` (runScript)
+
+### [MEDIUM] Using defaultSelect "all" without understanding performance
+
+Wrong:
+```ts
+const contacts = fmTableOccurrence("contacts", { /* 50 fields */ }, {
+  defaultSelect: "all",
+});
+// Every query fetches all 50+ fields from FM
+```
+
+Correct:
+```ts
+const contacts = fmTableOccurrence("contacts", { /* 50 fields */ }, {
+  defaultSelect: "schema",  // default -- only fetches defined fields
+});
+// Or override per-query:
+const result = await db.from(contacts).list().select("all").execute();
+```
+
+`defaultSelect: "all"` removes `$select` from every query, causing FileMaker to return all non-container fields. This is slower for tables with many fields. Use `"schema"` (default) and override with `.select("all")` per-query when needed.
+
+Source: `packages/fmodata/src/client/entity-set.ts`
+
+### [CRITICAL] Manually redefining types instead of using generated/inferred types
+
+Wrong:
+```ts
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+}
+const result = await db.from(contacts).list().execute();
+const typed = result.data as Contact[];
+```
+
+Correct:
+```ts
+import type { InferTableSchema } from "@proofkit/fmodata";
+
+type Contact = InferTableSchema<typeof contacts>;
+// Or just use the result directly -- types are inferred from the schema
+const result = await db.from(contacts).list().execute();
+// result.data is already typed based on contacts schema
+```
+
+fmodata infers all types from `fmTableOccurrence` definitions. Manual type definitions drift from the schema and bypass runtime validation. Use `InferTableSchema<typeof table>` if you need an explicit type alias.
+
+Source: `packages/fmodata/src/orm/table.ts` (InferTableSchema)
+
+### [HIGH] Mixing Zod v3 and v4 in the same project
+
+Wrong:
+```ts
+import { z as z3 } from "zod";
+import { z as z4 } from "zod/v4";
+
+const table = fmTableOccurrence("t", {
+  a: numberField().readValidator(z3.coerce.boolean()),  // v3
+  b: textField().readValidator(z4.string().min(1)),       // v4
+});
+```
+
+Correct:
+```ts
+import { z } from "zod/v4";
+
+const table = fmTableOccurrence("t", {
+  a: numberField().readValidator(z.coerce.boolean()),
+  b: textField().readValidator(z.string().min(1)),
+});
+```
+
+fmodata uses Standard Schema for validators. Zod v3 and v4 have different Standard Schema implementations that can conflict at runtime. Pick one Zod version (v4 recommended) and use it consistently.
+
+Source: `packages/fmodata/src/orm/field-builders.ts`
+
+## References
+
+- [Filter Operators Reference](references/filter-operators.md)
+- [Error Types Reference](references/error-types.md)
+- Cross-ref: `typegen-setup` -- generate schemas from FileMaker layouts

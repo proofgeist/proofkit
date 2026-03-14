@@ -17,7 +17,8 @@
     "lint:summary": "biome check . --reporter=summary"
   },
   "bin": {
-    "better-auth": "./dist/esm/cli/index.js"
+    "better-auth": "./dist/esm/cli/index.js",
+    "intent": "./bin/intent.js"
   },
   "exports": {
     ".": {
@@ -34,11 +35,15 @@
     "fmdapi",
     "proofgeist",
     "filemaker",
-    "fmrest"
+    "fmrest",
+    "tanstack-intent"
   ],
   "files": [
     "dist",
-    "src"
+    "src",
+    "skills",
+    "bin",
+    "!skills/_artifacts"
   ],
   "author": "",
   "license": "ISC",
@@ -63,6 +68,7 @@
     "vite": "^6.4.1"
   },
   "devDependencies": {
+    "@tanstack/intent": "^0.0.19",
     "@types/fs-extra": "^11.0.4",
     "@types/prompts": "^2.4.9",
     "@vitest/ui": "^3.2.4",

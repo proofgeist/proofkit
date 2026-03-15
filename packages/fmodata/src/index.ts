@@ -46,6 +46,7 @@ export {
   isResponseParseError,
   isResponseStructureError,
   isSchemaLockedError,
+  isTransientError,
   isValidationError,
   ODataError,
   RecordCountMismatchError,
@@ -55,6 +56,8 @@ export {
   ValidationError,
 } from "./errors";
 export type { Logger } from "./logger";
+// Effect services for composable dependency injection
+export { HttpClient, ODataConfig, ODataLogger, type FMODataLayer } from "./services";
 // NEW ORM API - Drizzle-inspired field builders and operators
 export {
   and,
@@ -124,4 +127,5 @@ export type {
   Metadata,
   ODataRecordMetadata,
   Result,
+  RetryPolicy,
 } from "./types";

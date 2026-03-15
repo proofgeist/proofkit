@@ -42,6 +42,12 @@ export interface ExecutionContext {
   _getIncludeSpecialColumns?(): boolean;
   _getBaseUrl?(): string;
   _getLogger?(): InternalLogger;
+  /**
+   * @internal
+   * Returns the Effect Layer for this context, enabling service-based Effect pipelines.
+   * Implemented by FMServerConnection and MockFMServerConnection.
+   */
+  _getLayer?(): import("./services").FMODataLayer;
 }
 
 export type InferSchemaType<Schema extends Record<string, StandardSchemaV1>> = {
@@ -146,6 +152,25 @@ type _ComputeInsertData<
       Exclude<AutoRequiredKeys<Schema>, ExcludedFields<IdField, ReadOnly>>
     >;
 
+/**
+ * Configuration for automatic retry of transient errors.
+ * Uses exponential backoff with optional jitter.
+ */
+export interface RetryPolicy {
+  /**
+   * Maximum number of retry attempts (default: 3)
+   */
+  maxRetries?: number;
+  /**
+   * Base delay in milliseconds for exponential backoff (default: 500)
+   */
+  baseDelay?: number;
+  /**
+   * Whether to add random jitter to delay to prevent thundering herd (default: true)
+   */
+  jitter?: boolean;
+}
+
 export interface ExecuteOptions {
   includeODataAnnotations?: boolean;
   skipValidation?: boolean;
@@ -158,6 +183,12 @@ export interface ExecuteOptions {
    * Note: Special columns are only included when there is no $select query.
    */
   includeSpecialColumns?: boolean;
+  /**
+   * Optional retry policy for transient errors (SchemaLockedError, NetworkError, TimeoutError, HTTP 5xx).
+   * When set, failed requests matching transient error conditions will be retried
+   * with exponential backoff.
+   */
+  retryPolicy?: RetryPolicy;
 }
 
 /**

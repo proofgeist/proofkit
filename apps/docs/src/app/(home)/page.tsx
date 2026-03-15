@@ -1,5 +1,5 @@
 import { Card, Cards } from "fumadocs-ui/components/card";
-import { Code, Database, Globe, RectangleEllipsis, Terminal, WebhookIcon } from "lucide-react";
+import { Bot, Brain, Code, Database, Globe, RectangleEllipsis, ShieldCheck, Terminal, WandSparkles, WebhookIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import ProofKitLogo from "@/../public/proofkit.png";
@@ -108,7 +108,54 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* <Separator className="my-12" /> */}
+          <Separator className="my-12" />
+
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="flex flex-col text-left">
+              <h2 className="mb-4 flex items-center gap-3 font-bold text-3xl">
+                <WandSparkles className="size-8 text-brand" />
+                Built for AI Agents
+              </h2>
+              <p className="mb-0 text-gray-600 text-lg">
+                Every ProofKit package ships with agent skills — built from decades of combined FileMaker integration
+                experience at Proof+Geist — that give AI coding tools like Claude Code and Cursor the context they need
+                to write correct, production-ready FileMaker code from day one.
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 text-left md:grid-cols-3">
+              <div className="flex flex-col gap-2 rounded-lg border p-4">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Brain className="size-5 text-brand" />
+                  Expert knowledge built in
+                </div>
+                <p className="text-gray-500 text-sm">
+                  Agent skills cover API patterns, edge cases, and common mistakes so your AI agent avoids the pitfalls
+                  that trip up even experienced developers.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 rounded-lg border p-4">
+                <div className="flex items-center gap-2 font-semibold">
+                  <ShieldCheck className="size-5 text-brand" />
+                  Type-safe by default
+                </div>
+                <p className="text-gray-500 text-sm">
+                  Schemas generated from your FileMaker field names plus runtime validators catch bugs early — whether
+                  code is written by you or your AI agent.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 rounded-lg border p-4">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Bot className="size-5 text-brand" />
+                  Works with any agent
+                </div>
+                <p className="text-gray-500 text-sm">
+                  Skills are bundled with each package — just install and your AI coding tool picks them up automatically.
+                  Compatible with Claude Code, Cursor, Windsurf, and more.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

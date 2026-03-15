@@ -63,6 +63,19 @@ schema/
   Invoices.ts     # Override file. Safe to edit.
 ```
 
+### OData-generated output structure
+
+For OData configs (`"type": "fmodata"`), typegen generates `fmTableOccurrence` definitions:
+
+```text
+schema/odata/
+  generated/      # Auto-generated. NEVER edit fields or entity IDs.
+    Customers.ts  # fmTableOccurrence with fields, entity IDs from FM metadata
+    Orders.ts
+```
+
+You may add `readValidator`, `writeValidator`, `defaultSelect`, `navigationPaths`, and other options to generated schemas. Do NOT add new fields or change entity IDs (`FMFID`/`FMTID`) — these must come from FileMaker metadata via typegen. Re-run `npx @proofkit/typegen` after any FileMaker schema change.
+
 ## Core Patterns
 
 ### Data API config
@@ -244,7 +257,7 @@ export const ZCustomers = ZCustomers_generated
 export type TCustomers = z.infer<typeof ZCustomers>;
 ```
 
-Files in `generated/` and `client/` are overwritten on every typegen run; all customizations belong in the override files at the schema root.
+Files in `generated/` and `client/` are overwritten on every typegen run; all customizations belong in the override files at the schema root. For OData schemas, do not manually add fields or change entity IDs (`FMFID`/`FMTID`) in generated files — these come from FileMaker metadata. You may safely add `readValidator`, `writeValidator`, `defaultSelect`, `navigationPaths`, and other options.
 
 Source: apps/docs/content/docs/typegen/customization.mdx
 

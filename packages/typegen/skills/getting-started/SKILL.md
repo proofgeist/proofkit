@@ -150,7 +150,15 @@ export const connection = new FMServerConnection({
 });
 ```
 
-4. Define a table schema (or use `npx @proofkit/typegen ui` to generate automatically):
+4. Generate table schemas with typegen (recommended):
+
+```bash
+npx @proofkit/typegen
+```
+
+This generates `fmTableOccurrence` definitions with correct field types and entity IDs from FileMaker metadata. Do NOT manually write schema files or invent entity IDs — these must come from typegen.
+
+If typegen is not available, you can define a minimal schema manually (without entity IDs):
 
 ```ts
 import { fmTableOccurrence, textField, numberField } from "@proofkit/fmodata";

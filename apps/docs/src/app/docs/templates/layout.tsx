@@ -77,6 +77,9 @@ export default async function Layout({ children }: { children: ReactNode }) {
     <DocsLayout
       tree={newTree}
       {...baseOptions}
+      containerProps={{
+        className: "[--fd-layout-width:100%]",
+      }}
       sidebar={{
         tabs,
         footer: (

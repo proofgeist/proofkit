@@ -7,7 +7,6 @@
     "---Setup---",
     "quick-start",
     "schema",
-    "cli",
     "---Guides---",
     "queries",
     "crud",
@@ -22,6 +21,7 @@
     "extra-properties",
     "custom-fetch-handlers",
     "---Reference---",
+    "cli",
     "errors",
     "methods"
   ],

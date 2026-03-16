@@ -5,6 +5,7 @@ description: Run fmodata operations from the command line — queries, scripts, 
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { PackageInstall } from "@/components/PackageInstall";
 
 The `@proofkit/fmodata` package ships a built-in CLI binary called **`fmodata`**. It exposes every library operation — querying records, running scripts, managing webhooks, inspecting metadata, and modifying schema — as a non-interactive command suitable for scripting, CI pipelines, and quick one-off database operations.
 
@@ -12,17 +13,11 @@ The `@proofkit/fmodata` package ships a built-in CLI binary called **`fmodata`**
 
 The binary is included automatically when you install the package:
 
-```bash
-pnpm add @proofkit/fmodata
-# or
-npm install @proofkit/fmodata
-```
+<PackageInstall packages="@proofkit/fmodata" />
 
 If you want it available globally:
 
-```bash
-pnpm add -g @proofkit/fmodata
-```
+<PackageInstall packages="@proofkit/fmodata" global />
 
 ## Connection Configuration
 

@@ -4,6 +4,7 @@ title: Quick Start - Typegen
 
 import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 import { Steps, Step } from "fumadocs-ui/components/steps";
+import { AgentCommand } from "@/components/AgentCommand";
 
 The typegen tool is the best way to interact with this library, as it will automatically generate layout-specific clients and get autocomplete hints in your IDE with your actual field names from your solution
 
@@ -12,19 +13,25 @@ The typegen tool is the best way to interact with this library, as it will autom
     ### Install the required packages
     
     ```package-install
-    @proofkit/fmdapi zod
+    @proofkit/fmdapi@beta zod
     ```
 
     <Callout type="info">
       Zod is used by the typegen tool by default, but it can be excluded if you set `validator` to `false` in the typegen config.
     </Callout>
 
+    #### AI Agent Integration
+
+    If you use an AI coding agent, run this command to map ProofKit's built-in skills to your project. See the [TanStack Intent docs](https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers) for more details.
+
+    <AgentCommand />
+
   </Step>
 
   <Step>
     ### Create a typegen config file in your project
     ```sh
-    npx @proofkit/typegen
+    npx @proofkit/typegen@beta
     ```
   
   
@@ -73,7 +80,7 @@ The typegen tool is the best way to interact with this library, as it will autom
   Run this command any time you make changes to your config file, any of the referenced FileMaker layouts, or any field names/types that are on the layouts.
 
   ```sh
-  npx @proofkit/typegen
+  npx @proofkit/typegen@beta
   ```
 
 <Callout type="info" >
@@ -83,7 +90,7 @@ The typegen tool is the best way to interact with this library, as it will autom
 {
   "scripts": {
     // ...
-    "typegen": "npx @proofkit/typegen"
+    "typegen": "npx @proofkit/typegen@beta"
   }
 }
 ```

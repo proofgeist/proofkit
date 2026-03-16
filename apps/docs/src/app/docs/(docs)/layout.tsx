@@ -8,6 +8,9 @@ export default function Layout({ children }: { children: ReactNode }) {
     <DocsLayout
       tree={source.pageTree}
       {...baseOptions}
+      containerProps={{
+        className: "[--fd-layout-width:100%]",
+      }}
       sidebar={{
         footer: (
           <div className="mt-2 flex items-center justify-center text-muted-foreground text-xs">

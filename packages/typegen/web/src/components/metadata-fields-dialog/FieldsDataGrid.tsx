@@ -73,14 +73,13 @@ export function FieldsDataGrid({ table, isLoading, isError, error, open }: Field
       table={table}
       tableLayout={{ width: "auto", headerSticky: true }}
     >
-      <DataGridContainer border={true}>
+      <DataGridContainer border={true} className="h-full">
         <div
           className="overflow-auto"
           ref={tableContainerRef}
           style={{
             contain: "strict",
-            height: "650px",
-            maxHeight: "650px",
+            height: "100%",
           }}
         >
           <table className="w-full border-separate border-spacing-0">

@@ -12,6 +12,7 @@ import {
 import { Callout } from "fumadocs-ui/components/callout";
 import { Card } from "fumadocs-ui/components/card";
 import { CliCommand } from "@/components/CliCommand";
+import { AgentCommand } from "@/components/AgentCommand";
 import { PackageInstall } from "@/components/PackageInstall";
 import { Badge } from "@/components/ui/badge";
 
@@ -25,9 +26,9 @@ Here's a minimal example to get you started with `@proofkit/fmodata`:
 
     #### AI Agent Integration
 
-    If you use an AI coding agent, run this after installing dependencies to add ProofKit skills for better code generation:
+    If you use an AI coding agent, ask it to run this command after dependencies are installed to add ProofKit skills:
 
-    <CliCommand command="install" exec packageName="@tanstack/intent@latest" />
+    <AgentCommand />
 
   </Step>
 

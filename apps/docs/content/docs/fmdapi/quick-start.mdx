@@ -4,6 +4,7 @@ title: Quick Start - Typegen
 
 import { Tabs, Tab } from "fumadocs-ui/components/tabs";
 import { Steps, Step } from "fumadocs-ui/components/steps";
+import { CliCommand } from "@/components/CliCommand";
 
 The typegen tool is the best way to interact with this library, as it will automatically generate layout-specific clients and get autocomplete hints in your IDE with your actual field names from your solution
 
@@ -18,6 +19,12 @@ The typegen tool is the best way to interact with this library, as it will autom
     <Callout type="info">
       Zod is used by the typegen tool by default, but it can be excluded if you set `validator` to `false` in the typegen config.
     </Callout>
+
+    #### AI Agent Integration
+
+    If you use an AI coding agent, run this after installing dependencies to add ProofKit skills for better code generation:
+
+    <CliCommand command="install" exec packageName="@tanstack/intent@latest" />
 
   </Step>
 

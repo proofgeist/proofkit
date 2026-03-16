@@ -17,7 +17,8 @@ name: Trigger Skill Review
 on:
   push:
     branches: [main]
-    paths:      - 'packages/better-auth/docs/**'
+    paths:
+      - 'packages/better-auth/docs/**'
       - 'packages/better-auth/src/**'
       - 'packages/fmdapi/docs/**'
       - 'packages/fmdapi/src/**'

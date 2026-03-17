@@ -35,6 +35,12 @@ export const envNamesBase = z
         password: z.string().optional(),
       })
       .optional(),
+    fmHttp: z
+      .object({
+        baseUrl: z.string().optional(),
+        connectedFileName: z.string().optional(),
+      })
+      .optional(),
   })
   .optional()
   .meta({
@@ -60,11 +66,22 @@ const envNames = envNamesBase
             password: val.auth.password === "" ? undefined : val.auth.password,
           }
         : undefined,
+      fmHttp: val.fmHttp
+        ? {
+            baseUrl: val.fmHttp.baseUrl === "" ? undefined : val.fmHttp.baseUrl,
+            connectedFileName: val.fmHttp.connectedFileName === "" ? undefined : val.fmHttp.connectedFileName,
+          }
+        : undefined,
     };
 
     // Remove auth if all values are undefined
     if (transformed.auth && Object.values(transformed.auth).every((v) => v === undefined)) {
       transformed.auth = undefined;
+    }
+
+    // Remove fmHttp if all values are undefined
+    if (transformed.fmHttp && Object.values(transformed.fmHttp).every((v) => v === undefined)) {
+      transformed.fmHttp = undefined;
     }
 
     // Return undefined if all top-level values are undefined
@@ -173,6 +190,35 @@ const webviewerScriptNameField = z.string().optional().meta({
     "The name of the webviewer script to be used. If this key is set, the generated client will use the @proofkit/webviewer adapter instead of the OttoFMS or Fetch adapter, which will only work when loaded inside of a FileMaker webviewer.",
 });
 
+const fmHttpFieldObject = z.object({
+  enabled: z.boolean().default(true).optional().meta({
+    description: "Enable the FM HTTP proxy for metadata fetching during typegen.",
+  }),
+  scriptName: z.string().optional().meta({
+    description:
+      'The FM script the HTTP proxy calls to execute Data API operations. Overrides webviewerScriptName for the proxy call. Defaults to "execute_data_api".',
+  }),
+  baseUrl: z.string().optional().meta({
+    description:
+      'Base URL of the local FM HTTP server. Defaults to "http://127.0.0.1:1365". Can also be set via FM_HTTP_BASE_URL env var.',
+  }),
+  connectedFileName: z.string().optional().meta({
+    description:
+      "Name of the connected FileMaker file. If not provided, it will be auto-discovered from the FM HTTP server's /connectedFiles endpoint and written back to your config. Can also be set via FM_CONNECTED_FILE_NAME env var.",
+  }),
+});
+
+const fmHttpField = z
+  .preprocess((val) => {
+    if (val === true) return { enabled: true };
+    return val;
+  }, fmHttpFieldObject)
+  .optional()
+  .meta({
+    description:
+      "Enable the FM HTTP proxy for metadata fetching during typegen. Generated clients will use the @proofkit/webviewer adapter with webviewerScriptName or 'execute_data_api' as the default.",
+  });
+
 const reduceMetadataField = z.boolean().optional().meta({
   description:
     "If true, reduced OData annotations will be requested from the server to reduce payload size. This will prevent comments, entity ids, and other properties from being generated.",
@@ -206,6 +252,7 @@ const createFmdapiConfig = (envNamesSchema: typeof envNames | typeof envNamesBas
     clientSuffix: clientSuffixField,
     generateClient: generateClientField,
     webviewerScriptName: webviewerScriptNameField,
+    fmHttp: fmHttpField,
   });
 
 const createFmodataConfig = (envNamesSchema: typeof envNames | typeof envNamesBase) =>
@@ -279,4 +326,5 @@ export interface BuildSchemaArgs {
   layoutName: string;
   strictNumbers?: boolean;
   webviewerScriptName?: string;
+  fmHttp?: boolean;
 }

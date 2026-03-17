@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import type { z } from "zod/v4";
-import { defaultEnvNames } from "./constants";
+import { defaultEnvNames, defaultFmHttpBaseUrl } from "./constants";
 import type { typegenConfigSingle } from "./types";
 
 type EnvNames = z.infer<typeof typegenConfigSingle>["envNames"];
@@ -11,14 +11,23 @@ export interface EnvValues {
   apiKey: string | undefined;
   username: string | undefined;
   password: string | undefined;
+  fmHttpBaseUrl: string | undefined;
+  fmHttpConnectedFileName: string | undefined;
 }
 
 export type EnvValidationResult =
   | {
       success: true;
+      mode: "standard";
       server: string;
       db: string;
       auth: { apiKey: string } | { username: string; password: string };
+    }
+  | {
+      success: true;
+      mode: "fmHttp";
+      baseUrl: string;
+      connectedFileName: string;
     }
   | {
       success: false;
@@ -61,12 +70,27 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
   const username = process.env[usernameEnvName];
   const password = process.env[passwordEnvName];
 
+  // FM HTTP env vars
+  const fmHttpBaseUrlEnvName =
+    envNames?.fmHttp && "baseUrl" in envNames.fmHttp
+      ? getEnvName(envNames.fmHttp.baseUrl, defaultEnvNames.fmHttpBaseUrl)
+      : defaultEnvNames.fmHttpBaseUrl;
+  const fmHttpConnectedFileNameEnvName =
+    envNames?.fmHttp && "connectedFileName" in envNames.fmHttp
+      ? getEnvName(envNames.fmHttp.connectedFileName, defaultEnvNames.fmHttpConnectedFileName)
+      : defaultEnvNames.fmHttpConnectedFileName;
+
+  const fmHttpBaseUrl = process.env[fmHttpBaseUrlEnvName];
+  const fmHttpConnectedFileName = process.env[fmHttpConnectedFileNameEnvName];
+
   return {
     server,
     db,
     apiKey,
     username,
     password,
+    fmHttpBaseUrl,
+    fmHttpConnectedFileName,
   };
 }
 
@@ -78,8 +102,27 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
  * @param envNames - Optional custom environment variable names (for error messages)
  * @returns Validation result with success flag and either data or error message
  */
-export function validateEnvValues(envValues: EnvValues, envNames?: EnvNames): EnvValidationResult {
-  const { server, db, apiKey, username, password } = envValues;
+export function validateEnvValues(
+  envValues: EnvValues,
+  envNames?: EnvNames,
+  options?: { fmHttp?: boolean; fmHttpConfig?: { baseUrl?: string; connectedFileName?: string } },
+): EnvValidationResult {
+  const { server, db, apiKey, username, password, fmHttpBaseUrl, fmHttpConnectedFileName } = envValues;
+
+  // FM HTTP mode: resolve baseUrl and connectedFileName with fallback chain
+  // Priority: config value > env var > default/auto-discover
+  if (options?.fmHttp) {
+    const resolvedBaseUrl = options.fmHttpConfig?.baseUrl || fmHttpBaseUrl || defaultFmHttpBaseUrl;
+    const resolvedConnectedFileName = options.fmHttpConfig?.connectedFileName || fmHttpConnectedFileName;
+
+    // connectedFileName will be auto-discovered later if still missing
+    return {
+      success: true,
+      mode: "fmHttp",
+      baseUrl: resolvedBaseUrl,
+      connectedFileName: resolvedConnectedFileName ?? "",
+    };
+  }
 
   // Helper to get env name, treating empty strings as undefined
   const getEnvName = (customName: string | undefined, defaultName: string) =>
@@ -159,6 +202,7 @@ export function validateEnvValues(envValues: EnvValues, envNames?: EnvNames): En
 
   return {
     success: true,
+    mode: "standard",
     server,
     db,
     auth,
@@ -173,38 +217,73 @@ export function validateEnvValues(envValues: EnvValues, envNames?: EnvNames): En
  * @param envNames - Optional custom environment variable names (for error messages)
  * @returns Validated values or undefined if validation failed
  */
-export function validateAndLogEnvValues(envValues: EnvValues, envNames?: EnvNames): EnvValidationResult | undefined {
-  const result = validateEnvValues(envValues, envNames);
+export function validateAndLogEnvValues(
+  envValues: EnvValues,
+  envNames?: EnvNames,
+  options?: { fmHttp?: boolean; fmHttpConfig?: { baseUrl?: string; connectedFileName?: string } },
+): EnvValidationResult | undefined {
+  const result = validateEnvValues(envValues, envNames, options);
 
   if (!result.success) {
     console.log(chalk.red("ERROR: Could not get all required config values"));
     console.log("Ensure the following environment variables are set:");
 
-    const { server, db, apiKey } = envValues;
+    const getEnvName = (customName: string | undefined, defaultName: string) =>
+      customName && customName.trim() !== "" ? customName : defaultName;
+
+    if (options?.fmHttp) {
+      if (!envValues.fmHttpBaseUrl) {
+        console.log(
+          getEnvName(
+            envNames?.fmHttp && "baseUrl" in envNames.fmHttp ? envNames.fmHttp.baseUrl : undefined,
+            defaultEnvNames.fmHttpBaseUrl,
+          ),
+        );
+      }
+      if (!envValues.fmHttpConnectedFileName) {
+        console.log(
+          getEnvName(
+            envNames?.fmHttp && "connectedFileName" in envNames.fmHttp ? envNames.fmHttp.connectedFileName : undefined,
+            defaultEnvNames.fmHttpConnectedFileName,
+          ),
+        );
+      }
+      console.log();
+      return undefined;
+    }
+
+    const { server, db, apiKey, username, password } = envValues;
 
     if (!server) {
-      console.log(`${envNames?.server ?? defaultEnvNames.server}`);
+      console.log(getEnvName(envNames?.server, defaultEnvNames.server));
     }
     if (!db) {
-      console.log(`${envNames?.db ?? defaultEnvNames.db}`);
+      console.log(getEnvName(envNames?.db, defaultEnvNames.db));
     }
 
-    if (!apiKey) {
+    if (!(apiKey || username)) {
       // Determine the names to display in the error message
-      const apiKeyNameToLog =
-        envNames?.auth && "apiKey" in envNames.auth && envNames.auth.apiKey
-          ? envNames.auth.apiKey
-          : defaultEnvNames.apiKey;
-      const usernameNameToLog =
-        envNames?.auth && "username" in envNames.auth && envNames.auth.username
-          ? envNames.auth.username
-          : defaultEnvNames.username;
-      const passwordNameToLog =
-        envNames?.auth && "password" in envNames.auth && envNames.auth.password
-          ? envNames.auth.password
-          : defaultEnvNames.password;
+      const apiKeyNameToLog = getEnvName(
+        envNames?.auth && "apiKey" in envNames.auth ? envNames.auth.apiKey : undefined,
+        defaultEnvNames.apiKey,
+      );
+      const usernameNameToLog = getEnvName(
+        envNames?.auth && "username" in envNames.auth ? envNames.auth.username : undefined,
+        defaultEnvNames.username,
+      );
+      const passwordNameToLog = getEnvName(
+        envNames?.auth && "password" in envNames.auth ? envNames.auth.password : undefined,
+        defaultEnvNames.password,
+      );
 
       console.log(`${apiKeyNameToLog} (or ${usernameNameToLog} and ${passwordNameToLog})`);
+    } else if (username && !password) {
+      console.log(
+        getEnvName(
+          envNames?.auth && "password" in envNames.auth ? envNames.auth.password : undefined,
+          defaultEnvNames.password,
+        ),
+      );
     }
 
     console.log();

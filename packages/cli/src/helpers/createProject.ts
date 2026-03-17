@@ -129,6 +129,7 @@ export const createBareProject = async ({
   }
 
   replaceTextInFiles(state.projectDir, "__PNPM_COMMAND__", pkgManagerCommand);
+  replaceTextInFiles(state.projectDir, "__PACKAGE_MANAGER__", pkgManager);
 
   return state.projectDir;
 };

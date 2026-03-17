@@ -14,10 +14,17 @@ interface CreateProjectOptions {
   packages: PkgInstallerMap;
   scopedAppName: string;
   noInstall: boolean;
+  force: boolean;
   appRouter: boolean;
 }
 
-export const createBareProject = async ({ projectName, scopedAppName, packages, noInstall }: CreateProjectOptions) => {
+export const createBareProject = async ({
+  projectName,
+  scopedAppName,
+  packages,
+  noInstall,
+  force,
+}: CreateProjectOptions) => {
   const pkgManager = getUserPkgManager();
   state.projectDir = path.resolve(process.cwd(), projectName);
 
@@ -27,6 +34,7 @@ export const createBareProject = async ({ projectName, scopedAppName, packages, 
     pkgManager,
     scopedAppName,
     noInstall,
+    force,
   });
 
   addPackageDependency({
@@ -36,7 +44,7 @@ export const createBareProject = async ({ projectName, scopedAppName, packages, 
 
   // Add new base dependencies for Tailwind v4 and shadcn/ui or legacy Mantine
   // These should match the plan and dependencyVersionMap
-  const SHADCN_BASE_DEPS = [
+  const NEXT_SHADCN_BASE_DEPS = [
     "@radix-ui/react-slot",
     "@tailwindcss/postcss",
     "class-variance-authority",
@@ -47,7 +55,21 @@ export const createBareProject = async ({ projectName, scopedAppName, packages, 
     "tw-animate-css",
     "next-themes",
   ] as AvailableDependencies[];
+  const VITE_SHADCN_BASE_DEPS = [
+    "@radix-ui/react-slot",
+    "@tailwindcss/vite",
+    "@proofkit/fmdapi",
+    "@proofkit/webviewer",
+    "class-variance-authority",
+    "clsx",
+    "lucide-react",
+    "tailwind-merge",
+    "tailwindcss",
+    "tw-animate-css",
+    "zod",
+  ] as AvailableDependencies[];
   const SHADCN_BASE_DEV_DEPS = [] as AvailableDependencies[];
+  const VITE_SHADCN_BASE_DEV_DEPS = ["@proofkit/typegen"] as AvailableDependencies[];
 
   const MANTINE_DEPS = [
     "@mantine/core",
@@ -70,16 +92,12 @@ export const createBareProject = async ({ projectName, scopedAppName, packages, 
     });
   } else if (state.ui === "shadcn") {
     addPackageDependency({
-      dependencies: SHADCN_BASE_DEPS,
+      dependencies: state.appType === "webviewer" ? VITE_SHADCN_BASE_DEPS : NEXT_SHADCN_BASE_DEPS,
       devMode: false,
     });
     addPackageDependency({
-      dependencies: SHADCN_BASE_DEV_DEPS,
+      dependencies: state.appType === "webviewer" ? VITE_SHADCN_BASE_DEV_DEPS : SHADCN_BASE_DEV_DEPS,
       devMode: true,
-    });
-    addPackageDependency({
-      dependencies: ["zod"],
-      devMode: false,
     });
   } else {
     throw new Error(`Unsupported UI library: ${state.ui}`);

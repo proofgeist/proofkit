@@ -1,15 +1,20 @@
-import {
-  getFmdapiVersion,
-  getNodeMajorVersion,
-  getProofkitBetterAuthVersion,
-  getVersion,
-} from "~/utils/getProofKitVersion.js";
+import { getNodeMajorVersion } from "~/utils/getProofKitVersion.js";
+import { getProofkitReleaseTag } from "~/utils/proofkitReleaseChannel.js";
+
+const proofkitReleaseTag = getProofkitReleaseTag();
 
 /*
  * This maps the necessary packages to a version.
  * This improves performance significantly over fetching it from the npm registry.
  */
 export const dependencyVersionMap = {
+  // Resolve to "latest" or "beta" based on current changeset state / versions.
+  "@proofkit/fmdapi": proofkitReleaseTag,
+  "@proofkit/webviewer": proofkitReleaseTag,
+  "@proofkit/cli": proofkitReleaseTag,
+  "@proofkit/typegen": proofkitReleaseTag,
+  "@proofkit/better-auth": proofkitReleaseTag,
+
   // NextAuth.js
   "next-auth": "beta",
   "next-auth-adapter-filemaker": "beta",
@@ -34,10 +39,11 @@ export const dependencyVersionMap = {
   tailwindcss: "^4.1.10",
   postcss: "^8.4.41",
   "@tailwindcss/postcss": "^4.1.10",
+  "@tailwindcss/vite": "^4.2.1",
   "class-variance-authority": "^0.7.1",
   clsx: "^2.1.1",
-  "tailwind-merge": "^3.3.1",
-  "tw-animate-css": "^1.3.4",
+  "tailwind-merge": "^3.5.0",
+  "tw-animate-css": "^1.4.0",
 
   // tRPC
   "@trpc/client": "^11.0.0-rc.446",
@@ -50,12 +56,6 @@ export const dependencyVersionMap = {
   // Clerk
   "@clerk/nextjs": "^6.3.1",
   "@clerk/themes": "^2.1.33",
-
-  // FileMaker Data API
-  "@proofkit/fmdapi": `^${getFmdapiVersion()}`,
-
-  // ProofKit
-  "@proofkit/cli": `^${getVersion()}`,
 
   // Tanstack Query
   "@tanstack/react-query": "^5.59.0",
@@ -85,11 +85,10 @@ export const dependencyVersionMap = {
   "@radix-ui/react-slot": "^1.2.3",
 
   // Icons (for shadcn/ui)
-  "lucide-react": "^0.518.0",
+  "lucide-react": "^0.577.0",
 
   // better-auth
   "better-auth": "^1.3.4",
-  "@proofkit/better-auth": `${getProofkitBetterAuthVersion()}`,
   "@daveyplate/better-auth-ui": "^2.1.3",
 
   // Mantine UI

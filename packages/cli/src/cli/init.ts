@@ -8,15 +8,14 @@ import type { PackageJson } from "type-fest";
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { addAuth } from "~/generators/auth.js";
 import { runCodegenCommand } from "~/generators/fmdapi.js";
-import { ciOption, debugOption } from "~/globalOptions.js";
+import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { createBareProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { setImportAlias } from "~/helpers/setImportAlias.js";
 import { buildPkgInstallerMap } from "~/installers/index.js";
-import { ensureWebViewerAddonInstalled } from "~/installers/proofkit-webviewer.js";
-import { initProgramState, state } from "~/state.js";
+import { initProgramState, isNonInteractiveMode, state } from "~/state.js";
 import { getVersion } from "~/utils/getProofKitVersion.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
@@ -28,6 +27,7 @@ import { abortIfCancel } from "./utils.js";
 interface CliFlags {
   noGit: boolean;
   noInstall: boolean;
+  force: boolean;
   default: boolean;
   importAlias: string;
   server?: string;
@@ -43,6 +43,8 @@ interface CliFlags {
   ui?: "shadcn" | "mantine";
   /** @internal Used in CI. */
   CI: boolean;
+  /** @internal Used in non-interactive mode. */
+  nonInteractive?: boolean;
   /** @internal Used in CI. */
   tailwind: boolean;
   /** @internal Used in CI. */
@@ -58,6 +60,7 @@ interface CliFlags {
 const defaultOptions: CliFlags = {
   noGit: false,
   noInstall: false,
+  force: false,
   default: false,
   CI: false,
   tailwind: false,
@@ -94,7 +97,9 @@ export const makeInitCommand = () => {
     .option("--dataSource [type]", "The data source to use for the web app (filemaker or none)", undefined)
     .option("--noGit", "Explicitly tell the CLI to not initialize a new git repo in the project", false)
     .option("--noInstall", "Explicitly tell the CLI to not run the package manager's install command", false)
+    .option("-f, --force", "Force overwrite target directory when it already contains files", false)
     .addOption(ciOption)
+    .addOption(nonInteractiveOption)
     .addOption(debugOption)
     .action(runInit);
 
@@ -132,21 +137,28 @@ type ProofKitPackageJSON = PackageJson & {
 export const runInit = async (name?: string, opts?: CliFlags) => {
   const pkgManager = getUserPkgManager();
   const cliOptions = opts ?? defaultOptions;
+  const nonInteractive = isNonInteractiveMode();
+  const noInstall = cliOptions.noInstall ?? (opts as { install?: boolean } | undefined)?.install === false;
+  const noGit = cliOptions.noGit ?? (opts as { git?: boolean } | undefined)?.git === false;
   // capture ui choice early into state
   state.ui = (cliOptions.ui ?? "shadcn") as "shadcn" | "mantine";
 
-  const projectName =
-    name ||
-    abortIfCancel(
+  let projectName = name;
+  if (!projectName) {
+    if (nonInteractive) {
+      throw new Error("Project name is required in non-interactive mode.");
+    }
+    projectName = abortIfCancel(
       await text({
         message: "What will your project be called?",
         defaultValue: DEFAULT_APP_NAME,
         validate: validateAppName,
       }),
     ).toString();
+  }
 
   if (!state.appType) {
-    state.appType = state.ci
+    state.appType = nonInteractive
       ? "browser"
       : (abortIfCancel(
           await select({
@@ -176,7 +188,8 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     projectName: appDir,
     scopedAppName,
     packages: usePackages,
-    noInstall: cliOptions.noInstall,
+    noInstall,
+    force: cliOptions.force,
     appRouter: cliOptions.appRouter,
   });
   setImportAlias(projectDir, "@/");
@@ -209,7 +222,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
           dataSources: [],
           tanstackQuery: false,
           replacedMainPage: false,
-          appliedUpgrades: ["cursorRules"],
+          appliedUpgrades: [],
           reactEmail: false,
           reactEmailServer: false,
           registryTemplates: [],
@@ -225,7 +238,10 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   setSettings(initialSettings);
 
   // for webviewer apps FM is required, so don't ask
-  let dataSource = state.appType === "webviewer" ? "filemaker" : cliOptions.dataSource;
+  let dataSource =
+    state.appType === "webviewer"
+      ? (cliOptions.dataSource ?? (nonInteractive && !cliOptions.server ? "none" : "filemaker"))
+      : (cliOptions.dataSource ?? (nonInteractive ? "none" : undefined));
   if (!dataSource) {
     dataSource = abortIfCancel(
       await select({
@@ -259,27 +275,39 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
       layoutName: cliOptions.layoutName,
       schemaName: cliOptions.schemaName,
     });
-
-    // Now that we have the data source set up, check for webviewer layouts if needed
-    if (state.appType === "webviewer") {
-      await ensureWebViewerAddonInstalled();
-    }
   } else if (dataSource === "supabase") {
     // TODO: add supabase
   }
 
   await askForAuth({ projectDir });
 
-  await installDependencies({ projectDir });
+  if (!noInstall) {
+    await installDependencies({ projectDir });
+  }
 
-  await runCodegenCommand();
+  if (dataSource === "filemaker") {
+    const hasExplicitFileMakerInputs = Boolean(
+      cliOptions.server ||
+        cliOptions.adminApiKey ||
+        cliOptions.dataApiKey ||
+        cliOptions.fileName ||
+        cliOptions.layoutName ||
+        cliOptions.schemaName,
+    );
 
-  if (!cliOptions.noGit) {
+    const shouldSkipInitialCodegen = state.appType === "webviewer" && nonInteractive && !hasExplicitFileMakerInputs;
+
+    if (!shouldSkipInitialCodegen) {
+      await runCodegenCommand();
+    }
+  }
+
+  if (!noGit) {
     await initializeGit(projectDir);
   }
 
   logNextSteps({
     projectName: appDir,
-    noInstall: cliOptions.noInstall,
+    noInstall,
   });
 };

@@ -28,3 +28,11 @@ export const getNodeMajorVersion = () => {
 export const getProofkitBetterAuthVersion = () => {
   return __BETTER_AUTH_VERSION__;
 };
+
+export const getProofkitWebviewerVersion = () => {
+  return __WEBVIEWER_VERSION__;
+};
+
+export const getTypegenVersion = () => {
+  return __TYPEGEN_VERSION__;
+};

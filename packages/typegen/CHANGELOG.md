@@ -1,5 +1,25 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.17
+
+### Minor Changes
+
+- 5544f68: - cli: Revamp the WebViewer Vite template and harden `proofkit init` (ignore hidden files, improve non-interactive prompts, stop generating Cursor rules).
+  - cli: Install typegen skills locally when scaffolding projects.
+  - typegen: Add optional `fmHttp` config for using an FM HTTP proxy during metadata fetching.
+  - fmdapi/fmodata/webviewer: Add initial Codex skills for client and integration workflows.
+- 1d4b69d: Add FM HTTP adapter support for type generation, including local FM HTTP metadata fetch flow, env name handling, and improved adapter error parsing.
+
+### Patch Changes
+
+- f3980b1: Add warnings to agent skills to prevent manually adding fields or inventing entity IDs in generated schema files; deduplicate common mistakes across skills with cross-refs to typegen-setup
+- 8ca7a1e: Fix overflow in metadata fields dialog where bottom settings form overlapped with data grid
+- Updated dependencies [5544f68]
+- Updated dependencies [f3980b1]
+- Updated dependencies [1d4b69d]
+  - @proofkit/fmdapi@5.1.0-beta.2
+  - @proofkit/fmodata@0.1.0-beta.33
+
 ## 1.1.0-beta.16
 
 ### Patch Changes

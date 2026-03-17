@@ -1,0 +1,17 @@
+{
+  "configurations": [
+    {
+      "name": "preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "preview"],
+      "cwd": "${workspaceFolder}",
+      "port": 5175
+    },
+    {
+      "name": "typegen",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "typegen"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

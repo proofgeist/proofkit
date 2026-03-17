@@ -1,5 +1,15 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.33
+
+### Patch Changes
+
+- 5544f68: - cli: Revamp the WebViewer Vite template and harden `proofkit init` (ignore hidden files, improve non-interactive prompts, stop generating Cursor rules).
+  - cli: Install typegen skills locally when scaffolding projects.
+  - typegen: Add optional `fmHttp` config for using an FM HTTP proxy during metadata fetching.
+  - fmdapi/fmodata/webviewer: Add initial Codex skills for client and integration workflows.
+- f3980b1: Add warnings to agent skills to prevent manually adding fields or inventing entity IDs in generated schema files; deduplicate common mistakes across skills with cross-refs to typegen-setup
+
 ## 0.1.0-beta.32
 
 ### Minor Changes

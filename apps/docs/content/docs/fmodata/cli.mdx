@@ -275,6 +275,23 @@ fmodata metadata tables
 fmodata metadata tables --pretty
 ```
 
+#### `metadata fields`
+
+List field names for a specific table. By default returns a JSON array of field name strings.
+
+```bash
+# Field names only
+fmodata metadata fields --table Contacts
+
+# Include type, nullable, and other metadata per field
+fmodata metadata fields --table Contacts --details
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Table to inspect |
+| `--details` | Include field metadata (`name`, `type`, `nullable`, and additional attributes) |
+
 ---
 
 ### `schema`

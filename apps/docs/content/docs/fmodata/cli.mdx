@@ -245,19 +245,26 @@ fmodata webhook remove 42
 
 #### `metadata get`
 
-Retrieve OData metadata for the database.
+Retrieve OData metadata for the database. Optionally filter to a single table.
 
 ```bash
-# JSON (default)
+# Full database metadata (JSON)
 fmodata metadata get
 
-# XML
+# Full database metadata (XML)
 fmodata metadata get --format xml
+
+# Single table metadata
+fmodata metadata get --table Contacts
+
+# Single table metadata (XML)
+fmodata metadata get --table Contacts --format xml
 ```
 
 | Option | Description |
 |---|---|
 | `--format <format>` | `json` (default) or `xml` |
+| `--table <name>` | Filter metadata to a specific table |
 
 #### `metadata tables`
 

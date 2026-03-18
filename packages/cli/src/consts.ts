@@ -36,6 +36,4 @@ declare const __REGISTRY_URL__: string;
 // Provide a safe fallback when running from source (not built)
 export const DEFAULT_REGISTRY_URL =
   // typeof check avoids ReferenceError if not defined at runtime
-  typeof __REGISTRY_URL__ !== "undefined" && __REGISTRY_URL__
-    ? __REGISTRY_URL__
-    : "https://proofkit.dev";
+  typeof __REGISTRY_URL__ !== "undefined" && __REGISTRY_URL__ ? __REGISTRY_URL__ : "https://proofkit.dev";

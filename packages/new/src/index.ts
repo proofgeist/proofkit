@@ -78,8 +78,10 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
     const flags = { ...defaultCliFlags, ...rawFlags };
 
     if (cliContext.nonInteractive || flags.CI || flags.nonInteractive) {
-      throw new Error(
-        "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit-new init <name> --non-interactive`.",
+      return yield* Effect.fail(
+        new Error(
+          "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit-new init <name> --non-interactive`.",
+        ),
       );
     }
 

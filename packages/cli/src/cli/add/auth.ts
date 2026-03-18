@@ -1,7 +1,7 @@
-import { cancel, select } from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
 import { z } from "zod/v4";
+import { cancel, select } from "~/cli/prompts.js";
 
 import { addAuth } from "~/generators/auth.js";
 import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";

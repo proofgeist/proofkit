@@ -1,5 +1,5 @@
-import * as p from "@clack/prompts";
 import { Command, Option } from "commander";
+import * as p from "~/cli/prompts.js";
 
 import { installReactEmail } from "~/installers/react-email.js";
 

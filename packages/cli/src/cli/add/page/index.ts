@@ -1,11 +1,10 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
 import { capitalize } from "es-toolkit";
 import fs from "fs-extra";
-
 import { nextjsTemplates, wvTemplates } from "~/cli/add/page/templates.js";
+import * as p from "~/cli/prompts.js";
 import { PKG_ROOT } from "~/consts.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
@@ -224,7 +223,7 @@ async function promptForSchemaFromDataSource({
   const schemaName = abortIfCancel(
     await p.select({
       message: "Which schema should this page load data from?",
-      options: schemas.map((o) => ({ label: o, value: o ?? "" })),
+      options: schemas.map((schema) => ({ label: schema ?? "", value: schema ?? "" })),
     }),
   );
   return schemaName;

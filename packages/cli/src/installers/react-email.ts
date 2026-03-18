@@ -1,9 +1,9 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
 import type { Project } from "ts-morph";
 import type { PackageJson } from "type-fest";
+import * as p from "~/cli/prompts.js";
 
 import { abortIfCancel } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";

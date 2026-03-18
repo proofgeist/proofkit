@@ -2,7 +2,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { intro } from "@clack/prompts";
 import { optional as optionalArg, text as textArg, withDescription as withArgDescription } from "@effect/cli/Args";
 import {
   make as makeCommand,
@@ -35,6 +34,7 @@ import { planInit } from "~/core/planInit.js";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
 import type { CliFlags } from "~/core/types.js";
 import { makeLiveLayer } from "~/services/live.js";
+import { intro } from "~/utils/prompts.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 
 const defaultCliFlags: CliFlags = {

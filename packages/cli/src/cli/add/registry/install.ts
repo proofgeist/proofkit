@@ -1,8 +1,8 @@
-import * as p from "@clack/prompts";
 import { getOtherProofKitDependencies } from "@proofkit/registry";
 import { capitalize, uniq } from "es-toolkit";
 import ora from "ora";
 import semver from "semver";
+import * as p from "~/cli/prompts.js";
 
 import { abortIfCancel } from "~/cli/utils.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
@@ -46,7 +46,7 @@ async function promptForSchemaFromDataSource({
   const schemaName = abortIfCancel(
     await p.select({
       message: "Which schema should this template use?",
-      options: schemas.map((o) => ({ label: o, value: o ?? "" })),
+      options: schemas.map((schema) => ({ label: schema ?? "", value: schema ?? "" })),
     }),
   );
   return schemaName;

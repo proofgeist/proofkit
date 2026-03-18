@@ -1,6 +1,6 @@
-import { confirm, log, select } from "@clack/prompts";
 import chalk from "chalk";
 import open from "open";
+import { confirm, log, select } from "~/cli/prompts.js";
 
 import { DOCS_URL } from "~/consts.js";
 import { checkForAvailableUpgrades, runAllAvailableUpgrades } from "~/upgrades/index.js";

@@ -1,10 +1,9 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import type { OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
-
 import { getLayouts } from "~/cli/fmdapi.js";
+import * as p from "~/cli/prompts.js";
 import { abortIfCancel, UserAbortedError } from "~/cli/utils.js";
 import { state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";

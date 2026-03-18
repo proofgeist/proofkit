@@ -1,8 +1,8 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
 import ora from "ora";
+import * as p from "~/cli/prompts.js";
 
 import { PKG_ROOT } from "~/consts.js";
 import type { InstallerOptions } from "~/installers/index.js";

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { confirm, spinner as createSpinner, isCancel, log, note, password, select, text } from "@clack/prompts";
 import { Effect, Layer } from "effect";
 import { execa } from "execa";
 import fs from "fs-extra";
@@ -28,7 +27,18 @@ import { openBrowser } from "~/utils/browserOpen.js";
 import { deleteJson, getJson, postJson } from "~/utils/http.js";
 import { detectUserPackageManager } from "~/utils/packageManager.js";
 import { createDataSourceEnvNames, updateEnvSchemaFile, updateTypegenConfig } from "~/utils/projectFiles.js";
-import { promptSearchSelect } from "~/utils/promptSearch.js";
+import {
+  confirmPrompt,
+  spinner as createSpinner,
+  isCancel,
+  log,
+  multiSearchSelectPrompt,
+  note,
+  passwordPrompt,
+  searchSelectPrompt,
+  selectPrompt,
+  textPrompt,
+} from "~/utils/prompts.js";
 
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
@@ -68,7 +78,7 @@ function transformLayoutList(layouts: LayoutFolder[]): string[] {
 const promptService = {
   text: async (options: { message: string; defaultValue?: string; validate?: (value: string) => string | undefined }) =>
     unwrap(
-      await text({
+      await textPrompt({
         message: options.message,
         defaultValue: options.defaultValue,
         validate: options.validate,
@@ -76,7 +86,7 @@ const promptService = {
     ).toString(),
   password: async (options: { message: string; validate?: (value: string) => string | undefined }) =>
     unwrap(
-      await password({
+      await passwordPrompt({
         message: options.message,
         validate: options.validate,
       }),
@@ -86,39 +96,25 @@ const promptService = {
     options: Array<{ value: T; label: string; hint?: string }>;
   }) =>
     unwrap(
-      await select({
+      await selectPrompt({
         message: options.message,
-        options: options.options as never,
+        options: options.options,
       }),
     ) as T,
   searchSelect: async <T extends string>(options: {
     message: string;
     searchLabel?: string;
     emptyMessage?: string;
-    options: Array<{ value: T; label: string; hint?: string; keywords?: string[] }>;
-  }) =>
-    promptSearchSelect(
-      {
-        promptForSearch: async (message) =>
-          unwrap(
-            await text({
-              message,
-              placeholder: "Type to filter results",
-            }),
-          ).toString(),
-        promptForSelect: async (message, items) =>
-          unwrap(
-            await select({
-              message,
-              options: items as never,
-            }),
-          ) as T | "__search__",
-      },
-      options,
-    ),
+    options: Array<{ value: T; label: string; hint?: string; keywords?: string[]; disabled?: boolean | string }>;
+  }) => unwrap(await searchSelectPrompt(options)) as T,
+  multiSearchSelect: async <T extends string>(options: {
+    message: string;
+    options: Array<{ value: T; label: string; hint?: string; keywords?: string[]; disabled?: boolean | string }>;
+    required?: boolean;
+  }) => unwrap(await multiSearchSelectPrompt(options)),
   confirm: async (options: { message: string; initialValue?: boolean }) =>
     unwrap(
-      await confirm({
+      await confirmPrompt({
         message: options.message,
         initialValue: options.initialValue,
       }),

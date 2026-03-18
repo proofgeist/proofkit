@@ -1,8 +1,8 @@
 #!/usr/bin/env node --no-warnings
-import { intro } from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
 import { makeInitCommand, runInit } from "~/cli/init.js";
+import { intro } from "~/cli/prompts.js";
 import { logger } from "~/utils/logger.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 import { makeAddCommand } from "./cli/add/index.js";

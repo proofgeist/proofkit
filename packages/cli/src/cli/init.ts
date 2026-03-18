@@ -134,6 +134,65 @@ type ProofKitPackageJSON = PackageJson & {
   };
 };
 
+const missingTypegenCommandPatterns = [
+  /ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL[\s\S]*Command\s+["'`]typegen["'`]\s+not found/i,
+  /Command\s+["'`]typegen["'`]\s+not found/i,
+  /Missing script:\s*["'`]typegen["'`]/i,
+  /Script not found\s*["'`]typegen["'`]/i,
+];
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function createErrorWithCause(message: string, cause: Error): Error {
+  const wrapped = new Error(message) as Error & { cause?: Error };
+  wrapped.cause = cause;
+  return wrapped;
+}
+
+export function isMissingTypegenCommandError(error: unknown): boolean {
+  const message = getErrorMessage(error);
+  return missingTypegenCommandPatterns.some((pattern) => pattern.test(message));
+}
+
+export function createPostInitGenerationError({
+  error,
+  appType,
+  projectDir,
+}: {
+  error: unknown;
+  appType: "browser" | "webviewer";
+  projectDir: string;
+}) {
+  const rootError = error instanceof Error ? error : new Error(getErrorMessage(error));
+
+  if (appType === "browser" && isMissingTypegenCommandError(error)) {
+    return createErrorWithCause(
+      [
+        "Post-init generation failed after scaffolding.",
+        `Project created at: ${projectDir}`,
+        "Root cause: a `typegen` package command was invoked, but browser scaffolds do not define that script.",
+        "Continue using the generated project, then run `proofkit typegen` later after FileMaker setup is complete.",
+      ].join("\n"),
+      rootError,
+    );
+  }
+
+  return createErrorWithCause(
+    [
+      "Post-init generation failed after scaffolding.",
+      `Project created at: ${projectDir}`,
+      "Retry `proofkit typegen` from inside the project once FileMaker settings and connectivity are valid.",
+      `Underlying error: ${getErrorMessage(error)}`,
+    ].join("\n"),
+    rootError,
+  );
+}
+
 export const runInit = async (name?: string, opts?: CliFlags) => {
   const pkgManager = getUserPkgManager();
   const cliOptions = opts ?? defaultOptions;
@@ -157,6 +216,21 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     ).toString();
   }
 
+  const appNameValidation = validateAppName(projectName);
+  if (appNameValidation) {
+    throw new Error(appNameValidation);
+  }
+
+  const hasExplicitFileMakerInputs = Boolean(
+    cliOptions.server ||
+      cliOptions.adminApiKey ||
+      cliOptions.dataApiKey ||
+      cliOptions.fileName ||
+      cliOptions.layoutName ||
+      cliOptions.schemaName,
+  );
+  const hasPartialFileMakerSchemaInputs = Boolean(cliOptions.layoutName) !== Boolean(cliOptions.schemaName);
+
   if (!state.appType) {
     state.appType = nonInteractive
       ? "browser"
@@ -177,6 +251,21 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
             ],
           }),
         ) as "browser" | "webviewer");
+  }
+
+  if (nonInteractive && hasPartialFileMakerSchemaInputs) {
+    throw new Error("Both --layoutName and --schemaName must be provided together.");
+  }
+
+  if (nonInteractive && hasExplicitFileMakerInputs) {
+    const resolvedDataSourceForValidation =
+      state.appType === "webviewer"
+        ? (cliOptions.dataSource ?? (cliOptions.server ? "filemaker" : "none"))
+        : (cliOptions.dataSource ?? "none");
+
+    if (resolvedDataSourceForValidation !== "filemaker") {
+      throw new Error("FileMaker flags require --dataSource filemaker in non-interactive mode.");
+    }
   }
 
   const usePackages = buildPkgInstallerMap();
@@ -286,19 +375,18 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   }
 
   if (dataSource === "filemaker") {
-    const hasExplicitFileMakerInputs = Boolean(
-      cliOptions.server ||
-        cliOptions.adminApiKey ||
-        cliOptions.dataApiKey ||
-        cliOptions.fileName ||
-        cliOptions.layoutName ||
-        cliOptions.schemaName,
-    );
+    const shouldRunInitialCodegen = state.appType === "webviewer" && !(nonInteractive && !hasExplicitFileMakerInputs);
 
-    const shouldSkipInitialCodegen = state.appType === "webviewer" && nonInteractive && !hasExplicitFileMakerInputs;
-
-    if (!shouldSkipInitialCodegen) {
-      await runCodegenCommand();
+    if (shouldRunInitialCodegen) {
+      try {
+        await runCodegenCommand();
+      } catch (error) {
+        throw createPostInitGenerationError({
+          error,
+          appType: state.appType ?? "browser",
+          projectDir,
+        });
+      }
     }
   }
 

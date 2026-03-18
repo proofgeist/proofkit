@@ -23,9 +23,9 @@ describe("WebViewer CLI Tests", () => {
       `node "${cliPath}" init`,
       projectName,
       "--non-interactive",
-      "--appType webviewer",
-      "--noGit",
-      "--noInstall",
+      "--app-type webviewer",
+      "--no-git",
+      "--no-install",
     ].join(" ");
 
     expect(() => {
@@ -60,9 +60,9 @@ describe("WebViewer CLI Tests", () => {
       `node "${cliPath}" init`,
       projectName,
       "--non-interactive",
-      "--appType webviewer",
-      "--noGit",
-      "--noInstall",
+      "--app-type webviewer",
+      "--no-git",
+      "--no-install",
     ].join(" ");
 
     expect(() => {
@@ -86,9 +86,9 @@ describe("WebViewer CLI Tests", () => {
       `node "${cliPath}" init`,
       projectName,
       "--non-interactive",
-      "--appType webviewer",
-      "--noGit",
-      "--noInstall",
+      "--app-type webviewer",
+      "--no-git",
+      "--no-install",
     ].join(" ");
 
     expect(() => {
@@ -111,9 +111,9 @@ describe("WebViewer CLI Tests", () => {
       `node "${cliPath}" init`,
       projectName,
       "--non-interactive",
-      "--appType webviewer",
-      "--noGit",
-      "--noInstall",
+      "--app-type webviewer",
+      "--no-git",
+      "--no-install",
     ].join(" ");
 
     expect(() => {
@@ -136,9 +136,9 @@ describe("WebViewer CLI Tests", () => {
       `node "${cliPath}" init`,
       projectName,
       "--non-interactive",
-      "--appType webviewer",
-      "--noGit",
-      "--noInstall",
+      "--app-type webviewer",
+      "--no-git",
+      "--no-install",
     ].join(" ");
 
     expect(() => {

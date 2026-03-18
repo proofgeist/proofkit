@@ -6,7 +6,29 @@ import { z } from "zod/v4";
 
 import { verifySmokeProjectBuilds } from "./test-utils";
 
-describe("External integration smoke tests (non-interactive CLI)", () => {
+const smokeEnvSchema = z.object({
+  OTTO_SERVER_URL: z.url(),
+  OTTO_ADMIN_API_KEY: z.string().min(1),
+  FM_DATA_API_KEY: z.string().min(1),
+  FM_FILE_NAME: z.string().min(1),
+  FM_LAYOUT_NAME: z.string().min(1),
+});
+
+const parsedSmokeEnv = smokeEnvSchema.safeParse(process.env);
+const describeWhenSmokeEnvPresent = parsedSmokeEnv.success ? describe : describe.skip;
+
+if (!parsedSmokeEnv.success) {
+  const missingKeys = [...new Set(parsedSmokeEnv.error.issues.map((issue) => issue.path.join(".")))];
+  console.warn(
+    `Skipping external integration smoke tests; missing required env vars: ${missingKeys.join(", ")}`,
+  );
+}
+
+describeWhenSmokeEnvPresent("External integration smoke tests (non-interactive CLI)", () => {
+  if (!parsedSmokeEnv.success) {
+    return;
+  }
+
   // Use root-level tmp directory for test outputs
   const testDir = join(__dirname, "..", "..", "tmp", "cli-tests");
   const cliPath = join(__dirname, "..", "dist", "index.js");
@@ -14,15 +36,7 @@ describe("External integration smoke tests (non-interactive CLI)", () => {
   const projectDir = join(testDir, projectName);
 
   // Required for live Otto/FileMaker integration smoke coverage.
-  const testEnv = z
-    .object({
-      OTTO_SERVER_URL: z.url(),
-      OTTO_ADMIN_API_KEY: z.string().min(1),
-      FM_DATA_API_KEY: z.string().min(1),
-      FM_FILE_NAME: z.string().min(1),
-      FM_LAYOUT_NAME: z.string().min(1),
-    })
-    .parse(process.env);
+  const testEnv = parsedSmokeEnv.data;
 
   beforeEach(
     () => {

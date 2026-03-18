@@ -68,8 +68,8 @@ export const createBareProject = async ({
     "tw-animate-css",
     "zod",
   ] as AvailableDependencies[];
-  const SHADCN_BASE_DEV_DEPS = [] as AvailableDependencies[];
-  const VITE_SHADCN_BASE_DEV_DEPS = ["@proofkit/typegen"] as AvailableDependencies[];
+  const SHADCN_BASE_DEV_DEPS = ["ultracite"] as AvailableDependencies[];
+  const VITE_SHADCN_BASE_DEV_DEPS = ["@proofkit/typegen", "ultracite"] as AvailableDependencies[];
 
   const MANTINE_DEPS = [
     "@mantine/core",
@@ -79,7 +79,12 @@ export const createBareProject = async ({
     "@mantine/notifications",
     "mantine-react-table",
   ] as AvailableDependencies[];
-  const MANTINE_DEV_DEPS = ["postcss", "postcss-preset-mantine", "postcss-simple-vars"] as AvailableDependencies[];
+  const MANTINE_DEV_DEPS = [
+    "postcss",
+    "postcss-preset-mantine",
+    "postcss-simple-vars",
+    "ultracite",
+  ] as AvailableDependencies[];
 
   if (state.ui === "mantine") {
     addPackageDependency({
@@ -124,6 +129,7 @@ export const createBareProject = async ({
   }
 
   replaceTextInFiles(state.projectDir, "__PNPM_COMMAND__", pkgManagerCommand);
+  replaceTextInFiles(state.projectDir, "__PACKAGE_MANAGER__", pkgManager);
 
   return state.projectDir;
 };

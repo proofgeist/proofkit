@@ -102,6 +102,9 @@ export const dependencyVersionMap = {
   // Theme utilities
   "next-themes": "^0.4.6",
 
+  // Linting and formatting
+  ultracite: "^7.0.8",
+
   // Zod
   zod: "^4",
 } as const;

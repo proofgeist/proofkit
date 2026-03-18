@@ -30,7 +30,7 @@ const steps: readonly Step[] = [
 
 export default function App() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main>
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10 sm:px-10">
         <div className="mb-10 flex-1">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm text-muted-foreground shadow-sm">
@@ -48,7 +48,7 @@ export default function App() {
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
                 This starter stays intentionally small, but it is already ready for Tailwind v4, shadcn component
-                installs, and later ProofKit typegen output.
+                installs, hash-based TanStack Router navigation, React Query, and later ProofKit typegen output.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3 text-sm">

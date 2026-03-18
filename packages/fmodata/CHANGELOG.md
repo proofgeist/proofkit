@@ -1,5 +1,15 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.34
+
+### Minor Changes
+
+- ce73357: Add metadata fields subcommand for listing table field names and metadata
+  - New `fmodata metadata fields` CLI command to list fields for a specific table
+  - Support `--table` option to specify target table (required)
+  - Support `--details` flag to include field metadata (type, nullable, etc)
+  - Simplifies field inspection workflow vs full metadata export
+
 ## 0.1.0-beta.33
 
 ### Patch Changes
@@ -15,7 +25,6 @@
 ### Minor Changes
 
 - 78a9f70: Add CLI binary with commands for records, schema, metadata, scripts, and webhooks
-
   - New `fmodata` command-line interface for database operations
   - Records command: Query, create, update, delete FileMaker records
   - Schema command: Inspect and manage database schema
@@ -38,7 +47,6 @@
 - c5efdbd: fix(fmodata): align webhook types with actual FM OData API response
 
   BREAKING: `WebhookListResponse`, `WebhookInfo`, and `WebhookAddResponse` property names changed to match what the API actually returns:
-
   - `Status` → `status`, `WebHook` → `webhooks`
   - `webHookID` → `webhookID`, `url` → `webhook`
   - `webHookResult` → `webhookResult`

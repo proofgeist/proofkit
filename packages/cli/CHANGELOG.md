@@ -1,5 +1,16 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.1
+
+### Major Changes
+
+- d3c7979: Rewrite the CLI package for better observability, composability, and error tracing.
+
+### Patch Changes
+
+- d7f86a4: Update newly scaffolded apps to use Ultracite for linting and formatting by default, including the generated `lint` and `format` scripts and CLI formatting flow.
+  - @proofkit/typegen@1.1.0-beta.18
+
 ## 2.0.0-beta.22
 
 ### Minor Changes

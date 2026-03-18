@@ -77,7 +77,21 @@ export async function replaceTextInFiles(
   const entries = await fs.readdir(rootDir);
   for (const entry of entries) {
     const fullPath = path.join(rootDir, entry);
-    const childEntries = await fs.readdir(fullPath).catch(() => undefined);
+    const childEntries = await fs.readdir(fullPath).catch((error: unknown) => {
+      const code =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : undefined;
+
+      if (code === "ENOTDIR") {
+        return undefined;
+      }
+
+      throw error;
+    });
     if (childEntries) {
       await replaceTextInFiles(fs, fullPath, searchValue, replaceValue);
       continue;

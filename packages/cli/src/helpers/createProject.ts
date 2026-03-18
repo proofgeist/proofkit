@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { AGENT_INSTRUCTIONS } from "~/consts.js";
 import { installPackages } from "~/helpers/installPackages.js";
 import { scaffoldProject } from "~/helpers/scaffoldProject.js";
 import type { AvailableDependencies } from "~/installers/dependencyVersionMap.js";
@@ -130,6 +131,7 @@ export const createBareProject = async ({
 
   replaceTextInFiles(state.projectDir, "__PNPM_COMMAND__", pkgManagerCommand);
   replaceTextInFiles(state.projectDir, "__PACKAGE_MANAGER__", pkgManager);
+  replaceTextInFiles(state.projectDir, "__AGENT_INSTRUCTIONS__", AGENT_INSTRUCTIONS);
 
   return state.projectDir;
 };

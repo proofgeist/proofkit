@@ -26,20 +26,10 @@ ${" ".repeat(61 - versionCharLength)}v${version}
 `;
 export const DEFAULT_APP_NAME = "my-proofkit-app";
 export const CREATE_FM_APP = cliName;
-export const AGENT_INSTRUCTIONS_BY_TEMPLATE = {
-  "nextjs-mantine": [
-    "Start with the ProofKit docs for implementation details and project conventions: https://proofkit.dev/docs",
-    "Before doing any AI-assisted development in this project, run `npx @tanstack/intent@latest install` in the project root, then use the TanStack Intent docs as needed: https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers",
-  ].join("\n"),
-  "nextjs-shadcn": [
-    "Start with the ProofKit docs for implementation details and project conventions: https://proofkit.dev/docs",
-    "Before doing any AI-assisted development in this project, run `npx @tanstack/intent@latest install` in the project root, then use the TanStack Intent docs as needed: https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers",
-  ].join("\n"),
-  "vite-wv": [
-    "Start with the ProofKit docs for implementation details and project conventions: https://proofkit.dev/docs/webviewer",
-    "Before doing any AI-assisted development in this project, run `npx @tanstack/intent@latest install` in the project root, then use the TanStack Intent docs as needed: https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers",
-  ].join("\n"),
-} as const;
+export const AGENT_INSTRUCTIONS = [
+  "Use the ProofKit docs as the primary reference for this project: https://proofkit.dev/docs",
+  "Before doing any AI-assisted development here, run `npx @tanstack/intent@latest install` in the project root to load the project skills; for TanStack Start itself, the current official scaffold command is `npx @tanstack/cli create my-app`, and the relevant docs are https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers and https://tanstack.com/cli/latest/docs/quick-start",
+].join("\n");
 
 // Registry URL is injected at build time via tsdown define
 declare const __REGISTRY_URL__: string;

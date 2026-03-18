@@ -215,7 +215,8 @@ describe("resolveInitRequest", () => {
     expect(request.fileMaker).toBeUndefined();
     expect(request.skipFileMakerSetup).toBe(true);
     expect(promptTranscript.select).toContainEqual({
-      message: "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?",
+      message:
+        "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?",
       options: ["retry", "hosted", "skip"],
     });
   });

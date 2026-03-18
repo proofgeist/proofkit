@@ -147,7 +147,7 @@ export function makeTestLayer(options: {
         }
         return Promise.resolve(searchOptions.slice(0, 1).map((option) => option.value));
       },
-      confirm: async ({ message, initialValue }: { message: string; initialValue?: boolean }) => {
+      confirm: ({ message, initialValue }: { message: string; initialValue?: boolean }) => {
         options.promptTranscript?.confirm.push(message);
         return promptScript.confirm.shift() ?? initialValue ?? false;
       },

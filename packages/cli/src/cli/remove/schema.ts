@@ -1,6 +1,6 @@
-import * as p from "@clack/prompts";
 import { Command } from "commander";
 import { z } from "zod/v4";
+import * as p from "~/cli/prompts.js";
 
 import { getExistingSchemas, removeLayout } from "~/generators/fmdapi.js";
 import { state } from "~/state.js";

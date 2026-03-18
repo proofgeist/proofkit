@@ -28,6 +28,7 @@ export interface PromptScript {
   confirm?: boolean[];
   password?: string[];
   searchSelect?: string[];
+  multiSearchSelect?: string[][];
 }
 
 export interface ConsoleTranscript {
@@ -65,6 +66,7 @@ export function makeTestLayer(options: {
     confirm: [...(options.prompts?.confirm ?? [])],
     password: [...(options.prompts?.password ?? [])],
     searchSelect: [...(options.prompts?.searchSelect ?? [])],
+    multiSearchSelect: [...(options.prompts?.multiSearchSelect ?? [])],
   };
   const consoleTranscript = options.console;
 
@@ -100,6 +102,13 @@ export function makeTestLayer(options: {
           }
         }
         return Promise.resolve(options[0]?.value ?? ("" as T));
+      },
+      multiSearchSelect: <T extends string>({ options }: { options: { value: T }[] }) => {
+        const next = promptScript.multiSearchSelect.shift();
+        if (next) {
+          return Promise.resolve(next.filter((value): value is T => options.some((option) => option.value === value)));
+        }
+        return Promise.resolve(options.slice(0, 1).map((option) => option.value));
       },
       confirm: async ({ initialValue }: { initialValue?: boolean }) =>
         promptScript.confirm.shift() ?? initialValue ?? false,

@@ -38,6 +38,7 @@
     "@effect/platform-node": "0.105.0",
     "@effect/printer": "0.48.0",
     "@effect/printer-ansi": "0.48.0",
+    "@inquirer/prompts": "^8.3.2",
     "axios": "^1.13.2",
     "chalk": "5.4.1",
     "effect": "^3.20.0",

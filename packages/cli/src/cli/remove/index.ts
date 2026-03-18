@@ -1,5 +1,5 @@
-import * as p from "@clack/prompts";
 import { Command } from "commander";
+import * as p from "~/cli/prompts.js";
 
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";

@@ -28,14 +28,19 @@ export interface PromptService {
   }) => Promise<string>;
   readonly select: <T extends string>(options: {
     message: string;
-    options: Array<{ value: T; label: string; hint?: string }>;
+    options: Array<{ value: T; label: string; hint?: string; disabled?: boolean | string }>;
   }) => Promise<T>;
   readonly searchSelect: <T extends string>(options: {
     message: string;
     searchLabel?: string;
     emptyMessage?: string;
-    options: Array<{ value: T; label: string; hint?: string; keywords?: string[] }>;
+    options: Array<{ value: T; label: string; hint?: string; keywords?: string[]; disabled?: boolean | string }>;
   }) => Promise<T>;
+  readonly multiSearchSelect: <T extends string>(options: {
+    message: string;
+    options: Array<{ value: T; label: string; hint?: string; keywords?: string[]; disabled?: boolean | string }>;
+    required?: boolean;
+  }) => Promise<T[]>;
   readonly confirm: (options: { message: string; initialValue?: boolean }) => Promise<boolean>;
 }
 

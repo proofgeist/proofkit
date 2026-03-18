@@ -1,6 +1,5 @@
-import * as p from "@clack/prompts";
-
 import { createDataAPIKeyWithCredentials, getDeploymentStatus, startDeployment } from "~/cli/ottofms.js";
+import * as p from "~/cli/prompts.js";
 
 export const filename = "ProofKitDemo.fmp12";
 

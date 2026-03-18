@@ -1,9 +1,9 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import { Command } from "commander";
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import { z } from "zod/v4";
+import * as p from "~/cli/prompts.js";
 
 import { removeFromFmschemaConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";

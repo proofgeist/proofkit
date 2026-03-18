@@ -368,7 +368,7 @@ importers:
         version: 11.0.0-rc.441(@trpc/server@11.0.0-rc.441)
       '@trpc/next':
         specifier: 11.0.0-rc.441
-        version: 11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        version: 11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@trpc/react-query':
         specifier: 11.0.0-rc.441
         version: 11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -413,7 +413,7 @@ importers:
         version: 16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next-auth:
         specifier: ^4.24.13
-        version: 4.24.13(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        version: 4.24.13(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       postgres:
         specifier: ^3.4.8
         version: 3.4.8
@@ -538,9 +538,6 @@ importers:
       es-toolkit:
         specifier: ^1.43.0
         version: 1.43.0
-      neverthrow:
-        specifier: ^8.2.0
-        version: 8.2.0
       odata-query:
         specifier: ^8.0.7
         version: 8.0.7
@@ -6486,10 +6483,6 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
-  neverthrow@8.2.0:
-    resolution: {integrity: sha512-kOCT/1MCPAxY5iUV3wytNFUMUolzuwd/VF/1KCx7kf6CutrOsTie+84zTGTpgQycjvfLdBBdvBvFLqFD2c0wkQ==}
-    engines: {node: '>=18'}
-
   next-auth@4.24.13:
     resolution: {integrity: sha512-sgObCfcfL7BzIK76SS5TnQtc3yo2Oifp/yIpfv6fMfeBOiBJkDWF3A2y9+yqnmJ4JKc2C+nMjSjmgDeTwgN1rQ==}
     peerDependencies:
@@ -11076,7 +11069,7 @@ snapshots:
     dependencies:
       '@trpc/server': 11.0.0-rc.441
 
-  '@trpc/next@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+  '@trpc/next@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/react-query@11.0.0-rc.441(@tanstack/react-query@5.90.16(react@19.2.3))(@trpc/client@11.0.0-rc.441(@trpc/server@11.0.0-rc.441))(@trpc/server@11.0.0-rc.441)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@trpc/server@11.0.0-rc.441)(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@trpc/client': 11.0.0-rc.441(@trpc/server@11.0.0-rc.441)
       '@trpc/server': 11.0.0-rc.441
@@ -14135,11 +14128,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  neverthrow@8.2.0:
-    optionalDependencies:
-      '@rollup/rollup-linux-x64-gnu': 4.55.1
-
-  next-auth@4.24.13(next@16.1.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  next-auth@4.24.13(next@16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
       '@babel/runtime': 7.28.4
       '@panva/hkdf': 1.2.1

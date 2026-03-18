@@ -1,8 +1,15 @@
-import { describe, it } from "vitest";
-import { createMockClient, users } from "./utils/test-setup";
+import { MockFMServerConnection } from "@proofkit/fmodata/testing";
+import { beforeEach, describe, it } from "vitest";
+import { users } from "./utils/test-setup";
 
-const client = createMockClient();
-const db = client.database("test_db");
+const DB_NAME = "test_db";
+let db: ReturnType<MockFMServerConnection["database"]>;
+
+beforeEach(() => {
+  const mock = new MockFMServerConnection();
+  mock.addRoute({ urlPattern: DB_NAME, response: { value: [] } });
+  db = mock.database(DB_NAME);
+});
 
 describe("list methods", () => {
   it("should not run query unless you await the method", async () => {

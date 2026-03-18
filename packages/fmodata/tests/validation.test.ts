@@ -14,35 +14,30 @@
  */
 
 import { fmTableOccurrence, textField } from "@proofkit/fmodata";
+import { MockFMServerConnection } from "@proofkit/fmodata/testing";
 import { assert, describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod/v4";
-import { simpleMock } from "./utils/mock-fetch";
-import { contacts, createMockClient, type hobbyEnum, users } from "./utils/test-setup";
+import { contacts, type hobbyEnum, users } from "./utils/test-setup";
 
 describe("Validation Tests", () => {
-  const client = createMockClient();
-  const db = client.database("fmdapi_test.fmp12");
-  const simpleDb = client.database("fmdapi_test.fmp12");
-
   describe("validateRecord", () => {
     it("should validate a single record", async () => {
-      const result = await db
-        .from(contacts)
-        .list()
-        .select({ hobby: contacts.hobby })
-        .execute({
-          fetchHandler: simpleMock({
-            status: 200,
-            body: {
-              "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
-              value: [
-                {
-                  hobby: "Invalid Hobby",
-                },
-              ],
+      const mock = new MockFMServerConnection();
+      mock.addRoute({
+        urlPattern: "/fmdapi_test.fmp12/contacts",
+        response: {
+          "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+          value: [
+            {
+              hobby: "Invalid Hobby",
             },
-          }),
-        });
+          ],
+        },
+        status: 200,
+      });
+      const db = mock.database("fmdapi_test.fmp12");
+
+      const result = await db.from(contacts).list().select({ hobby: contacts.hobby }).execute();
 
       assert(result.data, "Result data should be defined");
       const firstRecord = result.data?.[0];
@@ -53,35 +48,38 @@ describe("Validation Tests", () => {
     });
 
     it("should validate records within an expand expression", async () => {
-      const result = await db
-        .from(contacts)
-        .list()
-        .expand(users, (b: any) => b.select({ name: users.name, fake_field: users.fake_field }))
-        .execute({
-          fetchHandler: simpleMock({
-            status: 200,
-            body: {
-              "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
-              value: [
+      const mock = new MockFMServerConnection();
+      mock.addRoute({
+        urlPattern: "/fmdapi_test.fmp12/contacts",
+        response: {
+          "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+          value: [
+            {
+              PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
+              CreationTimestamp: "2025-10-31T10:03:27Z",
+              CreatedBy: "admin",
+              ModificationTimestamp: "2025-10-31T15:55:53Z",
+              ModifiedBy: "admin",
+              name: "Eric",
+              hobby: "Board games",
+              id_user: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
+              users: [
                 {
-                  PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
-                  CreationTimestamp: "2025-10-31T10:03:27Z",
-                  CreatedBy: "admin",
-                  ModificationTimestamp: "2025-10-31T15:55:53Z",
-                  ModifiedBy: "admin",
-                  name: "Eric",
-                  hobby: "Board games",
-                  id_user: "1A269FA3-82E6-465A-94FA-39EE3F2F9B5D",
-                  users: [
-                    {
-                      name: "Test User",
-                    },
-                  ],
+                  name: "Test User",
                 },
               ],
             },
-          }),
-        });
+          ],
+        },
+        status: 200,
+      });
+      const db = mock.database("fmdapi_test.fmp12");
+
+      const result = await db
+        .from(contacts)
+        .list()
+        .expand(users, (b) => b.select({ name: users.name, fake_field: users.fake_field }))
+        .execute();
 
       assert(result.data, "Result data should be defined");
       expect(result.error).toBeUndefined();
@@ -120,7 +118,9 @@ describe("Validation Tests", () => {
       id: textField().primaryKey().notNull(),
       name: textField().notNull(),
     });
-    const query = simpleDb.from(simpleUsers).list();
+    const mock = new MockFMServerConnection();
+    const db = mock.database("fmdapi_test.fmp12");
+    const query = db.from(simpleUsers).list();
 
     const queryString = query.getQueryString();
 
@@ -131,24 +131,25 @@ describe("Validation Tests", () => {
   });
 
   it("should skip validation if requested", async () => {
-    const result = await db
-      .from(contacts)
-      .list()
-      .execute({
-        skipValidation: true,
-        fetchHandler: simpleMock({
-          status: 200,
-          body: {
-            "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
-            value: [
-              {
-                PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
-                hobby: "not a valid hobby",
-              },
-            ],
+    const mock = new MockFMServerConnection();
+    mock.addRoute({
+      urlPattern: "/fmdapi_test.fmp12/contacts",
+      response: {
+        "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+        value: [
+          {
+            PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
+            hobby: "not a valid hobby",
           },
-        }),
-      });
+        ],
+      },
+      status: 200,
+    });
+    const db = mock.database("fmdapi_test.fmp12");
+
+    const result = await db.from(contacts).list().execute({
+      skipValidation: true,
+    });
 
     expect(result).toBeDefined();
     expect(result.error).toBeUndefined();
@@ -169,29 +170,30 @@ describe("Validation Tests", () => {
   });
 
   it("should return odata annotations if requested, even if skipValidation is true", async () => {
-    const result = await db
-      .from(contacts)
-      .list()
-      .execute({
-        skipValidation: true,
-        includeODataAnnotations: true,
-        fetchHandler: simpleMock({
-          status: 200,
-          body: {
-            "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
-            value: [
-              {
-                "@id":
-                  "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts(B5BFBC89-03E0-47FC-ABB6-D51401730227)",
-                "@editLink":
-                  "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts(B5BFBC89-03E0-47FC-ABB6-D51401730227)",
-                PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
-                hobby: "not a valid hobby",
-              },
-            ],
+    const mock = new MockFMServerConnection();
+    mock.addRoute({
+      urlPattern: "/fmdapi_test.fmp12/contacts",
+      response: {
+        "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+        value: [
+          {
+            "@id":
+              "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts(B5BFBC89-03E0-47FC-ABB6-D51401730227)",
+            "@editLink":
+              "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/contacts(B5BFBC89-03E0-47FC-ABB6-D51401730227)",
+            PrimaryKey: "B5BFBC89-03E0-47FC-ABB6-D51401730227",
+            hobby: "not a valid hobby",
           },
-        }),
-      });
+        ],
+      },
+      status: 200,
+    });
+    const db = mock.database("fmdapi_test.fmp12");
+
+    const result = await db.from(contacts).list().execute({
+      skipValidation: true,
+      includeODataAnnotations: true,
+    });
 
     expect(result).toBeDefined();
     expect(result.error).toBeUndefined();

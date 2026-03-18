@@ -112,7 +112,8 @@ export class ValidationError extends FMODataError {
       cause?: Error["cause"];
     },
   ) {
-    super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
+    const cause = options?.cause ?? issues;
+    super(message, { cause });
     this.field = options?.field;
     this.issues = issues;
     this.value = options?.value;
@@ -181,6 +182,59 @@ export class BatchTruncatedError extends FMODataError {
 }
 
 // ============================================
+// Internal Runtime/Invariant Errors
+// ============================================
+
+export class MissingLayerServiceError extends FMODataError {
+  readonly kind = "MissingLayerServiceError" as const;
+  readonly service: string;
+
+  constructor(service: string, options?: { cause?: Error }) {
+    super(
+      `Required layer service "${service}" is not available`,
+      options?.cause ? { cause: options.cause } : undefined,
+    );
+    this.service = service;
+  }
+}
+
+export class MetadataNotFoundError extends FMODataError {
+  readonly kind = "MetadataNotFoundError" as const;
+  readonly databaseName: string;
+
+  constructor(databaseName: string) {
+    super(`Metadata for database "${databaseName}" not found in response`);
+    this.databaseName = databaseName;
+  }
+}
+
+export class BuilderInvariantError extends FMODataError {
+  readonly kind = "BuilderInvariantError" as const;
+  readonly builder: string;
+
+  constructor(builder: string, message: string, options?: { cause?: Error }) {
+    super(`${builder} invariant violation: ${message}`, options?.cause ? { cause: options.cause } : undefined);
+    this.builder = builder;
+  }
+}
+
+export class SchemaValidationFailedError extends FMODataError {
+  readonly kind = "SchemaValidationFailedError" as const;
+  readonly operation: string;
+  readonly issues?: readonly StandardSchemaV1.Issue[];
+
+  constructor(
+    operation: string,
+    message: string,
+    options?: { issues?: readonly StandardSchemaV1.Issue[]; cause?: Error },
+  ) {
+    super(`${operation} schema validation failed: ${message}`, options?.cause ? { cause: options.cause } : undefined);
+    this.operation = operation;
+    this.issues = options?.issues;
+  }
+}
+
+// ============================================
 // Type Guards
 // ============================================
 
@@ -216,8 +270,49 @@ export function isBatchTruncatedError(error: unknown): error is BatchTruncatedEr
   return error instanceof BatchTruncatedError;
 }
 
+export function isMissingLayerServiceError(error: unknown): error is MissingLayerServiceError {
+  return error instanceof MissingLayerServiceError;
+}
+
+export function isMetadataNotFoundError(error: unknown): error is MetadataNotFoundError {
+  return error instanceof MetadataNotFoundError;
+}
+
+export function isBuilderInvariantError(error: unknown): error is BuilderInvariantError {
+  return error instanceof BuilderInvariantError;
+}
+
+export function isSchemaValidationFailedError(error: unknown): error is SchemaValidationFailedError {
+  return error instanceof SchemaValidationFailedError;
+}
+
 export function isFMODataError(error: unknown): error is FMODataError {
   return error instanceof FMODataError;
+}
+
+/**
+ * Determines whether an error is transient and safe to retry.
+ * Transient errors include:
+ * - SchemaLockedError (FM code 303 — file locked temporarily)
+ * - NetworkError (connection issues)
+ * - TimeoutError (request timed out)
+ * - HTTP 5xx errors (server-side failures)
+ */
+export function isTransientError(error: unknown): boolean {
+  if (error instanceof SchemaLockedError) {
+    return true;
+  }
+  // Check ffetch error types by name since they aren't subclasses of FMODataError
+  if (error && typeof error === "object") {
+    const name = Reflect.get(error, "name");
+    if (typeof name === "string" && (name === "NetworkError" || name === "TimeoutError")) {
+      return true;
+    }
+  }
+  if (error instanceof HTTPError && error.is5xx()) {
+    return true;
+  }
+  return false;
 }
 
 // ============================================
@@ -247,4 +342,8 @@ export type FMODataErrorType =
   | RecordCountMismatchError
   | InvalidLocationHeaderError
   | ResponseParseError
-  | BatchTruncatedError;
+  | BatchTruncatedError
+  | MissingLayerServiceError
+  | MetadataNotFoundError
+  | BuilderInvariantError
+  | SchemaValidationFailedError;

@@ -4,16 +4,16 @@
  * Tests for running FileMaker scripts via the OData API.
  */
 
+import { MockFMServerConnection } from "@proofkit/fmodata/testing";
 import { describe, expectTypeOf, it } from "vitest";
 import { z } from "zod/v4";
 import { jsonCodec } from "./utils/helpers";
-import { createMockClient } from "./utils/test-setup";
 
 describe("scripts", () => {
-  const client = createMockClient();
+  const client = new MockFMServerConnection();
 
   it("should handle expands", () => {
-    expectTypeOf(client.listDatabaseNames).returns.resolves.toBeArray();
+    expectTypeOf(client.asConnection.listDatabaseNames).returns.resolves.toBeArray();
     const db = client.database("test_db");
 
     expectTypeOf(db.listTableNames).returns.resolves.toBeArray();

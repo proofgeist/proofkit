@@ -1,4 +1,4 @@
-import { createLogger, type InternalLogger } from "../logger";
+import type { InternalLogger } from "../logger";
 import type { FieldBuilder } from "../orm/field-builders";
 import type {
   ColumnMap,
@@ -8,14 +8,22 @@ import type {
   UpdateDataFromFMTable,
   ValidExpandTarget,
 } from "../orm/table";
-import { FMTable as FMTableClass, getDefaultSelect, getTableColumns, getTableName, getTableSchema } from "../orm/table";
-import type { ExecutionContext } from "../types";
+import {
+  FMTable as FMTableClass,
+  getDefaultSelect,
+  getTableColumns,
+  getTableName,
+  getTableSchema,
+  isUsingEntityIds,
+} from "../orm/table";
+import type { FMODataLayer, ODataConfig } from "../services";
 import { resolveTableId } from "./builders/table-utils";
 import type { Database } from "./database";
 import { DeleteBuilder } from "./delete-builder";
 import { InsertBuilder } from "./insert-builder";
 import { QueryBuilder } from "./query/index";
 import { RecordBuilder } from "./record-builder";
+import { createClientRuntime } from "./runtime";
 import { UpdateBuilder } from "./update-builder";
 
 // Helper type to extract defaultSelect from an FMTable
@@ -41,51 +49,60 @@ type ExtractColumnsFromOcc<T> =
 // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
 export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColumns extends boolean = false> {
   private readonly occurrence: Occ;
-  private readonly databaseName: string;
-  private readonly context: ExecutionContext;
+  private readonly layer: FMODataLayer;
+  private readonly config: ODataConfig;
+  private readonly logger: InternalLogger;
   private readonly database: Database<DatabaseIncludeSpecialColumns>; // Database instance for accessing occurrences
   private readonly isNavigateFromEntitySet?: boolean;
   private readonly navigateRelation?: string;
+  private readonly navigateRelationEntityId?: string;
   private readonly navigateSourceTableName?: string;
+  private readonly navigateSourceTableEntityId?: string;
   private readonly navigateBasePath?: string; // Full base path for chained navigations
-  private readonly databaseUseEntityIds: boolean;
-  private readonly databaseIncludeSpecialColumns: DatabaseIncludeSpecialColumns;
-  private readonly logger: InternalLogger;
+  private readonly navigateBasePathEntityId?: string;
 
   constructor(config: {
     occurrence: Occ;
-    databaseName: string;
-    context: ExecutionContext;
+    layer: FMODataLayer;
     // biome-ignore lint/suspicious/noExplicitAny: Database type is optional and can be any Database instance
     database?: any;
-    useEntityIds?: boolean;
   }) {
     this.occurrence = config.occurrence;
-    this.databaseName = config.databaseName;
-    this.context = config.context;
     this.database = config.database;
-    // Use explicit useEntityIds if provided, otherwise fall back to database setting
-    this.databaseUseEntityIds = config.useEntityIds ?? config.database?._getUseEntityIds ?? false;
-    // Get includeSpecialColumns from database if available, otherwise default to false
-    this.databaseIncludeSpecialColumns = (config.database?._getIncludeSpecialColumns ??
-      false) as DatabaseIncludeSpecialColumns;
-    this.logger = config.context?._getLogger?.() ?? createLogger();
+    // Extract config and logger from the layer for sync access
+    const runtime = createClientRuntime(config.layer);
+    this.layer = runtime.layer;
+    this.config = runtime.config;
+    this.logger = runtime.logger;
   }
 
   // Type-only method to help TypeScript infer the schema from table
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   static create<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColumns extends boolean = false>(config: {
     occurrence: Occ;
-    databaseName: string;
-    context: ExecutionContext;
+    layer: FMODataLayer;
     database: Database<DatabaseIncludeSpecialColumns>;
   }): EntitySet<Occ, DatabaseIncludeSpecialColumns> {
     return new EntitySet<Occ, DatabaseIncludeSpecialColumns>({
       occurrence: config.occurrence,
-      databaseName: config.databaseName,
-      context: config.context,
+      layer: config.layer,
       database: config.database,
     });
+  }
+
+  private applyNavigationContext<T>(builder: T): T {
+    if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (builder as any).navigation = {
+        relation: this.navigateRelation,
+        relationEntityId: this.navigateRelationEntityId,
+        sourceTableName: this.navigateSourceTableName,
+        sourceTableEntityId: this.navigateSourceTableEntityId,
+        basePath: this.navigateBasePath,
+        basePathEntityId: this.navigateBasePathEntityId,
+      };
+    }
+    return builder;
   }
 
   // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
@@ -100,10 +117,7 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       DatabaseIncludeSpecialColumns
     >({
       occurrence: this.occurrence as Occ,
-      databaseName: this.databaseName,
-      context: this.context,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
+      layer: this.layer,
     });
 
     // Apply defaultSelect if occurrence exists and select hasn't been called
@@ -119,19 +133,11 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
         // Cast to the declared return type - runtime behavior handles the actual selection
         const allColumns = getTableColumns(this.occurrence) as ExtractColumnsFromOcc<Occ>;
 
-        // Include special columns if enabled at database level
-        const systemColumns = this.databaseIncludeSpecialColumns ? { ROWID: true, ROWMODID: true } : undefined;
-
-        const selectedBuilder = builder.select(allColumns, systemColumns).top(1000);
-        // Propagate navigation context if present
-        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
-          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-          (selectedBuilder as any).navigation = {
-            relation: this.navigateRelation,
-            sourceTableName: this.navigateSourceTableName,
-            basePath: this.navigateBasePath,
-          };
-        }
+        const selectedBuilder = this.applyNavigationContext(
+          this.config.includeSpecialColumns
+            ? builder.select(allColumns, { ROWID: true, ROWMODID: true })
+            : builder.select(allColumns),
+        ).top(1000);
         return selectedBuilder as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
@@ -139,23 +145,15 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
           false,
           // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
           {},
-          DatabaseIncludeSpecialColumns,
-          typeof systemColumns
+          DatabaseIncludeSpecialColumns
         >;
       }
       if (typeof defaultSelectValue === "object") {
         // defaultSelectValue is a select object (Record<string, Column>)
         // Cast to the declared return type - runtime behavior handles the actual selection
-        const selectedBuilder = builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>).top(1000);
-        // Propagate navigation context if present
-        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
-          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-          (selectedBuilder as any).navigation = {
-            relation: this.navigateRelation,
-            sourceTableName: this.navigateSourceTableName,
-            basePath: this.navigateBasePath,
-          };
-        }
+        const selectedBuilder = this.applyNavigationContext(
+          builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>),
+        ).top(1000);
         return selectedBuilder as QueryBuilder<
           Occ,
           keyof InferSchemaOutputFromFMTable<Occ>,
@@ -169,20 +167,9 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       // If defaultSelect is "all", no changes needed (current behavior)
     }
 
-    // Propagate navigation context if present
-    if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
-      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-      (builder as any).navigation = {
-        relation: this.navigateRelation,
-        sourceTableName: this.navigateSourceTableName,
-        basePath: this.navigateBasePath,
-        // recordId is intentionally not set (undefined) to indicate navigation from EntitySet
-      };
-    }
-
     // Apply default pagination limit of 1000 records to prevent stack overflow
     // with large datasets. Users can override with .top() if needed.
-    return builder.top(1000);
+    return this.applyNavigationContext(builder).top(1000);
   }
 
   get(
@@ -199,11 +186,8 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       DatabaseIncludeSpecialColumns
     >({
       occurrence: this.occurrence,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       recordId: id,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
     // Apply defaultSelect if occurrence exists
@@ -220,19 +204,11 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
         // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
         const allColumns = getTableColumns(this.occurrence as any) as ExtractColumnsFromOcc<Occ>;
 
-        // Include special columns if enabled at database level
-        const systemColumns = this.databaseIncludeSpecialColumns ? { ROWID: true, ROWMODID: true } : undefined;
-
-        const selectedBuilder = builder.select(allColumns, systemColumns);
-        // Propagate navigation context if present
-        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
-          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-          (selectedBuilder as any).navigation = {
-            relation: this.navigateRelation,
-            sourceTableName: this.navigateSourceTableName,
-            basePath: this.navigateBasePath,
-          };
-        }
+        const selectedBuilder = this.applyNavigationContext(
+          this.config.includeSpecialColumns
+            ? builder.select(allColumns, { ROWID: true, ROWMODID: true })
+            : builder.select(allColumns),
+        );
         // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         return selectedBuilder as any;
       }
@@ -240,33 +216,17 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
         // defaultSelectValue is a select object (Record<string, Column>)
         // Use it directly with select()
         // Use ExtractColumnsFromOcc to preserve the properly-typed column types
-        const selectedBuilder = builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>);
-        // Propagate navigation context if present
-        if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
-          // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-          (selectedBuilder as any).navigation = {
-            relation: this.navigateRelation,
-            sourceTableName: this.navigateSourceTableName,
-            basePath: this.navigateBasePath,
-          };
-        }
+        const selectedBuilder = this.applyNavigationContext(
+          builder.select(defaultSelectValue as ExtractColumnsFromOcc<Occ>),
+        );
         // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
         return selectedBuilder as any;
       }
       // If defaultSelect is "all", no changes needed (current behavior)
     }
 
-    // Propagate navigation context if present
-    if (this.isNavigateFromEntitySet && this.navigateRelation && this.navigateSourceTableName) {
-      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-      (builder as any).navigation = {
-        relation: this.navigateRelation,
-        sourceTableName: this.navigateSourceTableName,
-        basePath: this.navigateBasePath,
-      };
-    }
     // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
-    return builder as any;
+    return this.applyNavigationContext(builder) as any;
   }
 
   // Overload: when returnFullRecord is false
@@ -284,14 +244,11 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
 
     return new InsertBuilder<Occ, typeof returnPreference>({
       occurrence: this.occurrence,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       // biome-ignore lint/suspicious/noExplicitAny: Input type is validated/transformed at runtime
       data: data as any,
       // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       returnPreference: returnPreference as any,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
   }
 
@@ -310,24 +267,18 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
 
     return new UpdateBuilder<Occ, typeof returnPreference>({
       occurrence: this.occurrence,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       // biome-ignore lint/suspicious/noExplicitAny: Input type is validated/transformed at runtime
       data: data as any,
       // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type parameter
       returnPreference: returnPreference as any,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
   }
 
   delete(): DeleteBuilder<Occ> {
     return new DeleteBuilder<Occ>({
       occurrence: this.occurrence,
-      databaseName: this.databaseName,
-      context: this.context,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
+      layer: this.layer,
       // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
     }) as any;
   }
@@ -359,25 +310,25 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
     // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any FMTable configuration
     const entitySet = new EntitySet<any, DatabaseIncludeSpecialColumns>({
       occurrence: targetTable,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       database: this.database,
-      useEntityIds: this.databaseUseEntityIds,
     });
-    // Resolve navigation names using entity IDs when appropriate
-    const resolvedRelation = resolveTableId(targetTable, relationName, this.context, this.databaseUseEntityIds);
-    const resolvedSourceName = resolveTableId(
-      this.occurrence,
-      getTableName(this.occurrence),
-      this.context,
-      this.databaseUseEntityIds,
-    );
+    // Resolve entity IDs lazily at request time by storing both name and ID forms
+    const relationEntityId = isUsingEntityIds(targetTable)
+      ? resolveTableId(targetTable, relationName, true)
+      : relationName;
+    const sourceTableName = getTableName(this.occurrence);
+    const sourceTableEntityId = isUsingEntityIds(this.occurrence)
+      ? resolveTableId(this.occurrence, sourceTableName, true)
+      : sourceTableName;
 
     // Store the navigation info in the EntitySet
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (entitySet as any).isNavigateFromEntitySet = true;
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-    (entitySet as any).navigateRelation = resolvedRelation;
+    (entitySet as any).navigateRelation = relationName;
+    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+    (entitySet as any).navigateRelationEntityId = relationEntityId;
 
     // Build the full base path for chained navigations
     if (this.isNavigateFromEntitySet && this.navigateBasePath) {
@@ -385,17 +336,29 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateBasePath = `${this.navigateBasePath}/${this.navigateRelation}`;
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateBasePathEntityId =
+        `${this.navigateBasePathEntityId ?? this.navigateBasePath}/${this.navigateRelationEntityId ?? this.navigateRelation}`;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateSourceTableName = this.navigateSourceTableName;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateSourceTableEntityId = this.navigateSourceTableEntityId;
     } else if (this.isNavigateFromEntitySet && this.navigateRelation) {
       // First chained navigation - create base path from source/relation
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateBasePath = `${this.navigateSourceTableName}/${this.navigateRelation}`;
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateBasePathEntityId =
+        `${this.navigateSourceTableEntityId ?? this.navigateSourceTableName}/${this.navigateRelationEntityId ?? this.navigateRelation}`;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
       (entitySet as any).navigateSourceTableName = this.navigateSourceTableName;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateSourceTableEntityId = this.navigateSourceTableEntityId;
     } else {
       // Initial navigation - source is just the table name (resolved to entity ID if needed)
       // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-      (entitySet as any).navigateSourceTableName = resolvedSourceName;
+      (entitySet as any).navigateSourceTableName = sourceTableName;
+      // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
+      (entitySet as any).navigateSourceTableEntityId = sourceTableEntityId;
     }
     return entitySet;
   }

@@ -1,23 +1,30 @@
 import type { FFetchOptions } from "@fetchkit/ffetch";
-import { InvalidLocationHeaderError } from "../errors";
+import { Effect } from "effect";
+import { fromValidation, requestFromService, runLayerResult, tryEffect } from "../effect";
+import type { FMODataErrorType } from "../errors";
+import { BuilderInvariantError, InvalidLocationHeaderError } from "../errors";
 import type { FMTable } from "../orm/table";
-import { getBaseTableConfig, getTableId as getTableIdHelper, getTableName, isUsingEntityIds } from "../orm/table";
+import { getBaseTableConfig, getTableName } from "../orm/table";
+import type { FMODataLayer, ODataConfig } from "../services";
 import { transformFieldNamesToIds, transformResponseFields } from "../transform";
 import type {
   ConditionallyWithODataAnnotations,
   ExecutableBuilder,
   ExecuteMethodOptions,
   ExecuteOptions,
-  ExecutionContext,
   Result,
 } from "../types";
 import { getAcceptHeader } from "../types";
 import { validateAndTransformInput, validateSingleResponse } from "../validation";
+import {
+  getLocationHeader,
+  mergeMutationExecuteOptions,
+  parseRowIdFromLocationHeader,
+  resolveMutationTableId,
+} from "./builders/mutation-helpers";
 import { parseErrorResponse } from "./error-parser";
+import { createClientRuntime } from "./runtime";
 import { safeJsonParse } from "./sanitize-json";
-
-const ROWID_MATCH_REGEX = /ROWID=(\d+)/;
-const PAREN_VALUE_REGEX = /\(['"]?([^'"]+)['"]?\)/;
 
 export interface InsertOptions {
   return?: "minimal" | "representation";
@@ -35,30 +42,24 @@ export class InsertBuilder<
     >
 {
   private readonly table?: Occ;
-  private readonly databaseName: string;
-  private readonly context: ExecutionContext;
   private readonly data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
   private readonly returnPreference: ReturnPreference;
-
-  private readonly databaseUseEntityIds: boolean;
-  private readonly databaseIncludeSpecialColumns: boolean;
+  private readonly layer: FMODataLayer;
+  private readonly config: ODataConfig;
 
   constructor(config: {
     occurrence?: Occ;
-    databaseName: string;
-    context: ExecutionContext;
+    layer: FMODataLayer;
     data: Partial<InferSchemaOutputFromFMTable<NonNullable<Occ>>>;
     returnPreference?: ReturnPreference;
-    databaseUseEntityIds?: boolean;
-    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.table = config.occurrence;
-    this.databaseName = config.databaseName;
-    this.context = config.context;
+    this.layer = config.layer;
     this.data = config.data;
     this.returnPreference = (config.returnPreference || "representation") as ReturnPreference;
-    this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
+    // Extract config from layer for sync method access
+    const runtime = createClientRuntime(this.layer);
+    this.config = runtime.config;
   }
 
   /**
@@ -67,11 +68,7 @@ export class InsertBuilder<
   private mergeExecuteOptions(
     options?: RequestInit & FFetchOptions & ExecuteOptions,
   ): RequestInit & FFetchOptions & { useEntityIds?: boolean } {
-    // If useEntityIds is not set in options, use the database-level setting
-    return {
-      ...options,
-      useEntityIds: options?.useEntityIds ?? this.databaseUseEntityIds,
-    };
+    return mergeMutationExecuteOptions(options, this.config.useEntityIds);
   }
 
   /**
@@ -81,30 +78,7 @@ export class InsertBuilder<
    * - contacts('some-uuid')
    */
   private parseLocationHeader(locationHeader: string | undefined): number {
-    if (!locationHeader) {
-      throw new InvalidLocationHeaderError("Location header is required but was not provided");
-    }
-
-    // Try to match ROWID=number pattern
-    const rowidMatch = locationHeader.match(ROWID_MATCH_REGEX);
-    if (rowidMatch?.[1]) {
-      return Number.parseInt(rowidMatch[1], 10);
-    }
-
-    // Try to extract value from parentheses and parse as number
-    const parenMatch = locationHeader.match(PAREN_VALUE_REGEX);
-    if (parenMatch?.[1]) {
-      const value = parenMatch[1];
-      const numValue = Number.parseInt(value, 10);
-      if (!Number.isNaN(numValue)) {
-        return numValue;
-      }
-    }
-
-    throw new InvalidLocationHeaderError(
-      `Could not extract ROWID from Location header: ${locationHeader}`,
-      locationHeader,
-    );
+    return parseRowIdFromLocationHeader(locationHeader);
   }
 
   /**
@@ -113,25 +87,30 @@ export class InsertBuilder<
    */
   private getTableId(useEntityIds?: boolean): string {
     if (!this.table) {
-      throw new Error("Table occurrence is required");
+      throw new BuilderInvariantError("InsertBuilder", "table occurrence is required");
     }
-
-    const contextDefault = this.context._getUseEntityIds?.() ?? false;
-    const shouldUseIds = useEntityIds ?? contextDefault;
-
-    if (shouldUseIds) {
-      if (!isUsingEntityIds(this.table)) {
-        throw new Error(
-          `useEntityIds is true but table "${getTableName(this.table)}" does not have entity IDs configured`,
-        );
-      }
-      return getTableIdHelper(this.table);
-    }
-
-    return getTableName(this.table);
+    return resolveMutationTableId(this.table, useEntityIds ?? this.config.useEntityIds, "InsertBuilder");
   }
 
-  async execute<EO extends ExecuteOptions>(
+  /**
+   * Builds the schema for validation, excluding container fields.
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema shape from table configuration
+  private getValidationSchema(): Record<string, any> | undefined {
+    if (!this.table) {
+      return undefined;
+    }
+    const baseTableConfig = getBaseTableConfig(this.table);
+    const containerFields = baseTableConfig.containerFields || [];
+    // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema shape from table configuration
+    const schema: Record<string, any> = { ...baseTableConfig.schema };
+    for (const containerField of containerFields) {
+      delete schema[containerField as string];
+    }
+    return schema;
+  }
+
+  execute<EO extends ExecuteOptions>(
     options?: ExecuteMethodOptions<EO>,
   ): Promise<
     Result<
@@ -143,141 +122,118 @@ export class InsertBuilder<
           >
     >
   > {
-    // Merge database-level useEntityIds with per-request options
     const mergedOptions = this.mergeExecuteOptions(options);
-
-    // Get table identifier with override support
+    // Prevent caller options from overriding required request shape
+    // biome-ignore lint/suspicious/noExplicitAny: Execute options include dynamic fetch fields
+    const { method: _method, headers: callerHeaders, body: _body, ...requestOptions } = mergedOptions as any;
     const tableId = this.getTableId(mergedOptions.useEntityIds);
-    const url = `/${this.databaseName}/${tableId}`;
-
-    // Validate and transform input data using input validators (writeValidators)
-    let validatedData = this.data;
-    if (this.table) {
-      const baseTableConfig = getBaseTableConfig(this.table);
-      const inputSchema = baseTableConfig.inputSchema;
-
-      try {
-        validatedData = await validateAndTransformInput(this.data, inputSchema);
-      } catch (error) {
-        // If validation fails, return error immediately
-        return {
-          data: undefined,
-          error: error instanceof Error ? error : new Error(String(error)),
-          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
-        } as any;
-      }
-    }
-
-    // Transform field names to FMFIDs if using entity IDs
-    // Only transform if useEntityIds resolves to true (respects per-request override)
+    const url = `/${this.config.databaseName}/${tableId}`;
     const shouldUseIds = mergedOptions.useEntityIds ?? false;
-
-    const transformedData =
-      this.table && shouldUseIds ? transformFieldNamesToIds(validatedData, this.table) : validatedData;
-
-    // Set Prefer header based on return preference
     const preferHeader = this.returnPreference === "minimal" ? "return=minimal" : "return=representation";
 
-    // Make POST request with JSON body
-    // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
-    const result = await this.context._makeRequest<any>(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Prefer: preferHeader,
-        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for headers object
-        ...((mergedOptions as any)?.headers || {}),
-      },
-      body: JSON.stringify(transformedData),
-      ...mergedOptions,
-    });
-
-    if (result.error) {
-      return { data: undefined, error: result.error };
-    }
-
-    // Handle return=minimal case
-    if (this.returnPreference === "minimal") {
-      // The response should be empty (204 No Content)
-      // _makeRequest will return { _location: string } when there's a Location header
-      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
-      const responseData = result.data as any;
-
-      if (!responseData?._location) {
-        throw new InvalidLocationHeaderError(
-          "Location header is required when using return=minimal but was not found in response",
+    const pipeline = Effect.gen(this, function* () {
+      // Step 1: Validate input
+      let validatedData = this.data;
+      if (this.table) {
+        const baseTableConfig = getBaseTableConfig(this.table);
+        validatedData = yield* tryEffect(
+          () => validateAndTransformInput(this.data, baseTableConfig.inputSchema),
+          (e) =>
+            (e instanceof Error
+              ? e
+              : new BuilderInvariantError("InsertBuilder.execute", String(e))) as FMODataErrorType,
         );
       }
 
-      const rowid = this.parseLocationHeader(responseData._location);
-      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
-      return { data: { ROWID: rowid } as any, error: undefined };
-    }
+      // Step 2: Transform field names to entity IDs if needed
+      const transformedData =
+        this.table && shouldUseIds ? transformFieldNamesToIds(validatedData, this.table) : validatedData;
 
-    let response = result.data;
+      // Step 3: Make HTTP request via DI
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
+      const responseData = yield* requestFromService<any>(url, {
+        ...requestOptions,
+        method: "POST",
+        headers: {
+          ...(callerHeaders || {}),
+          "Content-Type": "application/json",
+          Prefer: preferHeader,
+        },
+        body: JSON.stringify(transformedData),
+      });
 
-    // Transform response field IDs back to names if using entity IDs
-    // Only transform if useEntityIds resolves to true (respects per-request override)
-    if (this.table && shouldUseIds) {
-      response = transformResponseFields(
-        response,
-        this.table,
-        undefined, // No expand configs for insert
-      );
-    }
-
-    // Get schema from table if available, excluding container fields
-    // biome-ignore lint/suspicious/noExplicitAny: Dynamic schema shape from table configuration
-    let schema: Record<string, any> | undefined;
-    if (this.table) {
-      const baseTableConfig = getBaseTableConfig(this.table);
-      const containerFields = baseTableConfig.containerFields || [];
-
-      // Filter out container fields from schema
-      schema = { ...baseTableConfig.schema };
-      for (const containerField of containerFields) {
-        delete schema[containerField as string];
+      // Step 4: Handle return=minimal case
+      if (this.returnPreference === "minimal") {
+        if (!responseData?._location) {
+          return yield* Effect.fail(
+            new InvalidLocationHeaderError(
+              "Location header is required when using return=minimal but was not found in response",
+            ) as FMODataErrorType,
+          );
+        }
+        const rowid = this.parseLocationHeader(responseData._location);
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
+        return { ROWID: rowid } as any;
       }
-    }
 
-    // Validate the response (FileMaker returns the created record)
-    const validation = await validateSingleResponse<InferSchemaOutputFromFMTable<NonNullable<Occ>>>(
-      response,
-      schema,
-      undefined, // No selected fields for insert
-      undefined, // No expand configs
-      "exact", // Expect exactly one record
-    );
+      // Step 5: Transform response field IDs back to names
+      let response = responseData;
+      if (this.table && shouldUseIds) {
+        response = transformResponseFields(response, this.table, undefined);
+      }
 
-    if (!validation.valid) {
-      return { data: undefined, error: validation.error };
-    }
+      // Step 6: Validate response
+      const schema = this.getValidationSchema();
+      const validated = yield* fromValidation(() =>
+        validateSingleResponse<InferSchemaOutputFromFMTable<NonNullable<Occ>>>(
+          response,
+          schema,
+          undefined,
+          undefined,
+          "exact",
+        ),
+      );
 
-    // Handle null response (shouldn't happen for insert, but handle it)
-    if (validation.data === null) {
-      return {
-        data: undefined,
-        error: new Error("Insert operation returned null response"),
-      };
-    }
+      if (validated === null) {
+        return yield* Effect.fail(
+          new BuilderInvariantError(
+            "InsertBuilder.execute",
+            "insert operation returned null response",
+          ) as FMODataErrorType,
+        );
+      }
 
-    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
-    return { data: validation.data as any, error: undefined };
+      return validated;
+    });
+
+    return runLayerResult(
+      this.layer,
+      pipeline,
+      "fmodata.insert",
+      this.table ? { "fmodata.table": getTableName(this.table) } : undefined,
+    ) as Promise<
+      Result<
+        ReturnPreference extends "minimal"
+          ? { ROWID: number }
+          : ConditionallyWithODataAnnotations<
+              InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+              EO["includeODataAnnotations"] extends true ? true : false
+            >
+      >
+    >;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any } {
-    // For batch operations, use database-level setting (no per-request override available here)
-    // Note: Input validation happens in execute() and processResponse() for batch operations
-    const tableId = this.getTableId(this.databaseUseEntityIds);
+    const tableId = this.getTableId(this.config.useEntityIds);
 
     // Transform field names to FMFIDs if using entity IDs
     const transformedData =
-      this.table && this.databaseUseEntityIds ? transformFieldNamesToIds(this.data, this.table) : this.data;
+      this.table && this.config.useEntityIds ? transformFieldNamesToIds(this.data, this.table) : this.data;
 
     return {
       method: "POST",
-      url: `/${this.databaseName}/${tableId}`,
+      url: `/${this.config.databaseName}/${tableId}`,
       body: JSON.stringify(transformedData),
     };
   }
@@ -309,7 +265,7 @@ export class InsertBuilder<
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const tableName = this.table ? getTableName(this.table) : "unknown";
-      const error = await parseErrorResponse(response, response.url || `/${this.databaseName}/${tableName}`);
+      const error = await parseErrorResponse(response, response.url || `/${this.config.databaseName}/${tableName}`);
       return { data: undefined, error };
     }
 
@@ -318,7 +274,7 @@ export class InsertBuilder<
     if (response.status === 204) {
       // Check for Location header (for return=minimal)
       if (this.returnPreference === "minimal") {
-        const locationHeader = response.headers.get("Location") || response.headers.get("location");
+        const locationHeader = getLocationHeader(response.headers);
         if (locationHeader) {
           const rowid = this.parseLocationHeader(locationHeader);
           // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
@@ -382,15 +338,15 @@ export class InsertBuilder<
       } catch (error) {
         return {
           data: undefined,
-          error: error instanceof Error ? error : new Error(String(error)),
+          error:
+            error instanceof Error ? error : new BuilderInvariantError("InsertBuilder.processResponse", String(error)),
           // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
         } as any;
       }
     }
 
     // Transform response field IDs back to names if using entity IDs
-    // Only transform if useEntityIds resolves to true (respects per-request override)
-    const shouldUseIds = options?.useEntityIds ?? this.databaseUseEntityIds;
+    const shouldUseIds = options?.useEntityIds ?? this.config.useEntityIds;
 
     let transformedResponse = rawResponse;
     if (this.table && shouldUseIds) {
@@ -432,7 +388,7 @@ export class InsertBuilder<
     if (validation.data === null) {
       return {
         data: undefined,
-        error: new Error("Insert operation returned null response"),
+        error: new BuilderInvariantError("InsertBuilder.processResponse", "insert operation returned null response"),
       };
     }
 

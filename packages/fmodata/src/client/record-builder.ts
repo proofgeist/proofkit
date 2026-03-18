@@ -1,35 +1,40 @@
 /** biome-ignore-all lint/complexity/noBannedTypes: Empty object type represents no expands by default */
 import type { FFetchOptions } from "@fetchkit/ffetch";
-import { createLogger, type InternalLogger } from "../logger";
+import { Effect } from "effect";
+import { requestFromService, runLayerResult } from "../effect";
+import { BuilderInvariantError } from "../errors";
+import type { InternalLogger } from "../logger";
 import type { Column } from "../orm/column";
 import type { ExtractTableName, FMTable, InferSchemaOutputFromFMTable, ValidExpandTarget } from "../orm/table";
-import { getNavigationPaths, getTableName } from "../orm/table";
+import { getNavigationPaths, getTableName, isUsingEntityIds } from "../orm/table";
+import type { FMODataLayer, ODataConfig } from "../services";
 import type {
   ConditionallyWithODataAnnotations,
   ConditionallyWithSpecialColumns,
   ExecutableBuilder,
   ExecuteMethodOptions,
   ExecuteOptions,
-  ExecutionContext,
   NormalizeIncludeSpecialColumns,
   ODataFieldResponse,
   Result,
 } from "../types";
 import {
   buildSelectExpandQueryString,
+  cloneRecordReadBuilderState,
+  createInitialRecordReadBuilderState,
   createODataRequest,
   ExpandBuilder,
   type ExpandConfig,
   type ExpandedRelations,
-  getSchemaFromTable,
   mergeExecuteOptions,
-  processODataResponse,
+  processRecordResponse,
   processSelectWithRenames,
   resolveTableId,
 } from "./builders/index";
 import { parseErrorResponse } from "./error-parser";
 import type { ResolveExpandedRelations, SystemColumnsFromOption, SystemColumnsOption } from "./query/types";
 import { QueryBuilder } from "./query-builder";
+import { createClientRuntime } from "./runtime";
 import { safeJsonParse } from "./sanitize-json";
 
 /**
@@ -105,8 +110,6 @@ export class RecordBuilder<
     >
 {
   private readonly table: Occ;
-  private readonly databaseName: string;
-  private readonly context: ExecutionContext;
   private readonly recordId: string | number;
   private readonly operation?: "getSingleField" | "navigate";
   private readonly operationParam?: string;
@@ -114,36 +117,68 @@ export class RecordBuilder<
   private readonly operationColumn?: Column<any, any, any, any>;
   private readonly isNavigateFromEntitySet?: boolean;
   private readonly navigateRelation?: string;
+  private readonly navigateRelationEntityId?: string;
   private readonly navigateSourceTableName?: string;
+  private readonly navigateSourceTableEntityId?: string;
 
-  private readonly databaseUseEntityIds: boolean;
-  private readonly databaseIncludeSpecialColumns: boolean;
+  private readState = createInitialRecordReadBuilderState();
 
-  // Properties for select/expand support
-  private readonly selectedFields?: string[];
-  private readonly expandConfigs: ExpandConfig[] = [];
-  // Mapping from field names to output keys (for renamed fields in select)
-  private readonly fieldMapping?: Record<string, string>;
-  // System columns requested via select() second argument
-  private readonly systemColumns?: SystemColumnsOption;
-
+  private readonly layer: FMODataLayer;
+  private readonly config: ODataConfig;
   private readonly logger: InternalLogger;
+
+  // Compatibility accessors for internal modules that inspect builder internals via `as any`.
+  private get selectedFields(): string[] | undefined {
+    return this.readState.selectedFields;
+  }
+
+  private set selectedFields(selectedFields: string[] | undefined) {
+    this.readState = cloneRecordReadBuilderState(this.readState, {
+      selectedFields,
+    });
+  }
+
+  private get expandConfigs(): ExpandConfig[] {
+    return this.readState.expandConfigs;
+  }
+
+  private set expandConfigs(expandConfigs: ExpandConfig[]) {
+    this.readState = cloneRecordReadBuilderState(this.readState, {
+      expandConfigs,
+    });
+  }
+
+  private get fieldMapping(): Record<string, string> | undefined {
+    return this.readState.fieldMapping;
+  }
+
+  private set fieldMapping(fieldMapping: Record<string, string> | undefined) {
+    this.readState = cloneRecordReadBuilderState(this.readState, {
+      fieldMapping,
+    });
+  }
+
+  private get systemColumns(): SystemColumnsOption | undefined {
+    return this.readState.systemColumns;
+  }
+
+  private set systemColumns(systemColumns: SystemColumnsOption | undefined) {
+    this.readState = cloneRecordReadBuilderState(this.readState, {
+      systemColumns,
+    });
+  }
 
   constructor(config: {
     occurrence: Occ;
-    databaseName: string;
-    context: ExecutionContext;
+    layer: FMODataLayer;
     recordId: string | number;
-    databaseUseEntityIds?: boolean;
-    databaseIncludeSpecialColumns?: boolean;
   }) {
     this.table = config.occurrence;
-    this.databaseName = config.databaseName;
-    this.context = config.context;
     this.recordId = config.recordId;
-    this.databaseUseEntityIds = config.databaseUseEntityIds ?? false;
-    this.databaseIncludeSpecialColumns = config.databaseIncludeSpecialColumns ?? false;
-    this.logger = config.context?._getLogger?.() ?? createLogger();
+    const runtime = createClientRuntime(config.layer);
+    this.layer = runtime.layer;
+    this.config = runtime.config;
+    this.logger = runtime.logger;
   }
 
   /**
@@ -154,10 +189,10 @@ export class RecordBuilder<
       useEntityIds?: boolean;
       includeSpecialColumns?: boolean;
     } {
-    const merged = mergeExecuteOptions(options, this.databaseUseEntityIds);
+    const merged = mergeExecuteOptions(options, this.config.useEntityIds);
     return {
       ...merged,
-      includeSpecialColumns: options?.includeSpecialColumns ?? this.databaseIncludeSpecialColumns,
+      includeSpecialColumns: options?.includeSpecialColumns ?? this.config.includeSpecialColumns,
     };
   }
 
@@ -167,9 +202,9 @@ export class RecordBuilder<
    */
   private getTableId(useEntityIds?: boolean): string {
     if (!this.table) {
-      throw new Error("Table occurrence is required");
+      throw new BuilderInvariantError("RecordBuilder", "table occurrence is required");
     }
-    return resolveTableId(this.table, getTableName(this.table), this.context, useEntityIds);
+    return resolveTableId(this.table, getTableName(this.table), useEntityIds ?? this.config.useEntityIds);
   }
 
   /**
@@ -197,24 +232,25 @@ export class RecordBuilder<
       NewSystemCols
     >({
       occurrence: this.table,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       recordId: this.recordId,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
     // Use type assertion to allow assignment to readonly properties on new instance
 
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     const mutableBuilder = newBuilder as any;
-    mutableBuilder.selectedFields = "selectedFields" in changes ? changes.selectedFields : this.selectedFields;
-    mutableBuilder.fieldMapping = "fieldMapping" in changes ? changes.fieldMapping : this.fieldMapping;
-    mutableBuilder.systemColumns = changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns;
-    mutableBuilder.expandConfigs = [...this.expandConfigs];
+    mutableBuilder.readState = cloneRecordReadBuilderState(this.readState, {
+      selectedFields: "selectedFields" in changes ? changes.selectedFields : this.selectedFields,
+      fieldMapping: "fieldMapping" in changes ? changes.fieldMapping : this.fieldMapping,
+      systemColumns: changes.systemColumns !== undefined ? changes.systemColumns : this.systemColumns,
+      expandConfigs: this.expandConfigs,
+    });
     // Preserve navigation context
     mutableBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
     mutableBuilder.navigateRelation = this.navigateRelation;
+    mutableBuilder.navigateRelationEntityId = this.navigateRelationEntityId;
     mutableBuilder.navigateSourceTableName = this.navigateSourceTableName;
+    mutableBuilder.navigateSourceTableEntityId = this.navigateSourceTableEntityId;
     mutableBuilder.operationColumn = this.operationColumn;
     return newBuilder;
   }
@@ -233,7 +269,10 @@ export class RecordBuilder<
     // Runtime validation: ensure column is from the correct table
     const tableName = getTableName(this.table);
     if (!column.isFromTable(tableName)) {
-      throw new Error(`Column ${column.toString()} is not from table ${tableName}`);
+      throw new BuilderInvariantError(
+        "RecordBuilder.getSingleField",
+        `column ${column.toString()} is not from table ${tableName}`,
+      );
     }
 
     const newBuilder = new RecordBuilder<
@@ -245,11 +284,8 @@ export class RecordBuilder<
       DatabaseIncludeSpecialColumns
     >({
       occurrence: this.table,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       recordId: this.recordId,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
     // Use type assertion to allow assignment to readonly properties on new instance
 
@@ -257,7 +293,6 @@ export class RecordBuilder<
     const mutableBuilder = newBuilder as any;
     mutableBuilder.operation = "getSingleField";
     mutableBuilder.operationColumn = column;
-    mutableBuilder.operationParam = column.getFieldIdentifier(this.databaseUseEntityIds);
     // Preserve navigation context
     mutableBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
     mutableBuilder.navigateRelation = this.navigateRelation;
@@ -393,28 +428,29 @@ export class RecordBuilder<
     // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any ExpandedRelations
     const newBuilder = new RecordBuilder<Occ, false, FieldColumn, Selected, any, DatabaseIncludeSpecialColumns>({
       occurrence: this.table,
-      databaseName: this.databaseName,
-      context: this.context,
+      layer: this.layer,
       recordId: this.recordId,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
     });
 
     // Use type assertion to allow assignment to readonly properties on new instance
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     const mutableBuilder = newBuilder as any;
     // Copy existing state
-    mutableBuilder.selectedFields = this.selectedFields;
-    mutableBuilder.fieldMapping = this.fieldMapping;
-    mutableBuilder.systemColumns = this.systemColumns;
-    mutableBuilder.expandConfigs = [...this.expandConfigs];
+    mutableBuilder.readState = cloneRecordReadBuilderState(this.readState, {
+      selectedFields: this.selectedFields,
+      fieldMapping: this.fieldMapping,
+      systemColumns: this.systemColumns,
+      expandConfigs: this.expandConfigs,
+    });
     mutableBuilder.isNavigateFromEntitySet = this.isNavigateFromEntitySet;
     mutableBuilder.navigateRelation = this.navigateRelation;
+    mutableBuilder.navigateRelationEntityId = this.navigateRelationEntityId;
     mutableBuilder.navigateSourceTableName = this.navigateSourceTableName;
+    mutableBuilder.navigateSourceTableEntityId = this.navigateSourceTableEntityId;
     mutableBuilder.operationColumn = this.operationColumn;
 
     // Use ExpandBuilder.processExpand to handle the expand logic
-    const expandBuilder = new ExpandBuilder(this.databaseUseEntityIds, this.logger);
+    const expandBuilder = new ExpandBuilder(this.config.useEntityIds, this.logger);
     type TargetBuilder = QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>;
     const expandConfig = expandBuilder.processExpand<TargetTable, TargetBuilder>(
       targetTable,
@@ -424,14 +460,13 @@ export class RecordBuilder<
         // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
         new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
           occurrence: targetTable,
-          databaseName: this.databaseName,
-          context: this.context,
-          databaseUseEntityIds: this.databaseUseEntityIds,
-          databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
+          layer: this.layer,
         }),
     );
 
-    mutableBuilder.expandConfigs.push(expandConfig);
+    mutableBuilder.readState = cloneRecordReadBuilderState(mutableBuilder.readState, {
+      expandConfigs: [...this.expandConfigs, expandConfig],
+    });
     // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed as expand changes generic parameters in complex way that TypeScript cannot infer
     return newBuilder as any;
   }
@@ -465,44 +500,46 @@ export class RecordBuilder<
     // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
     const builder = new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
       occurrence: targetTable,
-      databaseName: this.databaseName,
-      context: this.context,
-      databaseUseEntityIds: this.databaseUseEntityIds,
-      databaseIncludeSpecialColumns: this.databaseIncludeSpecialColumns,
+      layer: this.layer,
     });
 
     // Store the navigation info - resolve entity ID for relation if needed
-    const relationId = resolveTableId(targetTable, relationName, this.context, this.databaseUseEntityIds);
+    const relationEntityId = isUsingEntityIds(targetTable)
+      ? resolveTableId(targetTable, relationName, true)
+      : relationName;
 
     // If this RecordBuilder came from a navigated EntitySet, we need to preserve that base path
     let sourceTableName: string;
+    let sourceTableEntityId: string;
     let baseRelation: string | undefined;
+    let baseRelationEntityId: string | undefined;
     if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
       // Build the base path: /sourceTable/relation('recordId')/newRelation
       sourceTableName = this.navigateSourceTableName;
+      sourceTableEntityId = this.navigateSourceTableEntityId ?? sourceTableName;
       baseRelation = this.navigateRelation;
+      baseRelationEntityId = this.navigateRelationEntityId ?? baseRelation;
     } else {
       // Normal record navigation: /tableName('recordId')/relation
       // Use table ID if available, otherwise table name
       if (!this.table) {
-        throw new Error("Table occurrence is required for navigation");
+        throw new BuilderInvariantError("RecordBuilder.navigate", "table occurrence is required for navigation");
       }
-      sourceTableName = resolveTableId(this.table, getTableName(this.table), this.context, this.databaseUseEntityIds);
+      sourceTableName = getTableName(this.table);
+      sourceTableEntityId = isUsingEntityIds(this.table)
+        ? resolveTableId(this.table, sourceTableName, true)
+        : sourceTableName;
     }
 
     // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
     (builder as any).navigation = {
       recordId: this.recordId,
-      relation: relationId,
+      relation: relationName,
+      relationEntityId,
       sourceTableName,
+      sourceTableEntityId,
       baseRelation,
-    };
-    // biome-ignore lint/suspicious/noExplicitAny: Mutation of readonly properties for builder pattern
-    (builder as any).navigation = {
-      recordId: this.recordId,
-      relation: relationId,
-      sourceTableName,
-      baseRelation,
+      baseRelationEntityId,
     };
 
     return builder;
@@ -513,9 +550,9 @@ export class RecordBuilder<
    */
   private buildQueryString(includeSpecialColumns?: boolean, useEntityIds?: boolean): string {
     // Use merged includeSpecialColumns if provided, otherwise use database-level default
-    const finalIncludeSpecialColumns = includeSpecialColumns ?? this.databaseIncludeSpecialColumns;
+    const finalIncludeSpecialColumns = includeSpecialColumns ?? this.config.includeSpecialColumns;
     // Use merged useEntityIds if provided, otherwise use database-level default
-    const finalUseEntityIds = useEntityIds ?? this.databaseUseEntityIds;
+    const finalUseEntityIds = useEntityIds ?? this.config.useEntityIds;
 
     return buildSelectExpandQueryString({
       selectedFields: this.selectedFields,
@@ -527,7 +564,7 @@ export class RecordBuilder<
     });
   }
 
-  async execute<EO extends ExecuteOptions>(
+  execute<EO extends ExecuteOptions>(
     options?: ExecuteMethodOptions<EO>,
   ): Promise<
     Result<
@@ -557,60 +594,79 @@ export class RecordBuilder<
       >
     >
   > {
+    const mergedOptions = this.mergeExecuteOptions(options);
     let url: string;
 
     // Build the base URL depending on whether this came from a navigated EntitySet
     if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
+      const sourceSegment = mergedOptions.useEntityIds
+        ? (this.navigateSourceTableEntityId ?? this.navigateSourceTableName)
+        : this.navigateSourceTableName;
+      const relationSegment = mergedOptions.useEntityIds
+        ? (this.navigateRelationEntityId ?? this.navigateRelation)
+        : this.navigateRelation;
       // From navigated EntitySet: /sourceTable/relation('recordId')
-      url = `/${this.databaseName}/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
+      url = `/${this.config.databaseName}/${sourceSegment}/${relationSegment}('${this.recordId}')`;
     } else {
       // Normal record: /tableName('recordId') - use FMTID if configured
-      const tableId = this.getTableId(options?.useEntityIds ?? this.databaseUseEntityIds);
-      url = `/${this.databaseName}/${tableId}('${this.recordId}')`;
+      const tableId = this.getTableId(mergedOptions.useEntityIds);
+      url = `/${this.config.databaseName}/${tableId}('${this.recordId}')`;
     }
 
-    const mergedOptions = this.mergeExecuteOptions(options);
-
-    if (this.operation === "getSingleField" && this.operationParam) {
+    if (this.operation === "getSingleField" && this.operationColumn) {
+      url += `/${this.operationColumn.getFieldIdentifier(mergedOptions.useEntityIds)}`;
+    } else if (this.operation === "getSingleField" && this.operationParam) {
       url += `/${this.operationParam}`;
     } else {
       // Add query string for select/expand (only when not getting a single field)
       const queryString = this.buildQueryString(mergedOptions.includeSpecialColumns, mergedOptions.useEntityIds);
       url += queryString;
     }
-    const result = await this.context._makeRequest(url, mergedOptions);
-
-    if (result.error) {
-      return { data: undefined, error: result.error };
-    }
-
-    const response = result.data;
-
-    // Handle single field operation
-    if (this.operation === "getSingleField") {
-      // Single field returns a JSON object with @context and value
-      // The type is extracted from the Column stored in FieldColumn generic
+    const pipeline = Effect.gen(this, function* () {
+      // Make GET request via DI
       // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
-      const fieldResponse = response as ODataFieldResponse<any>;
-      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type extraction
-      return { data: fieldResponse.value as any, error: undefined };
-    }
+      const response = yield* requestFromService<any>(url, {
+        method: "GET",
+        ...mergedOptions,
+      });
 
-    // Use shared response processor
-    const expandBuilder = new ExpandBuilder(mergedOptions.useEntityIds ?? false, this.logger);
-    const expandValidationConfigs = expandBuilder.buildValidationConfigs(this.expandConfigs);
+      // Handle single field operation
+      if (this.operation === "getSingleField") {
+        // Single field returns a JSON object with @context and value
+        // The type is extracted from the Column stored in FieldColumn generic
+        // biome-ignore lint/suspicious/noExplicitAny: Dynamic response type from OData API
+        const fieldResponse = response as ODataFieldResponse<any>;
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic type extraction
+        return fieldResponse.value as any;
+      }
 
-    return processODataResponse(response, {
-      table: this.table,
-      schema: getSchemaFromTable(this.table),
-      singleMode: "exact",
-      selectedFields: this.selectedFields,
-      expandValidationConfigs,
-      skipValidation: options?.skipValidation,
-      useEntityIds: mergedOptions.useEntityIds,
-      includeSpecialColumns: mergedOptions.includeSpecialColumns,
-      fieldMapping: this.fieldMapping,
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          processRecordResponse(response, {
+            table: this.table,
+            selectedFields: this.selectedFields,
+            expandConfigs: this.expandConfigs,
+            skipValidation: options?.skipValidation,
+            useEntityIds: mergedOptions.useEntityIds,
+            includeSpecialColumns: mergedOptions.includeSpecialColumns,
+            fieldMapping: this.fieldMapping,
+            logger: this.logger,
+          }),
+        catch: (e) => (e instanceof Error ? e : new Error(String(e))),
+      });
+
+      if (result.error) {
+        return yield* Effect.fail(result.error);
+      }
+
+      return result.data;
     });
+
+    const result = runLayerResult(this.layer, pipeline, "fmodata.record.get", {
+      "fmodata.table": getTableName(this.table),
+    });
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion for complex generic return type
+    return result as Promise<Result<any>>;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
@@ -619,17 +675,23 @@ export class RecordBuilder<
 
     // Build the base URL depending on whether this came from a navigated EntitySet
     if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
+      const sourceSegment = this.config.useEntityIds
+        ? (this.navigateSourceTableEntityId ?? this.navigateSourceTableName)
+        : this.navigateSourceTableName;
+      const relationSegment = this.config.useEntityIds
+        ? (this.navigateRelationEntityId ?? this.navigateRelation)
+        : this.navigateRelation;
       // From navigated EntitySet: /sourceTable/relation('recordId')
-      url = `/${this.databaseName}/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
+      url = `/${this.config.databaseName}/${sourceSegment}/${relationSegment}('${this.recordId}')`;
     } else {
       // For batch operations, use database-level setting (no per-request override available here)
-      const tableId = this.getTableId(this.databaseUseEntityIds);
-      url = `/${this.databaseName}/${tableId}('${this.recordId}')`;
+      const tableId = this.getTableId(this.config.useEntityIds);
+      url = `/${this.config.databaseName}/${tableId}('${this.recordId}')`;
     }
 
     if (this.operation === "getSingleField" && this.operationColumn) {
       // Use the column's getFieldIdentifier to support entity IDs
-      url += `/${this.operationColumn.getFieldIdentifier(this.databaseUseEntityIds)}`;
+      url += `/${this.operationColumn.getFieldIdentifier(this.config.useEntityIds)}`;
     } else if (this.operation === "getSingleField" && this.operationParam) {
       // Fallback for backwards compatibility (shouldn't happen in normal flow)
       url += `/${this.operationParam}`;
@@ -649,12 +711,18 @@ export class RecordBuilder<
    * Returns the query string for this record builder (for testing purposes).
    */
   getQueryString(options?: { useEntityIds?: boolean }): string {
-    const useEntityIds = options?.useEntityIds ?? this.databaseUseEntityIds;
+    const useEntityIds = options?.useEntityIds ?? this.config.useEntityIds;
     let path: string;
 
     // Build the path depending on navigation context
     if (this.isNavigateFromEntitySet && this.navigateSourceTableName && this.navigateRelation) {
-      path = `/${this.navigateSourceTableName}/${this.navigateRelation}('${this.recordId}')`;
+      const sourceSegment = useEntityIds
+        ? (this.navigateSourceTableEntityId ?? this.navigateSourceTableName)
+        : this.navigateSourceTableName;
+      const relationSegment = useEntityIds
+        ? (this.navigateRelationEntityId ?? this.navigateRelation)
+        : this.navigateRelation;
+      path = `/${sourceSegment}/${relationSegment}('${this.recordId}')`;
     } else {
       // Use getTableId to respect entity ID settings (same as getRequestConfig)
       const tableId = this.getTableId(useEntityIds);
@@ -696,7 +764,7 @@ export class RecordBuilder<
     // Check for error responses (important for batch operations)
     if (!response.ok) {
       const tableName = this.table ? getTableName(this.table) : "unknown";
-      const error = await parseErrorResponse(response, response.url || `/${this.databaseName}/${tableName}`);
+      const error = await parseErrorResponse(response, response.url || `/${this.config.databaseName}/${tableName}`);
       return { data: undefined, error };
     }
 
@@ -715,19 +783,15 @@ export class RecordBuilder<
 
     // Use shared response processor
     const mergedOptions = this.mergeExecuteOptions(options);
-    const expandBuilder = new ExpandBuilder(mergedOptions.useEntityIds ?? false, this.logger);
-    const expandValidationConfigs = expandBuilder.buildValidationConfigs(this.expandConfigs);
-
-    return processODataResponse(rawResponse, {
+    return processRecordResponse(rawResponse, {
       table: this.table,
-      schema: getSchemaFromTable(this.table),
-      singleMode: "exact",
       selectedFields: this.selectedFields,
-      expandValidationConfigs,
+      expandConfigs: this.expandConfigs,
       skipValidation: options?.skipValidation,
       useEntityIds: mergedOptions.useEntityIds,
       includeSpecialColumns: mergedOptions.includeSpecialColumns,
       fieldMapping: this.fieldMapping,
+      logger: this.logger,
     });
   }
 }

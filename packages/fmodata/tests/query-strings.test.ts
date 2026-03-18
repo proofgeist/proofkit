@@ -22,8 +22,8 @@
 const SELECT_QUERY_REGEX = /\$select=([^&]+)/;
 
 import { and, asc, desc, eq, fmTableOccurrence, gt, isNull, numberField, or, textField } from "@proofkit/fmodata";
+import { MockFMServerConnection } from "@proofkit/fmodata/testing";
 import { describe, expect, it } from "vitest";
-import { createMockClient } from "./utils/test-setup";
 
 const users = fmTableOccurrence(
   "users",
@@ -47,7 +47,7 @@ const contacts = fmTableOccurrence("contacts", {
 });
 
 describe("OData Query String Generation", () => {
-  const client = createMockClient();
+  const client = new MockFMServerConnection();
   const db = client.database("TestDB");
 
   describe("$select", () => {

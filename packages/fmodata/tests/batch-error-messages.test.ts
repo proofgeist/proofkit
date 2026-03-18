@@ -9,8 +9,8 @@
  */
 
 import { fmTableOccurrence, isODataError, isResponseStructureError, textField } from "@proofkit/fmodata";
+import { MockFMServerConnection } from "@proofkit/fmodata/testing";
 import { describe, expect, it } from "vitest";
-import { createMockClient } from "./utils/test-setup";
 
 /**
  * Creates a mock fetch handler that returns a multipart batch response
@@ -34,7 +34,9 @@ function createBatchMockFetch(batchResponseBody: string): typeof fetch {
 }
 
 describe("Batch Error Messages - Improved Error Parsing", () => {
-  const client = createMockClient();
+  // Batch tests use a custom fetchHandler because multipart responses are easier
+  // to model directly than via per-route JSON response helpers.
+  const mock = new MockFMServerConnection();
 
   // Define simple schemas for batch testing
   const addressesTO = fmTableOccurrence("addresses", {
@@ -42,7 +44,7 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
     street: textField(),
   });
 
-  const db = client.database("test_db");
+  const db = mock.database("test_db");
 
   it("should return ODataError with helpful message instead of vague ResponseStructureError", async () => {
     // This simulates the exact scenario from the user's error:
@@ -123,13 +125,6 @@ describe("Batch Error Messages - Improved Error Parsing", () => {
       expect(r2.error.code).toBe("-1020");
       expect(r2.error.message).toContain("Table 'Purchase_Orders' not defined");
       expect(r2.error.kind).toBe("ODataError");
-
-      // The error message is now helpful instead of:
-      // "Invalid response structure: expected 'value' property to be an array"
-      console.log("\n✅ Fixed Error Message:");
-      console.log(`   Code: ${r2.error.code}`);
-      console.log(`   Message: ${r2.error.message}`);
-      console.log(`   Kind: ${r2.error.kind}\n`);
     }
 
     // Third query succeeded (not truncated in this mock)

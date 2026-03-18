@@ -6,12 +6,12 @@
  */
 
 import { dateField, fmTableOccurrence, textField } from "@proofkit/fmodata";
+import { MockFMServerConnection } from "@proofkit/fmodata/testing";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   arbitraryTable,
   contacts,
   contactsTOWithIds,
-  createMockClient,
   invoices,
   lineItems,
   users,
@@ -47,7 +47,7 @@ const usersWithSchema = fmTableOccurrence(
 );
 
 describe("navigate", () => {
-  const client = createMockClient();
+  const client = new MockFMServerConnection();
 
   it("should not allow navigation to an invalid relation", () => {
     const db = client.database("test_db");

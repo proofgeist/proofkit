@@ -11,6 +11,7 @@
  *   6. Re-run SaveAsPackage to regenerate with fixed JSON
  *   7. Close addon-creator via CloseThisFile script
  *   8. Copy .fmaddon and zip addon folder to stage directory
+ *   9. Refresh CLI template (packages/cli/template/fm-addon/ProofKitWV/)
  */
 
 import { execSync } from "node:child_process";
@@ -223,6 +224,25 @@ try {
   );
   success(`Created: ${stageZipPath}`);
 
+  // --- Step 12: Refresh CLI template ---
+  section("Step 12: Update CLI Template");
+
+  const cliTemplatePath = join(
+    repoRoot,
+    "packages/cli/template/fm-addon/ProofKitWV",
+  );
+
+  info(`Clearing ${cliTemplatePath}...`);
+  if (existsSync(cliTemplatePath)) {
+    rmSync(cliTemplatePath, { recursive: true, force: true });
+  }
+  mkdirSync(cliTemplatePath, { recursive: true });
+
+  info(`Copying addon folder contents to CLI template...`);
+  execSync(`cp -a "${addonFolderPath}/"* "${cliTemplatePath}/"`);
+
+  success(`CLI template updated: ${cliTemplatePath}`);
+
   // --- Done ---
   console.log("");
   console.log("=".repeat(70));
@@ -231,6 +251,9 @@ try {
   console.log(`Staged Files:`);
   console.log(`  ${stageFmaddonPath}`);
   console.log(`  ${stageZipPath}`);
+  console.log("");
+  console.log(`CLI Template Updated:`);
+  console.log(`  ${cliTemplatePath}`);
   console.log("");
   console.log(`Original Files (preserved):`);
   console.log(`  ${fmaddonPath}`);

@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run build --filter={./packages/*} --filter=@proofkit/docs",
     "ci": "turbo run lint && turbo run typecheck && turbo run test",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --concurrency=11",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",

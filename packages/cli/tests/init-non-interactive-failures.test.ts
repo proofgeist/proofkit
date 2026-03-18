@@ -21,7 +21,6 @@ function toText(value: string | Buffer | undefined) {
 }
 
 describe("Init Non-Interactive Failure Paths", () => {
-  const cliRoot = join(__dirname, "..");
   const testDir = join(__dirname, "..", "..", "tmp", "init-failure-tests");
   const cliPath = join(__dirname, "..", "dist", "index.js");
 
@@ -30,34 +29,13 @@ describe("Init Non-Interactive Failure Paths", () => {
     mkdirSync(testDir, { recursive: true });
   });
 
-  const rebuildCli = () => {
-    execFileSync("pnpm", ["build"], {
-      cwd: cliRoot,
+  const runInitCommand = (args: string[], cwd = testDir) => {
+    return execFileSync("node", [cliPath, "init", ...args], {
+      cwd,
       env: process.env,
       stdio: "pipe",
+      encoding: "utf-8",
     });
-  };
-
-  const runInitCommand = (args: string[], cwd = testDir) => {
-    const execute = () =>
-      execFileSync("node", [cliPath, "init", ...args], {
-        cwd,
-        env: process.env,
-        stdio: "pipe",
-        encoding: "utf-8",
-      });
-
-    try {
-      return execute();
-    } catch (error) {
-      const failure = error as ExecFailure;
-      const output = `${toText(failure.stdout)}\n${toText(failure.stderr)}`;
-      if (output.includes("Cannot find module") && output.includes("dist/index.js")) {
-        rebuildCli();
-        return execute();
-      }
-      throw error;
-    }
   };
 
   const runInitExpectFailure = (args: string[], cwd = testDir) => {

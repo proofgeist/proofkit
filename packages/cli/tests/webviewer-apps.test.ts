@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -12,13 +12,6 @@ describe("WebViewer CLI Tests", () => {
   const projectDir = join(testDir, projectName);
 
   beforeEach(() => {
-    if (!existsSync(cliPath)) {
-      execFileSync("pnpm", ["build"], {
-        cwd: join(__dirname, ".."),
-        env: process.env,
-        stdio: "pipe",
-      });
-    }
     if (existsSync(projectDir)) {
       rmSync(projectDir, { recursive: true, force: true });
     }

@@ -9,17 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.join(__dirname, "..");
 const distEntry = path.join(packageDir, "dist/index.js");
 
-function buildCli() {
-  execFileSync("pnpm", ["build"], {
-    cwd: packageDir,
-    stdio: "pipe",
-    encoding: "utf8",
-  });
-}
-
 describe("proofkit CLI", () => {
   it("shows kebab-case init flags in help", () => {
-    buildCli();
     const output = execFileSync("node", [distEntry, "init", "--help"], {
       cwd: packageDir,
       stdio: "pipe",
@@ -34,7 +25,6 @@ describe("proofkit CLI", () => {
   });
 
   it("prints the header and project command guidance when run inside a ProofKit project", async () => {
-    buildCli();
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-project-"));
     await fs.writeJson(path.join(cwd, "proofkit.json"), {
       appType: "browser",
@@ -57,7 +47,6 @@ describe("proofkit CLI", () => {
   });
 
   it("fails with guidance when no command is used in non-interactive mode", () => {
-    buildCli();
     const result = spawnSync("node", [distEntry, "--non-interactive"], {
       cwd: packageDir,
       stdio: "pipe",
@@ -70,7 +59,6 @@ describe("proofkit CLI", () => {
   });
 
   it("shows a clean invalid subcommand error by default", () => {
-    buildCli();
     const result = spawnSync("node", [distEntry, "my-proofkit-app", "--force"], {
       cwd: packageDir,
       stdio: "pipe",
@@ -88,7 +76,6 @@ describe("proofkit CLI", () => {
   });
 
   it("shows internal error details when debug mode is enabled", () => {
-    buildCli();
     const result = spawnSync("node", [distEntry, "--debug", "my-proofkit-app", "--force"], {
       cwd: packageDir,
       stdio: "pipe",

@@ -37,14 +37,6 @@ const packageManagerPattern = /^(npm|pnpm|yarn|bun)@/;
 const ansiStylePrefixPattern = /^[0-9;]*m/;
 
 function runInit({ appType, projectName }: { appType: "browser" | "webviewer"; projectName: string }): string {
-  if (!existsSync(cliPath)) {
-    execFileSync("pnpm", ["build"], {
-      cwd: join(__dirname, ".."),
-      env: process.env,
-      stdio: "pipe",
-    });
-  }
-
   return execFileSync(
     "node",
     [

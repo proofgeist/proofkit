@@ -39,12 +39,25 @@ export interface ConsoleTranscript {
   note: Array<{ message: string; title?: string }>;
 }
 
+export interface PromptTranscript {
+  text: string[];
+  password: string[];
+  select: Array<{
+    message: string;
+    options: string[];
+  }>;
+  searchSelect: string[];
+  multiSearchSelect: string[];
+  confirm: string[];
+}
+
 export function makeTestLayer(options: {
   cwd: string;
   packageManager: PackageManager;
   nonInteractive?: boolean;
   prompts?: PromptScript;
   console?: ConsoleTranscript;
+  promptTranscript?: PromptTranscript;
   tracker?: {
     commands: string[];
     gitInits: number;
@@ -78,40 +91,66 @@ export function makeTestLayer(options: {
       packageManager: options.packageManager,
     }),
     Layer.succeed(PromptService, {
-      text: ({ defaultValue }: { defaultValue?: string }) => {
+      text: ({ message, defaultValue }: { message: string; defaultValue?: string }) => {
+        options.promptTranscript?.text.push(message);
         const next = promptScript.text.shift();
         return Promise.resolve(next ?? defaultValue ?? "value");
       },
-      password: () => Promise.resolve(promptScript.password.shift() ?? "password"),
-      select: <T extends string>({ options }: { options: { value: T }[] }) => {
+      password: ({ message }: { message: string }) => {
+        options.promptTranscript?.password.push(message);
+        return Promise.resolve(promptScript.password.shift() ?? "password");
+      },
+      select: <T extends string>({ message, options: selectOptions }: { message: string; options: { value: T }[] }) => {
+        options.promptTranscript?.select.push({
+          message,
+          options: selectOptions.map((option) => option.value),
+        });
         const next = promptScript.select.shift();
         if (next) {
-          const match = options.find((option) => option.value === next);
+          const match = selectOptions.find((option) => option.value === next);
           if (match) {
             return Promise.resolve(match.value);
           }
         }
-        return Promise.resolve(options[0]?.value ?? ("" as T));
+        return Promise.resolve(selectOptions[0]?.value ?? ("" as T));
       },
-      searchSelect: <T extends string>({ options }: { options: { value: T }[] }) => {
+      searchSelect: <T extends string>({
+        message,
+        options: searchOptions,
+      }: {
+        message: string;
+        options: { value: T }[];
+      }) => {
+        options.promptTranscript?.searchSelect.push(message);
         const next = promptScript.searchSelect.shift();
         if (next) {
-          const match = options.find((option) => option.value === next);
+          const match = searchOptions.find((option) => option.value === next);
           if (match) {
             return Promise.resolve(match.value);
           }
         }
-        return Promise.resolve(options[0]?.value ?? ("" as T));
+        return Promise.resolve(searchOptions[0]?.value ?? ("" as T));
       },
-      multiSearchSelect: <T extends string>({ options }: { options: { value: T }[] }) => {
+      multiSearchSelect: <T extends string>({
+        message,
+        options: searchOptions,
+      }: {
+        message: string;
+        options: { value: T }[];
+      }) => {
+        options.promptTranscript?.multiSearchSelect.push(message);
         const next = promptScript.multiSearchSelect.shift();
         if (next) {
-          return Promise.resolve(next.filter((value): value is T => options.some((option) => option.value === value)));
+          return Promise.resolve(
+            next.filter((value): value is T => searchOptions.some((option) => option.value === value)),
+          );
         }
-        return Promise.resolve(options.slice(0, 1).map((option) => option.value));
+        return Promise.resolve(searchOptions.slice(0, 1).map((option) => option.value));
       },
-      confirm: async ({ initialValue }: { initialValue?: boolean }) =>
-        promptScript.confirm.shift() ?? initialValue ?? false,
+      confirm: async ({ message, initialValue }: { message: string; initialValue?: boolean }) => {
+        options.promptTranscript?.confirm.push(message);
+        return promptScript.confirm.shift() ?? initialValue ?? false;
+      },
     }),
     Layer.succeed(ConsoleService, {
       info: (message: string) => {

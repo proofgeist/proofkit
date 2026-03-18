@@ -282,49 +282,72 @@ async function resolveFileMakerInputs({
   validateLayoutInputs(flags);
 
   if (appType === "webviewer" && !flags.server) {
-    const localFmHttp = await fileMakerService.detectLocalFmHttp();
-    if (localFmHttp.healthy && localFmHttp.connectedFiles[0]) {
-      return {
-        fileMaker: {
-          mode: "local-fm-http",
-          dataSourceName: "filemaker",
-          envNames: createDataSourceEnvNames("filemaker"),
-          fmHttpBaseUrl: localFmHttp.baseUrl,
-          fileName: localFmHttp.connectedFiles[0],
-          layoutName: flags.layoutName,
-          schemaName: flags.schemaName,
-        } satisfies FileMakerInputs,
-        skipFileMakerSetup: false,
-      };
-    }
+    while (true) {
+      const localFmHttp = await fileMakerService.detectLocalFmHttp();
+      if (localFmHttp.healthy && localFmHttp.connectedFiles[0]) {
+        return {
+          fileMaker: {
+            mode: "local-fm-http",
+            dataSourceName: "filemaker",
+            envNames: createDataSourceEnvNames("filemaker"),
+            fmHttpBaseUrl: localFmHttp.baseUrl,
+            fileName: localFmHttp.connectedFiles[0],
+            layoutName: flags.layoutName,
+            schemaName: flags.schemaName,
+          } satisfies FileMakerInputs,
+          skipFileMakerSetup: false,
+        };
+      }
 
-    if (nonInteractive) {
-      throw new Error(
-        "No local FM HTTP connection was detected and no FileMaker server was provided. Start FM HTTP locally or rerun with --server.",
-      );
-    }
+      if (nonInteractive) {
+        if (localFmHttp.healthy) {
+          throw new Error(
+            "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
+          );
+        }
 
-    const fallbackAction = await prompt.select({
-      message: "Local FM HTTP was not detected. How would you like to continue?",
-      options: [
-        {
-          value: "hosted",
-          label: "Continue with hosted setup",
-          hint: "Use OttoFMS and a hosted FileMaker server",
-        },
-        {
-          value: "skip",
-          label: "Skip for now",
-          hint: "Create the project and configure FileMaker later",
-        },
-      ],
-    });
+        throw new Error(
+          "ProofKit MCP Server was not detected and no FileMaker server was provided. Start the ProofKit MCP Server locally or rerun with --server.",
+        );
+      }
 
-    if (fallbackAction === "skip") {
-      return {
-        fileMaker: undefined,
-        skipFileMakerSetup: true,
-      };
+      const fallbackAction = await prompt.select({
+        message: localFmHttp.healthy
+          ? "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?"
+          : "ProofKit MCP Server was not detected. How would you like to continue?",
+        options: [
+          {
+            value: "retry",
+            label: "Try again",
+            hint: localFmHttp.healthy
+              ? "Open a FileMaker file, then retry detection"
+              : "Retry ProofKit MCP Server detection",
+          },
+          {
+            value: "hosted",
+            label: "Continue with hosted setup",
+            hint: "Use OttoFMS and a hosted FileMaker server",
+          },
+          {
+            value: "skip",
+            label: "Skip for now",
+            hint: "Create the project and configure FileMaker later",
+          },
+        ],
+      });
+
+      if (fallbackAction === "retry") {
+        continue;
+      }
+
+      if (fallbackAction === "skip") {
+        return {
+          fileMaker: undefined,
+          skipFileMakerSetup: true,
+        };
+      }
+
+      break;
     }
   }
 

@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
-import { makeTestLayer } from "./test-layer.js";
+import { makeTestLayer, type PromptTranscript } from "./test-layer.js";
 
 describe("resolveInitRequest", () => {
   it("fails for missing project name in non-interactive mode", async () => {
@@ -171,5 +171,82 @@ describe("resolveInitRequest", () => {
       mode: "local-fm-http",
       fileName: "LocalFile.fmp12",
     });
+  });
+
+  it("prompts to retry when Proofkit MCP is running but no FileMaker file is open", async () => {
+    const promptTranscript: PromptTranscript = {
+      text: [],
+      password: [],
+      select: [],
+      searchSelect: [],
+      multiSearchSelect: [],
+      confirm: [],
+    };
+
+    const request = await Effect.runPromise(
+      resolveInitRequest("demo", {
+        noGit: true,
+        noInstall: true,
+        force: false,
+        default: false,
+        importAlias: "~/",
+        CI: false,
+        appType: "webviewer",
+        dataSource: "filemaker",
+      }).pipe(
+        makeTestLayer({
+          cwd: "/tmp",
+          packageManager: "pnpm",
+          nonInteractive: false,
+          prompts: {
+            select: ["skip"],
+          },
+          promptTranscript,
+          fileMaker: {
+            localFmHttp: {
+              healthy: true,
+              connectedFiles: [],
+            },
+          },
+        }),
+      ),
+    );
+
+    expect(request.fileMaker).toBeUndefined();
+    expect(request.skipFileMakerSetup).toBe(true);
+    expect(promptTranscript.select).toContainEqual({
+      message: "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?",
+      options: ["retry", "hosted", "skip"],
+    });
+  });
+
+  it("fails with a specific non-interactive error when Proofkit MCP is running but no FileMaker file is open", async () => {
+    await expect(
+      Effect.runPromise(
+        resolveInitRequest("demo", {
+          noGit: true,
+          noInstall: true,
+          force: false,
+          default: false,
+          importAlias: "~/",
+          CI: true,
+          appType: "webviewer",
+          dataSource: "filemaker",
+        }).pipe(
+          makeTestLayer({
+            cwd: "/tmp",
+            packageManager: "pnpm",
+            fileMaker: {
+              localFmHttp: {
+                healthy: true,
+                connectedFiles: [],
+              },
+            },
+          }),
+        ),
+      ),
+    ).rejects.toThrow(
+      "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
+    );
   });
 });

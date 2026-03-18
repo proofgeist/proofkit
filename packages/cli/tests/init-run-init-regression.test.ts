@@ -137,7 +137,7 @@ vi.mock("~/cli/utils.js", () => ({
   abortIfCancel: vi.fn((value: unknown) => value),
 }));
 
-import { runInit } from "~/cli/init";
+import { runInit } from "~/cli/init.js";
 
 const browserFilemakerFlags = {
   noGit: true,

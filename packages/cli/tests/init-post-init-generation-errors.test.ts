@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createPostInitGenerationError, isMissingTypegenCommandError } from "~/cli/init";
+import { createPostInitGenerationError, isMissingTypegenCommandError } from "~/cli/init.js";
 
 vi.mock("@inquirer/prompts", () => ({
   checkbox: vi.fn(),

@@ -107,7 +107,7 @@ export interface InitPlan {
     packageManager?: string;
     proofkitMetadata: {
       initVersion: string;
-      scaffoldPackage: "@proofkit/new";
+      scaffoldPackage: "@proofkit/cli";
     };
     dependencies: Record<string, string>;
     devDependencies: Record<string, string>;

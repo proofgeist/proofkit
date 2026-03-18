@@ -423,10 +423,6 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
       ).pipe(Effect.map((value) => value as DataSourceType));
     }
 
-    const hasExplicitFileMakerInputs = Boolean(
-      flags.server || flags.adminApiKey || flags.dataApiKey || flags.fileName || flags.layoutName || flags.schemaName,
-    );
-
     if (nonInteractive && !flags.dataSource && hasExplicitFileMakerInputs) {
       return yield* Effect.fail(new Error("FileMaker flags require --data-source filemaker in non-interactive mode."));
     }

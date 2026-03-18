@@ -148,6 +148,12 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function createErrorWithCause(message: string, cause: Error): Error {
+  const wrapped = new Error(message) as Error & { cause?: Error };
+  wrapped.cause = cause;
+  return wrapped;
+}
+
 export function isMissingTypegenCommandError(error: unknown): boolean {
   const message = getErrorMessage(error);
   return missingTypegenCommandPatterns.some((pattern) => pattern.test(message));
@@ -165,25 +171,25 @@ export function createPostInitGenerationError({
   const rootError = error instanceof Error ? error : new Error(getErrorMessage(error));
 
   if (appType === "browser" && isMissingTypegenCommandError(error)) {
-    return new Error(
+    return createErrorWithCause(
       [
         "Post-init generation failed after scaffolding.",
         `Project created at: ${projectDir}`,
         "Root cause: a `typegen` package command was invoked, but browser scaffolds do not define that script.",
         "Continue using the generated project, then run `proofkit typegen` later after FileMaker setup is complete.",
       ].join("\n"),
-      { cause: rootError },
+      rootError,
     );
   }
 
-  return new Error(
+  return createErrorWithCause(
     [
       "Post-init generation failed after scaffolding.",
       `Project created at: ${projectDir}`,
       "Retry `proofkit typegen` from inside the project once FileMaker settings and connectivity are valid.",
       `Underlying error: ${getErrorMessage(error)}`,
     ].join("\n"),
-    { cause: rootError },
+    rootError,
   );
 }
 

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 
-import { verifySmokeProjectBuilds } from "./test-utils";
+import { verifySmokeProjectBuilds } from "./test-utils.js";
 
 describe("External integration smoke tests (non-interactive CLI)", () => {
   // Use root-level tmp directory for test outputs

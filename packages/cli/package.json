@@ -50,7 +50,7 @@
     "pub:beta": "NODE_ENV=production pnpm build && npm publish --tag beta --access public",
     "pub:next": "NODE_ENV=production pnpm build && npm publish --tag next --access public",
     "pub:release": "NODE_ENV=production pnpm build && npm publish --access public",
-    "test": "vitest run",
+    "test": "pnpm build && vitest run",
     "test:smoke": "PROOFKIT_RUN_SMOKE_TESTS=1 vitest run --config vitest.smoke.config.ts"
   },
   "dependencies": {

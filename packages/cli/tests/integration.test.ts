@@ -197,7 +197,7 @@ describe("integration scaffold generation", () => {
     expect(packageJson.devDependencies.ultracite).toBe("7.0.8");
     expect(agentsFile).toContain("Use the ProofKit docs as the primary reference");
     expect(agentsFile).toContain("npx @tanstack/intent@latest install");
-    expect(claudeFile?.trim()).toBe("AGENTS.md");
+    expect(claudeFile).toBe(agentsFile);
     expect(launchConfig).toContain('"runtimeExecutable": "pnpm"');
     expect(routerFile).toContain("createHashHistory");
     expect(mainFile).toContain("QueryClientProvider");

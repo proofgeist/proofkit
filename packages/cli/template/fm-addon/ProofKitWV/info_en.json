@@ -1,7 +1,18 @@
 ﻿{
-  "Title": "ProofKit WebViewer",
-  "Description": "Easily build and embed your own custom webviewer widgets into FileMaker",
-  "Category": "Web",
-  "Features": [],
-  "Optimized": ["Desktop", "Tablet", "Mobile"]
+	"Title" : "ProofKit",
+
+	"Description" : "ProofKit for FileMaker",
+
+	"Category" : "Development",
+
+	"Features" :
+		[
+			
+		],
+
+	"Optimized" :
+		[
+			"Desktop", "Tablet", "Mobile"
+
+		]
 }

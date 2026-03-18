@@ -1,16 +1,107 @@
 ﻿
 <DynamicTemplateString>
-	<StringID>com.fmi.basetable.CBCA67C2335A3818A3C9727057706207</StringID>
-	<SourceText>ProofKitWV</SourceText>
-	<TargetText>ProofKitWV</TargetText>
-	<Comment>com.fmi.basetable.ProofKitWV</Comment>
+	<StringID>com.fmi.basedirectory.671631F6F47A23EA23DD18A863730CB5</StringID>
+	<SourceText>ProofKitWV/</SourceText>
+	<TargetText>ProofKitWV/</TargetText>
+	<Comment>com.fmi.basedirectory.ProofKitWV/</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.basetable.field.ProofKitWV::CEF66026AC6A040A2A2F2DCC712C456B</StringID>
+	<StringID>com.fmi.basetable.9C7E3C80FB0A806908A11953636F0584</StringID>
+	<SourceText>ProofKitApps</SourceText>
+	<TargetText>ProofKitApps</TargetText>
+	<Comment>com.fmi.basetable.ProofKitApps</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.A72664F13DDFEACC5F6AAC99DE88BC03</StringID>
+	<SourceText>__FMAddonTemplate_Metadata</SourceText>
+	<TargetText>__FMAddonTemplate_Metadata</TargetText>
+	<Comment>com.fmi.basetable.__FMAddonTemplate_Metadata</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.ProofKitApps::5AEDAECD3A1E81BBD5401A7F9DA81B85</StringID>
+	<SourceText>AppName</SourceText>
+	<TargetText>AppName</TargetText>
+	<Comment>com.fmi.basetable.field.ProofKitApps::AppName</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.ProofKitApps::CEF66026AC6A040A2A2F2DCC712C456B</StringID>
 	<SourceText>HTML</SourceText>
 	<TargetText>HTML</TargetText>
-	<Comment>com.fmi.basetable.field.ProofKitWV::HTML</Comment>
+	<Comment>com.fmi.basetable.field.ProofKitApps::HTML</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::1A6F6D8A5D201F2A21420B43C5345AE0</StringID>
+	<SourceText>__FMAddonTemplate_Version</SourceText>
+	<TargetText>__FMAddonTemplate_Version</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Version</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::3DF4202D460A0197901676D33510E2A9</StringID>
+	<SourceText>__FMAddonTemplate_GUID</SourceText>
+	<TargetText>__FMAddonTemplate_GUID</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_GUID</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::4C401D80F095E4875C589E7F30613788</StringID>
+	<SourceText>__FMAddonTemplate_PreviewImage</SourceText>
+	<TargetText>__FMAddonTemplate_PreviewImage</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_PreviewImage</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::58C8AA9702E724A8E8528A4EFD8E39BC</StringID>
+	<SourceText>__FMAddonTemplate_Icon</SourceText>
+	<TargetText>__FMAddonTemplate_Icon</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Icon</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::5A65B734A19B7A9D40A8E233BCECC32B</StringID>
+	<SourceText>__FMAddonTemplate_Desc</SourceText>
+	<TargetText>__FMAddonTemplate_Desc</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Desc</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::9C2DB678CD3FAB550FD3E0896225AC19</StringID>
+	<SourceText>__FMAddonTemplate_Clients</SourceText>
+	<TargetText>__FMAddonTemplate_Clients</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Clients</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::B0F082A2B4B8CD0DD4CC13D936B12D82</StringID>
+	<SourceText>__FMAddonTemplate_Attribution</SourceText>
+	<TargetText>__FMAddonTemplate_Attribution</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Attribution</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::BF67E2BFE93D889A4BB3ACAEF0833675</StringID>
+	<SourceText>__FMAddonTemplate_URL</SourceText>
+	<TargetText>__FMAddonTemplate_URL</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_URL</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::C3705CECC929CE96E6BCD1628F27214E</StringID>
+	<SourceText>__FMAddonTemplate_Title</SourceText>
+	<TargetText>__FMAddonTemplate_Title</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Title</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.basetable.field.__FMAddonTemplate_Metadata::DFF29DF31A6BCD82433020A5B2096A06</StringID>
+	<SourceText>__FMAddonTemplate_Category</SourceText>
+	<TargetText>__FMAddonTemplate_Category</TargetText>
+	<Comment>com.fmi.basetable.field.__FMAddonTemplate_Metadata::__FMAddonTemplate_Category</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -42,10 +133,31 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.0A2A6F666A2955B3C0D398EA50924A61</StringID>
+	<SourceText>code</SourceText>
+	<TargetText>code</TargetText>
+	<Comment>com.fmi.calculation.text.code</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.10A2FCEF94DEADE2D286DDA6EF3ED2DE</StringID>
 	<SourceText>      style=\&quot;margin:0;position:fixed;top:0;bottom:0,right:0;left:0;width:100%;height:100%;overflow:hidden;\&quot; </SourceText>
 	<TargetText>      style=\&quot;margin:0;position:fixed;top:0;bottom:0,right:0;left:0;width:100%;height:100%;overflow:hidden;\&quot; </TargetText>
 	<Comment>com.fmi.calculation.text.      style=\&quot;margin:0;position:fixed;top:0;bottom:0,right:0;left:0;width:100%;height:100%;overflow:hidden;\&quot;</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.13EDF26CBCCABA6863592B7386EC02E1</StringID>
+	<SourceText>,</SourceText>
+	<TargetText>,</TargetText>
+	<Comment>com.fmi.calculation.text.,</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.156C3F10A74DE3FFBF41E5FB07CF8BFA</StringID>
+	<SourceText>tableName is missing</SourceText>
+	<TargetText>tableName is missing</TargetText>
+	<Comment>com.fmi.calculation.text.tableName is missing</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -63,6 +175,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.21CDFC9EA84D0C5B380B52B942309989</StringID>
+	<SourceText> )</SourceText>
+	<TargetText> )</TargetText>
+	<Comment>com.fmi.calculation.text. )</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.22FB870EE7AB348C700B68C887AFCC25</StringID>
 	<SourceText>{}</SourceText>
 	<TargetText>{}</TargetText>
@@ -74,6 +193,13 @@
 	<SourceText>      \&quot;message\&quot;,</SourceText>
 	<TargetText>      \&quot;message\&quot;,</TargetText>
 	<Comment>com.fmi.calculation.text.      \&quot;message\&quot;,</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.248F804C1DCA767BE04493F208A08A71</StringID>
+	<SourceText>value</SourceText>
+	<TargetText>value</TargetText>
+	<Comment>com.fmi.calculation.text.value</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -126,6 +252,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.3C29B15C08744017304CC9694CDC7DED</StringID>
+	<SourceText>/webviewer</SourceText>
+	<TargetText>/webviewer</TargetText>
+	<Comment>com.fmi.calculation.text./webviewer</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.46231D675DCF08EA094EBC95E558C9D1</StringID>
 	<SourceText>            params = JSON.parse(params);</SourceText>
 	<TargetText>            params = JSON.parse(params);</TargetText>
@@ -147,10 +280,45 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.492C103A8B9D20DFE811002BB0E16B06</StringID>
+	<SourceText>Char(</SourceText>
+	<TargetText>Char(</TargetText>
+	<Comment>com.fmi.calculation.text.Char(</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.49B9153F41D2503C26FC3BBF5043CD59</StringID>
+	<SourceText>) ; </SourceText>
+	<TargetText>) ; </TargetText>
+	<Comment>com.fmi.calculation.text.) ;</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.49F40D154C8CDF81080D0BA47B4192FB</StringID>
+	<SourceText>http://fm-http.localhost:1355</SourceText>
+	<TargetText>http://fm-http.localhost:1355</TargetText>
+	<Comment>com.fmi.calculation.text.http://fm-http.localhost:1355</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.4AC6BA8868A9D055FCCC851659679C46</StringID>
 	<SourceText>        );</SourceText>
 	<TargetText>        );</TargetText>
 	<Comment>com.fmi.calculation.text.        );</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.4EBB3119669BFADD4D20AAF17F05F6CC</StringID>
+	<SourceText> needs to be edited to get the DDL setup</SourceText>
+	<TargetText> needs to be edited to get the DDL setup</TargetText>
+	<Comment>com.fmi.calculation.text. needs to be edited to get the DDL setup</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.4F8B0E48F3AFD74F9717B499A5EAF829</StringID>
+	<SourceText>tableNamesInFile</SourceText>
+	<TargetText>tableNamesInFile</TargetText>
+	<Comment>com.fmi.calculation.text.tableNamesInFile</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -175,6 +343,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.548D6635FA4830276FB5A814DBE0FDD1</StringID>
+	<SourceText>sql</SourceText>
+	<TargetText>sql</TargetText>
+	<Comment>com.fmi.calculation.text.sql</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.5C1699ACAFF841AF287498489285A20B</StringID>
 	<SourceText>      } catch (e) {</SourceText>
 	<TargetText>      } catch (e) {</TargetText>
@@ -186,6 +361,20 @@
 	<SourceText>      id=\&quot;app_iframe\&quot; </SourceText>
 	<TargetText>      id=\&quot;app_iframe\&quot; </TargetText>
 	<Comment>com.fmi.calculation.text.      id=\&quot;app_iframe\&quot;</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.5F1865C20FFDEE9C887CB236D966DAAA</StringID>
+	<SourceText>valueListName</SourceText>
+	<TargetText>valueListName</TargetText>
+	<Comment>com.fmi.calculation.text.valueListName</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.666483A17BD29A4B61086FE6AB4601DA</StringID>
+	<SourceText>proofkit MCP Server Connector</SourceText>
+	<TargetText>proofkit MCP Server Connector</TargetText>
+	<Comment>com.fmi.calculation.text.proofkit MCP Server Connector</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -203,10 +392,38 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.6A0F17138516F855DBBF7D9DE3F74971</StringID>
+	<SourceText>FileMaker evaluate error. (</SourceText>
+	<TargetText>FileMaker evaluate error. (</TargetText>
+	<Comment>com.fmi.calculation.text.FileMaker evaluate error. (</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.6D7067BC2AE6FFE1396F9E95425B7152</StringID>
+	<SourceText>appName</SourceText>
+	<TargetText>appName</TargetText>
+	<Comment>com.fmi.calculation.text.appName</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.729D67BCA45FB5FAE50567FE17377BE6</StringID>
 	<SourceText>data:text/html;charset=UTF-8,</SourceText>
 	<TargetText>data:text/html;charset=UTF-8,</TargetText>
 	<Comment>com.fmi.calculation.text.data:text/html;charset=UTF-8,</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.76345B95B1CB073B6F2D237C12156CAC</StringID>
+	<SourceText>MCP Connector</SourceText>
+	<TargetText>MCP Connector</TargetText>
+	<Comment>com.fmi.calculation.text.MCP Connector</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.788EE9EFEBF64250EEB2FF73611D249D</StringID>
+	<SourceText>path</SourceText>
+	<TargetText>path</TargetText>
+	<Comment>com.fmi.calculation.text.path</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -231,6 +448,20 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.7F5E0ABE18658158DB6C70B366BFB6A9</StringID>
+	<SourceText>realationInfo</SourceText>
+	<TargetText>realationInfo</TargetText>
+	<Comment>com.fmi.calculation.text.realationInfo</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.81DDA427909D1792D7E52F1849852EFC</StringID>
+	<SourceText>error</SourceText>
+	<TargetText>error</TargetText>
+	<Comment>com.fmi.calculation.text.error</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.821D7341CD938C0470F50650524AB3F4</StringID>
 	<SourceText>      src=\&quot;</SourceText>
 	<TargetText>      src=\&quot;</TargetText>
@@ -252,6 +483,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.88C929A3C66861616AD3A529BF9BB7F9</StringID>
+	<SourceText>\&quot;]</SourceText>
+	<TargetText>\&quot;]</TargetText>
+	<Comment>com.fmi.calculation.text.\&quot;]</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.8941760420115B72B31334BA82F15A8B</StringID>
 	<SourceText> otherwise, load the HTML from the field<CR/></SourceText>
 	<TargetText> otherwise, load the HTML from the field<CR/></TargetText>
@@ -263,6 +501,13 @@
 	<SourceText>http://localhost:5175/#</SourceText>
 	<TargetText>http://localhost:5175/#</TargetText>
 	<Comment>com.fmi.calculation.text.http://localhost:5175/#</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.8DCDD773AD19BE3DE539F0EE0AEAB594</StringID>
+	<SourceText>ddl</SourceText>
+	<TargetText>ddl</TargetText>
+	<Comment>com.fmi.calculation.text.ddl</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -294,10 +539,24 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.95B46F7DB4768FC3E50CB2DC67582D04</StringID>
+	<SourceText>http://127.0.0.1:1365</SourceText>
+	<TargetText>http://127.0.0.1:1365</TargetText>
+	<Comment>com.fmi.calculation.text.http://127.0.0.1:1365</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.9C6D318B6298E73CE7F9D36D01656757</StringID>
 	<SourceText>        // if this a string parse it, if not, use it as is</SourceText>
 	<TargetText>        // if this a string parse it, if not, use it as is</TargetText>
 	<Comment>com.fmi.calculation.text.        // if this a string parse it, if not, use it as is</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.9D81669B7CA5720E14731D745C32BD4B</StringID>
+	<SourceText>\&quot;,\&quot;</SourceText>
+	<TargetText>\&quot;,\&quot;</TargetText>
+	<Comment>com.fmi.calculation.text.\&quot;,\&quot;</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -399,6 +658,34 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.B692CF8BE4CFFE066C29FEC046FDEF83</StringID>
+	<SourceText>? ERROR:</SourceText>
+	<TargetText>? ERROR:</TargetText>
+	<Comment>com.fmi.calculation.text.? ERROR:</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.B8B9D25674790E9B411B18D99DB00EA4</StringID>
+	<SourceText>Can&apos;t find the artifact</SourceText>
+	<TargetText>Can&apos;t find the artifact</TargetText>
+	<Comment>com.fmi.calculation.text.Can&apos;t find the artifact</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.B927502600CB716F79C41DE7BD82ABFB</StringID>
+	<SourceText>rowSeparatorCode</SourceText>
+	<TargetText>rowSeparatorCode</TargetText>
+	<Comment>com.fmi.calculation.text.rowSeparatorCode</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.B9535C7C7219197054A0F56D89BDBA10</StringID>
+	<SourceText>) ; Char(</SourceText>
+	<TargetText>) ; Char(</TargetText>
+	<Comment>com.fmi.calculation.text.) ; Char(</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.BC1CEEA5C56513848510635337E717C6</StringID>
 	<SourceText>          FileMaker.PerformScript(params.script, params.data, params.options);</SourceText>
 	<TargetText>          FileMaker.PerformScript(params.script, params.data, params.options);</TargetText>
@@ -410,6 +697,13 @@
 	<SourceText> wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/></SourceText>
 	<TargetText> wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)<CR/></TargetText>
 	<Comment>com.fmi.calculation.text. wrap everything in the WebViewer compatible iFrame (only takes effect in WebDirect)_CR/_</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.BD89B0F8193F8C54FE2F8A873FED1D93</StringID>
+	<SourceText>)</SourceText>
+	<TargetText>)</TargetText>
+	<Comment>com.fmi.calculation.text.)</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -441,6 +735,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.CB2D58EE6D9A2D3B70D3A34BD72C344C</StringID>
+	<SourceText>tableName</SourceText>
+	<TargetText>tableName</TargetText>
+	<Comment>com.fmi.calculation.text.tableName</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.CBCA67C2335A3818A3C9727057706207</StringID>
 	<SourceText>ProofKitWV</SourceText>
 	<TargetText>ProofKitWV</TargetText>
@@ -455,10 +756,31 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.D0D2C571503ACEDFA8A868DFFD319C27</StringID>
+	<SourceText>ExecuteSQLe (</SourceText>
+	<TargetText>ExecuteSQLe (</TargetText>
+	<Comment>com.fmi.calculation.text.ExecuteSQLe (</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.D35B931E98E0308F6F48B058360E020B</StringID>
+	<SourceText>number</SourceText>
+	<TargetText>number</TargetText>
+	<Comment>com.fmi.calculation.text.number</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.D36D520AC81E0A72AE7416332519D6BA</StringID>
 	<SourceText>        console.log(\&quot;posting to wrapper error\&quot;, e);</SourceText>
 	<TargetText>        console.log(\&quot;posting to wrapper error\&quot;, e);</TargetText>
 	<Comment>com.fmi.calculation.text.        console.log(\&quot;posting to wrapper error\&quot;, e);</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.D3DC4C6F52B2E1D540589CCD2CCAD9E3</StringID>
+	<SourceText>[\&quot;</SourceText>
+	<TargetText>[\&quot;</TargetText>
+	<Comment>com.fmi.calculation.text.[\&quot;</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -490,10 +812,31 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.DA82556D9BC48DFA414CEBBD528280EF</StringID>
+	<SourceText> ; </SourceText>
+	<TargetText> ; </TargetText>
+	<Comment>com.fmi.calculation.text. ;</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.DCDF1E9F27F0708E782858CEC973DA89</StringID>
 	<SourceText>          } catch (e) {</SourceText>
 	<TargetText>          } catch (e) {</TargetText>
 	<Comment>com.fmi.calculation.text.          } catch (e) {</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.E011C7F054EF551BB275FE695732D640</StringID>
+	<SourceText>fileName=</SourceText>
+	<TargetText>fileName=</TargetText>
+	<Comment>com.fmi.calculation.text.fileName=</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.E06123D571693687770B1259FAD99B28</StringID>
+	<SourceText>Proof Add-on Module</SourceText>
+	<TargetText>Proof Add-on Module</TargetText>
+	<Comment>com.fmi.calculation.text.Proof Add-on Module</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -511,10 +854,31 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.E8242F9CA220C53035AFF0819EEDB978</StringID>
+	<SourceText>type</SourceText>
+	<TargetText>type</TargetText>
+	<Comment>com.fmi.calculation.text.type</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.EBAE57D049420130A501BA77DCB4E6A2</StringID>
+	<SourceText>). This is not a SQL Error.  The FileMaker script is broken.</SourceText>
+	<TargetText>). This is not a SQL Error.  The FileMaker script is broken.</TargetText>
+	<Comment>com.fmi.calculation.text.). This is not a SQL Error.  The FileMaker script is broken.</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.EC0879E1C77B7C2D0102C5AE125B83AD</StringID>
 	<SourceText>&lt;!DOCTYPE html&gt;</SourceText>
 	<TargetText>&lt;!DOCTYPE html&gt;</TargetText>
 	<Comment>com.fmi.calculation.text.&lt;!DOCTYPE html&gt;</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.EECE2E542B0CDCE586A27B7931BA8BF0</StringID>
+	<SourceText>¶</SourceText>
+	<TargetText>¶</TargetText>
+	<Comment>com.fmi.calculation.text.¶</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -536,6 +900,20 @@
 	<SourceText>      const params = {</SourceText>
 	<TargetText>      const params = {</TargetText>
 	<Comment>com.fmi.calculation.text.      const params = {</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.F245A875202FF8876BB043EFAA0603A1</StringID>
+	<SourceText>params</SourceText>
+	<TargetText>params</TargetText>
+	<Comment>com.fmi.calculation.text.params</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.F86D716E40EE0FD226D7D8515C7C40AC</StringID>
+	<SourceText>fieldSeparatorCode</SourceText>
+	<TargetText>fieldSeparatorCode</TargetText>
+	<Comment>com.fmi.calculation.text.fieldSeparatorCode</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -574,10 +952,24 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.layout.CBCA67C2335A3818A3C9727057706207</StringID>
-	<SourceText>ProofKitWV</SourceText>
-	<TargetText>ProofKitWV</TargetText>
-	<Comment>com.fmi.layout.ProofKitWV</Comment>
+	<StringID>com.fmi.layout.9C7E3C80FB0A806908A11953636F0584</StringID>
+	<SourceText>ProofKitApps</SourceText>
+	<TargetText>ProofKitApps</TargetText>
+	<Comment>com.fmi.layout.ProofKitApps</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.layout.B6B5353574A748B9411017CCA081F5B4</StringID>
+	<SourceText>ProofKit MCP Connector</SourceText>
+	<TargetText>ProofKit MCP Connector</TargetText>
+	<Comment>com.fmi.layout.ProofKit MCP Connector</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.layout.folder.9A7200193FE818DBEFD24AAF14BF9F94</StringID>
+	<SourceText>ProofKit</SourceText>
+	<TargetText>ProofKit</TargetText>
+	<Comment>com.fmi.layout.folder.ProofKit</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -588,10 +980,24 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.script.0964A099A0AB5C57A10D9142B36C4388</StringID>
+	<SourceText>deploy_html</SourceText>
+	<TargetText>deploy_html</TargetText>
+	<Comment>com.fmi.script.deploy_html</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.script.2731467863E20F0E70D999E1F9C8D428</StringID>
 	<SourceText>Refresh Webviewer Widget</SourceText>
 	<TargetText>Refresh Webviewer Widget</TargetText>
 	<Comment>com.fmi.script.Refresh Webviewer Widget</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.286F6527DF6D67374CE843B13FC87D7C</StringID>
+	<SourceText>get_realation_info</SourceText>
+	<TargetText>get_realation_info</TargetText>
+	<Comment>com.fmi.script.get_realation_info</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -609,6 +1015,27 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.script.6890E045128FDF6076924F23B7DD62E4</StringID>
+	<SourceText>Connect To MCP</SourceText>
+	<TargetText>Connect To MCP</TargetText>
+	<Comment>com.fmi.script.Connect To MCP</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.6D092B7223FFD014349DDF365D47519E</StringID>
+	<SourceText>execute_data_api</SourceText>
+	<TargetText>execute_data_api</TargetText>
+	<Comment>com.fmi.script.execute_data_api</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.8046AC982357BF0F87E4DA950186654F</StringID>
+	<SourceText>get_script_names</SourceText>
+	<TargetText>get_script_names</TargetText>
+	<Comment>com.fmi.script.get_script_names</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.script.9EB7DF46B90E85D20A5C138216E9610A</StringID>
 	<SourceText>Disable WebDev Mode</SourceText>
 	<TargetText>Disable WebDev Mode</TargetText>
@@ -620,6 +1047,13 @@
 	<SourceText>UploadWebviewerWidget</SourceText>
 	<TargetText>UploadWebviewerWidget</TargetText>
 	<Comment>com.fmi.script.UploadWebviewerWidget</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.AB8D7C7B592936F7F8CDDF702527AB3C</StringID>
+	<SourceText>execute_sql</SourceText>
+	<TargetText>execute_sql</TargetText>
+	<Comment>com.fmi.script.execute_sql</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -637,6 +1071,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.script.E3103EBC7F4DA40D79F4693DD414898C</StringID>
+	<SourceText>refresh_wv</SourceText>
+	<TargetText>refresh_wv</TargetText>
+	<Comment>com.fmi.script.refresh_wv</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.script.E684EC5DAE0FC476921FE0FF357DD35F</StringID>
 	<SourceText>Enable WebDev Mode</SourceText>
 	<TargetText>Enable WebDev Mode</TargetText>
@@ -644,10 +1085,24 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.script.E6BD6FDF7B5C47C95E5F816E8A176E38</StringID>
+	<SourceText>get_filemaker_ddl_schema</SourceText>
+	<TargetText>get_filemaker_ddl_schema</TargetText>
+	<Comment>com.fmi.script.get_filemaker_ddl_schema</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.script.F7662E70CB310C44167F9730EE7B494C</StringID>
 	<SourceText>ExecuteDataApi</SourceText>
 	<TargetText>ExecuteDataApi</TargetText>
 	<Comment>com.fmi.script.ExecuteDataApi</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.F88B2BB26A31FB2980F7C3EE88B48708</StringID>
+	<SourceText>get_value_list_info</SourceText>
+	<TargetText>get_value_list_info</TargetText>
+	<Comment>com.fmi.script.get_value_list_info</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -662,6 +1117,20 @@
 	<SourceText>EXAMPLES</SourceText>
 	<TargetText>EXAMPLES</TargetText>
 	<Comment>com.fmi.script.folder.EXAMPLES</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.folder.838155B02578F2E962B24BE0B36F44A0</StringID>
+	<SourceText>ProofKit-MCP</SourceText>
+	<TargetText>ProofKit-MCP</TargetText>
+	<Comment>com.fmi.script.folder.ProofKit-MCP</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.folder.9A7200193FE818DBEFD24AAF14BF9F94</StringID>
+	<SourceText>ProofKit</SourceText>
+	<TargetText>ProofKit</TargetText>
+	<Comment>com.fmi.script.folder.ProofKit</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -777,6 +1246,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.scriptstep.text.5F8CA00AD8F0391B5B288A702DCBAA94</StringID>
+	<SourceText>{&quot;fieldSeparator&quot;:&quot;31&quot;,&quot;maxRows&quot;:100,&quot;params&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;value&quot;:&quot;Jake&quot;},{&quot;type&quot;:&quot;text&quot;,&quot;value&quot;:&quot;Smith&quot;}],&quot;rowSeparator&quot;:30,&quot;sql&quot;:&quot;SELECT FirstName, LastName FROM contacts WHERE LastName = ? AND FirstName = ? FETCH FIRST 10 ROWS ONLY&quot;}</SourceText>
+	<TargetText>{&quot;fieldSeparator&quot;:&quot;31&quot;,&quot;maxRows&quot;:100,&quot;params&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;value&quot;:&quot;Jake&quot;},{&quot;type&quot;:&quot;text&quot;,&quot;value&quot;:&quot;Smith&quot;}],&quot;rowSeparator&quot;:30,&quot;sql&quot;:&quot;SELECT FirstName, LastName FROM contacts WHERE LastName = ? AND FirstName = ? FETCH FIRST 10 ROWS ONLY&quot;}</TargetText>
+	<Comment>com.fmi.scriptstep.text.{&quot;fieldSeparator&quot;:&quot;31&quot;,&quot;maxRows&quot;:100,&quot;params&quot;:[{&quot;type&quot;:&quot;text&quot;,&quot;value&quot;:&quot;Jake&quot;},{&quot;type&quot;:&quot;text&quot;,&quot;value&quot;:&quot;Smith&quot;}],&quot;rowSeparator&quot;:30,&quot;sql&quot;:&quot;SELECT FirstName, LastName FROM contacts WHERE LastName = ? AND FirstName = ? FETCH FIRST 10 ROWS ONLY&quot;}</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.scriptstep.text.602B6391A8C8ACF21D775403D8DB46E8</StringID>
 	<SourceText>This ensures this script will always run on server (if the file is hosted)</SourceText>
 	<TargetText>This ensures this script will always run on server (if the file is hosted)</TargetText>
@@ -840,6 +1316,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.scriptstep.text.C4E1AB58BC75DDAA182369B6AC950BFD</StringID>
+	<SourceText> you need to connect this to a script the gets the ddl</SourceText>
+	<TargetText> you need to connect this to a script the gets the ddl</TargetText>
+	<Comment>com.fmi.scriptstep.text. you need to connect this to a script the gets the ddl</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.scriptstep.text.CCA79BCCE089A932DE2F6BD5B6B89C43</StringID>
 	<SourceText>@param {object} callback</SourceText>
 	<TargetText>@param {object} callback</TargetText>
@@ -875,22 +1358,36 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.tableoccurrence.CBCA67C2335A3818A3C9727057706207</StringID>
-	<SourceText>ProofKitWV</SourceText>
-	<TargetText>ProofKitWV</TargetText>
-	<Comment>com.fmi.tableoccurrence.ProofKitWV</Comment>
+	<StringID>com.fmi.tableoccurrence.9C7E3C80FB0A806908A11953636F0584</StringID>
+	<SourceText>ProofKitApps</SourceText>
+	<TargetText>ProofKitApps</TargetText>
+	<Comment>com.fmi.tableoccurrence.ProofKitApps</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.tableoccurrence.field.ProofKitWV::8C0EC245B43DB2131C17BF7825C4CCAF</StringID>
-	<SourceText>ProofKitWV::HTML</SourceText>
-	<TargetText>ProofKitWV::HTML</TargetText>
-	<Comment>com.fmi.tableoccurrence.field.ProofKitWV::ProofKitWV::HTML</Comment>
+	<StringID>com.fmi.tableoccurrence.A72664F13DDFEACC5F6AAC99DE88BC03</StringID>
+	<SourceText>__FMAddonTemplate_Metadata</SourceText>
+	<TargetText>__FMAddonTemplate_Metadata</TargetText>
+	<Comment>com.fmi.tableoccurrence.__FMAddonTemplate_Metadata</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.tableoccurrence.field.ProofKitWV::CEF66026AC6A040A2A2F2DCC712C456B</StringID>
+	<StringID>com.fmi.tableoccurrence.field.ProofKitApps::5AEDAECD3A1E81BBD5401A7F9DA81B85</StringID>
+	<SourceText>AppName</SourceText>
+	<TargetText>AppName</TargetText>
+	<Comment>com.fmi.tableoccurrence.field.ProofKitApps::AppName</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.tableoccurrence.field.ProofKitApps::66DEE820662C5B808391CE2B39D54E52</StringID>
+	<SourceText>ProofKitApps::HTML</SourceText>
+	<TargetText>ProofKitApps::HTML</TargetText>
+	<Comment>com.fmi.tableoccurrence.field.ProofKitApps::ProofKitApps::HTML</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.tableoccurrence.field.ProofKitApps::CEF66026AC6A040A2A2F2DCC712C456B</StringID>
 	<SourceText>HTML</SourceText>
 	<TargetText>HTML</TargetText>
-	<Comment>com.fmi.tableoccurrence.field.ProofKitWV::HTML</Comment>
+	<Comment>com.fmi.tableoccurrence.field.ProofKitApps::HTML</Comment>
 </DynamicTemplateString>

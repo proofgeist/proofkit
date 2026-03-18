@@ -1,8 +1,11 @@
 ﻿{
-  "GUID": "7CCFAF65-7C87-46B1-9FDC-D636B3B9C0AD",
-  "Clients": ["Pro"],
-  "Attribution": "Proof+Geist",
-  "URL": "https://proofkit.dev",
-  "Icon_Color": "#7F7F7F",
-  "Version": "1.0"
+	"GUID" : "C05D4971-3724-4D81-B20E-7665D3D2E21E",
+	"Clients" :
+		[
+			"Pro"
+		],
+	"Attribution" : "Proof",
+	"URL" : "https://proofkit.dev",
+	"Icon_Color" : "",
+	"Version" : "0"
 }

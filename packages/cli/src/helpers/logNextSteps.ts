@@ -43,7 +43,7 @@ export const logNextSteps = ({
   );
   logger.info("  npx @tanstack/intent@latest install");
   logger.dim(
-    "  Have your agent run this command in the newly created project so can discover and learn important skills relevant to the project.",
+    "  Have your agent run this command in the newly created project so it can discover and learn important skills relevant to the project.",
   );
 
   logger.dim("\nStart the dev server to view your app in a browser:");

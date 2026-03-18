@@ -31,6 +31,12 @@ export const logNextSteps = ({
     }
   }
 
+  logger.dim("\nAgent instruction (required before continuing any AI-assisted development in this project):");
+  logger.info("  npx @tanstack/intent@latest install");
+  logger.dim(
+    "  Run this inside the newly created project so your agent learns the necessary skills for continuing work here.",
+  );
+
   logger.dim("\nStart the dev server to view your app in a browser:");
   logger.info(`  ${formatRunCommand(pkgManager, "dev")}`);
 

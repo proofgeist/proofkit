@@ -1,9 +1,9 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
 import type { Project } from "ts-morph";
 import type { PackageJson } from "type-fest";
+import * as p from "~/cli/prompts.js";
 
 import { abortIfCancel } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";
@@ -121,7 +121,6 @@ export async function installPlunk({ project }: { project?: Project }) {
         message: `Enter your Plunk API key\n${chalk.dim(
           "Enter your Secret API Key from https://app.useplunk.com/settings/api",
         )}`,
-        placeholder: "...or leave blank to do this later",
       }),
     );
   }
@@ -175,7 +174,6 @@ export async function installResend({ project }: { project?: Project }) {
         message: `Enter your Resend API key\n${chalk.dim(
           `Only "Sending Access" permission required: https://resend.com/api-keys`,
         )}`,
-        placeholder: "...or leave blank to do this later",
       }),
     );
   }

@@ -1,10 +1,10 @@
 import { execSync } from "node:child_process";
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { execa } from "execa";
 import fs from "fs-extra";
 import ora from "ora";
+import * as p from "~/cli/prompts.js";
 
 import { isNonInteractiveMode } from "~/state.js";
 import { logger } from "~/utils/logger.js";

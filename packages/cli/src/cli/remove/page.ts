@@ -1,8 +1,8 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import { Command } from "commander";
 import fs from "fs-extra";
 import { Node, type Project, type PropertyAssignment, SyntaxKind } from "ts-morph";
+import * as p from "~/cli/prompts.js";
 
 import { ciOption, debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";

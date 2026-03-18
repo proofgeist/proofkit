@@ -1,5 +1,4 @@
 import path from "node:path";
-import { select, text } from "@clack/prompts";
 import { Command } from "commander";
 import { execa } from "execa";
 import fs from "fs-extra";
@@ -22,6 +21,7 @@ import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
 import { type Settings, setSettings } from "~/utils/parseSettings.js";
 import { validateAppName } from "~/utils/validateAppName.js";
 import { promptForFileMakerDataSource } from "./add/data-source/filemaker.js";
+import { select, text } from "./prompts.js";
 import { abortIfCancel } from "./utils.js";
 
 interface CliFlags {

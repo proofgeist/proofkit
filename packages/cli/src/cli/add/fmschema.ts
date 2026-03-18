@@ -1,11 +1,11 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import type { OttoAPIKey } from "@proofkit/fmdapi";
 import type { ValueListsOptions } from "@proofkit/typegen/config";
 import chalk from "chalk";
 import { Command } from "commander";
 import dotenv from "dotenv";
 import { z } from "zod/v4";
+import * as p from "~/cli/prompts.js";
 import { addLayout, getExistingSchemas } from "~/generators/fmdapi.js";
 import { state } from "~/state.js";
 import { getSettings, type Settings } from "~/utils/parseSettings.js";
@@ -110,14 +110,15 @@ export const runAddSchemaAction = async (opts?: {
   const selectedLayout =
     passedInLayoutName ??
     abortIfCancel(
-      await p.select({
+      await p.searchSelect({
         message: "Select a new layout to read data from",
-        maxItems: 10,
+        emptyMessage: "No matching layouts found.",
         options: layouts
           .filter((layout) => !existingLayouts.includes(layout))
           .map((layout) => ({
             label: layout,
             value: layout,
+            keywords: [layout],
           })),
       }),
     );
@@ -130,7 +131,6 @@ export const runAddSchemaAction = async (opts?: {
         message: `Enter a friendly name for the new schema.\n${chalk.dim("This will the name by which you refer to this layout in your codebase")}`,
         // initialValue: selectedLayout,
         defaultValue: defaultSchemaName,
-        placeholder: defaultSchemaName,
         validate: (input) => {
           if (input === "") {
             return; // allow empty input for the default value

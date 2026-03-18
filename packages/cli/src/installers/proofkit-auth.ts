@@ -1,5 +1,4 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import type { OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
@@ -7,6 +6,7 @@ import fs from "fs-extra";
 import ora, { type Ora } from "ora";
 import { type SourceFile, SyntaxKind } from "ts-morph";
 import { getLayouts } from "~/cli/fmdapi.js";
+import * as p from "~/cli/prompts.js";
 import { abortIfCancel, UserAbortedError } from "~/cli/utils.js";
 import { PKG_ROOT } from "~/consts.js";
 import { addConfig, runCodegenCommand } from "~/generators/fmdapi.js";
@@ -113,8 +113,6 @@ export const proofkitAuthInstaller = async () => {
         await p.confirm({
           message: "I have followed the above instructions, continue installing",
           initialValue: true,
-          active: "Continue",
-          inactive: "Abort",
         }),
       );
 

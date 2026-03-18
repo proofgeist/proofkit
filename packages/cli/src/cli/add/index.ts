@@ -1,8 +1,8 @@
-import { select } from "@clack/prompts";
 import type { RegistryIndex } from "@proofkit/registry";
 import { Command } from "commander";
 import { capitalize, groupBy, uniq } from "es-toolkit";
 import ora from "ora";
+import { select } from "~/cli/prompts.js";
 import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { logger } from "~/utils/logger.js";

@@ -1,8 +1,8 @@
 import { execSync } from "node:child_process";
 import https from "node:https";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import * as semver from "semver";
+import * as p from "~/cli/prompts.js";
 
 import { cliName, npmName } from "~/consts.js";
 import { getVersion } from "./getProofKitVersion.js";

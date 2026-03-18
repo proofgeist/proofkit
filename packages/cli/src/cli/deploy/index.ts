@@ -1,10 +1,10 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Command, Option } from "commander";
 import { execa } from "execa";
 import fs from "fs-extra";
 import type { PackageJson } from "type-fest";
+import * as p from "~/cli/prompts.js";
 
 import { ciOption, debugOption } from "~/globalOptions.js";
 

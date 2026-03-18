@@ -1,6 +1,6 @@
-import * as p from "@clack/prompts";
 import { Command } from "commander";
 import { z } from "zod/v4";
+import * as p from "~/cli/prompts.js";
 
 import { ensureProofKitProject } from "~/cli/utils.js";
 import { ciOption, nonInteractiveOption } from "~/globalOptions.js";

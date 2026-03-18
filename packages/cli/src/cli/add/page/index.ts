@@ -1,11 +1,10 @@
 import path from "node:path";
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Command } from "commander";
 import { capitalize } from "es-toolkit";
 import fs from "fs-extra";
-
 import { nextjsTemplates, wvTemplates } from "~/cli/add/page/templates.js";
+import * as p from "~/cli/prompts.js";
 import { PKG_ROOT } from "~/consts.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
@@ -62,7 +61,6 @@ export const runAddPageAction = async (opts?: {
     routeName = abortIfCancel(
       await p.text({
         message: "Enter the URL PATH for your new page",
-        placeholder: "/my-page",
         validate: (value) => {
           if (value.length === 0) {
             return "URL path is required";
@@ -224,7 +222,7 @@ async function promptForSchemaFromDataSource({
   const schemaName = abortIfCancel(
     await p.select({
       message: "Which schema should this page load data from?",
-      options: schemas.map((o) => ({ label: o, value: o ?? "" })),
+      options: schemas.map((schema) => ({ label: schema ?? "", value: schema ?? "" })),
     }),
   );
   return schemaName;

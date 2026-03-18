@@ -1,9 +1,8 @@
-import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { SemVer } from "semver";
 import type { z } from "zod/v4";
-
 import { createDataAPIKey, getOttoFMSToken, listAPIKeys, listFiles } from "~/cli/ottofms.js";
+import * as p from "~/cli/prompts.js";
 import { abortIfCancel } from "~/cli/utils.js";
 import { addLayout, addToFmschemaConfig, ensureWebviewerFmHttpConfig } from "~/generators/fmdapi.js";
 import { getFmHttpStatus } from "~/helpers/fmHttp.js";
@@ -151,20 +150,23 @@ export async function promptForFileMakerDataSource({
     fmFile =
       opts.fileName ||
       abortIfCancel(
-        await p.select({
+        await p.searchSelect({
           message: `Which file would you like to connect to? ${chalk.dim("(TIP: Select the file where your data is stored)")}`,
-          maxItems: 10,
+          emptyMessage: "No matching files found.",
           options: [
             {
               value: "$deployDemoFile",
               label: "Deploy NEW ProofKit Demo File",
               hint: "Use OttoFMS to deploy a new file for testing",
+              keywords: ["demo", "proofkit"],
             },
             ...fileList
               .sort((a, b) => a.filename.localeCompare(b.filename))
               .map((file) => ({
                 value: file.filename,
                 label: file.filename,
+                hint: file.status,
+                keywords: [file.filename],
               })),
           ],
         }),
@@ -178,8 +180,6 @@ export async function promptForFileMakerDataSource({
       const replace = abortIfCancel(
         await p.confirm({
           message: "The demo file already exists, do you want to replace it with a fresh copy?",
-          active: "Yes, replace",
-          inactive: "No, select another file",
           initialValue: false,
         }),
       );
@@ -212,18 +212,21 @@ export async function promptForFileMakerDataSource({
 
     if (!dataApiKey && thisFileApiKeys.length > 0) {
       const selectedKey = abortIfCancel(
-        await p.select({
+        await p.searchSelect({
           message: `Which OttoFMS Data API key would you like to use? ${chalk.dim(`(This determines the access that you'll have to the data in this file)`)}`,
+          emptyMessage: "No matching API keys found.",
           options: [
             ...thisFileApiKeys.map((key) => ({
               value: key.key,
               label: `${chalk.bold(key.label)} - ${key.user}`,
               hint: `${key.key.slice(0, 5)}...${key.key.slice(-4)}`,
+              keywords: [key.label, key.user, key.database],
             })),
             {
               value: "create",
               label: "Create a new API key",
               hint: "Requires FileMaker credentials for this file",
+              keywords: ["create", "new"],
             },
           ],
         }),

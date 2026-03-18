@@ -1,11 +1,9 @@
-// import { isCancel } from "@clack/core";
-
 import path from "node:path";
-import { cancel, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 import fs from "fs-extra";
 import z, { ZodError } from "zod/v4";
 
+import { cancel, isCancel } from "~/cli/prompts.js";
 import { npmName } from "~/consts.js";
 import { getSettings } from "~/utils/parseSettings.js";
 

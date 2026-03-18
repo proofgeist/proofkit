@@ -74,5 +74,8 @@ public/dist
 packages/fmdapi/test/typegen/*
 packages/typegen/schema/metadata.xml
 
+# FM ADD-ON BUILD ARTIFACTS
+fm-addon/stage/
+
 # Prevent accidentally committing files with absolute paths
 Users/

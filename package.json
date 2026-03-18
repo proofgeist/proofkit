@@ -1,5 +1,6 @@
 {
   "private": true,
+  "version": "0.1.0",
   "scripts": {
     "build": "turbo run build --filter={./packages/*} --filter=@proofkit/docs",
     "ci": "turbo run lint && turbo run typecheck && turbo run test",
@@ -16,7 +17,8 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "knip": "knip",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:addon": "node scripts/build-addon.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

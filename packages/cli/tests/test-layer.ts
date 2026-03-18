@@ -149,7 +149,7 @@ export function makeTestLayer(options: {
       },
       confirm: ({ message, initialValue }: { message: string; initialValue?: boolean }) => {
         options.promptTranscript?.confirm.push(message);
-        return promptScript.confirm.shift() ?? initialValue ?? false;
+        return Promise.resolve(promptScript.confirm.shift() ?? initialValue ?? false);
       },
     }),
     Layer.succeed(ConsoleService, {

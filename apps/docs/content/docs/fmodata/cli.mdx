@@ -245,19 +245,26 @@ fmodata webhook remove 42
 
 #### `metadata get`
 
-Retrieve OData metadata for the database.
+Retrieve OData metadata for the database. Optionally filter to a single table.
 
 ```bash
-# JSON (default)
+# Full database metadata (JSON)
 fmodata metadata get
 
-# XML
+# Full database metadata (XML)
 fmodata metadata get --format xml
+
+# Single table metadata
+fmodata metadata get --table Contacts
+
+# Single table metadata (XML)
+fmodata metadata get --table Contacts --format xml
 ```
 
 | Option | Description |
 |---|---|
 | `--format <format>` | `json` (default) or `xml` |
+| `--table <name>` | Filter metadata to a specific table |
 
 #### `metadata tables`
 
@@ -267,6 +274,23 @@ List all table names in the database. This is the quickest way to inspect what's
 fmodata metadata tables
 fmodata metadata tables --pretty
 ```
+
+#### `metadata fields`
+
+List field names for a specific table. By default returns a JSON array of field name strings.
+
+```bash
+# Field names only
+fmodata metadata fields --table Contacts
+
+# Include type, nullable, and other metadata per field
+fmodata metadata fields --table Contacts --details
+```
+
+| Option | Description |
+|---|---|
+| `--table <name>` | **Required.** Table to inspect |
+| `--details` | Include field metadata (`name`, `type`, `nullable`, and additional attributes) |
 
 ---
 

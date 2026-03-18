@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { AGENT_INSTRUCTIONS_BY_TEMPLATE } from "~/consts.js";
 import { installPackages } from "~/helpers/installPackages.js";
 import { scaffoldProject } from "~/helpers/scaffoldProject.js";
 import type { AvailableDependencies } from "~/installers/dependencyVersionMap.js";
@@ -128,8 +129,14 @@ export const createBareProject = async ({
     pkgManagerCommand = "npm run";
   }
 
+  let templateName: keyof typeof AGENT_INSTRUCTIONS_BY_TEMPLATE = "vite-wv";
+  if (state.appType === "browser") {
+    templateName = state.ui === "mantine" ? "nextjs-mantine" : "nextjs-shadcn";
+  }
+
   replaceTextInFiles(state.projectDir, "__PNPM_COMMAND__", pkgManagerCommand);
   replaceTextInFiles(state.projectDir, "__PACKAGE_MANAGER__", pkgManager);
+  replaceTextInFiles(state.projectDir, "__AGENT_INSTRUCTIONS__", AGENT_INSTRUCTIONS_BY_TEMPLATE[templateName]);
 
   return state.projectDir;
 };

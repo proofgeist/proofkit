@@ -26,6 +26,20 @@ ${" ".repeat(61 - versionCharLength)}v${version}
 `;
 export const DEFAULT_APP_NAME = "my-proofkit-app";
 export const CREATE_FM_APP = cliName;
+export const AGENT_INSTRUCTIONS_BY_TEMPLATE = {
+  "nextjs-mantine": [
+    "Start with the ProofKit docs for implementation details and project conventions: https://proofkit.dev/docs",
+    "Before doing any AI-assisted development in this project, run `npx @tanstack/intent@latest install` in the project root, then use the TanStack Intent docs as needed: https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers",
+  ].join("\n"),
+  "nextjs-shadcn": [
+    "Start with the ProofKit docs for implementation details and project conventions: https://proofkit.dev/docs",
+    "Before doing any AI-assisted development in this project, run `npx @tanstack/intent@latest install` in the project root, then use the TanStack Intent docs as needed: https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers",
+  ].join("\n"),
+  "vite-wv": [
+    "Start with the ProofKit docs for implementation details and project conventions: https://proofkit.dev/docs/webviewer",
+    "Before doing any AI-assisted development in this project, run `npx @tanstack/intent@latest install` in the project root, then use the TanStack Intent docs as needed: https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers",
+  ].join("\n"),
+} as const;
 
 // Registry URL is injected at build time via tsdown define
 declare const __REGISTRY_URL__: string;

@@ -33,7 +33,7 @@ function resolveTemplateRoot(): string {
     }
   }
 
-  return candidates[0];
+  throw new Error(`Could not locate a template directory. Checked: ${candidates.join(", ")}`);
 }
 
 export const TEMPLATE_ROOT = resolveTemplateRoot();

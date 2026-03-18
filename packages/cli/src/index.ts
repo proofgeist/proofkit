@@ -369,10 +369,7 @@ function shouldShowDebugDetails(argv: readonly string[]) {
 function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
   const failure = getOrUndefined(Cause.failureOption(cause));
 
-  if (failure && !isValidationError(failure)) {
-    const error = Cause.squash(cause);
-    console.error(error instanceof Error ? error.message : String(error));
-  } else if (!failure) {
+  if (!failure || !isValidationError(failure)) {
     const error = Cause.squash(cause);
     console.error(error instanceof Error ? error.message : String(error));
   }

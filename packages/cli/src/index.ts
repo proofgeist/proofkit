@@ -34,6 +34,7 @@ import { planInit } from "~/core/planInit.js";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
 import type { CliFlags } from "~/core/types.js";
 import { makeLiveLayer } from "~/services/live.js";
+import { resolveNonInteractiveMode } from "~/utils/nonInteractive.js";
 import { intro } from "~/utils/prompts.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 
@@ -76,13 +77,6 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
     const fsService = yield* FileSystemService;
     const consoleService = yield* ConsoleService;
     const flags = { ...defaultCliFlags, ...rawFlags };
-
-    if (cliContext.nonInteractive || flags.CI || flags.nonInteractive) {
-      throw new Error(
-        "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
-      );
-    }
-
     const settingsPath = path.join(cliContext.cwd, "proofkit.json");
     const hasProofKitProject = yield* Effect.promise(() => fsService.exists(settingsPath));
 
@@ -96,6 +90,12 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
         "Project commands",
       );
       return;
+    }
+
+    if (cliContext.nonInteractive || flags.CI || flags.nonInteractive) {
+      throw new Error(
+        "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
+      );
     }
 
     intro(`No ${proofGradient("ProofKit")} project found, running \`init\``);
@@ -117,11 +117,23 @@ function optionalChoiceOption<Choices extends readonly string[]>(name: string, c
   return optionalOption(choiceOption(name, choices).pipe(withOptionDescription(description)));
 }
 
+function getCurrentTTYState() {
+  return {
+    stdinIsTTY: process.stdin?.isTTY,
+    stdoutIsTTY: process.stdout?.isTTY,
+  };
+}
+
 function legacyEffect<T>(runLegacy: () => Promise<T>, options?: { nonInteractive?: boolean; debug?: boolean }) {
+  const nonInteractive = resolveNonInteractiveMode({
+    nonInteractive: options?.nonInteractive,
+    ...getCurrentTTYState(),
+  });
+
   return makeLiveLayer({
     cwd: process.cwd(),
     debug: options?.debug === true,
-    nonInteractive: options?.nonInteractive === true,
+    nonInteractive,
   })(Effect.promise(runLegacy));
 }
 
@@ -155,6 +167,12 @@ function makeInitCommand() {
       debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
     },
     ({ dir, ...options }) => {
+      const nonInteractive = resolveNonInteractiveMode({
+        CI: options.CI,
+        nonInteractive: options.nonInteractive,
+        ...getCurrentTTYState(),
+      });
+
       const flags: CliFlags = {
         ...defaultCliFlags,
         appType: getOrUndefined(options.appType),
@@ -177,7 +195,7 @@ function makeInitCommand() {
       return makeLiveLayer({
         cwd: process.cwd(),
         debug: flags.debug === true,
-        nonInteractive: Boolean(flags.CI || flags.nonInteractive),
+        nonInteractive,
       })(runInit(getOrUndefined(dir), flags));
     },
   ).pipe(withCommandDescription("Create a new project with ProofKit"));
@@ -336,7 +354,11 @@ const rootCommand = makeCommand(
     makeLiveLayer({
       cwd: process.cwd(),
       debug: options.debug === true,
-      nonInteractive: Boolean(options.CI || options.nonInteractive),
+      nonInteractive: resolveNonInteractiveMode({
+        CI: options.CI,
+        nonInteractive: options.nonInteractive,
+        ...getCurrentTTYState(),
+      }),
     })(
       runDefaultCommand({
         ...defaultCliFlags,

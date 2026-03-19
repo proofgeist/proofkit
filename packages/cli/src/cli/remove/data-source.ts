@@ -4,12 +4,12 @@ import dotenv from "dotenv";
 import fs from "fs-extra";
 import { z } from "zod/v4";
 import * as p from "~/cli/prompts.js";
-
+import { UserCancelledError } from "~/core/errors.js";
 import { removeFromFmschemaConfig, runCodegenCommand } from "~/generators/fmdapi.js";
 import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, isNonInteractiveMode, state } from "~/state.js";
 import { type DataSource, getSettings, setSettings } from "~/utils/parseSettings.js";
-import { abortIfCancel, ensureProofKitProject, UserAbortedError } from "../utils.js";
+import { abortIfCancel, ensureProofKitProject } from "../utils.js";
 
 function getDataSourceInfo(source: DataSource) {
   if (source.type !== "fm") {
@@ -86,7 +86,7 @@ export const runRemoveDataSourceCommand = async (name?: string) => {
     );
 
     if (!confirmed) {
-      throw new UserAbortedError();
+      throw new UserCancelledError({ message: "User aborted the operation" });
     }
   }
 

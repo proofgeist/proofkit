@@ -29,6 +29,7 @@ import {
   PackageManagerService,
   TemplateService,
 } from "~/core/context.js";
+import { getCliErrorMessage, isCliError, NonInteractiveInputError } from "~/core/errors.js";
 import { executeInitPlan } from "~/core/executeInitPlan.js";
 import { planInit } from "~/core/planInit.js";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
@@ -62,9 +63,7 @@ export const runInit = (name?: string, rawFlags?: Partial<CliFlags>) =>
     const packageManagerService = yield* PackageManagerService;
     const request = yield* resolveInitRequest(name, { ...defaultCliFlags, ...rawFlags });
     const templateDir = templateService.getTemplateDir(request.appType, request.ui);
-    const packageManagerVersion = yield* Effect.promise(() =>
-      packageManagerService.getVersion(request.packageManager, request.cwd),
-    );
+    const packageManagerVersion = yield* packageManagerService.getVersion(request.packageManager, request.cwd);
     const plan = planInit(request, { templateDir, packageManagerVersion });
     yield* executeInitPlan(plan);
     return { request, plan };
@@ -78,13 +77,16 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
     const flags = { ...defaultCliFlags, ...rawFlags };
 
     if (cliContext.nonInteractive || flags.CI || flags.nonInteractive) {
-      throw new Error(
-        "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
+      return yield* Effect.fail(
+        new NonInteractiveInputError({
+          message:
+            "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
+        }),
       );
     }
 
     const settingsPath = path.join(cliContext.cwd, "proofkit.json");
-    const hasProofKitProject = yield* Effect.promise(() => fsService.exists(settingsPath));
+    const hasProofKitProject = yield* fsService.exists(settingsPath);
 
     if (hasProofKitProject) {
       intro(`Found ${proofGradient("ProofKit")} project`);
@@ -384,10 +386,19 @@ function shouldShowDebugDetails(argv: readonly string[]) {
   return argv.some((arg) => debugFlagNames.has(arg));
 }
 
-function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
+export function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
   const failure = getOrUndefined(Cause.failureOption(cause));
 
-  if (!(failure && isValidationError(failure))) {
+  if (failure && isValidationError(failure)) {
+    if (showDebugDetails) {
+      console.error(`\n[debug] ${Cause.pretty(cause)}`);
+    }
+    return;
+  }
+
+  if (failure && isCliError(failure)) {
+    console.error(getCliErrorMessage(failure));
+  } else {
     const error = Cause.squash(cause);
     console.error(error instanceof Error ? error.message : String(error));
   }
@@ -399,7 +410,7 @@ function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
 
 async function main(argv: readonly string[]) {
   const showDebugDetails = shouldShowDebugDetails(argv);
-  const exit = await Effect.runPromiseExit(cli(argv).pipe(Effect.provide(nodeContextLayer)));
+  const exit = await Effect.runPromiseExit(Effect.provide(cli(argv), nodeContextLayer));
 
   if (Exit.isFailure(exit)) {
     renderFailure(exit.cause, showDebugDetails);

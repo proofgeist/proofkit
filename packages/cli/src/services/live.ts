@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import type { Effect as Fx } from "effect";
 import { Effect, Layer } from "effect";
 import { execa } from "execa";
 import fs from "fs-extra";
@@ -21,7 +22,7 @@ import {
   SettingsService,
   TemplateService,
 } from "~/core/context.js";
-import { UserAbortedError } from "~/core/errors.js";
+import { ExternalCommandError, FileMakerSetupError, FileSystemError, UserCancelledError } from "~/core/errors.js";
 import type { AppType, FileMakerInputs, ProofKitSettings, UIType } from "~/core/types.js";
 import { openBrowser } from "~/utils/browserOpen.js";
 import { deleteJson, getJson, postJson } from "~/utils/http.js";
@@ -42,7 +43,7 @@ import {
 
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
-    throw new UserAbortedError();
+    throw new UserCancelledError({ message: "User aborted the operation" });
   }
   return value as T;
 }
@@ -73,6 +74,44 @@ function transformLayoutList(layouts: LayoutFolder[]): string[] {
   };
 
   return layouts.flatMap(flatten).sort((left, right) => left.localeCompare(right));
+}
+
+function withFsError<A>(operation: string, targetPath: string, run: () => Promise<A>) {
+  return Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new FileSystemError({
+        message: `File system ${operation} failed for ${targetPath}.`,
+        operation,
+        path: targetPath,
+        cause,
+      }),
+  });
+}
+
+function withCommandError<A>(command: string, args: string[], cwd: string, run: () => Promise<A>, message?: string) {
+  return Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new ExternalCommandError({
+        message: message ?? `Command failed: ${[command, ...args].join(" ")}`,
+        command,
+        args,
+        cwd,
+        cause,
+      }),
+  });
+}
+
+function withFileMakerSetupError<A>(message: string, run: () => Promise<A>) {
+  return Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      new FileMakerSetupError({
+        message,
+        cause,
+      }),
+  });
 }
 
 const promptService = {
@@ -129,17 +168,19 @@ const consoleService = {
 };
 
 const fileSystemService = {
-  exists: async (targetPath: string) => fs.pathExists(targetPath),
-  readdir: async (targetPath: string) => fs.readdir(targetPath),
-  emptyDir: async (targetPath: string) => fs.emptyDir(targetPath),
-  copyDir: async (from: string, to: string, options?: { overwrite?: boolean }) =>
-    fs.copy(from, to, { overwrite: options?.overwrite ?? true }),
-  rename: async (from: string, to: string) => fs.rename(from, to),
-  remove: async (targetPath: string) => fs.remove(targetPath),
-  readJson: async <T>(targetPath: string) => fs.readJson(targetPath) as Promise<T>,
-  writeJson: async (targetPath: string, value: unknown) => fs.writeJson(targetPath, value, { spaces: 2 }),
-  writeFile: async (targetPath: string, content: string) => fs.writeFile(targetPath, content, "utf8"),
-  readFile: async (targetPath: string) => fs.readFile(targetPath, "utf8"),
+  exists: (targetPath: string) => withFsError("exists", targetPath, () => fs.pathExists(targetPath)),
+  readdir: (targetPath: string) => withFsError("readdir", targetPath, () => fs.readdir(targetPath)),
+  emptyDir: (targetPath: string) => withFsError("emptyDir", targetPath, () => fs.emptyDir(targetPath)),
+  copyDir: (from: string, to: string, options?: { overwrite?: boolean }) =>
+    withFsError("copyDir", `${from} -> ${to}`, () => fs.copy(from, to, { overwrite: options?.overwrite ?? true })),
+  rename: (from: string, to: string) => withFsError("rename", `${from} -> ${to}`, () => fs.rename(from, to)),
+  remove: (targetPath: string) => withFsError("remove", targetPath, () => fs.remove(targetPath)),
+  readJson: <T>(targetPath: string) => withFsError("readJson", targetPath, () => fs.readJson(targetPath) as Promise<T>),
+  writeJson: (targetPath: string, value: unknown) =>
+    withFsError("writeJson", targetPath, () => fs.writeJson(targetPath, value, { spaces: 2 })),
+  writeFile: (targetPath: string, content: string) =>
+    withFsError("writeFile", targetPath, () => fs.writeFile(targetPath, content, "utf8")),
+  readFile: (targetPath: string) => withFsError("readFile", targetPath, () => fs.readFile(targetPath, "utf8")),
 };
 
 const templateService = {
@@ -155,17 +196,19 @@ const templateService = {
 };
 
 const packageManagerService = {
-  getVersion: async (packageManager: string, cwd: string) => {
+  getVersion: (packageManager: string, cwd: string) => {
     if (packageManager === "bun") {
-      return undefined;
+      return Effect.succeed(undefined);
     }
-    const { stdout } = await execa(packageManager, ["-v"], { cwd });
-    return stdout.trim();
+    return withCommandError(packageManager, ["-v"], cwd, async () => {
+      const { stdout } = await execa(packageManager, ["-v"], { cwd });
+      return stdout.trim();
+    });
   },
 };
 
 const processService = {
-  run: async (
+  run: (
     command: string,
     args: string[],
     options: {
@@ -173,41 +216,46 @@ const processService = {
       stdout?: "pipe" | "inherit" | "ignore";
       stderr?: "pipe" | "inherit" | "ignore";
     },
-  ) => {
-    const result = await execa(command, args, {
-      cwd: options.cwd,
-      stdout: options.stdout ?? "pipe",
-      stderr: options.stderr ?? "pipe",
-    });
-    return {
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
-    };
-  },
+  ) =>
+    withCommandError(command, args, options.cwd, async () => {
+      const result = await execa(command, args, {
+        cwd: options.cwd,
+        stdout: options.stdout ?? "pipe",
+        stderr: options.stderr ?? "pipe",
+      });
+      return {
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+      };
+    }),
 };
 
 const gitService = {
-  initialize: async (projectDir: string) => {
-    await execa("git", ["init"], { cwd: projectDir });
-    await execa("git", ["add", "."], { cwd: projectDir });
-    await execa("git", ["commit", "-m", "Initial commit"], { cwd: projectDir });
-  },
+  initialize: (projectDir: string) =>
+    withCommandError("git", ["init"], projectDir, async () => {
+      await execa("git", ["init"], { cwd: projectDir });
+      await execa("git", ["add", "."], { cwd: projectDir });
+      await execa("git", ["commit", "-m", "Initial commit"], { cwd: projectDir });
+    }),
 };
 
 const settingsService = {
-  writeSettings: async (projectDir: string, settings: ProofKitSettings) =>
-    fs.writeJson(path.join(projectDir, "proofkit.json"), settings, { spaces: 2 }),
-  appendEnvVars: async (projectDir: string, vars: Record<string, string>) => {
-    const envPath = path.join(projectDir, ".env");
-    const existing = (await fs.pathExists(envPath)) ? await fs.readFile(envPath, "utf8") : "";
-    const additions = Object.entries(vars)
-      .map(([name, value]) => `${name}=${value}`)
-      .join("\n");
-    const nextContent = [existing.trimEnd(), additions].filter(Boolean).join("\n").concat("\n");
-    await fs.writeFile(envPath, nextContent, "utf8");
-  },
-  ensureTypegenConfig: async (_projectDir: string, _options: { appType: AppType; fileMaker?: FileMakerInputs }) =>
-    undefined,
+  writeSettings: (projectDir: string, settings: ProofKitSettings) =>
+    withFsError("writeSettings", path.join(projectDir, "proofkit.json"), () =>
+      fs.writeJson(path.join(projectDir, "proofkit.json"), settings, { spaces: 2 }),
+    ),
+  appendEnvVars: (projectDir: string, vars: Record<string, string>) =>
+    withFsError("appendEnvVars", path.join(projectDir, ".env"), async () => {
+      const envPath = path.join(projectDir, ".env");
+      const existing = (await fs.pathExists(envPath)) ? await fs.readFile(envPath, "utf8") : "";
+      const additions = Object.entries(vars)
+        .map(([name, value]) => `${name}=${value}`)
+        .join("\n");
+      const nextContent = [existing.trimEnd(), additions].filter(Boolean).join("\n").concat("\n");
+      await fs.writeFile(envPath, nextContent, "utf8");
+    }),
+  ensureTypegenConfig: (_projectDir: string, _options: { appType: AppType; fileMaker?: FileMakerInputs }) =>
+    Effect.void,
 };
 
 function createDataSourceEntry(dataSourceName: string) {
@@ -284,135 +332,165 @@ function createFileMakerBootstrapArtifacts(
 }
 
 const fileMakerService = {
-  detectLocalFmMcp: async (baseUrl = process.env.FM_MCP_BASE_URL ?? "http://127.0.0.1:1365") => {
-    try {
-      const health = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
-      if (!health.ok) {
-        return { baseUrl, healthy: false, connectedFiles: [] };
+  detectLocalFmMcp: (baseUrl = process.env.FM_MCP_BASE_URL ?? "http://127.0.0.1:1365") =>
+    Effect.tryPromise({
+      try: async () => {
+        try {
+          const health = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
+          if (!health.ok) {
+            return { baseUrl, healthy: false, connectedFiles: [] };
+          }
+          const connectedFiles = await fetch(`${baseUrl}/connectedFiles`, { signal: AbortSignal.timeout(3000) })
+            .then(async (response) => (response.ok ? ((await response.json()) as unknown) : []))
+            .catch(() => []);
+          return {
+            baseUrl,
+            healthy: true,
+            connectedFiles: Array.isArray(connectedFiles)
+              ? connectedFiles.filter((item): item is string => typeof item === "string")
+              : [],
+          };
+        } catch {
+          return { baseUrl, healthy: false, connectedFiles: [] };
+        }
+      },
+      catch: (cause) =>
+        new FileMakerSetupError({
+          message: "Unable to detect local ProofKit MCP Server.",
+          cause,
+        }),
+    }),
+  validateHostedServerUrl: (serverUrl: string, ottoPort?: number | null) =>
+    Effect.gen(function* () {
+      const normalizedUrl = normalizeUrl(serverUrl);
+      const fmsUrl = new URL("/fmws/serverinfo", normalizedUrl).toString();
+      const fmsResponse = yield* withFileMakerSetupError(
+        `Unable to validate FileMaker Server URL: ${normalizedUrl}`,
+        () => getJson<{ data?: { ServerVersion?: string } }>(fmsUrl),
+      );
+      const serverVersion = fmsResponse.data?.data?.ServerVersion?.split(" ")[0];
+      if (!serverVersion) {
+        return yield* Effect.fail(
+          new FileMakerSetupError({
+            message: `Invalid FileMaker Server URL: ${normalizedUrl}`,
+          }),
+        );
       }
-      const connectedFiles = await fetch(`${baseUrl}/connectedFiles`, { signal: AbortSignal.timeout(3000) })
-        .then(async (response) => (response.ok ? ((await response.json()) as unknown) : []))
-        .catch(() => []);
+
+      let ottoVersion: string | null = null;
+      const otto4Response = yield* withFileMakerSetupError("Unable to query OttoFMS version.", () =>
+        getJson<{ response?: { Otto?: { version?: string } } }>(new URL("/otto/api/info", normalizedUrl).toString()),
+      ).pipe(Effect.catchAll(() => Effect.succeed(undefined)));
+      ottoVersion = otto4Response?.data?.response?.Otto?.version ?? null;
+
+      if (!ottoVersion) {
+        const otto3Url = new URL(normalizedUrl);
+        otto3Url.port = ottoPort ? String(ottoPort) : "3030";
+        otto3Url.pathname = "/api/otto/info";
+        const otto3Response = yield* withFileMakerSetupError("Unable to query OttoFMS v3 version.", () =>
+          getJson<{ Otto?: { version?: string } }>(otto3Url.toString()),
+        ).pipe(Effect.catchAll(() => Effect.succeed(undefined)));
+        ottoVersion = otto3Response?.data?.Otto?.version ?? null;
+      }
+
       return {
-        baseUrl,
-        healthy: true,
-        connectedFiles: Array.isArray(connectedFiles)
-          ? connectedFiles.filter((item): item is string => typeof item === "string")
-          : [],
+        normalizedUrl: new URL(normalizedUrl).origin,
+        versions: {
+          fmsVersion: serverVersion,
+          ottoVersion,
+        },
       };
-    } catch {
-      return { baseUrl, healthy: false, connectedFiles: [] };
-    }
-  },
-  validateHostedServerUrl: async (serverUrl: string, ottoPort?: number | null) => {
-    const normalizedUrl = normalizeUrl(serverUrl);
-    const fmsUrl = new URL("/fmws/serverinfo", normalizedUrl).toString();
-    const fmsResponse = await getJson<{ data?: { ServerVersion?: string } }>(fmsUrl);
-    const serverVersion = fmsResponse.data?.data?.ServerVersion?.split(" ")[0];
-    if (!serverVersion) {
-      throw new Error(`Invalid FileMaker Server URL: ${normalizedUrl}`);
-    }
+    }),
+  getOttoFMSToken: ({ url }: { url: URL }) =>
+    Effect.gen(function* () {
+      const hash = randomUUID().replaceAll("-", "").slice(0, 18);
+      const loginUrl = new URL(`/otto/wizard/${hash}`, url.origin);
+      log.info(`If the browser window didn't open automatically, use this Otto login URL:\n${loginUrl.toString()}`);
+      yield* withFileMakerSetupError("Unable to open OttoFMS login URL.", () => openBrowser(loginUrl.toString()));
 
-    let ottoVersion: string | null = null;
-    const otto4Response = await getJson<{ response?: { Otto?: { version?: string } } }>(
-      new URL("/otto/api/info", normalizedUrl).toString(),
-    ).catch(() => undefined);
-    ottoVersion = otto4Response?.data?.response?.Otto?.version ?? null;
+      const spin = createSpinner();
+      spin.start("Waiting for OttoFMS login");
 
-    if (!ottoVersion) {
-      const otto3Url = new URL(normalizedUrl);
-      otto3Url.port = ottoPort ? String(ottoPort) : "3030";
-      otto3Url.pathname = "/api/otto/info";
-      const otto3Response = await getJson<{ Otto?: { version?: string } }>(otto3Url.toString()).catch(() => undefined);
-      ottoVersion = otto3Response?.data?.Otto?.version ?? null;
-    }
-
-    return {
-      normalizedUrl: new URL(normalizedUrl).origin,
-      versions: {
-        fmsVersion: serverVersion,
-        ottoVersion,
-      },
-    };
-  },
-  getOttoFMSToken: async ({ url }: { url: URL }) => {
-    const hash = randomUUID().replaceAll("-", "").slice(0, 18);
-    const loginUrl = new URL(`/otto/wizard/${hash}`, url.origin);
-    log.info(`If the browser window didn't open automatically, use this Otto login URL:\n${loginUrl.toString()}`);
-    await openBrowser(loginUrl.toString());
-
-    const spin = createSpinner();
-    spin.start("Waiting for OttoFMS login");
-
-    const deadline = Date.now() + 180_000;
-    while (Date.now() < deadline) {
-      const response = await getJson<{ response?: { token?: string } }>(
-        `${url.origin}/otto/api/cli/checkHash/${hash}`,
-        { headers: { "Accept-Encoding": "deflate" }, timeout: 5000 },
-      ).catch(() => undefined);
-      const token = response?.data?.response?.token;
-      if (token) {
-        spin.stop("Login complete");
-        await deleteJson(`${url.origin}/otto/api/cli/checkHash/${hash}`, {
-          headers: { "Accept-Encoding": "deflate" },
-        }).catch(() => undefined);
-        return { token };
+      const deadline = Date.now() + 180_000;
+      while (Date.now() < deadline) {
+        const response = yield* withFileMakerSetupError("Unable to poll OttoFMS login status.", () =>
+          getJson<{ response?: { token?: string } }>(`${url.origin}/otto/api/cli/checkHash/${hash}`, {
+            headers: { "Accept-Encoding": "deflate" },
+            timeout: 5000,
+          }),
+        ).pipe(Effect.catchAll(() => Effect.succeed(undefined)));
+        const token = response?.data?.response?.token;
+        if (token) {
+          spin.stop("Login complete");
+          yield* withFileMakerSetupError("Unable to clean up OttoFMS login state.", () =>
+            deleteJson(`${url.origin}/otto/api/cli/checkHash/${hash}`, {
+              headers: { "Accept-Encoding": "deflate" },
+            }),
+          ).pipe(Effect.catchAll(() => Effect.void));
+          return { token };
+        }
+        yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 500)));
       }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
 
-    spin.stop("Login timed out");
-    throw new Error("OttoFMS login timed out after 3 minutes.");
-  },
-  listFiles: async ({ url, token }: { url: URL; token: string }) => {
-    const response = await getJson<{ response?: { databases?: Array<{ filename?: string; status?: string }> } }>(
-      `${url.origin}/otto/fmi/admin/api/v2/databases`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-    const databases = (response.data?.response?.databases ?? []) as Record<string, unknown>[];
-    return databases
-      .filter((database): database is { filename: string; status?: string } => typeof database.filename === "string")
-      .map(
-        (database) =>
-          ({
-            filename: database.filename,
-            status: database.status ?? "unknown",
-          }) satisfies OttoFileInfo,
+      spin.stop("Login timed out");
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: "OttoFMS login timed out after 3 minutes.",
+        }),
       );
-  },
-  listAPIKeys: async ({ url, token }: { url: URL; token: string }) => {
-    const response = await getJson<{ response?: { "api-keys"?: Record<string, unknown>[] } }>(
-      `${url.origin}/otto/api/api-key`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-    const apiKeys = (response.data?.response?.["api-keys"] ?? []) as Record<string, unknown>[];
-    return apiKeys
-      .filter(
-        (apiKey): apiKey is { key: string; user: string; database: string; label: string } =>
-          typeof apiKey.key === "string" &&
-          typeof apiKey.user === "string" &&
-          typeof apiKey.database === "string" &&
-          typeof apiKey.label === "string",
-      )
-      .map(
-        (apiKey) =>
-          ({
-            key: apiKey.key,
-            user: apiKey.user,
-            database: apiKey.database,
-            label: apiKey.label,
-          }) satisfies OttoApiKeyInfo,
+    }),
+  listFiles: ({ url, token }: { url: URL; token: string }) =>
+    Effect.gen(function* () {
+      const response = yield* withFileMakerSetupError("Unable to list FileMaker files from OttoFMS.", () =>
+        getJson<{ response?: { databases?: Array<{ filename?: string; status?: string }> } }>(
+          `${url.origin}/otto/fmi/admin/api/v2/databases`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        ),
       );
-  },
-  createDataAPIKeyWithCredentials: async ({
+      const databases = (response.data?.response?.databases ?? []) as Record<string, unknown>[];
+      return databases
+        .filter((database): database is { filename: string; status?: string } => typeof database.filename === "string")
+        .map(
+          (database) =>
+            ({
+              filename: database.filename,
+              status: database.status ?? "unknown",
+            }) satisfies OttoFileInfo,
+        );
+    }),
+  listAPIKeys: ({ url, token }: { url: URL; token: string }) =>
+    Effect.gen(function* () {
+      const response = yield* withFileMakerSetupError("Unable to list OttoFMS Data API keys.", () =>
+        getJson<{ response?: { "api-keys"?: Record<string, unknown>[] } }>(`${url.origin}/otto/api/api-key`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+      const apiKeys = (response.data?.response?.["api-keys"] ?? []) as Record<string, unknown>[];
+      return apiKeys
+        .filter(
+          (apiKey): apiKey is { key: string; user: string; database: string; label: string } =>
+            typeof apiKey.key === "string" &&
+            typeof apiKey.user === "string" &&
+            typeof apiKey.database === "string" &&
+            typeof apiKey.label === "string",
+        )
+        .map(
+          (apiKey) =>
+            ({
+              key: apiKey.key,
+              user: apiKey.user,
+              database: apiKey.database,
+              label: apiKey.label,
+            }) satisfies OttoApiKeyInfo,
+        );
+    }),
+  createDataAPIKeyWithCredentials: ({
     url,
     filename,
     username,
@@ -422,156 +500,197 @@ const fileMakerService = {
     filename: string;
     username: string;
     password: string;
-  }) => {
-    const response = await postJson<{ response?: { key?: string } }>(`${url.origin}/otto/api/api-key/create-only`, {
-      database: filename,
-      label: "For FM Web App",
-      user: username,
-      pass: userPassword,
-    });
-    const apiKey = response.data?.response?.key;
-    if (!apiKey) {
-      throw new Error(`Failed to create a Data API key for ${filename}.`);
-    }
-    return { apiKey };
-  },
-  startDeployment: async ({ payload, url, token }: { payload: unknown; url: URL; token: string }) =>
-    postJson<{ response?: { subDeploymentIds?: number[] } }>(`${url.origin}/otto/api/deployment`, payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  }) =>
+    Effect.gen(function* () {
+      const response = yield* withFileMakerSetupError(`Unable to create a Data API key for ${filename}.`, () =>
+        postJson<{ response?: { key?: string } }>(`${url.origin}/otto/api/api-key/create-only`, {
+          database: filename,
+          label: "For FM Web App",
+          user: username,
+          pass: userPassword,
+        }),
+      );
+      const apiKey = response.data?.response?.key;
+      if (!apiKey) {
+        return yield* Effect.fail(
+          new FileMakerSetupError({
+            message: `Failed to create a Data API key for ${filename}.`,
+          }),
+        );
+      }
+      return { apiKey };
     }),
-  getDeploymentStatus: async ({ url, token, deploymentId }: { url: URL; token: string; deploymentId: number }) =>
-    getJson<{ response?: { status?: string; running?: boolean } }>(
-      `${url.origin}/otto/api/deployment/${deploymentId}`,
-      {
+  startDeployment: ({ payload, url, token }: { payload: unknown; url: URL; token: string }) =>
+    withFileMakerSetupError("Unable to start ProofKit Demo deployment.", () =>
+      postJson<{ response?: { subDeploymentIds?: number[] } }>(`${url.origin}/otto/api/deployment`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
+      }),
     ),
-  deployDemoFile: async ({ url, token, operation }: { url: URL; token: string; operation: "install" | "replace" }) => {
-    const demoFileName = "ProofKitDemo.fmp12";
-    const spin = createSpinner();
-    spin.start("Deploying ProofKit Demo file");
-
-    const deploymentPayload = {
-      scheduled: false,
-      label: "Install ProofKit Demo",
-      deployments: [
+  getDeploymentStatus: ({ url, token, deploymentId }: { url: URL; token: string; deploymentId: number }) =>
+    withFileMakerSetupError(`Unable to fetch deployment status for ${deploymentId}.`, () =>
+      getJson<{ response?: { status?: string; running?: boolean } }>(
+        `${url.origin}/otto/api/deployment/${deploymentId}`,
         {
-          name: "Install ProofKit Demo",
-          source: {
-            type: "url",
-            url: "https://proofkit.dev/proofkit-demo/manifest.json",
-          },
-          fileOperations: [
-            {
-              target: {
-                fileName: demoFileName,
-              },
-              operation,
-              source: {
-                fileName: demoFileName,
-              },
-              location: {
-                folder: "default",
-                subFolder: "",
-              },
-            },
-          ],
-          concurrency: 1,
-          options: {
-            closeFilesAfterBuild: false,
-            keepFilesClosedAfterComplete: false,
-            transferContainerData: false,
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
         },
-      ],
-      abortRemaining: false,
-    };
+      ),
+    ),
+  deployDemoFile: ({ url, token, operation }: { url: URL; token: string; operation: "install" | "replace" }) =>
+    Effect.gen(function* () {
+      const demoFileName = "ProofKitDemo.fmp12";
+      const spin = createSpinner();
+      spin.start("Deploying ProofKit Demo file");
 
-    const deployment = await fileMakerService.startDeployment({
-      payload: deploymentPayload,
-      url,
-      token,
-    });
+      const deploymentPayload = {
+        scheduled: false,
+        label: "Install ProofKit Demo",
+        deployments: [
+          {
+            name: "Install ProofKit Demo",
+            source: {
+              type: "url",
+              url: "https://proofkit.dev/proofkit-demo/manifest.json",
+            },
+            fileOperations: [
+              {
+                target: {
+                  fileName: demoFileName,
+                },
+                operation,
+                source: {
+                  fileName: demoFileName,
+                },
+                location: {
+                  folder: "default",
+                  subFolder: "",
+                },
+              },
+            ],
+            concurrency: 1,
+            options: {
+              closeFilesAfterBuild: false,
+              keepFilesClosedAfterComplete: false,
+              transferContainerData: false,
+            },
+          },
+        ],
+        abortRemaining: false,
+      };
 
-    const deploymentId = deployment.data?.response?.subDeploymentIds?.[0];
-    if (!deploymentId) {
-      spin.stop("Demo deployment failed");
-      throw new Error("No deployment ID was returned when deploying the demo file.");
-    }
-
-    const deploymentDeadline = Date.now() + 300_000;
-    let deploymentCompleted = false;
-    while (Date.now() < deploymentDeadline) {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-      const status = await fileMakerService.getDeploymentStatus({
+      const deployment = yield* fileMakerService.startDeployment({
+        payload: deploymentPayload,
         url,
         token,
-        deploymentId,
       });
 
-      if (!status.data?.response?.running) {
-        if (status.data?.response?.status !== "complete") {
-          spin.stop("Demo deployment failed");
-          throw new Error("ProofKit Demo deployment did not complete successfully.");
-        }
-        deploymentCompleted = true;
-        break;
+      const deploymentId = deployment.data?.response?.subDeploymentIds?.[0];
+      if (!deploymentId) {
+        spin.stop("Demo deployment failed");
+        return yield* Effect.fail(
+          new FileMakerSetupError({
+            message: "No deployment ID was returned when deploying the demo file.",
+          }),
+        );
       }
-    }
 
-    if (!deploymentCompleted) {
-      spin.stop("Demo deployment timed out");
-      throw new Error("ProofKit Demo deployment timed out after 5 minutes.");
-    }
+      const deploymentDeadline = Date.now() + 300_000;
+      let deploymentCompleted = false;
+      while (Date.now() < deploymentDeadline) {
+        yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 2500)));
+        const status = yield* fileMakerService.getDeploymentStatus({
+          url,
+          token,
+          deploymentId,
+        });
 
-    const apiKey = await fileMakerService.createDataAPIKeyWithCredentials({
-      url,
-      filename: demoFileName,
-      username: "admin",
-      password: "admin",
-    });
-    spin.stop("Demo file deployed");
-    return { apiKey: apiKey.apiKey, filename: demoFileName };
-  },
-  listLayouts: async ({ dataApiKey, fmFile, server }: { dataApiKey: string; fmFile: string; server: string }) => {
-    const response = await getJson<{ response?: { layouts?: LayoutFolder[] } }>(
-      `${server}/otto/fmi/data/vLatest/databases/${encodeURIComponent(fmFile)}/layouts`,
-      {
-        headers: {
-          Authorization: `Bearer ${dataApiKey}`,
-        },
-      },
-    );
-    return transformLayoutList(response.data?.response?.layouts ?? []);
-  },
-  createFileMakerBootstrapArtifacts,
-  bootstrap: async (projectDir: string, settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) => {
-    const artifacts = await createFileMakerBootstrapArtifacts(settings, inputs, appType);
-    if (Object.keys(artifacts.envVars).length > 0) {
-      await settingsService.appendEnvVars(projectDir, artifacts.envVars);
-      await updateEnvSchemaFile(fileSystemService, projectDir, artifacts.envSchemaEntries);
-    }
+        if (!status.data?.response?.running) {
+          if (status.data?.response?.status !== "complete") {
+            spin.stop("Demo deployment failed");
+            return yield* Effect.fail(
+              new FileMakerSetupError({
+                message: "ProofKit Demo deployment did not complete successfully.",
+              }),
+            );
+          }
+          deploymentCompleted = true;
+          break;
+        }
+      }
 
-    await updateTypegenConfig(fileSystemService, projectDir, {
-      appType: artifacts.typegenConfig.appType,
-      dataSourceName: artifacts.typegenConfig.dataSourceName,
-      envNames: artifacts.typegenConfig.envNames,
-      fmMcpBaseUrl: artifacts.typegenConfig.fmMcpBaseUrl,
-      connectedFileName: artifacts.typegenConfig.connectedFileName,
-      layoutName: artifacts.typegenConfig.layoutName,
-      schemaName: artifacts.typegenConfig.schemaName,
-    });
+      if (!deploymentCompleted) {
+        spin.stop("Demo deployment timed out");
+        return yield* Effect.fail(
+          new FileMakerSetupError({
+            message: "ProofKit Demo deployment timed out after 5 minutes.",
+          }),
+        );
+      }
 
-    return artifacts.settings;
-  },
+      const apiKey = yield* fileMakerService.createDataAPIKeyWithCredentials({
+        url,
+        filename: demoFileName,
+        username: "admin",
+        password: "admin",
+      });
+      spin.stop("Demo file deployed");
+      return { apiKey: apiKey.apiKey, filename: demoFileName };
+    }),
+  listLayouts: ({ dataApiKey, fmFile, server }: { dataApiKey: string; fmFile: string; server: string }) =>
+    Effect.gen(function* () {
+      const response = yield* withFileMakerSetupError(`Unable to list layouts for ${fmFile}.`, () =>
+        getJson<{ response?: { layouts?: LayoutFolder[] } }>(
+          `${server}/otto/fmi/data/vLatest/databases/${encodeURIComponent(fmFile)}/layouts`,
+          {
+            headers: {
+              Authorization: `Bearer ${dataApiKey}`,
+            },
+          },
+        ),
+      );
+      return transformLayoutList(response.data?.response?.layouts ?? []);
+    }),
+  createFileMakerBootstrapArtifacts: (settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) =>
+    withFileMakerSetupError("Unable to prepare FileMaker bootstrap artifacts.", () =>
+      createFileMakerBootstrapArtifacts(settings, inputs, appType),
+    ),
+  bootstrap: (projectDir: string, settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) =>
+    Effect.gen(function* () {
+      const artifacts = yield* fileMakerService.createFileMakerBootstrapArtifacts(settings, inputs, appType);
+      const projectFilesFs = {
+        exists: (targetPath: string) => Effect.runPromise(fileSystemService.exists(targetPath)),
+        readFile: (targetPath: string) => Effect.runPromise(fileSystemService.readFile(targetPath)),
+        writeFile: (targetPath: string, content: string) =>
+          Effect.runPromise(fileSystemService.writeFile(targetPath, content)),
+      };
+      if (Object.keys(artifacts.envVars).length > 0) {
+        yield* settingsService.appendEnvVars(projectDir, artifacts.envVars);
+        yield* withFileMakerSetupError("Unable to update env schema for FileMaker bootstrap.", () =>
+          updateEnvSchemaFile(projectFilesFs, projectDir, artifacts.envSchemaEntries),
+        );
+      }
+
+      yield* withFileMakerSetupError("Unable to update typegen config for FileMaker bootstrap.", () =>
+        updateTypegenConfig(projectFilesFs, projectDir, {
+          appType: artifacts.typegenConfig.appType,
+          dataSourceName: artifacts.typegenConfig.dataSourceName,
+          envNames: artifacts.typegenConfig.envNames,
+          fmMcpBaseUrl: artifacts.typegenConfig.fmMcpBaseUrl,
+          connectedFileName: artifacts.typegenConfig.connectedFileName,
+          layoutName: artifacts.typegenConfig.layoutName,
+          schemaName: artifacts.typegenConfig.schemaName,
+        }),
+      );
+
+      return artifacts.settings;
+    }),
 };
 
 const codegenService = {
-  runInitial: async (projectDir: string, packageManager: CliContextValue["packageManager"]) => {
+  runInitial: (projectDir: string, packageManager: CliContextValue["packageManager"]) => {
     let commandParts: string[];
     if (packageManager === "npm") {
       commandParts = ["npm", "run", "typegen"];
@@ -582,10 +701,25 @@ const codegenService = {
     }
     const command = commandParts[0];
     if (!command) {
-      throw new Error("Unable to resolve the codegen command");
+      return Effect.fail(
+        new ExternalCommandError({
+          message: "Unable to resolve the codegen command",
+          command: packageManager,
+          args: commandParts.slice(1),
+          cwd: projectDir,
+        }),
+      );
     }
     const args = commandParts.slice(1);
-    await execa(command, args, { cwd: projectDir });
+    return withCommandError(
+      command,
+      args,
+      projectDir,
+      async () => {
+        await execa(command, args, { cwd: projectDir });
+      },
+      "Initial codegen failed",
+    );
   },
 };
 
@@ -611,5 +745,5 @@ export function makeLiveLayer(options: { cwd: string; debug: boolean; nonInterac
     Layer.succeed(CodegenService, codegenService),
   );
 
-  return <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.provide(effect, layer);
+  return <A, E, R>(effect: Fx.Effect<A, E, R>) => Effect.provide(effect, layer) as Fx.Effect<A, E, never>;
 }

@@ -1,12 +1,32 @@
-import { Effect } from "effect";
+import type { Effect as Fx } from "effect";
+import { Cause, Effect, Exit } from "effect";
+import { getOrUndefined } from "effect/Option";
 import { describe, expect, it } from "vitest";
+import {
+  CliValidationError,
+  FileMakerSetupError,
+  NonInteractiveInputError,
+  UserCancelledError,
+} from "~/core/errors.js";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
 import { type ConsoleTranscript, makeTestLayer, type PromptTranscript } from "./test-layer.js";
 
+async function getFailure<A, E>(effect: Fx.Effect<A, E, never>) {
+  const exit = await Effect.runPromiseExit(effect);
+  if (!Exit.isFailure(exit)) {
+    throw new Error("Expected effect to fail.");
+  }
+  const failure = getOrUndefined(Cause.failureOption(exit.cause));
+  if (!failure) {
+    throw new Error("Expected failure cause.");
+  }
+  return failure;
+}
+
 describe("resolveInitRequest", () => {
   it("fails for missing project name in non-interactive mode", async () => {
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         resolveInitRequest(undefined, {
           noGit: true,
           noInstall: true,
@@ -21,12 +41,16 @@ describe("resolveInitRequest", () => {
           }),
         ),
       ),
-    ).rejects.toThrow("Project name is required in non-interactive mode.");
+    ).toMatchObject(
+      new NonInteractiveInputError({
+        message: "Project name is required in non-interactive mode.",
+      }),
+    );
   });
 
   it("fails for incomplete non-interactive filemaker inputs", async () => {
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         resolveInitRequest("demo", {
           noGit: true,
           noInstall: true,
@@ -44,12 +68,16 @@ describe("resolveInitRequest", () => {
           }),
         ),
       ),
-    ).rejects.toThrow("--file-name, --data-api-key");
+    ).toMatchObject(
+      new NonInteractiveInputError({
+        message: "Missing required FileMaker inputs in non-interactive mode: --file-name, --data-api-key.",
+      }),
+    );
   });
 
   it("fails when only one of layout-name and schema-name is provided", async () => {
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         resolveInitRequest("demo", {
           noGit: true,
           noInstall: true,
@@ -67,7 +95,11 @@ describe("resolveInitRequest", () => {
           }),
         ),
       ),
-    ).rejects.toThrow("Both --layout-name and --schema-name must be provided together.");
+    ).toMatchObject(
+      new CliValidationError({
+        message: "Both --layout-name and --schema-name must be provided together.",
+      }),
+    );
   });
 
   it("resolves an interactive filemaker request from prompt responses", async () => {
@@ -232,8 +264,8 @@ describe("resolveInitRequest", () => {
   });
 
   it("fails in non-interactive mode when multiple local FileMaker files are open without --file-name", async () => {
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         resolveInitRequest("demo", {
           noGit: true,
           noInstall: true,
@@ -256,8 +288,11 @@ describe("resolveInitRequest", () => {
           }),
         ),
       ),
-    ).rejects.toThrow(
-      "Multiple FileMaker files are connected to the local ProofKit MCP Server. Pass --file-name with one of: A.fmp12, B.fmp12.",
+    ).toMatchObject(
+      new NonInteractiveInputError({
+        message:
+          "Multiple FileMaker files are connected to the local ProofKit MCP Server. Pass --file-name with one of: A.fmp12, B.fmp12.",
+      }),
     );
   });
 
@@ -294,8 +329,8 @@ describe("resolveInitRequest", () => {
   });
 
   it("fails when --file-name does not match a connected local FileMaker file", async () => {
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         resolveInitRequest("demo", {
           noGit: true,
           noInstall: true,
@@ -319,8 +354,45 @@ describe("resolveInitRequest", () => {
           }),
         ),
       ),
-    ).rejects.toThrow(
-      'FileMaker file "Missing.fmp12" is not currently connected to the local ProofKit MCP Server. Connected files: A.fmp12, B.fmp12.',
+    ).toMatchObject(
+      new FileMakerSetupError({
+        message:
+          'FileMaker file "Missing.fmp12" is not currently connected to the local ProofKit MCP Server. Connected files: A.fmp12, B.fmp12.',
+      }),
+    );
+  });
+
+  it("propagates a typed hosted FileMaker validation error", async () => {
+    expect(
+      await getFailure(
+        resolveInitRequest("demo", {
+          noGit: true,
+          noInstall: true,
+          force: false,
+          default: false,
+          importAlias: "~/",
+          CI: true,
+          appType: "browser",
+          dataSource: "filemaker",
+          server: "https://bad.example.com",
+          fileName: "Contacts.fmp12",
+          dataApiKey: "dk_123",
+        }).pipe(
+          makeTestLayer({
+            cwd: "/tmp",
+            packageManager: "pnpm",
+            failures: {
+              validateHostedServerUrl: new FileMakerSetupError({
+                message: "Invalid FileMaker Server URL: https://bad.example.com",
+              }),
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject(
+      new FileMakerSetupError({
+        message: "Invalid FileMaker Server URL: https://bad.example.com",
+      }),
     );
   });
 
@@ -424,8 +496,8 @@ describe("resolveInitRequest", () => {
   });
 
   it("fails with a specific non-interactive error when Proofkit MCP is running but no FileMaker file is open", async () => {
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         resolveInitRequest("demo", {
           noGit: true,
           noInstall: true,
@@ -448,8 +520,75 @@ describe("resolveInitRequest", () => {
           }),
         ),
       ),
-    ).rejects.toThrow(
-      "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
+    ).toMatchObject(
+      new NonInteractiveInputError({
+        message:
+          "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
+      }),
+    );
+  });
+
+  it("propagates a typed demo deployment error", async () => {
+    expect(
+      await getFailure(
+        resolveInitRequest("demo", {
+          noGit: true,
+          noInstall: true,
+          force: false,
+          default: false,
+          importAlias: "~/",
+          CI: false,
+          appType: "browser",
+          dataSource: "filemaker",
+          server: "https://fm.example.com",
+        }).pipe(
+          makeTestLayer({
+            cwd: "/tmp",
+            packageManager: "pnpm",
+            nonInteractive: false,
+            prompts: {
+              searchSelect: ["$deploy-demo"],
+            },
+            failures: {
+              deployDemoFile: new FileMakerSetupError({
+                message: "ProofKit Demo deployment timed out after 5 minutes.",
+              }),
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject(
+      new FileMakerSetupError({
+        message: "ProofKit Demo deployment timed out after 5 minutes.",
+      }),
+    );
+  });
+
+  it("fails with a typed cancelation error when a prompt is cancelled", async () => {
+    expect(
+      await getFailure(
+        resolveInitRequest(undefined, {
+          noGit: true,
+          noInstall: true,
+          force: false,
+          default: false,
+          importAlias: "~/",
+          CI: false,
+        }).pipe(
+          makeTestLayer({
+            cwd: "/tmp",
+            packageManager: "pnpm",
+            nonInteractive: false,
+            prompts: {
+              text: ["__cancel__"],
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject(
+      new UserCancelledError({
+        message: "User aborted the operation",
+      }),
     );
   });
 });

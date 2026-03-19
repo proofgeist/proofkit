@@ -1,8 +1,11 @@
 import os from "node:os";
 import path from "node:path";
-import { Effect } from "effect";
+import type { Effect as Fx } from "effect";
+import { Cause, Effect, Exit } from "effect";
+import { getOrUndefined } from "effect/Option";
 import fs from "fs-extra";
 import { describe, expect, it } from "vitest";
+import { NonInteractiveInputError } from "~/core/errors.js";
 import { runDefaultCommand } from "~/index.js";
 import { makeTestLayer } from "./test-layer.js";
 
@@ -14,6 +17,18 @@ function createConsoleTranscript() {
     success: [] as string[],
     note: [] as Array<{ message: string; title?: string }>,
   };
+}
+
+async function getFailure<A, E>(effect: Fx.Effect<A, E, never>) {
+  const exit = await Effect.runPromiseExit(effect);
+  if (!Exit.isFailure(exit)) {
+    throw new Error("Expected effect to fail.");
+  }
+  const failure = getOrUndefined(Cause.failureOption(exit.cause));
+  if (!failure) {
+    throw new Error("Expected failure cause.");
+  }
+  return failure;
 }
 
 describe("default command routing", () => {
@@ -74,8 +89,8 @@ describe("default command routing", () => {
   it("fails in non-interactive mode without an explicit command", async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-default-ci-"));
 
-    await expect(
-      Effect.runPromise(
+    expect(
+      await getFailure(
         runDefaultCommand({ nonInteractive: true }).pipe(
           makeTestLayer({
             cwd,
@@ -84,6 +99,11 @@ describe("default command routing", () => {
           }),
         ),
       ),
-    ).rejects.toThrow("interactive-only in non-interactive mode");
+    ).toMatchObject(
+      new NonInteractiveInputError({
+        message:
+          "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
+      }),
+    );
   });
 });

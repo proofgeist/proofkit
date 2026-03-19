@@ -2,6 +2,7 @@ import { Effect } from "effect";
 
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { CliContext, ConsoleService, FileMakerService, PromptService } from "~/core/context.js";
+import { CliValidationError, FileMakerSetupError, isCliError, NonInteractiveInputError } from "~/core/errors.js";
 import type { AppType, CliFlags, DataSourceType, FileMakerInputs, InitRequest } from "~/core/types.js";
 import { createDataSourceEnvNames, getDefaultSchemaName } from "~/utils/projectFiles.js";
 import { parseNameAndPath, validateAppName } from "~/utils/projectName.js";
@@ -38,11 +39,34 @@ function validateLayoutInputs(flags: CliFlags) {
   const hasSchemaName = Boolean(flags.schemaName);
 
   if (hasLayoutName !== hasSchemaName) {
-    throw new Error("Both --layout-name and --schema-name must be provided together.");
+    return Effect.fail(
+      new CliValidationError({
+        message: "Both --layout-name and --schema-name must be provided together.",
+      }),
+    );
   }
+
+  return Effect.void;
 }
 
-async function resolveHostedFileMakerInputs({
+function promptEffect<A>(message: string, run: () => Promise<A>) {
+  return Effect.tryPromise({
+    try: run,
+    catch: (cause) =>
+      isCliError(cause)
+        ? cause
+        : new CliValidationError({
+            message,
+          }),
+  });
+}
+
+const missingHostedFileMakerInputsMessage =
+  "Missing required hosted FileMaker inputs in non-interactive mode: --server, --file-name, and --data-api-key.";
+const missingHostedFileAndKeyMessage =
+  "Missing required FileMaker inputs in non-interactive mode: --file-name, --data-api-key.";
+
+function resolveHostedFileMakerInputs({
   prompt,
   fileMakerService,
   flags,
@@ -52,217 +76,309 @@ async function resolveHostedFileMakerInputs({
   fileMakerService: FileMakerService;
   flags: CliFlags;
   nonInteractive: boolean;
-}): Promise<FileMakerInputs> {
-  validateLayoutInputs(flags);
+}) {
+  return Effect.gen(function* () {
+    yield* validateLayoutInputs(flags);
 
-  if (!flags.server && nonInteractive) {
-    throw new Error(
-      "Missing required hosted FileMaker inputs in non-interactive mode: --server, --file-name, and --data-api-key.",
-    );
-  }
-
-  const rawServer =
-    flags.server ??
-    (await prompt.text({
-      message: "What is the URL of your FileMaker Server?",
-      validate: (value) => {
-        try {
-          const normalized = value.startsWith("http") ? value : `https://${value}`;
-          new URL(normalized);
-          return;
-        } catch {
-          return "Please enter a valid URL";
-        }
-      },
-    }));
-
-  const { normalizedUrl, versions } = await fileMakerService.validateHostedServerUrl(rawServer);
-  const hostedUrl = new URL(normalizedUrl);
-  const demoFileName = "ProofKitDemo.fmp12";
-
-  let selectedFile = flags.fileName;
-  let dataApiKey = flags.dataApiKey;
-  let layoutName = flags.layoutName;
-  let schemaName = flags.schemaName;
-  let token: string | undefined;
-  let files: Awaited<ReturnType<FileMakerService["listFiles"]>> = [];
-  const requireHostedToken = () => {
-    if (!token) {
-      throw new Error("OttoFMS authentication is required for hosted setup.");
-    }
-    return token;
-  };
-
-  if (!(selectedFile && dataApiKey)) {
-    if (!(flags.adminApiKey || (versions.ottoVersion && compareSemver(versions.ottoVersion, "4.7.0") >= 0))) {
-      throw new Error(
-        "OttoFMS 4.7.0 or later is required to auto-login. Upgrade OttoFMS or pass --admin-api-key for hosted setup.",
+    if (!flags.server && nonInteractive) {
+      return yield* Effect.fail(
+        new NonInteractiveInputError({
+          message: missingHostedFileMakerInputsMessage,
+        }),
       );
     }
-    token = flags.adminApiKey ?? (await fileMakerService.getOttoFMSToken({ url: hostedUrl })).token;
-  }
 
-  if (!selectedFile) {
-    if (nonInteractive) {
-      throw new Error("Missing required FileMaker inputs in non-interactive mode: --file-name, --data-api-key.");
+    const rawServer =
+      flags.server ??
+      (yield* promptEffect("Unable to read FileMaker Server URL.", () =>
+        prompt.text({
+          message: "What is the URL of your FileMaker Server?",
+          validate: (value) => {
+            try {
+              const normalized = value.startsWith("http") ? value : `https://${value}`;
+              new URL(normalized);
+              return;
+            } catch {
+              return "Please enter a valid URL";
+            }
+          },
+        }),
+      ));
+
+    const { normalizedUrl, versions } = yield* fileMakerService.validateHostedServerUrl(rawServer);
+    const hostedUrl = new URL(normalizedUrl);
+    const demoFileName = "ProofKitDemo.fmp12";
+
+    let selectedFile = flags.fileName;
+    let dataApiKey = flags.dataApiKey;
+    let layoutName = flags.layoutName;
+    let schemaName = flags.schemaName;
+    let token: string | undefined;
+    let files: Array<{ filename: string; status: string }> = [];
+
+    const requireHostedToken = () =>
+      token
+        ? Effect.succeed(token)
+        : Effect.fail(
+            new FileMakerSetupError({
+              message: "OttoFMS authentication is required for hosted setup.",
+            }),
+          );
+
+    if (!(selectedFile && dataApiKey)) {
+      if (!(flags.adminApiKey || (versions.ottoVersion && compareSemver(versions.ottoVersion, "4.7.0") >= 0))) {
+        return yield* Effect.fail(
+          new FileMakerSetupError({
+            message:
+              "OttoFMS 4.7.0 or later is required to auto-login. Upgrade OttoFMS or pass --admin-api-key for hosted setup.",
+          }),
+        );
+      }
+      token = flags.adminApiKey ?? (yield* fileMakerService.getOttoFMSToken({ url: hostedUrl })).token;
     }
 
-    files = await fileMakerService.listFiles({ url: hostedUrl, token: requireHostedToken() });
-    selectedFile = await prompt.searchSelect({
-      message: "Which file would you like to connect to?",
-      options: [
-        {
-          value: "$deploy-demo",
-          label: "Deploy NEW ProofKit Demo File",
-          hint: "Use OttoFMS to deploy a new file for testing",
-          keywords: ["demo", "proofkit"],
-        },
-        ...files
-          .slice()
-          .sort((left, right) => left.filename.localeCompare(right.filename))
-          .map((file) => ({
-            value: file.filename,
-            label: file.filename,
-            hint: file.status,
-            keywords: [file.filename],
-          })),
-      ],
-    });
-  }
+    if (!selectedFile) {
+      if (nonInteractive) {
+        return yield* Effect.fail(
+          new NonInteractiveInputError({
+            message: missingHostedFileAndKeyMessage,
+          }),
+        );
+      }
 
-  if (!selectedFile) {
-    throw new Error("No FileMaker file was selected.");
-  }
-
-  if (selectedFile === "$deploy-demo") {
-    if (files.length === 0) {
-      files = await fileMakerService.listFiles({ url: hostedUrl, token: requireHostedToken() });
-    }
-    const demoExists = files.some((file) => file.filename === demoFileName);
-    const replaceDemo =
-      demoExists && !nonInteractive
-        ? await prompt.confirm({
-            message: "The demo file already exists. Do you want to replace it with a fresh copy?",
-            initialValue: false,
-          })
-        : demoExists;
-    const deployed = await fileMakerService.deployDemoFile({
-      url: hostedUrl,
-      token: requireHostedToken(),
-      operation: replaceDemo ? "replace" : "install",
-    });
-    selectedFile = deployed.filename;
-    dataApiKey = deployed.apiKey;
-    layoutName ??= "API_Contacts";
-    schemaName ??= "Contacts";
-  }
-
-  if (!dataApiKey && nonInteractive) {
-    throw new Error("Missing required FileMaker inputs in non-interactive mode: --data-api-key.");
-  }
-
-  if (!dataApiKey) {
-    const apiKeys = (await fileMakerService.listAPIKeys({ url: hostedUrl, token: requireHostedToken() })).filter(
-      (apiKey) => apiKey.database === selectedFile,
-    );
-
-    const selection =
-      apiKeys.length === 0
-        ? "create"
-        : await prompt.searchSelect({
-            message: "Which OttoFMS Data API key would you like to use?",
-            options: [
-              ...apiKeys.map((apiKey) => ({
-                value: apiKey.key,
-                label: `${apiKey.label} - ${apiKey.user}`,
-                hint: `${apiKey.key.slice(0, 5)}...${apiKey.key.slice(-4)}`,
-                keywords: [apiKey.label, apiKey.user, apiKey.database],
+      files = yield* fileMakerService.listFiles({
+        url: hostedUrl,
+        token: yield* requireHostedToken(),
+      });
+      selectedFile = yield* promptEffect("Unable to choose a FileMaker file.", () =>
+        prompt.searchSelect({
+          message: "Which file would you like to connect to?",
+          options: [
+            {
+              value: "$deploy-demo",
+              label: "Deploy NEW ProofKit Demo File",
+              hint: "Use OttoFMS to deploy a new file for testing",
+              keywords: ["demo", "proofkit"],
+            },
+            ...files
+              .slice()
+              .sort((left, right) => left.filename.localeCompare(right.filename))
+              .map((file) => ({
+                value: file.filename,
+                label: file.filename,
+                hint: file.status,
+                keywords: [file.filename],
               })),
-              {
-                value: "create",
-                label: "Create a new API key",
-                hint: "Requires FileMaker credentials for this file",
-                keywords: ["create", "new"],
-              },
-            ],
-          });
+          ],
+        }),
+      );
+    }
 
-    if (selection === "create") {
-      const username = await prompt.text({
-        message: `Enter the account name for ${selectedFile}`,
-        validate: (value) => (value ? undefined : "An account name is required"),
+    if (!selectedFile) {
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: "No FileMaker file was selected.",
+        }),
+      );
+    }
+
+    if (selectedFile === "$deploy-demo") {
+      if (files.length === 0) {
+        files = yield* fileMakerService.listFiles({
+          url: hostedUrl,
+          token: yield* requireHostedToken(),
+        });
+      }
+      const demoExists = files.some((file) => file.filename === demoFileName);
+      const replaceDemo =
+        demoExists && !nonInteractive
+          ? yield* promptEffect("Unable to confirm ProofKit Demo replacement.", () =>
+              prompt.confirm({
+                message: "The demo file already exists. Do you want to replace it with a fresh copy?",
+                initialValue: false,
+              }),
+            )
+          : demoExists;
+      const deployed = yield* fileMakerService.deployDemoFile({
+        url: hostedUrl,
+        token: yield* requireHostedToken(),
+        operation: replaceDemo ? "replace" : "install",
       });
-      const password = await prompt.password({
-        message: `Enter the password for ${username}`,
-        validate: (value) => (value ? undefined : "A password is required"),
-      });
-      dataApiKey = (
-        await fileMakerService.createDataAPIKeyWithCredentials({
+      selectedFile = deployed.filename;
+      dataApiKey = deployed.apiKey;
+      layoutName ??= "API_Contacts";
+      schemaName ??= "Contacts";
+    }
+
+    if (!dataApiKey && nonInteractive) {
+      return yield* Effect.fail(
+        new NonInteractiveInputError({
+          message: "Missing required FileMaker inputs in non-interactive mode: --data-api-key.",
+        }),
+      );
+    }
+
+    if (!dataApiKey) {
+      const apiKeys = (yield* fileMakerService.listAPIKeys({
+        url: hostedUrl,
+        token: yield* requireHostedToken(),
+      })).filter((apiKey: { database: string }) => apiKey.database === selectedFile);
+
+      const selection =
+        apiKeys.length === 0
+          ? "create"
+          : yield* promptEffect("Unable to choose an OttoFMS Data API key.", () =>
+              prompt.searchSelect({
+                message: "Which OttoFMS Data API key would you like to use?",
+                options: [
+                  ...apiKeys.map((apiKey: { key: string; label: string; user: string; database: string }) => ({
+                    value: apiKey.key,
+                    label: `${apiKey.label} - ${apiKey.user}`,
+                    hint: `${apiKey.key.slice(0, 5)}...${apiKey.key.slice(-4)}`,
+                    keywords: [apiKey.label, apiKey.user, apiKey.database],
+                  })),
+                  {
+                    value: "create",
+                    label: "Create a new API key",
+                    hint: "Requires FileMaker credentials for this file",
+                    keywords: ["create", "new"],
+                  },
+                ],
+              }),
+            );
+
+      if (selection === "create") {
+        const username = yield* promptEffect("Unable to read FileMaker account name.", () =>
+          prompt.text({
+            message: `Enter the account name for ${selectedFile}`,
+            validate: (value) => (value ? undefined : "An account name is required"),
+          }),
+        );
+        const password = yield* promptEffect("Unable to read FileMaker account password.", () =>
+          prompt.password({
+            message: `Enter the password for ${username}`,
+            validate: (value) => (value ? undefined : "A password is required"),
+          }),
+        );
+        if (!selectedFile) {
+          return yield* Effect.fail(
+            new FileMakerSetupError({
+              message: "No FileMaker file was selected.",
+            }),
+          );
+        }
+        dataApiKey = (yield* fileMakerService.createDataAPIKeyWithCredentials({
           url: hostedUrl,
           filename: selectedFile,
           username,
           password,
-        })
-      ).apiKey;
-    } else {
-      dataApiKey = selection;
+        })).apiKey;
+      } else {
+        dataApiKey = selection;
+      }
     }
-  }
 
-  if (!dataApiKey) {
-    throw new Error("No FileMaker Data API key was selected.");
-  }
+    if (!dataApiKey) {
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: "No FileMaker Data API key was selected.",
+        }),
+      );
+    }
 
-  const layouts = await fileMakerService.listLayouts({
-    dataApiKey,
-    fmFile: selectedFile,
-    server: hostedUrl.origin,
-  });
+    const resolvedFileName = selectedFile;
+    if (!resolvedFileName) {
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: "No FileMaker file was selected.",
+        }),
+      );
+    }
 
-  if (layoutName && !layouts.includes(layoutName)) {
-    throw new Error(`Layout "${layoutName}" was not found in ${selectedFile}.`);
-  }
-
-  if (!(nonInteractive || layoutName || schemaName)) {
-    const shouldConfigureLayout = await prompt.confirm({
-      message: "Do you want to configure an initial layout for type generation now?",
-      initialValue: false,
+    const layouts = yield* fileMakerService.listLayouts({
+      dataApiKey,
+      fmFile: resolvedFileName,
+      server: hostedUrl.origin,
     });
 
-    if (shouldConfigureLayout) {
-      layoutName = await prompt.searchSelect({
-        message: "Select a layout to read data from",
-        options: layouts.map((layout) => ({
-          value: layout,
-          label: layout,
-          keywords: [layout],
-        })),
-      });
-
-      schemaName = await prompt.text({
-        message: "What should the generated schema be called?",
-        defaultValue: getDefaultSchemaName(layoutName),
-        validate: (value) => (value ? undefined : "A schema name is required"),
-      });
+    if (layoutName && !layouts.includes(layoutName)) {
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: `Layout "${layoutName}" was not found in ${resolvedFileName}.`,
+        }),
+      );
     }
-  }
 
-  return {
-    mode: "hosted-otto",
-    dataSourceName: "filemaker",
-    envNames: createDataSourceEnvNames("filemaker"),
-    server: hostedUrl.origin,
-    fileName: selectedFile,
-    dataApiKey,
-    layoutName,
-    schemaName,
-    adminApiKey: flags.adminApiKey,
-    fmsVersion: versions.fmsVersion,
-    ottoVersion: versions.ottoVersion,
-  };
+    if (!(nonInteractive || layoutName || schemaName)) {
+      const shouldConfigureLayout = yield* promptEffect("Unable to confirm initial layout setup.", () =>
+        prompt.confirm({
+          message: "Do you want to configure an initial layout for type generation now?",
+          initialValue: false,
+        }),
+      );
+
+      if (shouldConfigureLayout) {
+        layoutName = yield* promptEffect("Unable to choose a FileMaker layout.", () =>
+          prompt.searchSelect({
+            message: "Select a layout to read data from",
+            options: layouts.map((layout: string) => ({
+              value: layout,
+              label: layout,
+              keywords: [layout],
+            })),
+          }),
+        );
+
+        const resolvedLayoutName = layoutName;
+        if (!resolvedLayoutName) {
+          return yield* Effect.fail(
+            new FileMakerSetupError({
+              message: "No FileMaker layout was selected.",
+            }),
+          );
+        }
+        schemaName = yield* promptEffect("Unable to read generated schema name.", () =>
+          prompt.text({
+            message: "What should the generated schema be called?",
+            defaultValue: getDefaultSchemaName(resolvedLayoutName),
+            validate: (value) => (value ? undefined : "A schema name is required"),
+          }),
+        );
+      }
+    }
+
+    if (!selectedFile) {
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: "No FileMaker file was selected.",
+        }),
+      );
+    }
+    if (!dataApiKey) {
+      return yield* Effect.fail(
+        new FileMakerSetupError({
+          message: "No FileMaker Data API key was selected.",
+        }),
+      );
+    }
+
+    return {
+      mode: "hosted-otto",
+      dataSourceName: "filemaker",
+      envNames: createDataSourceEnvNames("filemaker"),
+      server: hostedUrl.origin,
+      fileName: selectedFile,
+      dataApiKey,
+      layoutName,
+      schemaName,
+      adminApiKey: flags.adminApiKey,
+      fmsVersion: versions.fmsVersion,
+      ottoVersion: versions.ottoVersion,
+    } satisfies FileMakerInputs;
+  });
 }
 
-async function resolveFileMakerInputs({
+function resolveFileMakerInputs({
   prompt,
   console,
   fileMakerService,
@@ -277,130 +393,147 @@ async function resolveFileMakerInputs({
   appType: AppType;
   nonInteractive: boolean;
 }) {
-  if (flags.dataSource !== "filemaker") {
-    return { fileMaker: undefined, skipFileMakerSetup: false };
-  }
+  return Effect.gen(function* () {
+    if (flags.dataSource !== "filemaker") {
+      return { fileMaker: undefined, skipFileMakerSetup: false };
+    }
 
-  validateLayoutInputs(flags);
+    yield* validateLayoutInputs(flags);
 
-  if (appType === "webviewer" && !flags.server) {
-    const resolveLocalFmMcpFile = async (connectedFiles: string[]) => {
-      const availableFiles = connectedFiles.filter(Boolean);
-      if (availableFiles.length === 0) {
-        return undefined;
-      }
+    if (appType === "webviewer" && !flags.server) {
+      const resolveLocalFmMcpFile = (connectedFiles: string[]) =>
+        Effect.gen(function* () {
+          const availableFiles = connectedFiles.filter(Boolean);
+          if (availableFiles.length === 0) {
+            return undefined;
+          }
 
-      if (flags.fileName) {
-        if (availableFiles.includes(flags.fileName)) {
-          return flags.fileName;
+          if (flags.fileName) {
+            if (availableFiles.includes(flags.fileName)) {
+              return flags.fileName;
+            }
+
+            return yield* Effect.fail(
+              new FileMakerSetupError({
+                message: `FileMaker file "${flags.fileName}" is not currently connected to the local ProofKit MCP Server. Connected files: ${availableFiles.join(", ")}.`,
+              }),
+            );
+          }
+
+          if (availableFiles.length === 1) {
+            return availableFiles[0];
+          }
+
+          if (nonInteractive) {
+            return yield* Effect.fail(
+              new NonInteractiveInputError({
+                message: `Multiple FileMaker files are connected to the local ProofKit MCP Server. Pass --file-name with one of: ${availableFiles.join(", ")}.`,
+              }),
+            );
+          }
+
+          return yield* promptEffect("Unable to choose a local FileMaker file.", () =>
+            prompt.searchSelect({
+              message: "Multiple FileMaker files are open. Which file should ProofKit use?",
+              options: availableFiles.map((fileName) => ({
+                value: fileName,
+                label: fileName,
+                hint: "Connected via local ProofKit MCP Server",
+                keywords: [fileName],
+              })),
+            }),
+          );
+        });
+
+      while (true) {
+        const localFmMcp = yield* fileMakerService.detectLocalFmMcp();
+        const selectedFile = localFmMcp.healthy ? yield* resolveLocalFmMcpFile(localFmMcp.connectedFiles) : undefined;
+        if (localFmMcp.healthy && selectedFile) {
+          console.info(`Using local ProofKit MCP file: ${selectedFile}`);
+          return {
+            fileMaker: {
+              mode: "local-fm-mcp",
+              dataSourceName: "filemaker",
+              envNames: createDataSourceEnvNames("filemaker"),
+              fmMcpBaseUrl: localFmMcp.baseUrl,
+              fileName: selectedFile,
+              layoutName: flags.layoutName,
+              schemaName: flags.schemaName,
+            } satisfies FileMakerInputs,
+            skipFileMakerSetup: false,
+          };
         }
 
-        throw new Error(
-          `FileMaker file "${flags.fileName}" is not currently connected to the local ProofKit MCP Server. Connected files: ${availableFiles.join(", ")}.`,
-        );
-      }
+        if (nonInteractive) {
+          if (localFmMcp.healthy) {
+            return yield* Effect.fail(
+              new NonInteractiveInputError({
+                message:
+                  "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
+              }),
+            );
+          }
 
-      if (availableFiles.length === 1) {
-        return availableFiles[0];
-      }
-
-      if (nonInteractive) {
-        throw new Error(
-          `Multiple FileMaker files are connected to the local ProofKit MCP Server. Pass --file-name with one of: ${availableFiles.join(", ")}.`,
-        );
-      }
-
-      return await prompt.searchSelect({
-        message: "Multiple FileMaker files are open. Which file should ProofKit use?",
-        options: availableFiles.map((fileName) => ({
-          value: fileName,
-          label: fileName,
-          hint: "Connected via local ProofKit MCP Server",
-          keywords: [fileName],
-        })),
-      });
-    };
-
-    while (true) {
-      const localFmMcp = await fileMakerService.detectLocalFmMcp();
-      const selectedFile = localFmMcp.healthy ? await resolveLocalFmMcpFile(localFmMcp.connectedFiles) : undefined;
-      if (localFmMcp.healthy && selectedFile) {
-        console.info(`Using local ProofKit MCP file: ${selectedFile}`);
-        return {
-          fileMaker: {
-            mode: "local-fm-mcp",
-            dataSourceName: "filemaker",
-            envNames: createDataSourceEnvNames("filemaker"),
-            fmMcpBaseUrl: localFmMcp.baseUrl,
-            fileName: selectedFile,
-            layoutName: flags.layoutName,
-            schemaName: flags.schemaName,
-          } satisfies FileMakerInputs,
-          skipFileMakerSetup: false,
-        };
-      }
-
-      if (nonInteractive) {
-        if (localFmMcp.healthy) {
-          throw new Error(
-            "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
+          return yield* Effect.fail(
+            new NonInteractiveInputError({
+              message:
+                "ProofKit MCP Server was not detected and no FileMaker server was provided. Start the ProofKit MCP Server locally or rerun with --server.",
+            }),
           );
         }
 
-        throw new Error(
-          "ProofKit MCP Server was not detected and no FileMaker server was provided. Start the ProofKit MCP Server locally or rerun with --server.",
+        const fallbackAction = yield* promptEffect("Unable to choose FileMaker setup fallback.", () =>
+          prompt.select({
+            message: localFmMcp.healthy
+              ? "ProofKit MCP Server is running, but no FileMaker file is open yet. Open one, then choose how to continue."
+              : "ProofKit MCP Server was not detected. How would you like to continue?",
+            options: [
+              {
+                value: "retry",
+                label: "Try again",
+                hint: localFmMcp.healthy
+                  ? "Check again after opening a FileMaker file"
+                  : "Retry ProofKit MCP Server detection",
+              },
+              {
+                value: "hosted",
+                label: "Continue with hosted setup",
+                hint: "Use OttoFMS and a hosted FileMaker server",
+              },
+              {
+                value: "skip",
+                label: "Skip for now",
+                hint: "Create the project and configure FileMaker later",
+              },
+            ],
+          }),
         );
+
+        if (fallbackAction === "retry") {
+          continue;
+        }
+
+        if (fallbackAction === "skip") {
+          return {
+            fileMaker: undefined,
+            skipFileMakerSetup: true,
+          };
+        }
+
+        break;
       }
-
-      const fallbackAction = await prompt.select({
-        message: localFmMcp.healthy
-          ? "ProofKit MCP Server is running, but no FileMaker file is open yet. Open one, then choose how to continue."
-          : "ProofKit MCP Server was not detected. How would you like to continue?",
-        options: [
-          {
-            value: "retry",
-            label: "Try again",
-            hint: localFmMcp.healthy
-              ? "Check again after opening a FileMaker file"
-              : "Retry ProofKit MCP Server detection",
-          },
-          {
-            value: "hosted",
-            label: "Continue with hosted setup",
-            hint: "Use OttoFMS and a hosted FileMaker server",
-          },
-          {
-            value: "skip",
-            label: "Skip for now",
-            hint: "Create the project and configure FileMaker later",
-          },
-        ],
-      });
-
-      if (fallbackAction === "retry") {
-        continue;
-      }
-
-      if (fallbackAction === "skip") {
-        return {
-          fileMaker: undefined,
-          skipFileMakerSetup: true,
-        };
-      }
-
-      break;
     }
-  }
 
-  return {
-    fileMaker: await resolveHostedFileMakerInputs({
-      prompt,
-      fileMakerService,
-      flags,
-      nonInteractive,
-    }),
-    skipFileMakerSetup: false,
-  };
+    return {
+      fileMaker: yield* resolveHostedFileMakerInputs({
+        prompt,
+        fileMakerService,
+        flags,
+        nonInteractive,
+      }),
+      skipFileMakerSetup: false,
+    };
+  });
 }
 
 export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
@@ -415,10 +548,14 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
     let projectName = name;
     if (!projectName) {
       if (nonInteractive) {
-        return yield* Effect.fail(new Error("Project name is required in non-interactive mode."));
+        return yield* Effect.fail(
+          new NonInteractiveInputError({
+            message: "Project name is required in non-interactive mode.",
+          }),
+        );
       }
 
-      projectName = yield* Effect.promise(() =>
+      projectName = yield* promptEffect("Unable to read project name.", () =>
         prompt.text({
           message: "What will your project be called?",
           defaultValue: DEFAULT_APP_NAME,
@@ -428,17 +565,25 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
     }
 
     if (!projectName) {
-      return yield* Effect.fail(new Error("Project name is required."));
+      return yield* Effect.fail(
+        new CliValidationError({
+          message: "Project name is required.",
+        }),
+      );
     }
 
     const validationError = validateAppName(projectName);
     if (validationError) {
-      return yield* Effect.fail(new Error(validationError));
+      return yield* Effect.fail(
+        new CliValidationError({
+          message: validationError,
+        }),
+      );
     }
 
     let appType: AppType = flags.appType ?? "browser";
     if (!(flags.appType || nonInteractive)) {
-      appType = yield* Effect.promise(() =>
+      appType = (yield* promptEffect("Unable to choose app type.", () =>
         prompt.select({
           message: "What kind of app do you want to build?",
           options: [
@@ -454,7 +599,7 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
             },
           ],
         }),
-      ).pipe(Effect.map((value) => value as AppType));
+      )) as AppType;
     }
 
     const hasExplicitFileMakerInputs = Boolean(
@@ -469,7 +614,7 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
     }
 
     if (!(nonInteractive || flags.dataSource) && appType !== "webviewer") {
-      dataSource = yield* Effect.promise(() =>
+      dataSource = (yield* promptEffect("Unable to choose data source setup.", () =>
         prompt.select({
           message: "Do you want to connect to a FileMaker Database now?",
           options: [
@@ -485,27 +630,33 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
             },
           ],
         }),
-      ).pipe(Effect.map((value) => value as DataSourceType));
+      )) as DataSourceType;
     }
 
     if (nonInteractive && !flags.dataSource && hasExplicitFileMakerInputs) {
-      return yield* Effect.fail(new Error("FileMaker flags require --data-source filemaker in non-interactive mode."));
+      return yield* Effect.fail(
+        new NonInteractiveInputError({
+          message: "FileMaker flags require --data-source filemaker in non-interactive mode.",
+        }),
+      );
     }
 
     if (nonInteractive && dataSource !== "filemaker" && hasExplicitFileMakerInputs) {
-      return yield* Effect.fail(new Error("FileMaker flags require --data-source filemaker in non-interactive mode."));
+      return yield* Effect.fail(
+        new NonInteractiveInputError({
+          message: "FileMaker flags require --data-source filemaker in non-interactive mode.",
+        }),
+      );
     }
 
-    const { fileMaker, skipFileMakerSetup } = yield* Effect.promise(() =>
-      resolveFileMakerInputs({
-        prompt,
-        console,
-        fileMakerService,
-        flags: { ...flags, dataSource },
-        appType,
-        nonInteractive,
-      }),
-    );
+    const { fileMaker, skipFileMakerSetup } = yield* resolveFileMakerInputs({
+      prompt,
+      console,
+      fileMakerService,
+      flags: { ...flags, dataSource },
+      appType,
+      nonInteractive,
+    });
 
     const [scopedAppName, appDir] = parseNameAndPath(projectName);
 

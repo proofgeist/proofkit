@@ -1,6 +1,10 @@
+import type { Effect as Fx } from "effect";
 import { Context } from "effect";
+import type { CliError } from "~/core/errors.js";
 import type { AppType, FileMakerEnvNames, FileMakerInputs, ProofKitSettings, UIType } from "~/core/types.js";
 import type { PackageManager } from "~/utils/packageManager.js";
+
+type Eff<A, E = never, R = never> = Fx.Effect<A, E, R>;
 
 export interface CliContextValue {
   cwd: string;
@@ -56,16 +60,16 @@ export interface ConsoleService {
 export const ConsoleService = Context.GenericTag<ConsoleService>("@proofkit/cli/ConsoleService");
 
 export interface FileSystemService {
-  readonly exists: (path: string) => Promise<boolean>;
-  readonly readdir: (path: string) => Promise<string[]>;
-  readonly emptyDir: (path: string) => Promise<void>;
-  readonly copyDir: (from: string, to: string, options?: { overwrite?: boolean }) => Promise<void>;
-  readonly rename: (from: string, to: string) => Promise<void>;
-  readonly remove: (path: string) => Promise<void>;
-  readonly readJson: <T>(path: string) => Promise<T>;
-  readonly writeJson: (path: string, value: unknown) => Promise<void>;
-  readonly writeFile: (path: string, content: string) => Promise<void>;
-  readonly readFile: (path: string) => Promise<string>;
+  readonly exists: (path: string) => Eff<boolean, CliError>;
+  readonly readdir: (path: string) => Eff<string[], CliError>;
+  readonly emptyDir: (path: string) => Eff<void, CliError>;
+  readonly copyDir: (from: string, to: string, options?: { overwrite?: boolean }) => Eff<void, CliError>;
+  readonly rename: (from: string, to: string) => Eff<void, CliError>;
+  readonly remove: (path: string) => Eff<void, CliError>;
+  readonly readJson: <T>(path: string) => Eff<T, CliError>;
+  readonly writeJson: (path: string, value: unknown) => Eff<void, CliError>;
+  readonly writeFile: (path: string, content: string) => Eff<void, CliError>;
+  readonly readFile: (path: string) => Eff<string, CliError>;
 }
 
 export const FileSystemService = Context.GenericTag<FileSystemService>("@proofkit/cli/FileSystemService");
@@ -77,7 +81,7 @@ export interface TemplateService {
 export const TemplateService = Context.GenericTag<TemplateService>("@proofkit/cli/TemplateService");
 
 export interface PackageManagerService {
-  readonly getVersion: (packageManager: PackageManager, cwd: string) => Promise<string | undefined>;
+  readonly getVersion: (packageManager: PackageManager, cwd: string) => Eff<string | undefined, CliError>;
 }
 
 export const PackageManagerService = Context.GenericTag<PackageManagerService>("@proofkit/cli/PackageManagerService");
@@ -91,24 +95,24 @@ export interface ProcessService {
       stdout?: "pipe" | "inherit" | "ignore";
       stderr?: "pipe" | "inherit" | "ignore";
     },
-  ) => Promise<{ stdout: string; stderr: string }>;
+  ) => Eff<{ stdout: string; stderr: string }, CliError>;
 }
 
 export const ProcessService = Context.GenericTag<ProcessService>("@proofkit/cli/ProcessService");
 
 export interface GitService {
-  readonly initialize: (projectDir: string) => Promise<void>;
+  readonly initialize: (projectDir: string) => Eff<void, CliError>;
 }
 
 export const GitService = Context.GenericTag<GitService>("@proofkit/cli/GitService");
 
 export interface SettingsService {
-  readonly writeSettings: (projectDir: string, settings: ProofKitSettings) => Promise<void>;
-  readonly appendEnvVars: (projectDir: string, vars: Record<string, string>) => Promise<void>;
+  readonly writeSettings: (projectDir: string, settings: ProofKitSettings) => Eff<void, CliError>;
+  readonly appendEnvVars: (projectDir: string, vars: Record<string, string>) => Eff<void, CliError>;
   readonly ensureTypegenConfig: (
     projectDir: string,
     options: { appType: AppType; fileMaker?: FileMakerInputs },
-  ) => Promise<void>;
+  ) => Eff<void, CliError>;
 }
 
 export const SettingsService = Context.GenericTag<SettingsService>("@proofkit/cli/SettingsService");
@@ -163,46 +167,49 @@ export interface FileMakerBootstrapArtifacts {
 }
 
 export interface FileMakerService {
-  readonly detectLocalFmMcp: (baseUrl?: string) => Promise<FmMcpStatus>;
+  readonly detectLocalFmMcp: (baseUrl?: string) => Eff<FmMcpStatus, CliError>;
   readonly validateHostedServerUrl: (
     serverUrl: string,
     ottoPort?: number | null,
-  ) => Promise<{
-    normalizedUrl: string;
-    versions: FileMakerServerVersions;
-  }>;
-  readonly getOttoFMSToken: (options: { url: URL }) => Promise<{ token: string }>;
-  readonly listFiles: (options: { url: URL; token: string }) => Promise<OttoFileInfo[]>;
-  readonly listAPIKeys: (options: { url: URL; token: string }) => Promise<OttoApiKeyInfo[]>;
+  ) => Eff<
+    {
+      normalizedUrl: string;
+      versions: FileMakerServerVersions;
+    },
+    CliError
+  >;
+  readonly getOttoFMSToken: (options: { url: URL }) => Eff<{ token: string }, CliError>;
+  readonly listFiles: (options: { url: URL; token: string }) => Eff<OttoFileInfo[], CliError>;
+  readonly listAPIKeys: (options: { url: URL; token: string }) => Eff<OttoApiKeyInfo[], CliError>;
   readonly createDataAPIKeyWithCredentials: (options: {
     url: URL;
     filename: string;
     username: string;
     password: string;
-  }) => Promise<{ apiKey: string }>;
+  }) => Eff<{ apiKey: string }, CliError>;
   readonly deployDemoFile: (options: {
     url: URL;
     token: string;
     operation: "install" | "replace";
-  }) => Promise<{ apiKey: string; filename: string }>;
-  readonly listLayouts: (options: { dataApiKey: string; fmFile: string; server: string }) => Promise<string[]>;
+  }) => Eff<{ apiKey: string; filename: string }, CliError>;
+  readonly listLayouts: (options: { dataApiKey: string; fmFile: string; server: string }) => Eff<string[], CliError>;
   readonly createFileMakerBootstrapArtifacts: (
     settings: ProofKitSettings,
     inputs: FileMakerInputs,
     appType: AppType,
-  ) => Promise<FileMakerBootstrapArtifacts>;
+  ) => Eff<FileMakerBootstrapArtifacts, CliError>;
   readonly bootstrap: (
     projectDir: string,
     settings: ProofKitSettings,
     inputs: FileMakerInputs,
     appType: AppType,
-  ) => Promise<ProofKitSettings>;
+  ) => Eff<ProofKitSettings, CliError>;
 }
 
 export const FileMakerService = Context.GenericTag<FileMakerService>("@proofkit/cli/FileMakerService");
 
 export interface CodegenService {
-  readonly runInitial: (projectDir: string, packageManager: PackageManager) => Promise<void>;
+  readonly runInitial: (projectDir: string, packageManager: PackageManager) => Eff<void, CliError>;
 }
 
 export const CodegenService = Context.GenericTag<CodegenService>("@proofkit/cli/CodegenService");

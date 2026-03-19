@@ -1,12 +1,27 @@
 import os from "node:os";
 import path from "node:path";
-import { Effect } from "effect";
+import type { Effect as Fx } from "effect";
+import { Cause, Effect, Exit } from "effect";
+import { getOrUndefined } from "effect/Option";
 import fs from "fs-extra";
 import { describe, expect, it } from "vitest";
+import { DirectoryConflictError, ExternalCommandError, UserCancelledError } from "~/core/errors.js";
 import { executeInitPlan } from "~/core/executeInitPlan.js";
 import { planInit } from "~/core/planInit.js";
 import { getSharedTemplateDir, makeInitRequest, readScaffoldArtifacts } from "./init-fixtures.js";
 import { makeTestLayer } from "./test-layer.js";
+
+async function getFailure<A, E>(effect: Fx.Effect<A, E, never>) {
+  const exit = await Effect.runPromiseExit(effect);
+  if (!Exit.isFailure(exit)) {
+    throw new Error("Expected effect to fail.");
+  }
+  const failure = getOrUndefined(Cause.failureOption(exit.cause));
+  if (!failure) {
+    throw new Error("Expected failure cause.");
+  }
+  return failure;
+}
 
 describe("executeInitPlan command paths", () => {
   it("runs install, git, codegen, and filemaker bootstrap through services", async () => {
@@ -194,5 +209,201 @@ describe("executeInitPlan command paths", () => {
     const { typegenConfig } = await readScaffoldArtifacts(path.join(cwd, "single-local-mcp-app"));
     expect(typegenConfig).toContain('"baseUrl": "http://127.0.0.1:1365"');
     expect(typegenConfig).toContain('"connectedFileName": "OnlyOpen.fmp12"');
+  });
+
+  it("fails with a typed directory conflict in non-interactive mode", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-conflict-"));
+    const projectDir = path.join(cwd, "conflict-app");
+    await fs.ensureDir(projectDir);
+    await fs.writeFile(path.join(projectDir, "README.md"), "existing");
+
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "conflict-app",
+        scopedAppName: "conflict-app",
+        appDir: "conflict-app",
+        appType: "browser",
+        ui: "shadcn",
+        dataSource: "none",
+        packageManager: "pnpm",
+        noInstall: true,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: true,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: false,
+      }),
+      {
+        templateDir: getSharedTemplateDir("nextjs-shadcn"),
+      },
+    );
+
+    expect(await getFailure(executeInitPlan(plan).pipe(makeTestLayer({ cwd, packageManager: "pnpm" })))).toMatchObject(
+      new DirectoryConflictError({
+        message:
+          "conflict-app already exists and isn't empty. Remove the existing files or choose a different directory.",
+        path: projectDir,
+      }),
+    );
+  });
+
+  it("fails with a typed cancelation error when overwrite is aborted", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-abort-"));
+    const projectDir = path.join(cwd, "abort-app");
+    await fs.ensureDir(projectDir);
+    await fs.writeFile(path.join(projectDir, "README.md"), "existing");
+
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "abort-app",
+        scopedAppName: "abort-app",
+        appDir: "abort-app",
+        appType: "browser",
+        ui: "shadcn",
+        dataSource: "none",
+        packageManager: "pnpm",
+        noInstall: true,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: false,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: false,
+      }),
+      {
+        templateDir: getSharedTemplateDir("nextjs-shadcn"),
+      },
+    );
+
+    expect(
+      await getFailure(
+        executeInitPlan(plan).pipe(
+          makeTestLayer({
+            cwd,
+            packageManager: "pnpm",
+            nonInteractive: false,
+            prompts: {
+              select: ["abort"],
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject(
+      new UserCancelledError({
+        message: "User aborted the operation",
+      }),
+    );
+  });
+
+  it("fails with a typed external command error when install fails", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-install-fail-"));
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "install-fail",
+        scopedAppName: "install-fail",
+        appDir: "install-fail",
+        appType: "browser",
+        ui: "shadcn",
+        dataSource: "none",
+        packageManager: "pnpm",
+        noInstall: false,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: true,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: false,
+      }),
+      {
+        templateDir: getSharedTemplateDir("nextjs-shadcn"),
+      },
+    );
+
+    expect(
+      await getFailure(
+        executeInitPlan(plan).pipe(
+          makeTestLayer({
+            cwd,
+            packageManager: "pnpm",
+            failures: {
+              processRun: new ExternalCommandError({
+                message: "install failed",
+                command: "pnpm",
+                args: ["install"],
+                cwd,
+              }),
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject(
+      new ExternalCommandError({
+        message: "install failed",
+        command: "pnpm",
+        args: ["install"],
+        cwd,
+      }),
+    );
+  });
+
+  it("fails with a typed codegen error when initial codegen fails", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-codegen-fail-"));
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "codegen-fail",
+        scopedAppName: "codegen-fail",
+        appDir: "codegen-fail",
+        appType: "browser",
+        ui: "shadcn",
+        dataSource: "none",
+        packageManager: "pnpm",
+        noInstall: true,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: true,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: false,
+      }),
+      {
+        templateDir: getSharedTemplateDir("nextjs-shadcn"),
+      },
+    );
+    plan.tasks.runInitialCodegen = true;
+
+    expect(
+      await getFailure(
+        executeInitPlan(plan).pipe(
+          makeTestLayer({
+            cwd,
+            packageManager: "pnpm",
+            failures: {
+              codegenRun: new ExternalCommandError({
+                message: "Initial codegen failed",
+                command: "pnpm",
+                args: ["typegen"],
+                cwd: path.join(cwd, "codegen-fail"),
+              }),
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject(
+      new ExternalCommandError({
+        message: "Initial codegen failed",
+        command: "pnpm",
+        args: ["typegen"],
+        cwd: path.join(cwd, "codegen-fail"),
+      }),
+    );
   });
 });

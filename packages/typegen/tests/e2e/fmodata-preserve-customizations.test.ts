@@ -339,11 +339,11 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
           `import { DateTime } from "luxon";`,
           "",
           `const STATUS_LABELS = new Map([["open", "Open"]]);`,
-          `function getGeneratedAt() {`,
-          `  return DateTime.utc().toISO();`,
-          `}`,
+          "function getGeneratedAt() {",
+          "  return DateTime.utc().toISO();",
+          "}",
           "",
-          `export const generatedAt = getGeneratedAt();`,
+          "export const generatedAt = getGeneratedAt();",
           "",
           `export const Project = fmTableOccurrence("Project", {`,
           `  status: textField().entityId("F1"),`,
@@ -365,9 +365,9 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
       const regenerated = await fs.readFile(existingFilePath, "utf8");
       expect(regenerated).toContain(`import { DateTime } from "luxon";`);
       expect(regenerated).toContain(`const STATUS_LABELS = new Map([["open", "Open"]]);`);
-      expect(regenerated).toContain(`function getGeneratedAt()`);
-      expect(regenerated).toContain(`return DateTime.utc().toISO();`);
-      expect(regenerated).toContain(`export const generatedAt = getGeneratedAt();`);
+      expect(regenerated).toContain("function getGeneratedAt()");
+      expect(regenerated).toContain("return DateTime.utc().toISO();");
+      expect(regenerated).toContain("export const generatedAt = getGeneratedAt();");
       expect(regenerated).toContain(`status: textField().entityId("F1")`);
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });

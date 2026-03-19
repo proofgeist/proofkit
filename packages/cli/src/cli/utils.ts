@@ -5,6 +5,7 @@ import z, { ZodError } from "zod/v4";
 
 import { cancel, isCancel } from "~/cli/prompts.js";
 import { npmName } from "~/consts.js";
+import { UserCancelledError } from "~/core/errors.js";
 import { getSettings } from "~/utils/parseSettings.js";
 
 /**
@@ -37,13 +38,12 @@ Please run " ${npmName} init" first, or try this command again when inside a Pro
   }
 };
 
-export class UserAbortedError extends Error {}
 export function abortIfCancel(value: symbol | string): string;
 export function abortIfCancel<T extends boolean>(value: symbol | T): T;
 export function abortIfCancel<T extends string | boolean>(value: T | symbol): T {
   if (isCancel(value)) {
     cancel();
-    throw new UserAbortedError();
+    throw new UserCancelledError({ message: "User aborted the operation" });
   }
   return value;
 }

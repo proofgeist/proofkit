@@ -30,7 +30,7 @@ const formatCommand = (command: string) => chalk.cyan(command);
 const formatHeading = (heading: string) => chalk.bold(heading);
 const formatPath = (value: string) => chalk.yellow(value);
 
-function renderNextSteps(plan: InitPlan) {
+function renderNextSteps(plan: InitPlan, additionalSteps: string[] = []) {
   const lines = [
     `${formatHeading("Project root:")} ${formatCommand(`cd ${formatPath(plan.request.appDir)}`)}`,
     "",
@@ -56,6 +56,10 @@ function renderNextSteps(plan: InitPlan) {
       `  ${formatCommand(`${plan.packageManagerCommand} typegen`)}`,
       `  ${formatCommand(`${plan.packageManagerCommand} launch-fm`)}`,
     );
+
+    if (additionalSteps.length > 0) {
+      lines.push(...additionalSteps.map((step) => `  ${formatCommand(step)}`));
+    }
   }
 
   lines.push(
@@ -145,6 +149,7 @@ export const prepareDirectory = (plan: InitPlan) =>
 
 export const executeInitPlan = (plan: InitPlan) =>
   Effect.gen(function* () {
+    const cliContext = yield* CliContext;
     const fs = yield* FileSystemService;
     const consoleService = yield* ConsoleService;
     const settingsService = yield* SettingsService;
@@ -153,6 +158,7 @@ export const executeInitPlan = (plan: InitPlan) =>
     const gitService = yield* GitService;
     const codegenService = yield* CodegenService;
     const packageManagerService = yield* PackageManagerService;
+    const additionalNextSteps: string[] = [];
 
     yield* prepareDirectory(plan);
 
@@ -212,16 +218,27 @@ export const executeInitPlan = (plan: InitPlan) =>
       yield* Effect.promise(() => settingsService.writeSettings(plan.targetDir, nextSettings));
     }
 
-    if (plan.tasks.installFmAddon) {
+    if (plan.tasks.checkWebViewerAddon) {
       yield* Effect.promise(async () => {
         try {
-          const { installFmAddon } = await import("~/installers/install-fm-addon.js");
-          await installFmAddon({ addonName: "wv" });
+          const { checkForWebViewerLayouts, getWebViewerAddonMessages } = await import(
+            "~/installers/proofkit-webviewer.js"
+          );
+          const status = await checkForWebViewerLayouts(plan.targetDir);
+          const messages = getWebViewerAddonMessages(status);
+
+          for (const message of messages.warn) {
+            consoleService.warn(message);
+          }
+          for (const message of messages.info) {
+            consoleService.info(message);
+          }
+          if (cliContext.nonInteractive) {
+            additionalNextSteps.push(...messages.nextSteps);
+          }
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : String(error);
-          consoleService.warn(
-            `Could not auto-install the ProofKit WebViewer add-on (${message}). Please install it manually in FileMaker from Extensions/AddonModules.`,
-          );
+          consoleService.warn(`Could not inspect the ProofKit WebViewer add-on (${message}).`);
         }
       });
     }
@@ -258,6 +275,6 @@ export const executeInitPlan = (plan: InitPlan) =>
       }`,
     );
     consoleService.info(chalk.bold("Next steps:"));
-    consoleService.info(renderNextSteps(plan));
+    consoleService.info(renderNextSteps(plan, Array.from(new Set(additionalNextSteps))));
     return plan;
   });

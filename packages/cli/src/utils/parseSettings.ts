@@ -88,13 +88,7 @@ export const defaultSettings = settingsSchema.parse({
 });
 
 let settings: Settings | undefined;
-export const getSettings = () => {
-  if (settings) {
-    return settings;
-  }
-
-  const settingsPath = path.join(state.projectDir, "proofkit.json");
-
+function parseSettingsFile(settingsPath: string) {
   // Check if the settings file exists before trying to read it
   if (!fs.existsSync(settingsPath)) {
     throw new Error(`ProofKit settings file not found at: ${settingsPath}`);
@@ -107,10 +101,25 @@ export const getSettings = () => {
   }
 
   const parsed = settingsSchema.parse(settingsFile);
+  return parsed;
+}
+
+export const getSettings = () => {
+  if (settings) {
+    return settings;
+  }
+
+  const settingsPath = path.join(state.projectDir, "proofkit.json");
+  const parsed = parseSettingsFile(settingsPath);
 
   state.appType = parsed.appType;
+  settings = parsed;
   return parsed;
 };
+
+export function readSettings(projectDir = state.projectDir) {
+  return parseSettingsFile(path.join(projectDir, "proofkit.json"));
+}
 
 export type Settings = z.infer<typeof settingsSchema>;
 

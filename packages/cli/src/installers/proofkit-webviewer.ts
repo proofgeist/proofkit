@@ -3,14 +3,18 @@ import type { OttoAPIKey } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import { getLayouts } from "~/cli/fmdapi.js";
-import * as p from "~/cli/prompts.js";
-import { abortIfCancel, UserAbortedError } from "~/cli/utils.js";
 import { state } from "~/state.js";
-import { getSettings } from "~/utils/parseSettings.js";
-import { installFmAddon } from "./install-fm-addon.js";
+import { readSettings } from "~/utils/parseSettings.js";
+import { type FmAddonInspection, getFmAddonInstallInstructions, inspectFmAddon } from "./install-fm-addon.js";
 
-export async function checkForWebViewerLayouts(): Promise<boolean> {
-  const settings = getSettings();
+export interface WebViewerAddonStatus {
+  hasRequiredLayouts?: boolean;
+  inspection: FmAddonInspection;
+}
+
+export async function checkForWebViewerLayouts(projectDir = state.projectDir): Promise<WebViewerAddonStatus> {
+  const settings = readSettings(projectDir);
+  const inspection = await inspectFmAddon({ addonName: "wv" });
 
   const dataSource = settings.dataSources
     .filter((s: { type: string }) => s.type === "fm")
@@ -23,11 +27,11 @@ export async function checkForWebViewerLayouts(): Promise<boolean> {
     | undefined;
 
   if (!dataSource) {
-    return false;
+    return { inspection };
   }
   if (settings.envFile) {
     dotenv.config({
-      path: path.join(state.projectDir, settings.envFile),
+      path: path.join(projectDir, settings.envFile),
     });
   }
   const dataApiKey = process.env[dataSource.envNames.apiKey] as OttoAPIKey | undefined;
@@ -35,7 +39,7 @@ export async function checkForWebViewerLayouts(): Promise<boolean> {
   const server = process.env[dataSource.envNames.server];
 
   if (!(dataApiKey && fmFile && server)) {
-    return false;
+    return { inspection };
   }
 
   const existingLayouts = await getLayouts({
@@ -49,34 +53,81 @@ export async function checkForWebViewerLayouts(): Promise<boolean> {
     existingLayouts.some((l: string) => l === layout),
   );
 
-  if (allWebViewerLayoutsExist) {
-    console.log(
-      chalk.green("Successfully detected all required layouts for ProofKit WebViewer in your FileMaker file."),
-    );
-    return true;
+  return {
+    hasRequiredLayouts: allWebViewerLayoutsExist,
+    inspection,
+  };
+}
+
+export function getWebViewerAddonMessages({ hasRequiredLayouts, inspection }: WebViewerAddonStatus): {
+  info: string[];
+  warn: string[];
+  nextSteps: string[];
+} {
+  const messages = {
+    info: [] as string[],
+    warn: [] as string[],
+    nextSteps: [] as string[],
+  };
+
+  if (hasRequiredLayouts) {
+    messages.info.push("Successfully detected all required layouts for ProofKit WebViewer in your FileMaker file.");
   }
 
-  await installFmAddon({ addonName: "wv" });
+  if (inspection.status === "installed-outdated") {
+    const versionSuffix =
+      inspection.installedVersion && inspection.bundledVersion
+        ? ` Local version: ${inspection.installedVersion}. Bundled version: ${inspection.bundledVersion}.`
+        : "";
+    messages.warn.push(
+      `New ProofKit WebViewer add-on available. Run \`${inspection.installCommand}\` to update the local add-on files.${versionSuffix}`,
+    );
+    messages.nextSteps.push(inspection.installCommand);
+  }
 
-  return false;
+  if (inspection.status === "unknown" && inspection.reason === "unsupported-platform") {
+    messages.warn.push("Could not inspect the local ProofKit WebViewer add-on on this platform.");
+  }
+
+  if (hasRequiredLayouts === false) {
+    const instructions = getFmAddonInstallInstructions("wv");
+    messages.warn.push(
+      "ProofKit WebViewer layouts were not detected in your FileMaker file. The add-on may not be installed in the file yet.",
+    );
+    if (inspection.status === "missing") {
+      messages.warn.push(
+        `Local ProofKit WebViewer add-on files were not found. Run \`${inspection.installCommand}\` before installing the add-on into the FileMaker file.`,
+      );
+      messages.nextSteps.push(inspection.installCommand);
+    }
+    if (inspection.status === "unknown" && inspection.reason !== "unsupported-platform") {
+      messages.warn.push(
+        "Could not determine the local ProofKit WebViewer add-on version. Reinstall it explicitly if you need the latest local files.",
+      );
+      messages.nextSteps.push(inspection.installCommand);
+    }
+    messages.info.push(
+      chalk.bgYellow(" ACTION REQUIRED: ") +
+        ` Install or update the ProofKit WebViewer add-on in your FileMaker file. ${chalk.dim(`(Learn more: ${instructions.docsUrl})`)}`,
+    );
+    for (const step of instructions.steps) {
+      messages.info.push(step);
+    }
+  }
+
+  return messages;
 }
 
 export async function ensureWebViewerAddonInstalled() {
-  let hasWebViewerLayouts = false;
-  while (!hasWebViewerLayouts) {
-    hasWebViewerLayouts = await checkForWebViewerLayouts();
+  const status = await checkForWebViewerLayouts();
+  const messages = getWebViewerAddonMessages(status);
 
-    if (!hasWebViewerLayouts) {
-      const shouldContinue = abortIfCancel<boolean>(
-        await p.confirm({
-          message: "I have followed the above instructions, continue installing",
-          initialValue: true,
-        }),
-      );
-
-      if (!shouldContinue) {
-        throw new UserAbortedError();
-      }
-    }
+  for (const message of messages.warn) {
+    console.log(chalk.yellow(message));
   }
+  for (const message of messages.info) {
+    console.log(message);
+  }
+
+  return status;
 }

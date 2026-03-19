@@ -10,6 +10,7 @@ import { getSettings, type Settings } from "~/utils/parseSettings.js";
 import { runAddReactEmailCommand } from "../react-email.js";
 import { runAddTanstackQueryCommand } from "../tanstack-query.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
+import { makeAddAddonCommand, runAddAddonAction } from "./addon.js";
 import { makeAddAuthCommand, runAddAuthAction } from "./auth.js";
 import { makeAddDataSourceCommand, runAddDataSourceCommand } from "./data-source/index.js";
 import { makeAddSchemaCommand, runAddSchemaAction } from "./fmschema.js";
@@ -98,7 +99,10 @@ const runAddFromRegistry = async (_options?: { noInstall?: boolean }) => {
   }
 };
 
-export const runAdd = async (name: string | undefined, options?: { noInstall?: boolean }) => {
+export const runAdd = async (name: string | undefined, options?: { noInstall?: boolean; target?: string }) => {
+  if (name === "addon") {
+    return await runAddAddonAction(options?.target);
+  }
   if (name === "tanstack-query") {
     return await runAddTanstackQueryCommand();
   }
@@ -182,6 +186,7 @@ export const makeAddCommand = () => {
   });
 
   addCommand.addCommand(makeAddAuthCommand());
+  addCommand.addCommand(makeAddAddonCommand());
   addCommand.addCommand(makeAddPageCommand());
   addCommand.addCommand(makeAddSchemaCommand());
   addCommand.addCommand(makeAddDataSourceCommand());

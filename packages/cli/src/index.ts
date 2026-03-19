@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { optional as optionalArg, text as textArg, withDescription as withArgDescription } from "@effect/cli/Args";
@@ -359,7 +359,21 @@ export const cli = run(rootCommand, {
   version: getCliVersion(),
 });
 
-const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+function isMainEntrypoint(argvPath: string | undefined, moduleUrl: string) {
+  if (!argvPath) {
+    return false;
+  }
+
+  const resolvedModulePath = fileURLToPath(moduleUrl);
+
+  try {
+    return realpathSync(argvPath) === realpathSync(resolvedModulePath);
+  } catch {
+    return path.resolve(argvPath) === path.resolve(resolvedModulePath);
+  }
+}
+
+const isMainModule = isMainEntrypoint(process.argv[1], import.meta.url);
 
 const debugFlagNames = new Set(["--debug"]);
 

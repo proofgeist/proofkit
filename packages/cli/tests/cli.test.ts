@@ -58,6 +58,23 @@ describe("proofkit CLI", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain("proofkit init <name> --non-interactive");
   });
 
+  it("runs when invoked through a symlinked bin path", async () => {
+    const shimDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-shim-"));
+    const shimPath = path.join(shimDir, "proofkit");
+    await fs.symlink(distEntry, shimPath);
+
+    const result = spawnSync("node", [shimPath, "init", "--help"], {
+      cwd: packageDir,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("ProofKit");
+    expect(result.stdout).toContain("Create a new project with ProofKit");
+    expect(result.stdout).toContain("--app-type");
+  });
+
   it("shows a clean invalid subcommand error by default", () => {
     const result = spawnSync("node", [distEntry, "my-proofkit-app", "--force"], {
       cwd: packageDir,

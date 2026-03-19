@@ -1,12 +1,11 @@
 import os from "node:os";
 import path from "node:path";
-import type { Effect as Fx } from "effect";
-import { Cause, Effect, Exit } from "effect";
-import { getOrUndefined } from "effect/Option";
+import { Effect } from "effect";
 import fs from "fs-extra";
 import { describe, expect, it } from "vitest";
 import { NonInteractiveInputError } from "~/core/errors.js";
 import { runDefaultCommand } from "~/index.js";
+import { getFailure } from "./effect-test-utils.js";
 import { makeTestLayer } from "./test-layer.js";
 
 function createConsoleTranscript() {
@@ -17,18 +16,6 @@ function createConsoleTranscript() {
     success: [] as string[],
     note: [] as Array<{ message: string; title?: string }>,
   };
-}
-
-async function getFailure<A, E>(effect: Fx.Effect<A, E, never>) {
-  const exit = await Effect.runPromiseExit(effect);
-  if (!Exit.isFailure(exit)) {
-    throw new Error("Expected effect to fail.");
-  }
-  const failure = getOrUndefined(Cause.failureOption(exit.cause));
-  if (!failure) {
-    throw new Error("Expected failure cause.");
-  }
-  return failure;
 }
 
 describe("default command routing", () => {

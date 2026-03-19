@@ -57,14 +57,18 @@ function promptEffect<A>(message: string, run: () => Promise<A>) {
         ? cause
         : new CliValidationError({
             message,
+            cause,
           }),
   });
 }
 
-const missingHostedFileMakerInputsMessage =
-  "Missing required hosted FileMaker inputs in non-interactive mode: --server, --file-name, and --data-api-key.";
-const missingHostedFileAndKeyMessage =
-  "Missing required FileMaker inputs in non-interactive mode: --file-name, --data-api-key.";
+function getMissingFlags(values: [flag: string, value: unknown][]) {
+  return values.filter(([, value]) => !value).map(([flag]) => flag);
+}
+
+function createMissingInputsMessage(scope: string, flags: string[]) {
+  return `Missing required ${scope} inputs in non-interactive mode: ${flags.join(", ")}.`;
+}
 
 function resolveHostedFileMakerInputs({
   prompt,
@@ -83,7 +87,14 @@ function resolveHostedFileMakerInputs({
     if (!flags.server && nonInteractive) {
       return yield* Effect.fail(
         new NonInteractiveInputError({
-          message: missingHostedFileMakerInputsMessage,
+          message: createMissingInputsMessage(
+            "hosted FileMaker",
+            getMissingFlags([
+              ["--server", flags.server],
+              ["--file-name", flags.fileName],
+              ["--data-api-key", flags.dataApiKey],
+            ]),
+          ),
         }),
       );
     }
@@ -141,7 +152,13 @@ function resolveHostedFileMakerInputs({
       if (nonInteractive) {
         return yield* Effect.fail(
           new NonInteractiveInputError({
-            message: missingHostedFileAndKeyMessage,
+            message: createMissingInputsMessage(
+              "FileMaker",
+              getMissingFlags([
+                ["--file-name", selectedFile],
+                ["--data-api-key", dataApiKey],
+              ]),
+            ),
           }),
         );
       }
@@ -213,7 +230,7 @@ function resolveHostedFileMakerInputs({
     if (!dataApiKey && nonInteractive) {
       return yield* Effect.fail(
         new NonInteractiveInputError({
-          message: "Missing required FileMaker inputs in non-interactive mode: --data-api-key.",
+          message: createMissingInputsMessage("FileMaker", getMissingFlags([["--data-api-key", dataApiKey]])),
         }),
       );
     }
@@ -583,8 +600,8 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
 
     let appType: AppType = flags.appType ?? "browser";
     if (!(flags.appType || nonInteractive)) {
-      appType = (yield* promptEffect("Unable to choose app type.", () =>
-        prompt.select({
+      appType = yield* promptEffect("Unable to choose app type.", () =>
+        prompt.select<AppType>({
           message: "What kind of app do you want to build?",
           options: [
             {
@@ -599,7 +616,7 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
             },
           ],
         }),
-      )) as AppType;
+      );
     }
 
     const hasExplicitFileMakerInputs = Boolean(
@@ -614,8 +631,8 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
     }
 
     if (!(nonInteractive || flags.dataSource) && appType !== "webviewer") {
-      dataSource = (yield* promptEffect("Unable to choose data source setup.", () =>
-        prompt.select({
+      dataSource = yield* promptEffect("Unable to choose data source setup.", () =>
+        prompt.select<DataSourceType>({
           message: "Do you want to connect to a FileMaker Database now?",
           options: [
             {
@@ -630,7 +647,7 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
             },
           ],
         }),
-      )) as DataSourceType;
+      );
     }
 
     if (nonInteractive && !flags.dataSource && hasExplicitFileMakerInputs) {

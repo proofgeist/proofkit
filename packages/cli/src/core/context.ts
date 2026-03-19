@@ -109,10 +109,6 @@ export const GitService = Context.GenericTag<GitService>("@proofkit/cli/GitServi
 export interface SettingsService {
   readonly writeSettings: (projectDir: string, settings: ProofKitSettings) => Eff<void, CliError>;
   readonly appendEnvVars: (projectDir: string, vars: Record<string, string>) => Eff<void, CliError>;
-  readonly ensureTypegenConfig: (
-    projectDir: string,
-    options: { appType: AppType; fileMaker?: FileMakerInputs },
-  ) => Eff<void, CliError>;
 }
 
 export const SettingsService = Context.GenericTag<SettingsService>("@proofkit/cli/SettingsService");

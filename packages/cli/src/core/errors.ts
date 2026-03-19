@@ -2,6 +2,7 @@ import { Data } from "effect";
 
 export class CliValidationError extends Data.TaggedError("CliValidationError")<{
   readonly message: string;
+  readonly cause?: unknown;
 }> {}
 
 export class UserCancelledError extends Data.TaggedError("UserCancelledError")<{
@@ -69,6 +70,8 @@ export function isCliError(error: unknown): error is CliError {
     error !== null &&
     "_tag" in error &&
     typeof error._tag === "string" &&
+    "message" in error &&
+    typeof error.message === "string" &&
     cliErrorTags.has(error._tag)
   );
 }

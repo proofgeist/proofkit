@@ -391,44 +391,6 @@ export function makeTestLayer(options: {
               cause,
             }),
         }),
-      ensureTypegenConfig: (projectDir: string, options: { appType: AppType; fileMaker?: FileMakerInputs }) =>
-        Effect.tryPromise({
-          try: async () => {
-            const typegenPath = path.join(projectDir, "proofkit-typegen.config.jsonc");
-            if (!(await fs.pathExists(typegenPath))) {
-              await fs.writeFile(typegenPath, `${JSON.stringify({ config: { layouts: [] } }, null, 2)}\n`, "utf8");
-            }
-            if (options.fileMaker?.layoutName && options.fileMaker?.schemaName) {
-              const parsed = JSON.parse(await fs.readFile(typegenPath, "utf8")) as {
-                config:
-                  | { layouts?: Array<{ layoutName: string; schemaName: string }> }
-                  | Array<{ layouts?: Array<{ layoutName: string; schemaName: string }> }>;
-              };
-              let layouts: Array<{ layoutName: string; schemaName: string }>;
-              if (Array.isArray(parsed.config)) {
-                const firstConfig = parsed.config[0] ?? {};
-                firstConfig.layouts ??= [];
-                parsed.config[0] = firstConfig;
-                layouts = firstConfig.layouts;
-              } else {
-                parsed.config.layouts ??= [];
-                layouts = parsed.config.layouts;
-              }
-              layouts.push({
-                layoutName: options.fileMaker.layoutName,
-                schemaName: options.fileMaker.schemaName,
-              });
-              await fs.writeFile(typegenPath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
-            }
-          },
-          catch: (cause) =>
-            new FileSystemError({
-              message: "Unable to ensure typegen config.",
-              operation: "ensureTypegenConfig",
-              path: path.join(projectDir, "proofkit-typegen.config.jsonc"),
-              cause,
-            }),
-        }),
     }),
     Layer.succeed(FileMakerService, {
       detectLocalFmMcp: () => {
@@ -580,5 +542,5 @@ export function makeTestLayer(options: {
     }),
   );
 
-  return <A, E, R>(effect: Fx.Effect<A, E, R>) => Effect.provide(effect, layer) as Fx.Effect<A, E, never>;
+  return <A, E, R>(effect: Fx.Effect<A, E, R>) => Effect.provide(effect, layer);
 }

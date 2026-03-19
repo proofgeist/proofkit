@@ -232,10 +232,12 @@ const processService = {
 
 const gitService = {
   initialize: (projectDir: string) =>
-    withCommandError("git", ["init"], projectDir, async () => {
-      await execa("git", ["init"], { cwd: projectDir });
-      await execa("git", ["add", "."], { cwd: projectDir });
-      await execa("git", ["commit", "-m", "Initial commit"], { cwd: projectDir });
+    Effect.gen(function* () {
+      yield* withCommandError("git", ["init"], projectDir, () => execa("git", ["init"], { cwd: projectDir }));
+      yield* withCommandError("git", ["add", "."], projectDir, () => execa("git", ["add", "."], { cwd: projectDir }));
+      yield* withCommandError("git", ["commit", "-m", "Initial commit"], projectDir, () =>
+        execa("git", ["commit", "-m", "Initial commit"], { cwd: projectDir }),
+      );
     }),
 };
 
@@ -254,8 +256,6 @@ const settingsService = {
       const nextContent = [existing.trimEnd(), additions].filter(Boolean).join("\n").concat("\n");
       await fs.writeFile(envPath, nextContent, "utf8");
     }),
-  ensureTypegenConfig: (_projectDir: string, _options: { appType: AppType; fileMaker?: FileMakerInputs }) =>
-    Effect.void,
 };
 
 function createDataSourceEntry(dataSourceName: string) {
@@ -451,7 +451,7 @@ const fileMakerService = {
           },
         ),
       );
-      const databases = (response.data?.response?.databases ?? []) as Record<string, unknown>[];
+      const databases = Array.isArray(response.data?.response?.databases) ? response.data.response.databases : [];
       return databases
         .filter((database): database is { filename: string; status?: string } => typeof database.filename === "string")
         .map(
@@ -471,7 +471,7 @@ const fileMakerService = {
           },
         }),
       );
-      const apiKeys = (response.data?.response?.["api-keys"] ?? []) as Record<string, unknown>[];
+      const apiKeys = Array.isArray(response.data?.response?.["api-keys"]) ? response.data.response["api-keys"] : [];
       return apiKeys
         .filter(
           (apiKey): apiKey is { key: string; user: string; database: string; label: string } =>
@@ -651,7 +651,8 @@ const fileMakerService = {
           },
         ),
       );
-      return transformLayoutList(response.data?.response?.layouts ?? []);
+      const layouts = Array.isArray(response.data?.response?.layouts) ? response.data.response.layouts : [];
+      return transformLayoutList(layouts);
     }),
   createFileMakerBootstrapArtifacts: (settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) =>
     withFileMakerSetupError("Unable to prepare FileMaker bootstrap artifacts.", () =>
@@ -745,5 +746,5 @@ export function makeLiveLayer(options: { cwd: string; debug: boolean; nonInterac
     Layer.succeed(CodegenService, codegenService),
   );
 
-  return <A, E, R>(effect: Fx.Effect<A, E, R>) => Effect.provide(effect, layer) as Fx.Effect<A, E, never>;
+  return <A, E, R>(effect: Fx.Effect<A, E, R>) => Effect.provide(effect, layer);
 }

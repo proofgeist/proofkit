@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Chalk } from "chalk";
-import { Effect } from "effect";
-import fsExtra from "fs-extra";
+import { Cause, Effect, Exit } from "effect";
+import { getOrUndefined } from "effect/Option";
 import sortPackageJson from "sort-package-json";
 
 import { AGENT_INSTRUCTIONS } from "~/consts.js";
@@ -184,10 +184,23 @@ export const executeInitPlan = (plan: InitPlan) =>
     const codegenService = yield* CodegenService;
     const packageManagerService = yield* PackageManagerService;
     const additionalNextSteps: string[] = [];
+    const runFileSystemPromise = async <A>(effect: Effect.Effect<A, unknown>) => {
+      const exit = await Effect.runPromiseExit(effect);
+      if (Exit.isSuccess(exit)) {
+        return exit.value;
+      }
+
+      const failure = getOrUndefined(Cause.failureOption(exit.cause));
+      if (failure && typeof failure === "object" && failure !== null && "cause" in failure) {
+        throw failure.cause;
+      }
+
+      throw failure ?? Cause.squash(exit.cause);
+    };
     const projectFilesFs = {
-      readdir: (targetPath: string) => fsExtra.readdir(targetPath),
-      readFile: (targetPath: string) => fsExtra.readFile(targetPath, "utf8"),
-      writeFile: (targetPath: string, content: string) => fsExtra.writeFile(targetPath, content, "utf8"),
+      readdir: (targetPath: string) => runFileSystemPromise(fs.readdir(targetPath)),
+      readFile: (targetPath: string) => runFileSystemPromise(fs.readFile(targetPath)),
+      writeFile: (targetPath: string, content: string) => runFileSystemPromise(fs.writeFile(targetPath, content)),
     };
 
     yield* prepareDirectory(plan);

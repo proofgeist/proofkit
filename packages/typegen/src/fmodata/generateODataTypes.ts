@@ -447,6 +447,7 @@ interface ParsedTableOccurrence {
   fieldsByEntityId: Map<string, ParsedField>; // keyed by entity ID
   existingImports: string[]; // All existing import statements as strings
   importAliases: Map<string, string>; // Map base name -> alias (e.g., "textField" -> "tf")
+  preservedTopLevelStatements: string[];
 }
 
 /**
@@ -776,6 +777,42 @@ function parseExistingTableFile(sourceFile: SourceFile): ParsedTableOccurrence |
     }
   }
 
+  const preservedTopLevelStatements: string[] = [];
+  for (const statement of sourceFile.getStatements()) {
+    if (statement.getKindName() === "ImportDeclaration") {
+      continue;
+    }
+
+    if (statement.getKindName() === "VariableStatement") {
+      const variableStatement = statement as unknown as {
+        getDeclarations(): Array<{ getName(): string }>;
+      };
+      const containsGeneratedTable = variableStatement
+        .getDeclarations()
+        .some((declaration) => declaration.getName() === varName);
+      if (containsGeneratedTable) {
+        continue;
+      }
+    }
+
+    if (statement.getKindName() === "ExportDeclaration") {
+      const exportDeclaration = statement as unknown as {
+        getNamedExports(): Array<{ getName(): string }>;
+      };
+      const exportsGeneratedTable = exportDeclaration
+        .getNamedExports()
+        .some((namedExport) => namedExport.getName() === varName);
+      if (exportsGeneratedTable) {
+        continue;
+      }
+    }
+
+    const statementText = statement.getFullText().trim();
+    if (statementText) {
+      preservedTopLevelStatements.push(statementText);
+    }
+  }
+
   // Parse each field
   const fields = new Map<string, ParsedField>();
   const fieldsByEntityId = new Map<string, ParsedField>();
@@ -827,6 +864,7 @@ function parseExistingTableFile(sourceFile: SourceFile): ParsedTableOccurrence |
     fieldsByEntityId,
     existingImports,
     importAliases,
+    preservedTopLevelStatements,
   };
 }
 
@@ -1499,6 +1537,10 @@ export async function generateODataTypes(
 
     // Build file content with removed fields commented out
     let fileContent = `${finalImports}\n`;
+
+    if (existingFields?.preservedTopLevelStatements.length) {
+      fileContent += `${existingFields.preservedTopLevelStatements.join("\n\n")}\n\n`;
+    }
 
     if (removedFields.length > 0) {
       fileContent += "// ============================================================================\n";

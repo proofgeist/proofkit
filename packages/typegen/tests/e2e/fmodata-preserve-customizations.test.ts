@@ -271,6 +271,54 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
     }
   });
 
+  it("preserves top-level validator helpers referenced by field chains", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
+
+    try {
+      const entitySetName = "User";
+      const entityTypeName = "NS.User";
+      const metadata = makeMetadata({
+        entitySetName,
+        entityTypeName,
+        fields: [{ name: "contact_json", type: "Edm.String", fieldId: "F1" }],
+      });
+
+      const existingFilePath = path.join(tmpDir, "User.ts");
+      await fs.writeFile(
+        existingFilePath,
+        [
+          `import { fmTableOccurrence, textField } from "@proofkit/fmodata";`,
+          `import { z } from "zod/v4";`,
+          "",
+          "const ZContactJson = z.union([z.string(), z.null(), z.undefined()]).transform((s) => s);",
+          "",
+          `export const User = fmTableOccurrence("User", {`,
+          `  contact_json: textField().entityId("F1").readValidator(ZContactJson),`,
+          "}, {",
+          `  entityId: "T1",`,
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      await generateODataTypes(metadata, {
+        type: "fmodata",
+        path: tmpDir,
+        clearOldFiles: false,
+        tables: [{ tableName: "User" }],
+      });
+
+      const regenerated = await fs.readFile(existingFilePath, "utf8");
+      expect(regenerated).toContain("const ZContactJson = z");
+      expect(regenerated).toContain(".union([z.string(), z.null(), z.undefined()])");
+      expect(regenerated).toContain(".transform((s) => s);");
+      expect(regenerated).toContain(`contact_json: textField().entityId("F1").readValidator(ZContactJson)`);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("preserves custom validators and removes stale files when clearOldFiles is true", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
 

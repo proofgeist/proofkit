@@ -73,13 +73,13 @@ export function FieldsDataGrid({ table, isLoading, isError, error, open }: Field
       table={table}
       tableLayout={{ width: "auto", headerSticky: true }}
     >
-      <DataGridContainer border={true} className="h-full">
+      <DataGridContainer border={true}>
         <div
           className="overflow-auto"
           ref={tableContainerRef}
           style={{
             contain: "strict",
-            height: "100%",
+            height: "calc(90vh - 280px)", // Adjust based on dialog header and search input height
           }}
         >
           <table className="w-full border-separate border-spacing-0">

@@ -48,7 +48,7 @@ export function TableOptionsForm({
   const isDisabled = currentTableIndex < 0 || configType !== "fmodata" || !open;
 
   return (
-    <div className="shrink-0 border-border border-t pt-4">
+    <div className="shrink-0 pt-3">
       <div className="flex gap-4">
         <FormField
           control={control}

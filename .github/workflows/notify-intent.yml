@@ -29,6 +29,9 @@ on:
       - 'packages/webviewer/docs/**'
       - 'packages/webviewer/src/**'
 
+permissions:
+  contents: write
+
 jobs:
   notify:
     name: Trigger Skill Review
@@ -48,7 +51,7 @@ jobs:
       - name: Dispatch to intent repo
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.INTENT_NOTIFY_TOKEN }}
+          token: ${{ github.token }}
           repository: ${{ github.repository }}
           event-type: skill-check
           client-payload: |

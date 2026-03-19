@@ -46,6 +46,19 @@ export const generateTypedClients = async (
 
   const { resetOverrides = false, cwd = process.cwd() } = options ?? {};
 
+  const clientIndexPathsToReset = new Set<string>();
+  for (const singleConfig of configArray) {
+    if (singleConfig?.type !== "fmdapi") {
+      continue;
+    }
+    const rootDir = path.join(cwd, singleConfig.path ?? "schema");
+    clientIndexPathsToReset.add(path.join(rootDir, "client", "index.ts"));
+  }
+
+  for (const clientIndexPath of clientIndexPathsToReset) {
+    fs.rmSync(clientIndexPath, { force: true });
+  }
+
   let totalSuccessCount = 0;
   let totalErrorCount = 0;
   let totalCount = 0;
@@ -252,7 +265,6 @@ const generateTypedClientsSingle = async (
     fs.emptyDirSync(path.join(rootDir, "generated"));
   }
   const clientIndexFilePath = path.join(rootDir, "client", "index.ts");
-  fs.rmSync(clientIndexFilePath, { force: true }); // ensure clean slate for this file
 
   let successCount = 0;
   let errorCount = 0;

@@ -467,6 +467,53 @@ describe("typegen unit tests", () => {
     expect(content).toContain("suffixSchemaLayout");
   });
 
+  it("preserves client index exports across multiple configs targeting the same path", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        LayoutA: mockLayoutMetadata["basic-layout"],
+        LayoutB: mockLayoutMetadata["layout-with-portal"],
+      }),
+    );
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>[] = [
+      {
+        type: "fmdapi",
+        layouts: [
+          {
+            layoutName: "LayoutA",
+            schemaName: "schemaA",
+          },
+        ],
+        path: "unit-typegen-output/multi-config",
+        generateClient: true,
+        clientSuffix: "Layout",
+        clearOldFiles: false,
+      },
+      {
+        type: "fmdapi",
+        layouts: [
+          {
+            layoutName: "LayoutB",
+            schemaName: "schemaB",
+          },
+        ],
+        path: "unit-typegen-output/multi-config",
+        generateClient: true,
+        clientSuffix: "Layout",
+        clearOldFiles: false,
+      },
+    ];
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    const indexPath = path.join(__dirname, "unit-typegen-output/multi-config/client/index.ts");
+    const content = await fs.readFile(indexPath, "utf-8");
+
+    expect(content).toContain('export { client as schemaALayout } from "./schemaA";');
+    expect(content).toContain('export { client as schemaBLayout } from "./schemaB";');
+  });
+
   it("generates client using WebViewerAdapter when fmMcp config is provided", async () => {
     process.env.FM_MCP_BASE_URL = "http://127.0.0.1:1365";
     process.env.FM_CONNECTED_FILE_NAME = "TestFile";

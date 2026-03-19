@@ -295,9 +295,9 @@
 
 <DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.49F40D154C8CDF81080D0BA47B4192FB</StringID>
-	<SourceText>http://fm-http.localhost:1355</SourceText>
-	<TargetText>http://fm-http.localhost:1355</TargetText>
-	<Comment>com.fmi.calculation.text.http://fm-http.localhost:1355</Comment>
+	<SourceText>http://fm-mcp.localhost:1355</SourceText>
+	<TargetText>http://fm-mcp.localhost:1355</TargetText>
+	<Comment>com.fmi.calculation.text.http://fm-mcp.localhost:1355</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>

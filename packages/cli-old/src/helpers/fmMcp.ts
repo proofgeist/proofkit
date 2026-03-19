@@ -1,7 +1,7 @@
 const defaultBaseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365";
 const REQUEST_TIMEOUT_MS = 3000;
 
-export interface FmHttpStatus {
+export interface FmMcpStatus {
   baseUrl: string;
   healthy: boolean;
   connectedFiles: string[];
@@ -30,7 +30,7 @@ async function readJson(url: string): Promise<unknown | null> {
   return await response.json().catch(() => null);
 }
 
-export async function getFmHttpStatus(baseUrl = defaultBaseUrl): Promise<FmHttpStatus> {
+export async function getFmMcpStatus(baseUrl = defaultBaseUrl): Promise<FmMcpStatus> {
   const healthResponse = await fetchWithTimeout(`${baseUrl}/health`);
 
   if (!healthResponse?.ok) {
@@ -51,6 +51,6 @@ export async function getFmHttpStatus(baseUrl = defaultBaseUrl): Promise<FmHttpS
 }
 
 export async function detectConnectedFmFile(baseUrl = defaultBaseUrl): Promise<string | undefined> {
-  const status = await getFmHttpStatus(baseUrl);
+  const status = await getFmMcpStatus(baseUrl);
   return status.connectedFiles[0];
 }

@@ -5,12 +5,12 @@ const CONNECTED_FILES_TIMEOUT_MS = 5000;
 
 export interface FmBridgeOptions {
   fileName?: string;
-  fmHttpBaseUrl?: string;
+  fmMcpBaseUrl?: string;
   wsUrl?: string;
   debug?: boolean;
 }
 
-export const defaultFmHttpBaseUrl = "http://localhost:1365";
+export const defaultFmMcpBaseUrl = "http://localhost:1365";
 export const defaultWsUrl = "ws://localhost:1365/ws";
 
 export const trimToNull = (value: unknown): string | null => {
@@ -24,13 +24,13 @@ export const trimToNull = (value: unknown): string | null => {
 
 export const normalizeBaseUrl = (value: string): string => value.replace(TRAILING_SLASH_PATTERN, "");
 
-export const resolveWsUrl = (options: Pick<FmBridgeOptions, "fmHttpBaseUrl" | "wsUrl">): string => {
+export const resolveWsUrl = (options: Pick<FmBridgeOptions, "fmMcpBaseUrl" | "wsUrl">): string => {
   const explicitWsUrl = trimToNull(options.wsUrl);
   if (explicitWsUrl) {
     return explicitWsUrl;
   }
 
-  const baseUrl = normalizeBaseUrl(trimToNull(options.fmHttpBaseUrl) ?? defaultFmHttpBaseUrl);
+  const baseUrl = normalizeBaseUrl(trimToNull(options.fmMcpBaseUrl) ?? defaultFmMcpBaseUrl);
 
   try {
     const parsed = new URL(baseUrl);
@@ -47,7 +47,7 @@ export const discoverConnectedFileName = async (baseUrl: string): Promise<string
   const timeoutId = setTimeout(() => {
     controller.abort();
   }, CONNECTED_FILES_TIMEOUT_MS);
-  const reachabilityErrorMessage = `fmBridge could not reach ${connectedFilesUrl}. Start fm-http and connect a FileMaker webviewer.`;
+  const reachabilityErrorMessage = `fmBridge could not reach ${connectedFilesUrl}. Start fm-mcp and connect a FileMaker webviewer.`;
 
   let response: Response;
   try {
@@ -64,7 +64,7 @@ export const discoverConnectedFileName = async (baseUrl: string): Promise<string
 
   if (!response.ok) {
     throw new Error(
-      `fmBridge received HTTP ${response.status} from ${connectedFilesUrl}. Ensure fm-http is healthy and reachable.`,
+      `fmBridge received HTTP ${response.status} from ${connectedFilesUrl}. Ensure fm-mcp is healthy and reachable.`,
     );
   }
 
@@ -110,7 +110,7 @@ export const buildMockScriptTag = (options: {
 };
 
 export const fmBridge = (options: FmBridgeOptions = {}): Plugin => {
-  const baseUrl = trimToNull(options.fmHttpBaseUrl) ?? defaultFmHttpBaseUrl;
+  const baseUrl = trimToNull(options.fmMcpBaseUrl) ?? defaultFmMcpBaseUrl;
   const wsUrl = resolveWsUrl(options);
   const debug = options.debug === true;
   let resolvedFileName: string | null = trimToNull(options.fileName);

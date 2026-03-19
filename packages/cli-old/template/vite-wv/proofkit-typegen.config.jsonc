@@ -7,7 +7,7 @@
     "clientSuffix": "Layout",
     "validator": "zod/v4",
     "webviewerScriptName": "ExecuteDataApi",
-    "fmHttp": {
+    "fmMcp": {
       "enabled": true
     },
     "layouts": [

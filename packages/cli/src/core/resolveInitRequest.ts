@@ -283,15 +283,15 @@ async function resolveFileMakerInputs({
 
   if (appType === "webviewer" && !flags.server) {
     while (true) {
-      const localFmHttp = await fileMakerService.detectLocalFmHttp();
-      if (localFmHttp.healthy && localFmHttp.connectedFiles[0]) {
+      const localFmMcp = await fileMakerService.detectLocalFmMcp();
+      if (localFmMcp.healthy && localFmMcp.connectedFiles[0]) {
         return {
           fileMaker: {
-            mode: "local-fm-http",
+            mode: "local-fm-mcp",
             dataSourceName: "filemaker",
             envNames: createDataSourceEnvNames("filemaker"),
-            fmHttpBaseUrl: localFmHttp.baseUrl,
-            fileName: localFmHttp.connectedFiles[0],
+            fmMcpBaseUrl: localFmMcp.baseUrl,
+            fileName: localFmMcp.connectedFiles[0],
             layoutName: flags.layoutName,
             schemaName: flags.schemaName,
           } satisfies FileMakerInputs,
@@ -300,7 +300,7 @@ async function resolveFileMakerInputs({
       }
 
       if (nonInteractive) {
-        if (localFmHttp.healthy) {
+        if (localFmMcp.healthy) {
           throw new Error(
             "ProofKit MCP Server was detected, but no FileMaker files are open. Open a file in FileMaker and rerun, or pass --server.",
           );
@@ -312,14 +312,14 @@ async function resolveFileMakerInputs({
       }
 
       const fallbackAction = await prompt.select({
-        message: localFmHttp.healthy
+        message: localFmMcp.healthy
           ? "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?"
           : "ProofKit MCP Server was not detected. How would you like to continue?",
         options: [
           {
             value: "retry",
             label: "Try again",
-            hint: localFmHttp.healthy
+            hint: localFmMcp.healthy
               ? "Open a FileMaker file, then retry detection"
               : "Retry ProofKit MCP Server detection",
           },

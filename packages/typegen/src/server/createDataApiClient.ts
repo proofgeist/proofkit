@@ -1,14 +1,14 @@
 import path from "node:path";
 import DataApi from "@proofkit/fmdapi";
 import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
-import { FmHttpAdapter } from "@proofkit/fmdapi/adapters/fm-http";
+import { FmMcpAdapter } from "@proofkit/fmdapi/adapters/fm-mcp";
 import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
 import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
 import { type Database, FMServerConnection } from "@proofkit/fmodata";
 import fs from "fs-extra";
 import { parse } from "jsonc-parser";
 import type { z } from "zod/v4";
-import { defaultEnvNames, defaultFmHttpBaseUrl } from "../constants";
+import { defaultEnvNames, defaultFmMcpBaseUrl } from "../constants";
 import { typegenConfig, type typegenConfigSingle } from "../types";
 import type { ApiContext } from "./app";
 
@@ -18,7 +18,7 @@ export interface CreateClientResult {
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>;
   server: string;
   db: string;
-  authType: "apiKey" | "username" | "fmHttp";
+  authType: "apiKey" | "username" | "fmMcp";
 }
 
 export interface CreateClientError {
@@ -196,48 +196,48 @@ export function createOdataClientFromConfig(config: FmodataConfig): OdataClientR
  * @returns The client, server, and db, or an error object
  */
 export function createClientFromConfig(config: FmdapiConfig): Omit<CreateClientResult, "config"> | CreateClientError {
-  // FM HTTP mode
-  if (config.fmHttp != null && config.fmHttp.enabled !== false) {
-    const fmHttpObj = config.fmHttp;
+  // FM MCP mode
+  if (config.fmMcp != null && config.fmMcp.enabled !== false) {
+    const fmMcpObj = config.fmMcp;
 
     const getEnvName = (customName: string | undefined, defaultName: string) =>
       customName && customName.trim() !== "" ? customName : defaultName;
 
-    const baseUrlEnvName = getEnvName(config.envNames?.fmHttp?.baseUrl, defaultEnvNames.fmHttpBaseUrl);
+    const baseUrlEnvName = getEnvName(config.envNames?.fmMcp?.baseUrl, defaultEnvNames.fmMcpBaseUrl);
     const connectedFileNameEnvName = getEnvName(
-      config.envNames?.fmHttp?.connectedFileName,
-      defaultEnvNames.fmHttpConnectedFileName,
+      config.envNames?.fmMcp?.connectedFileName,
+      defaultEnvNames.fmMcpConnectedFileName,
     );
 
     // Resolution: config value > env var > default
-    const baseUrl = fmHttpObj?.baseUrl || process.env[baseUrlEnvName] || defaultFmHttpBaseUrl;
-    const connectedFileName = fmHttpObj?.connectedFileName || process.env[connectedFileNameEnvName];
+    const baseUrl = fmMcpObj?.baseUrl || process.env[baseUrlEnvName] || defaultFmMcpBaseUrl;
+    const connectedFileName = fmMcpObj?.connectedFileName || process.env[connectedFileNameEnvName];
 
     // connectedFileName is required (auto-discovery not available in sync context)
     if (!connectedFileName) {
       return {
-        error: "Missing connectedFileName for FM HTTP mode",
+        error: "Missing connectedFileName for FM MCP mode",
         statusCode: 400,
         kind: "missing_env",
         details: { missing: { connectedFileName: true } },
         suspectedField: "db",
-        message: "Set connectedFileName in your fmHttp config or FM_CONNECTED_FILE_NAME env var",
+        message: "Set connectedFileName in your fmMcp config or FM_CONNECTED_FILE_NAME env var",
       };
     }
 
     try {
       // biome-ignore lint/suspicious/noExplicitAny: DataApi is a generic type
       const client: ReturnType<typeof DataApi<any, any, any, any>> = DataApi({
-        adapter: new FmHttpAdapter({
+        adapter: new FmMcpAdapter({
           baseUrl,
           connectedFileName,
-          scriptName: fmHttpObj?.scriptName ?? config.webviewerScriptName,
+          scriptName: fmMcpObj?.scriptName ?? config.webviewerScriptName,
         }),
         layout: "",
       });
-      return { client, server: baseUrl, db: connectedFileName, authType: "fmHttp" };
+      return { client, server: baseUrl, db: connectedFileName, authType: "fmMcp" };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to create FM HTTP adapter";
+      const errorMessage = err instanceof Error ? err.message : "Failed to create FM MCP adapter";
       return {
         error: errorMessage,
         statusCode: 400,

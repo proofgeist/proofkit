@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import type { z } from "zod/v4";
-import { defaultEnvNames, defaultFmHttpBaseUrl } from "./constants";
+import { defaultEnvNames, defaultFmMcpBaseUrl } from "./constants";
 import type { typegenConfigSingle } from "./types";
 
 type EnvNames = z.infer<typeof typegenConfigSingle>["envNames"];
@@ -11,8 +11,8 @@ export interface EnvValues {
   apiKey: string | undefined;
   username: string | undefined;
   password: string | undefined;
-  fmHttpBaseUrl: string | undefined;
-  fmHttpConnectedFileName: string | undefined;
+  fmMcpBaseUrl: string | undefined;
+  fmMcpConnectedFileName: string | undefined;
 }
 
 export type EnvValidationResult =
@@ -25,7 +25,7 @@ export type EnvValidationResult =
     }
   | {
       success: true;
-      mode: "fmHttp";
+      mode: "fmMcp";
       baseUrl: string;
       connectedFileName: string;
     }
@@ -70,18 +70,18 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
   const username = process.env[usernameEnvName];
   const password = process.env[passwordEnvName];
 
-  // FM HTTP env vars
-  const fmHttpBaseUrlEnvName =
-    envNames?.fmHttp && "baseUrl" in envNames.fmHttp
-      ? getEnvName(envNames.fmHttp.baseUrl, defaultEnvNames.fmHttpBaseUrl)
-      : defaultEnvNames.fmHttpBaseUrl;
-  const fmHttpConnectedFileNameEnvName =
-    envNames?.fmHttp && "connectedFileName" in envNames.fmHttp
-      ? getEnvName(envNames.fmHttp.connectedFileName, defaultEnvNames.fmHttpConnectedFileName)
-      : defaultEnvNames.fmHttpConnectedFileName;
+  // FM MCP env vars
+  const fmMcpBaseUrlEnvName =
+    envNames?.fmMcp && "baseUrl" in envNames.fmMcp
+      ? getEnvName(envNames.fmMcp.baseUrl, defaultEnvNames.fmMcpBaseUrl)
+      : defaultEnvNames.fmMcpBaseUrl;
+  const fmMcpConnectedFileNameEnvName =
+    envNames?.fmMcp && "connectedFileName" in envNames.fmMcp
+      ? getEnvName(envNames.fmMcp.connectedFileName, defaultEnvNames.fmMcpConnectedFileName)
+      : defaultEnvNames.fmMcpConnectedFileName;
 
-  const fmHttpBaseUrl = process.env[fmHttpBaseUrlEnvName];
-  const fmHttpConnectedFileName = process.env[fmHttpConnectedFileNameEnvName];
+  const fmMcpBaseUrl = process.env[fmMcpBaseUrlEnvName];
+  const fmMcpConnectedFileName = process.env[fmMcpConnectedFileNameEnvName];
 
   return {
     server,
@@ -89,8 +89,8 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
     apiKey,
     username,
     password,
-    fmHttpBaseUrl,
-    fmHttpConnectedFileName,
+    fmMcpBaseUrl,
+    fmMcpConnectedFileName,
   };
 }
 
@@ -105,20 +105,20 @@ export function getEnvValues(envNames?: EnvNames): EnvValues {
 export function validateEnvValues(
   envValues: EnvValues,
   envNames?: EnvNames,
-  options?: { fmHttp?: boolean; fmHttpConfig?: { baseUrl?: string; connectedFileName?: string } },
+  options?: { fmMcp?: boolean; fmMcpConfig?: { baseUrl?: string; connectedFileName?: string } },
 ): EnvValidationResult {
-  const { server, db, apiKey, username, password, fmHttpBaseUrl, fmHttpConnectedFileName } = envValues;
+  const { server, db, apiKey, username, password, fmMcpBaseUrl, fmMcpConnectedFileName } = envValues;
 
-  // FM HTTP mode: resolve baseUrl and connectedFileName with fallback chain
+  // FM MCP mode: resolve baseUrl and connectedFileName with fallback chain
   // Priority: config value > env var > default/auto-discover
-  if (options?.fmHttp) {
-    const resolvedBaseUrl = options.fmHttpConfig?.baseUrl || fmHttpBaseUrl || defaultFmHttpBaseUrl;
-    const resolvedConnectedFileName = options.fmHttpConfig?.connectedFileName || fmHttpConnectedFileName;
+  if (options?.fmMcp) {
+    const resolvedBaseUrl = options.fmMcpConfig?.baseUrl || fmMcpBaseUrl || defaultFmMcpBaseUrl;
+    const resolvedConnectedFileName = options.fmMcpConfig?.connectedFileName || fmMcpConnectedFileName;
 
     // connectedFileName will be auto-discovered later if still missing
     return {
       success: true,
-      mode: "fmHttp",
+      mode: "fmMcp",
       baseUrl: resolvedBaseUrl,
       connectedFileName: resolvedConnectedFileName ?? "",
     };
@@ -220,7 +220,7 @@ export function validateEnvValues(
 export function validateAndLogEnvValues(
   envValues: EnvValues,
   envNames?: EnvNames,
-  options?: { fmHttp?: boolean; fmHttpConfig?: { baseUrl?: string; connectedFileName?: string } },
+  options?: { fmMcp?: boolean; fmMcpConfig?: { baseUrl?: string; connectedFileName?: string } },
 ): EnvValidationResult | undefined {
   const result = validateEnvValues(envValues, envNames, options);
 
@@ -231,20 +231,20 @@ export function validateAndLogEnvValues(
     const getEnvName = (customName: string | undefined, defaultName: string) =>
       customName && customName.trim() !== "" ? customName : defaultName;
 
-    if (options?.fmHttp) {
-      if (!envValues.fmHttpBaseUrl) {
+    if (options?.fmMcp) {
+      if (!envValues.fmMcpBaseUrl) {
         console.log(
           getEnvName(
-            envNames?.fmHttp && "baseUrl" in envNames.fmHttp ? envNames.fmHttp.baseUrl : undefined,
-            defaultEnvNames.fmHttpBaseUrl,
+            envNames?.fmMcp && "baseUrl" in envNames.fmMcp ? envNames.fmMcp.baseUrl : undefined,
+            defaultEnvNames.fmMcpBaseUrl,
           ),
         );
       }
-      if (!envValues.fmHttpConnectedFileName) {
+      if (!envValues.fmMcpConnectedFileName) {
         console.log(
           getEnvName(
-            envNames?.fmHttp && "connectedFileName" in envNames.fmHttp ? envNames.fmHttp.connectedFileName : undefined,
-            defaultEnvNames.fmHttpConnectedFileName,
+            envNames?.fmMcp && "connectedFileName" in envNames.fmMcp ? envNames.fmMcp.connectedFileName : undefined,
+            defaultEnvNames.fmMcpConnectedFileName,
           ),
         );
       }

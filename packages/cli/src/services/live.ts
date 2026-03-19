@@ -231,7 +231,7 @@ function createFileMakerBootstrapArtifacts(
       : [...settings.dataSources, dataSourceEntry],
   };
 
-  if (inputs.mode === "local-fm-http") {
+  if (inputs.mode === "local-fm-mcp") {
     return Promise.resolve({
       settings: nextSettings,
       envVars: {},
@@ -239,7 +239,7 @@ function createFileMakerBootstrapArtifacts(
       typegenConfig: {
         mode: inputs.mode,
         dataSourceName: inputs.dataSourceName,
-        fmHttpBaseUrl: inputs.fmHttpBaseUrl,
+        fmMcpBaseUrl: inputs.fmMcpBaseUrl,
         connectedFileName: inputs.fileName,
         layoutName: inputs.layoutName,
         schemaName: inputs.schemaName,
@@ -284,7 +284,7 @@ function createFileMakerBootstrapArtifacts(
 }
 
 const fileMakerService = {
-  detectLocalFmHttp: async (baseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365") => {
+  detectLocalFmMcp: async (baseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365") => {
     try {
       const health = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
       if (!health.ok) {
@@ -560,7 +560,7 @@ const fileMakerService = {
       appType: artifacts.typegenConfig.appType,
       dataSourceName: artifacts.typegenConfig.dataSourceName,
       envNames: artifacts.typegenConfig.envNames,
-      fmHttpBaseUrl: artifacts.typegenConfig.fmHttpBaseUrl,
+      fmMcpBaseUrl: artifacts.typegenConfig.fmMcpBaseUrl,
       connectedFileName: artifacts.typegenConfig.connectedFileName,
       layoutName: artifacts.typegenConfig.layoutName,
       schemaName: artifacts.typegenConfig.schemaName,

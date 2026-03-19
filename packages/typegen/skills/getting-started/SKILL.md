@@ -187,13 +187,13 @@ if (error) {
 }
 ```
 
-### Path D: Local WebViewer Development (FM HTTP — no credentials)
+### Path D: Local WebViewer Development (FM MCP — no credentials)
 
-For WebViewer apps running inside FileMaker, you can use FM HTTP mode to generate types from a local FileMaker file without any server credentials.
+For WebViewer apps running inside FileMaker, you can use FM MCP mode to generate types from a local FileMaker file without any server credentials.
 
 **Prerequisites:**
-- FM HTTP daemon installed and running (`curl http://127.0.0.1:1365/health`)
-- FileMaker file reachable via the FM HTTP `connectedFiles` endpoint. The most common setup is to open the file locally and run a script such as "Connect to MCP", but the script name may differ in your solution as long as it establishes the bridge.
+- FM MCP daemon installed and running (`curl http://127.0.0.1:1365/health`)
+- FileMaker file reachable via the FM MCP `connectedFiles` endpoint. The most common setup is to open the file locally and run a script such as "Connect to MCP", but the script name may differ in your solution as long as it establishes the bridge.
 
 1. Install packages:
 
@@ -201,16 +201,16 @@ For WebViewer apps running inside FileMaker, you can use FM HTTP mode to generat
 pnpm add @proofkit/fmdapi @proofkit/webviewer zod
 ```
 
-2. No `.env` file needed for typegen (baseUrl defaults, connectedFileName is auto-discovered). Optionally set "connectedFileName" in the config.fmHttp.connectedFileName to override the auto-discovery.
+2. No `.env` file needed for typegen (baseUrl defaults, connectedFileName is auto-discovered). Optionally set "connectedFileName" in the config.fmMcp.connectedFileName to override the auto-discovery.
 
-3. Create typegen config with `fmHttp` enabled:
+3. Create typegen config with `fmMcp` enabled:
 
 ```jsonc
 {
   "$schema": "https://proofkit.dev/typegen-config-schema.json",
   "config": {
     "type": "fmdapi",
-    "fmHttp": { "enabled": true },
+    "fmMcp": { "enabled": true },
     "layouts": [
       { "layoutName": "api_Contacts", "schemaName": "Contacts" }
     ],

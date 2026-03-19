@@ -51,44 +51,44 @@ describe("getEnvValues + validateEnvValues", () => {
     }
   });
 
-  it("validates fmHttp mode with default env names", () => {
+  it("validates fmMcp mode with default env names", () => {
     process.env.FM_HTTP_BASE_URL = "http://127.0.0.1:1365";
     process.env.FM_CONNECTED_FILE_NAME = "MyFile";
 
     const envValues = getEnvValues();
-    const result = validateEnvValues(envValues, undefined, { fmHttp: true });
+    const result = validateEnvValues(envValues, undefined, { fmMcp: true });
 
     expect(result.success).toBe(true);
-    if (result.success && result.mode === "fmHttp") {
-      expect(result.mode).toBe("fmHttp");
+    if (result.success && result.mode === "fmMcp") {
+      expect(result.mode).toBe("fmMcp");
       expect(result.baseUrl).toBe("http://127.0.0.1:1365");
       expect(result.connectedFileName).toBe("MyFile");
     }
   });
 
-  it("defaults baseUrl and allows empty connectedFileName for auto-discovery when fmHttp env vars are missing", () => {
+  it("defaults baseUrl and allows empty connectedFileName for auto-discovery when fmMcp env vars are missing", () => {
     const envValues = getEnvValues();
-    const result = validateEnvValues(envValues, undefined, { fmHttp: true });
+    const result = validateEnvValues(envValues, undefined, { fmMcp: true });
 
     expect(result.success).toBe(true);
-    if (result.success && result.mode === "fmHttp") {
+    if (result.success && result.mode === "fmMcp") {
       expect(result.baseUrl).toBe("http://127.0.0.1:1365");
       expect(result.connectedFileName).toBe("");
     }
   });
 
-  it("uses config values over env vars for fmHttp", () => {
+  it("uses config values over env vars for fmMcp", () => {
     process.env.FM_HTTP_BASE_URL = "http://env-url:9999";
     process.env.FM_CONNECTED_FILE_NAME = "EnvFile";
 
     const envValues = getEnvValues();
     const result = validateEnvValues(envValues, undefined, {
-      fmHttp: true,
-      fmHttpConfig: { baseUrl: "http://config-url:1234", connectedFileName: "ConfigFile" },
+      fmMcp: true,
+      fmMcpConfig: { baseUrl: "http://config-url:1234", connectedFileName: "ConfigFile" },
     });
 
     expect(result.success).toBe(true);
-    if (result.success && result.mode === "fmHttp") {
+    if (result.success && result.mode === "fmMcp") {
       expect(result.baseUrl).toBe("http://config-url:1234");
       expect(result.connectedFileName).toBe("ConfigFile");
     }
@@ -105,13 +105,13 @@ describe("getEnvValues + validateEnvValues", () => {
       server: "CUSTOM_SERVER",
       db: "CUSTOM_DB",
       auth: { apiKey: "CUSTOM_KEY" },
-      fmHttp: { baseUrl: "CUSTOM_HTTP_URL", connectedFileName: "CUSTOM_HTTP_FILE" },
+      fmMcp: { baseUrl: "CUSTOM_HTTP_URL", connectedFileName: "CUSTOM_HTTP_FILE" },
     });
 
     expect(envValues.server).toBe("https://custom.example.com");
     expect(envValues.db).toBe("CustomDB");
     expect(envValues.apiKey).toBe("KEY_custom_123");
-    expect(envValues.fmHttpBaseUrl).toBe("http://127.0.0.1:1365");
-    expect(envValues.fmHttpConnectedFileName).toBe("CustomFile");
+    expect(envValues.fmMcpBaseUrl).toBe("http://127.0.0.1:1365");
+    expect(envValues.fmMcpConnectedFileName).toBe("CustomFile");
   });
 });

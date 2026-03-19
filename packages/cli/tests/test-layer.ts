@@ -65,7 +65,7 @@ export function makeTestLayer(options: {
     filemakerBootstraps: number;
   };
   fileMaker?: {
-    localFmHttp?: {
+    localFmMcp?: {
       healthy: boolean;
       baseUrl?: string;
       connectedFiles?: string[];
@@ -251,10 +251,10 @@ export function makeTestLayer(options: {
       },
     }),
     Layer.succeed(FileMakerService, {
-      detectLocalFmHttp: async () => ({
-        baseUrl: options.fileMaker?.localFmHttp?.baseUrl ?? "http://127.0.0.1:1365",
-        healthy: options.fileMaker?.localFmHttp?.healthy ?? false,
-        connectedFiles: options.fileMaker?.localFmHttp?.connectedFiles ?? [],
+      detectLocalFmMcp: async () => ({
+        baseUrl: options.fileMaker?.localFmMcp?.baseUrl ?? "http://127.0.0.1:1365",
+        healthy: options.fileMaker?.localFmMcp?.healthy ?? false,
+        connectedFiles: options.fileMaker?.localFmMcp?.connectedFiles ?? [],
       }),
       validateHostedServerUrl: async (serverUrl: string) => ({
         normalizedUrl: serverUrl,
@@ -318,8 +318,8 @@ export function makeTestLayer(options: {
             mode: inputs.mode,
             dataSourceName: "filemaker",
             envNames: inputs.mode === "hosted-otto" ? envNames : undefined,
-            fmHttpBaseUrl: inputs.mode === "local-fm-http" ? inputs.fmHttpBaseUrl : undefined,
-            connectedFileName: inputs.mode === "local-fm-http" ? inputs.fileName : undefined,
+            fmMcpBaseUrl: inputs.mode === "local-fm-mcp" ? inputs.fmMcpBaseUrl : undefined,
+            connectedFileName: inputs.mode === "local-fm-mcp" ? inputs.fileName : undefined,
             layoutName: inputs.layoutName,
             schemaName: inputs.schemaName,
             appType,
@@ -363,8 +363,8 @@ export function makeTestLayer(options: {
             appType,
             dataSourceName: "filemaker",
             envNames: inputs.mode === "hosted-otto" ? createDataSourceEnvNames("filemaker") : undefined,
-            fmHttpBaseUrl: inputs.mode === "local-fm-http" ? inputs.fmHttpBaseUrl : undefined,
-            connectedFileName: inputs.mode === "local-fm-http" ? inputs.fileName : undefined,
+            fmMcpBaseUrl: inputs.mode === "local-fm-mcp" ? inputs.fmMcpBaseUrl : undefined,
+            connectedFileName: inputs.mode === "local-fm-mcp" ? inputs.fileName : undefined,
             layoutName: inputs.layoutName,
             schemaName: inputs.schemaName,
           },

@@ -158,7 +158,7 @@ describe("resolveInitRequest", () => {
           packageManager: "pnpm",
           nonInteractive: false,
           fileMaker: {
-            localFmHttp: {
+            localFmMcp: {
               healthy: true,
               connectedFiles: ["LocalFile.fmp12"],
             },
@@ -168,7 +168,7 @@ describe("resolveInitRequest", () => {
     );
 
     expect(request.fileMaker).toMatchObject({
-      mode: "local-fm-http",
+      mode: "local-fm-mcp",
       fileName: "LocalFile.fmp12",
     });
   });
@@ -203,7 +203,7 @@ describe("resolveInitRequest", () => {
           },
           promptTranscript,
           fileMaker: {
-            localFmHttp: {
+            localFmMcp: {
               healthy: true,
               connectedFiles: [],
             },
@@ -238,7 +238,7 @@ describe("resolveInitRequest", () => {
             cwd: "/tmp",
             packageManager: "pnpm",
             fileMaker: {
-              localFmHttp: {
+              localFmMcp: {
                 healthy: true,
                 connectedFiles: [],
               },

@@ -126,8 +126,8 @@
                 }
               ]
             },
-            "fmHttp": {
-              "description": "Enable the FM HTTP proxy for metadata fetching during typegen. Generated clients will use the @proofkit/webviewer adapter with webviewerScriptName or 'execute_data_api' as the default.",
+            "fmMcp": {
+              "description": "Enable the FM MCP proxy for metadata fetching during typegen. Generated clients will use the @proofkit/webviewer adapter with webviewerScriptName or 'execute_data_api' as the default.",
               "allOf": [
                 {
                   "$ref": "#/definitions/__schema15"
@@ -232,7 +232,7 @@
           },
           "additionalProperties": false
         },
-        "fmHttp": {
+        "fmMcp": {
           "type": "object",
           "properties": {
             "baseUrl": {
@@ -309,7 +309,7 @@
       "type": "object",
       "properties": {
         "enabled": {
-          "description": "Enable the FM HTTP proxy for metadata fetching during typegen.",
+          "description": "Enable the FM MCP proxy for metadata fetching during typegen.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema16"
@@ -325,7 +325,7 @@
           ]
         },
         "baseUrl": {
-          "description": "Base URL of the local FM HTTP server. Defaults to \"http://127.0.0.1:1365\". Can also be set via FM_HTTP_BASE_URL env var.",
+          "description": "Base URL of the local FM MCP server. Defaults to \"http://127.0.0.1:1365\". Can also be set via FM_HTTP_BASE_URL env var.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema18"
@@ -333,7 +333,7 @@
           ]
         },
         "connectedFileName": {
-          "description": "Name of the connected FileMaker file. If not provided, it will be auto-discovered from the FM HTTP server's /connectedFiles endpoint and written back to your config. Can also be set via FM_CONNECTED_FILE_NAME env var.",
+          "description": "Name of the connected FileMaker file. If not provided, it will be auto-discovered from the FM MCP server's /connectedFiles endpoint and written back to your config. Can also be set via FM_CONNECTED_FILE_NAME env var.",
           "allOf": [
             {
               "$ref": "#/definitions/__schema19"

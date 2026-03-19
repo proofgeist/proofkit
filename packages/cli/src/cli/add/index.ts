@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { capitalize, groupBy, uniq } from "es-toolkit";
 import ora from "ora";
 import { select } from "~/cli/prompts.js";
-import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
+import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { logger } from "~/utils/logger.js";
 import { getSettings, type Settings } from "~/utils/parseSettings.js";
@@ -163,7 +163,6 @@ export const makeAddCommand = () => {
   const addCommand = new Command("add")
     .description("Add a new component to your project")
     .argument("[name]", "Type of component to add")
-    .addOption(ciOption)
     .addOption(nonInteractiveOption)
     .addOption(debugOption)
     .option("--noInstall", "Do not run your package manager install command", false)

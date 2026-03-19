@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 import { cancel, select } from "~/cli/prompts.js";
 
 import { addAuth } from "~/generators/auth.js";
-import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
+import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, isNonInteractiveMode, state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { abortIfCancel } from "../utils.js";
@@ -87,7 +87,6 @@ export const makeAddAuthCommand = () => {
     .option("--authType <authType>", "Type of auth provider to use")
     .option("--emailProvider <emailProvider>", "Email provider to use (only for FM Add-on Auth)")
     .option("--apiKey <apiKey>", "API key to use for the email provider (only for FM Add-on Auth)")
-    .addOption(ciOption)
     .addOption(nonInteractiveOption)
     .addOption(debugOption)
 

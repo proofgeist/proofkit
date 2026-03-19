@@ -4,7 +4,7 @@ import fs from "fs-extra";
 import { Node, type Project, type PropertyAssignment, SyntaxKind } from "ts-morph";
 import * as p from "~/cli/prompts.js";
 
-import { ciOption, debugOption } from "~/globalOptions.js";
+import { debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
@@ -198,7 +198,6 @@ export const makeRemovePageCommand = () => {
   const removePageCommand = new Command("page")
     .description("Remove a page from your project")
     .argument("[route]", "The route of the page to remove")
-    .addOption(ciOption)
     .addOption(debugOption)
     .action(async (route: string) => {
       await runRemovePageAction(route);

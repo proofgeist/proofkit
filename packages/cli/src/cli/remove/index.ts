@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as p from "~/cli/prompts.js";
 
-import { ciOption, debugOption } from "~/globalOptions.js";
+import { debugOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { abortIfCancel, ensureProofKitProject } from "../utils.js";
@@ -48,7 +48,6 @@ export function makeRemoveCommand() {
   const removeCommand = new Command("remove")
     .description("Remove a component from your project")
     .argument("[name]", "Type of component to remove")
-    .addOption(ciOption)
     .addOption(debugOption)
     .action(runRemove);
 

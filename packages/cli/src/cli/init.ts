@@ -7,7 +7,7 @@ import type { PackageJson } from "type-fest";
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { addAuth } from "~/generators/auth.js";
 import { runCodegenCommand } from "~/generators/fmdapi.js";
-import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
+import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { createBareProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { installDependencies } from "~/helpers/installDependencies.js";
@@ -98,7 +98,6 @@ export const makeInitCommand = () => {
     .option("--noGit", "Explicitly tell the CLI to not initialize a new git repo in the project", false)
     .option("--noInstall", "Explicitly tell the CLI to not run the package manager's install command", false)
     .option("-f, --force", "Force overwrite target directory when it already contains files", false)
-    .addOption(ciOption)
     .addOption(nonInteractiveOption)
     .addOption(debugOption)
     .action(runInit);

@@ -6,7 +6,7 @@ import fs from "fs-extra";
 import type { PackageJson } from "type-fest";
 import * as p from "~/cli/prompts.js";
 
-import { ciOption, debugOption } from "~/globalOptions.js";
+import { debugOption } from "~/globalOptions.js";
 
 // Regex patterns defined at top level for performance
 const LEADING_SYMBOLS_REGEX = /^[✔\s]+/;
@@ -474,7 +474,6 @@ export async function runDeploy() {
 export const makeDeployCommand = () => {
   const deployCommand = new Command("deploy")
     .description("Deploy your ProofKit application to Vercel")
-    .addOption(ciOption)
     .addOption(debugOption)
     .addOption(new Option("--local-build", "Build locally before deploying"))
     .action(runDeploy);

@@ -22,8 +22,8 @@ import type {
 
 const TRAILING_SLASHES_REGEX = /\/+$/;
 
-export interface FmHttpAdapterOptions {
-  /** Base URL of the local FM HTTP server (e.g. "http://localhost:3000") */
+export interface FmMcpAdapterOptions {
+  /** Base URL of the local FM MCP server (e.g. "http://localhost:3000") */
   baseUrl: string;
   /** Name of the connected FileMaker file */
   connectedFileName: string;
@@ -31,12 +31,12 @@ export interface FmHttpAdapterOptions {
   scriptName?: string;
 }
 
-export class FmHttpAdapter implements Adapter {
+export class FmMcpAdapter implements Adapter {
   protected baseUrl: string;
   protected connectedFileName: string;
   protected scriptName: string;
 
-  constructor(options: FmHttpAdapterOptions) {
+  constructor(options: FmMcpAdapterOptions) {
     this.baseUrl = options.baseUrl.replace(TRAILING_SLASHES_REGEX, "");
     this.connectedFileName = options.connectedFileName;
     this.scriptName = options.scriptName ?? "execute_data_api";
@@ -102,7 +102,7 @@ export class FmHttpAdapter implements Adapter {
     }
 
     if (!res.ok) {
-      throw new FileMakerError(String(res.status), `FM HTTP request failed (${res.status}): ${await res.text()}`);
+      throw new FileMakerError(String(res.status), `FM MCP request failed (${res.status}): ${await res.text()}`);
     }
 
     const raw = await res.json();
@@ -113,7 +113,7 @@ export class FmHttpAdapter implements Adapter {
     } catch (err) {
       throw new FileMakerError(
         "500",
-        `FM HTTP response parse failed: ${err instanceof Error ? err.message : String(err)}`,
+        `FM MCP response parse failed: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
 
@@ -209,7 +209,7 @@ export class FmHttpAdapter implements Adapter {
     });
 
     if (!res.ok) {
-      throw new FileMakerError(String(res.status), `FM HTTP executeScript failed (${res.status}): ${await res.text()}`);
+      throw new FileMakerError(String(res.status), `FM MCP executeScript failed (${res.status}): ${await res.text()}`);
     }
 
     const raw = await res.json();
@@ -219,6 +219,6 @@ export class FmHttpAdapter implements Adapter {
   };
 
   containerUpload = (): Promise<never> => {
-    throw new Error("Container upload is not supported via FM HTTP adapter");
+    throw new Error("Container upload is not supported via FM MCP adapter");
   };
 }

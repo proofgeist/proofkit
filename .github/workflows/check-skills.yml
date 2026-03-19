@@ -12,6 +12,8 @@
 name: Check Skills
 
 on:
+  repository_dispatch:
+    types: [skill-check]
   release:
     types: [published]
   workflow_dispatch: {}

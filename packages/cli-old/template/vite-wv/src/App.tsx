@@ -14,7 +14,7 @@ const steps: readonly Step[] = [
   {
     icon: Database,
     title: "Connect FileMaker later",
-    body: "This starter renders safely in a normal browser. When you are ready, wire in FM HTTP or hosted FileMaker setup with ProofKit commands.",
+    body: "This starter renders safely in a normal browser. When you are ready, wire in FM MCP or hosted FileMaker setup with ProofKit commands.",
   },
   {
     icon: Layers,
@@ -63,7 +63,7 @@ export default function App() {
               <div className="mt-5 space-y-4 text-sm text-muted-foreground">
                 <p>Update the default WebViewer name in <code>src/App.tsx</code> to match your FileMaker layout object.</p>
                 <p>When the app runs inside FileMaker, you can start using <code>fmFetch</code> or generated clients right away.</p>
-                <p>The local helper scripts prefer FM HTTP connected files before falling back to hosted server env vars.</p>
+                <p>The local helper scripts prefer FM MCP connected files before falling back to hosted server env vars.</p>
               </div>
             </aside>
           </div>

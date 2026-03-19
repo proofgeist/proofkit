@@ -113,7 +113,7 @@ export interface SettingsService {
 
 export const SettingsService = Context.GenericTag<SettingsService>("@proofkit/cli/SettingsService");
 
-export interface FmHttpStatus {
+export interface FmMcpStatus {
   baseUrl: string;
   healthy: boolean;
   connectedFiles: string[];
@@ -154,7 +154,7 @@ export interface FileMakerBootstrapArtifacts {
     mode: FileMakerInputs["mode"];
     dataSourceName: string;
     envNames?: FileMakerEnvNames;
-    fmHttpBaseUrl?: string;
+    fmMcpBaseUrl?: string;
     connectedFileName?: string;
     layoutName?: string;
     schemaName?: string;
@@ -163,7 +163,7 @@ export interface FileMakerBootstrapArtifacts {
 }
 
 export interface FileMakerService {
-  readonly detectLocalFmHttp: (baseUrl?: string) => Promise<FmHttpStatus>;
+  readonly detectLocalFmMcp: (baseUrl?: string) => Promise<FmMcpStatus>;
   readonly validateHostedServerUrl: (
     serverUrl: string,
     ottoPort?: number | null,

@@ -55,7 +55,7 @@ export function createLayoutMetadataMock(layouts: Record<string, LayoutMetadata>
   return (input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
     const url = getUrlString(input);
 
-    // Handle FmHttpAdapter requests to /callScript
+    // Handle FmMcpAdapter requests to /callScript
     if (CALL_SCRIPT_URL_PATTERN.test(url)) {
       const body = _init?.body ? JSON.parse(String(_init.body)) : {};
       const scriptData = body?.data ? JSON.parse(String(body.data)) : {};

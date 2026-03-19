@@ -202,7 +202,7 @@ describe("Init scaffold contract tests", () => {
         path?: string;
         validator?: string;
         webviewerScriptName?: string;
-        fmHttp?: {
+        fmMcp?: {
           enabled?: boolean;
         };
       };
@@ -211,7 +211,7 @@ describe("Init scaffold contract tests", () => {
     expect(typegenConfig.config?.path).toBe("./src/config/schemas/filemaker");
     expect(typegenConfig.config?.validator).toBe("zod/v4");
     expect(typegenConfig.config?.webviewerScriptName).toBe("ExecuteDataApi");
-    expect(typegenConfig.config?.fmHttp?.enabled).toBe(true);
+    expect(typegenConfig.config?.fmMcp?.enabled).toBe(true);
 
     // Compile-equivalent smoke checks without external installs.
     expect(checkNodeSyntax(webviewerProjectDir, "scripts/launch-fm.js")).toBe(true);

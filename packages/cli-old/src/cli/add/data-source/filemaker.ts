@@ -4,8 +4,8 @@ import type { z } from "zod/v4";
 import { createDataAPIKey, getOttoFMSToken, listAPIKeys, listFiles } from "~/cli/ottofms.js";
 import * as p from "~/cli/prompts.js";
 import { abortIfCancel } from "~/cli/utils.js";
-import { addLayout, addToFmschemaConfig, ensureWebviewerFmHttpConfig } from "~/generators/fmdapi.js";
-import { getFmHttpStatus } from "~/helpers/fmHttp.js";
+import { addLayout, addToFmschemaConfig, ensureWebviewerFmMcpConfig } from "~/generators/fmdapi.js";
+import { getFmMcpStatus } from "~/helpers/fmMcp.js";
 import { fetchServerVersions } from "~/helpers/version-fetcher.js";
 import { isNonInteractiveMode } from "~/state.js";
 import { addPackageDependency } from "~/utils/addPackageDependency.js";
@@ -32,22 +32,22 @@ export async function promptForFileMakerDataSource({
   const settings = getSettings();
 
   if (settings.appType === "webviewer") {
-    const fmHttpStatus = await getFmHttpStatus();
-    const connectedFileName = fmHttpStatus.connectedFiles[0];
+    const fmMcpStatus = await getFmMcpStatus();
+    const connectedFileName = fmMcpStatus.connectedFiles[0];
     const localDataSourceName = opts.name ?? "filemaker";
 
-    if (!opts.server && fmHttpStatus.healthy && connectedFileName) {
+    if (!opts.server && fmMcpStatus.healthy && connectedFileName) {
       addPackageDependency({
         projectDir,
         dependencies: ["@proofkit/fmdapi"],
         devMode: false,
       });
 
-      await ensureWebviewerFmHttpConfig({
+      await ensureWebviewerFmMcpConfig({
         projectDir,
         connectedFileName,
         dataSourceName: localDataSourceName,
-        baseUrl: fmHttpStatus.baseUrl,
+        baseUrl: fmMcpStatus.baseUrl,
       });
 
       // Persist the datasource in project settings
@@ -86,7 +86,7 @@ export async function promptForFileMakerDataSource({
         throw new Error("Both --layoutName and --schemaName must be provided together.");
       } else {
         p.note(
-          `Detected local FM HTTP at ${fmHttpStatus.baseUrl} with connected file "${connectedFileName}". Edit ${chalk.cyan(
+          `Detected local FM MCP at ${fmMcpStatus.baseUrl} with connected file "${connectedFileName}". Edit ${chalk.cyan(
             "proofkit-typegen.config.jsonc",
           )} to add layouts, then run ${chalk.cyan("pnpm typegen")} or ${chalk.cyan("pnpm typegen:ui")}.`,
           "Local FileMaker detected",
@@ -98,7 +98,7 @@ export async function promptForFileMakerDataSource({
 
     if (!opts.server && isNonInteractiveMode()) {
       throw new Error(
-        "No local FM HTTP connection was detected and no FileMaker server was provided. Start the local FM HTTP proxy with a connected file or rerun with --server.",
+        "No local FM MCP connection was detected and no FileMaker server was provided. Start the local FM MCP proxy with a connected file or rerun with --server.",
       );
     }
 
@@ -106,7 +106,7 @@ export async function promptForFileMakerDataSource({
       const fallbackAction = abortIfCancel(
         await p.select({
           message:
-            "Local FM HTTP was not detected. Do you want to continue with hosted FileMaker server setup or skip for now?",
+            "Local FM MCP was not detected. Do you want to continue with hosted FileMaker server setup or skip for now?",
           options: [
             {
               label: "Continue with hosted setup",
@@ -122,7 +122,7 @@ export async function promptForFileMakerDataSource({
 
       if (fallbackAction === "skip") {
         p.note(
-          `You can come back later with ${chalk.cyan("proofkit add data")} after starting FM HTTP locally or when you have a hosted server ready.`,
+          `You can come back later with ${chalk.cyan("proofkit add data")} after starting FM MCP locally or when you have a hosted server ready.`,
         );
         return;
       }

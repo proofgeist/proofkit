@@ -6,7 +6,7 @@ import { z } from "zod/v4";
 import * as p from "~/cli/prompts.js";
 
 import { removeFromFmschemaConfig, runCodegenCommand } from "~/generators/fmdapi.js";
-import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
+import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, isNonInteractiveMode, state } from "~/state.js";
 import { type DataSource, getSettings, setSettings } from "~/utils/parseSettings.js";
 import { abortIfCancel, ensureProofKitProject, UserAbortedError } from "../utils.js";
@@ -132,7 +132,6 @@ export const makeRemoveDataSourceCommand = () => {
   const removeDataSourceCommand = new Command("data")
     .description("Remove a data source from your project")
     .option("--name <name>", "Name of the data source to remove")
-    .addOption(ciOption)
     .addOption(nonInteractiveOption)
     .addOption(debugOption)
     .action(async (options) => {

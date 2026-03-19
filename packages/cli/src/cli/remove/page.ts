@@ -4,7 +4,7 @@ import fs from "fs-extra";
 import { Node, type Project, type PropertyAssignment, SyntaxKind } from "ts-morph";
 import * as p from "~/cli/prompts.js";
 
-import { ciOption, debugOption } from "~/globalOptions.js";
+import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, state } from "~/state.js";
 import { getSettings } from "~/utils/parseSettings.js";
 import { formatAndSaveSourceFiles, getNewProject } from "~/utils/ts-morph.js";
@@ -150,6 +150,10 @@ export const runRemovePageAction = async (routeName?: string) => {
 
   let selectedRouteName = routeName;
   if (!selectedRouteName) {
+    if (state.nonInteractive) {
+      throw new Error("Route is required in non-interactive mode.");
+    }
+
     selectedRouteName = abortIfCancel(
       await p.select({
         message: "Select the page to remove",
@@ -198,7 +202,7 @@ export const makeRemovePageCommand = () => {
   const removePageCommand = new Command("page")
     .description("Remove a page from your project")
     .argument("[route]", "The route of the page to remove")
-    .addOption(ciOption)
+    .addOption(nonInteractiveOption)
     .addOption(debugOption)
     .action(async (route: string) => {
       await runRemovePageAction(route);

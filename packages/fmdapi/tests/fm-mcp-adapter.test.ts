@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FmHttpAdapter } from "../src/adapters/fm-http";
+import { FmMcpAdapter } from "../src/adapters/fm-mcp";
 import { FileMakerError } from "../src/client-types";
 import { DataApi } from "../src/index";
 
@@ -21,7 +21,7 @@ function mockFetch(body: object, status = 200): typeof fetch {
 }
 
 function createAdapter(opts?: Partial<{ scriptName: string }>) {
-  return new FmHttpAdapter({
+  return new FmMcpAdapter({
     baseUrl: "http://localhost:3000",
     connectedFileName: "MyFile",
     ...opts,
@@ -44,7 +44,7 @@ const errorEnvelope = (code: string) =>
     response: {},
   });
 
-describe("FmHttpAdapter", () => {
+describe("FmMcpAdapter", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });

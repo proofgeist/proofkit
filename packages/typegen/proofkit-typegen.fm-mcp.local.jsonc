@@ -3,7 +3,7 @@
   "config": {
     "type": "fmdapi",
     "webviewerScriptName": "execute_data_api",
-    "fmHttp": {
+    "fmMcp": {
       "enabled": true,
       "connectedFileName": "MCP_Test"
     },
@@ -13,7 +13,7 @@
         "schemaName": "contacts"
       }
     ],
-    "path": "packages/typegen/live-fm-http-output",
+    "path": "packages/typegen/live-fm-mcp-output",
     "validator": "zod/v4",
     "generateClient": true
   }

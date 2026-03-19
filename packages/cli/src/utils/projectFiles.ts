@@ -163,7 +163,7 @@ export async function updateTypegenConfig(
     appType: "browser" | "webviewer";
     dataSourceName: string;
     envNames?: FileMakerEnvNames;
-    fmHttpBaseUrl?: string;
+    fmMcpBaseUrl?: string;
     connectedFileName?: string;
     layoutName?: string;
     schemaName?: string;
@@ -191,10 +191,10 @@ export async function updateTypegenConfig(
     nextDataSource.webviewerScriptName = "ExecuteDataApi";
   }
 
-  if (options.fmHttpBaseUrl) {
-    nextDataSource.fmHttp = {
+  if (options.fmMcpBaseUrl) {
+    nextDataSource.fmMcp = {
       enabled: true,
-      baseUrl: options.fmHttpBaseUrl,
+      baseUrl: options.fmMcpBaseUrl,
       ...(options.connectedFileName ? { connectedFileName: options.connectedFileName } : {}),
     };
   }

@@ -13,7 +13,7 @@ describe("resolveWsUrl", () => {
   it("prefers an explicit websocket URL", () => {
     expect(
       resolveWsUrl({
-        fmHttpBaseUrl: "http://localhost:1365",
+        fmMcpBaseUrl: "http://localhost:1365",
         wsUrl: "ws://example.test/custom",
       }),
     ).toBe("ws://example.test/custom");
@@ -22,7 +22,7 @@ describe("resolveWsUrl", () => {
   it("derives the websocket URL from the HTTP base URL", () => {
     expect(
       resolveWsUrl({
-        fmHttpBaseUrl: "https://example.test:9999/",
+        fmMcpBaseUrl: "https://example.test:9999/",
       }),
     ).toBe("wss://example.test:9999/ws");
   });
@@ -30,7 +30,7 @@ describe("resolveWsUrl", () => {
   it("falls back to the default websocket URL for invalid base URLs", () => {
     expect(
       resolveWsUrl({
-        fmHttpBaseUrl: "not a url",
+        fmMcpBaseUrl: "not a url",
       }),
     ).toBe(defaultWsUrl);
   });
@@ -99,7 +99,7 @@ describe("discoverConnectedFileName", () => {
       const pendingExpectation = expect(pendingRequest).rejects.toMatchObject({
         cause: abortError,
         message:
-          "fmBridge could not reach http://localhost:1365/connectedFiles. Start fm-http and connect a FileMaker webviewer.",
+          "fmBridge could not reach http://localhost:1365/connectedFiles. Start fm-mcp and connect a FileMaker webviewer.",
       });
 
       await vi.advanceTimersByTimeAsync(5000);
@@ -113,7 +113,7 @@ describe("discoverConnectedFileName", () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(new Response("nope", { status: 503 }));
 
     await expect(discoverConnectedFileName("http://localhost:1365")).rejects.toThrow(
-      "fmBridge received HTTP 503 from http://localhost:1365/connectedFiles. Ensure fm-http is healthy and reachable.",
+      "fmBridge received HTTP 503 from http://localhost:1365/connectedFiles. Ensure fm-mcp is healthy and reachable.",
     );
   });
 
@@ -164,7 +164,7 @@ describe("fmBridge", () => {
     );
 
     const plugin = fmBridge({
-      fmHttpBaseUrl: "http://localhost:1365",
+      fmMcpBaseUrl: "http://localhost:1365",
       debug: true,
     });
 
@@ -188,7 +188,7 @@ describe("fmBridge", () => {
 
   it("opts out of build mode", async () => {
     const plugin = fmBridge({
-      fmHttpBaseUrl: "http://localhost:1365",
+      fmMcpBaseUrl: "http://localhost:1365",
     });
 
     expect(typeof plugin.apply).toBe("function");

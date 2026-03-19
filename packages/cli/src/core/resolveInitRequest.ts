@@ -290,8 +290,24 @@ async function resolveFileMakerInputs({
         return undefined;
       }
 
-      if (availableFiles.length === 1 || nonInteractive) {
+      if (flags.fileName) {
+        if (availableFiles.includes(flags.fileName)) {
+          return flags.fileName;
+        }
+
+        throw new Error(
+          `FileMaker file "${flags.fileName}" is not currently connected to the local ProofKit MCP Server. Connected files: ${availableFiles.join(", ")}.`,
+        );
+      }
+
+      if (availableFiles.length === 1) {
         return availableFiles[0];
+      }
+
+      if (nonInteractive) {
+        throw new Error(
+          `Multiple FileMaker files are connected to the local ProofKit MCP Server. Pass --file-name with one of: ${availableFiles.join(", ")}.`,
+        );
       }
 
       return await prompt.searchSelect({

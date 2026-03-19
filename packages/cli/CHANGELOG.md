@@ -1,5 +1,11 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.26
+
+### Patch Changes
+
+- e3b25c3: Refocus the ProofKit CLI around project bootstrap and diagnostics by adding `doctor` and placeholder `prompt` commands, updating default guidance and docs, and switching scaffolded typegen scripts to package-native `@proofkit/typegen` commands.
+
 ## 2.0.0-beta.25
 
 ### Patch Changes

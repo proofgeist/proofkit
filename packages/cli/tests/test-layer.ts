@@ -65,11 +65,17 @@ export function makeTestLayer(options: {
     filemakerBootstraps: number;
   };
   fileMaker?: {
-    localFmMcp?: {
-      healthy: boolean;
-      baseUrl?: string;
-      connectedFiles?: string[];
-    };
+    localFmMcp?:
+      | {
+          healthy: boolean;
+          baseUrl?: string;
+          connectedFiles?: string[];
+        }
+      | Array<{
+          healthy: boolean;
+          baseUrl?: string;
+          connectedFiles?: string[];
+        }>;
   };
 }) {
   const tracker = options.tracker;
@@ -82,6 +88,21 @@ export function makeTestLayer(options: {
     multiSearchSelect: [...(options.prompts?.multiSearchSelect ?? [])],
   };
   const consoleTranscript = options.console;
+  let localFmMcpScript:
+    | Array<{
+        healthy: boolean;
+        baseUrl?: string;
+        connectedFiles?: string[];
+      }>
+    | undefined;
+  if (Array.isArray(options.fileMaker?.localFmMcp)) {
+    localFmMcpScript = [...options.fileMaker.localFmMcp];
+  } else if (options.fileMaker?.localFmMcp) {
+    localFmMcpScript = [options.fileMaker.localFmMcp];
+  } else {
+    localFmMcpScript = [];
+  }
+  let lastLocalFmMcp = localFmMcpScript[0];
 
   const layer = Layer.mergeAll(
     Layer.succeed(CliContext, {
@@ -251,11 +272,15 @@ export function makeTestLayer(options: {
       },
     }),
     Layer.succeed(FileMakerService, {
-      detectLocalFmMcp: async () => ({
-        baseUrl: options.fileMaker?.localFmMcp?.baseUrl ?? "http://127.0.0.1:1365",
-        healthy: options.fileMaker?.localFmMcp?.healthy ?? false,
-        connectedFiles: options.fileMaker?.localFmMcp?.connectedFiles ?? [],
-      }),
+      detectLocalFmMcp: () => {
+        const next = localFmMcpScript.shift() ?? lastLocalFmMcp;
+        lastLocalFmMcp = next;
+        return Promise.resolve({
+          baseUrl: next?.baseUrl ?? "http://127.0.0.1:1365",
+          healthy: next?.healthy ?? false,
+          connectedFiles: next?.connectedFiles ?? [],
+        });
+      },
       validateHostedServerUrl: async (serverUrl: string) => ({
         normalizedUrl: serverUrl,
         versions: {

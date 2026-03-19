@@ -468,7 +468,7 @@ describe("typegen unit tests", () => {
   });
 
   it("generates client using WebViewerAdapter when fmMcp config is provided", async () => {
-    process.env.FM_HTTP_BASE_URL = "http://127.0.0.1:1365";
+    process.env.FM_MCP_BASE_URL = "http://127.0.0.1:1365";
     process.env.FM_CONNECTED_FILE_NAME = "TestFile";
 
     const fetchMock = vi.fn(

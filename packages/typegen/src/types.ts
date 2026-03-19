@@ -196,11 +196,11 @@ const fmMcpFieldObject = z.object({
   }),
   scriptName: z.string().optional().meta({
     description:
-      'The FM script the HTTP proxy calls to execute Data API operations. Overrides webviewerScriptName for the proxy call. Defaults to "execute_data_api".',
+      'The FM script the FM MCP bridge calls to execute Data API operations. Overrides webviewerScriptName for the bridge call. Defaults to "execute_data_api".',
   }),
   baseUrl: z.string().optional().meta({
     description:
-      'Base URL of the local FM MCP server. Defaults to "http://127.0.0.1:1365". Can also be set via FM_HTTP_BASE_URL env var.',
+      'Base URL of the local FM MCP server. Defaults to "http://127.0.0.1:1365". Can also be set via FM_MCP_BASE_URL env var.',
   }),
   connectedFileName: z.string().optional().meta({
     description:

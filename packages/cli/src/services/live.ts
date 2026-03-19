@@ -284,7 +284,7 @@ function createFileMakerBootstrapArtifacts(
 }
 
 const fileMakerService = {
-  detectLocalFmMcp: async (baseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365") => {
+  detectLocalFmMcp: async (baseUrl = process.env.FM_MCP_BASE_URL ?? "http://127.0.0.1:1365") => {
     try {
       const health = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
       if (!health.ok) {

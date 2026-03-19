@@ -1,4 +1,4 @@
-const defaultBaseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365";
+const defaultBaseUrl = process.env.FM_MCP_BASE_URL ?? "http://127.0.0.1:1365";
 const REQUEST_TIMEOUT_MS = 3000;
 
 export interface FmMcpStatus {

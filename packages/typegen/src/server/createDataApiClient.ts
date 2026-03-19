@@ -221,7 +221,7 @@ export function createClientFromConfig(config: FmdapiConfig): Omit<CreateClientR
         kind: "missing_env",
         details: { missing: { connectedFileName: true } },
         suspectedField: "db",
-        message: "Set connectedFileName in your fmMcp config or FM_CONNECTED_FILE_NAME env var",
+        message: `Set connectedFileName in your fmMcp config or ${connectedFileNameEnvName} env var`,
       };
     }
 

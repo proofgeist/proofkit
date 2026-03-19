@@ -7,7 +7,7 @@ const envPath = resolve(currentDirectory, "../.env");
 
 dotenv.config({ path: envPath });
 
-const defaultFmMcpBaseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365";
+const defaultFmMcpBaseUrl = process.env.FM_MCP_BASE_URL ?? "http://127.0.0.1:1365";
 
 function stripFileExtension(fileName) {
   return fileName.replace(/\.fmp12$/i, "");

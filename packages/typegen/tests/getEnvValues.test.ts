@@ -11,7 +11,7 @@ describe("getEnvValues + validateEnvValues", () => {
       "OTTO_API_KEY",
       "FM_USERNAME",
       "FM_PASSWORD",
-      "FM_HTTP_BASE_URL",
+      "FM_MCP_BASE_URL",
       "FM_CONNECTED_FILE_NAME",
       "CUSTOM_SERVER",
       "CUSTOM_DB",
@@ -52,7 +52,7 @@ describe("getEnvValues + validateEnvValues", () => {
   });
 
   it("validates fmMcp mode with default env names", () => {
-    process.env.FM_HTTP_BASE_URL = "http://127.0.0.1:1365";
+    process.env.FM_MCP_BASE_URL = "http://127.0.0.1:1365";
     process.env.FM_CONNECTED_FILE_NAME = "MyFile";
 
     const envValues = getEnvValues();
@@ -78,7 +78,7 @@ describe("getEnvValues + validateEnvValues", () => {
   });
 
   it("uses config values over env vars for fmMcp", () => {
-    process.env.FM_HTTP_BASE_URL = "http://env-url:9999";
+    process.env.FM_MCP_BASE_URL = "http://env-url:9999";
     process.env.FM_CONNECTED_FILE_NAME = "EnvFile";
 
     const envValues = getEnvValues();

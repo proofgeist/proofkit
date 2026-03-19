@@ -29,7 +29,7 @@ export const defaultEnvNames = {
   password: "FM_PASSWORD",
   server: "FM_SERVER",
   db: "FM_DATABASE",
-  fmMcpBaseUrl: "FM_HTTP_BASE_URL",
+  fmMcpBaseUrl: "FM_MCP_BASE_URL",
   fmMcpConnectedFileName: "FM_CONNECTED_FILE_NAME",
 };
 

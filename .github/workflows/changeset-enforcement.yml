@@ -1,0 +1,61 @@
+name: Changeset Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  require-changeset:
+    name: Require changeset for package changes
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Ensure base ref is available
+        run: git fetch origin "${{ github.base_ref }}:${{ github.base_ref }}" --depth=1
+
+      - name: Detect whether this PR touches releasable code
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+
+          echo "Changed files:" 
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -Eq '^(apps/|packages/|fm-addon/|scripts/|package.json$|pnpm-lock.yaml$|pnpm-workspace.yaml$|turbo.json$|tsconfig\.json$|vitest\.config\.ts$|biome\.json$)'; then
+            echo "requires_changeset=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "requires_changeset=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup pnpm
+        if: steps.scope.outputs.requires_changeset == 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        if: steps.scope.outputs.requires_changeset == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.scope.outputs.requires_changeset == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate changeset exists
+        if: steps.scope.outputs.requires_changeset == 'true'
+        run: pnpm changeset status --since="origin/${{ github.base_ref }}"
+
+      - name: Skip notice for non-release changes
+        if: steps.scope.outputs.requires_changeset != 'true'
+        run: echo "No releasable package/app changes detected; skipping changeset requirement."

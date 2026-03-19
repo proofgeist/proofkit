@@ -134,7 +134,10 @@ function makeInitCommand() {
       ui: optionalChoiceOption("ui", ["shadcn", "mantine"] as const, "The UI scaffold to create"),
       server: optionalTextOption("server", "The URL of your FileMaker Server"),
       adminApiKey: optionalTextOption("admin-api-key", "Admin API key for OttoFMS"),
-      fileName: optionalTextOption("file-name", "The name of the FileMaker file"),
+      fileName: optionalTextOption(
+        "file-name",
+        "The FileMaker file name to use, including selecting a local connected file",
+      ),
       layoutName: optionalTextOption("layout-name", "The FileMaker layout name to scaffold"),
       schemaName: optionalTextOption("schema-name", "The generated schema name"),
       dataApiKey: optionalTextOption("data-api-key", "The Otto Data API key to use"),

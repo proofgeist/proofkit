@@ -105,4 +105,94 @@ describe("executeInitPlan command paths", () => {
     expect(await fs.pathExists(path.join(projectDir, "README.md"))).toBe(true);
     expect(await fs.readFile(path.join(projectDir, "README.md"), "utf8")).not.toBe("old content");
   });
+
+  it("persists selected local MCP file into typegen config", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-local-mcp-explicit-"));
+
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "local-mcp-app",
+        scopedAppName: "local-mcp-app",
+        appDir: "local-mcp-app",
+        appType: "webviewer",
+        ui: "shadcn",
+        dataSource: "filemaker",
+        packageManager: "pnpm",
+        noInstall: true,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: true,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: true,
+        fileMaker: {
+          mode: "local-fm-mcp",
+          dataSourceName: "filemaker",
+          envNames: {
+            database: "FM_DATABASE",
+            server: "FM_SERVER",
+            apiKey: "OTTO_API_KEY",
+          },
+          fmMcpBaseUrl: "http://127.0.0.1:1365",
+          fileName: "Selected.fmp12",
+        },
+      }),
+      {
+        templateDir: getSharedTemplateDir("vite-wv"),
+      },
+    );
+
+    await Effect.runPromise(executeInitPlan(plan).pipe(makeTestLayer({ cwd, packageManager: "pnpm" })));
+
+    const { typegenConfig } = await readScaffoldArtifacts(path.join(cwd, "local-mcp-app"));
+    expect(typegenConfig).toContain('"baseUrl": "http://127.0.0.1:1365"');
+    expect(typegenConfig).toContain('"connectedFileName": "Selected.fmp12"');
+  });
+
+  it("persists the single auto-selected local MCP file into typegen config", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-local-mcp-single-"));
+
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "single-local-mcp-app",
+        scopedAppName: "single-local-mcp-app",
+        appDir: "single-local-mcp-app",
+        appType: "webviewer",
+        ui: "shadcn",
+        dataSource: "filemaker",
+        packageManager: "pnpm",
+        noInstall: true,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: true,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: false,
+        fileMaker: {
+          mode: "local-fm-mcp",
+          dataSourceName: "filemaker",
+          envNames: {
+            database: "FM_DATABASE",
+            server: "FM_SERVER",
+            apiKey: "OTTO_API_KEY",
+          },
+          fmMcpBaseUrl: "http://127.0.0.1:1365",
+          fileName: "OnlyOpen.fmp12",
+        },
+      }),
+      {
+        templateDir: getSharedTemplateDir("vite-wv"),
+      },
+    );
+
+    await Effect.runPromise(executeInitPlan(plan).pipe(makeTestLayer({ cwd, packageManager: "pnpm" })));
+
+    const { typegenConfig } = await readScaffoldArtifacts(path.join(cwd, "single-local-mcp-app"));
+    expect(typegenConfig).toContain('"baseUrl": "http://127.0.0.1:1365"');
+    expect(typegenConfig).toContain('"connectedFileName": "OnlyOpen.fmp12"');
+  });
 });

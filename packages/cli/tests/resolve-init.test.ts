@@ -231,6 +231,99 @@ describe("resolveInitRequest", () => {
     );
   });
 
+  it("fails in non-interactive mode when multiple local FileMaker files are open without --file-name", async () => {
+    await expect(
+      Effect.runPromise(
+        resolveInitRequest("demo", {
+          noGit: true,
+          noInstall: true,
+          force: false,
+          default: false,
+          importAlias: "~/",
+          CI: true,
+          appType: "webviewer",
+          dataSource: "filemaker",
+        }).pipe(
+          makeTestLayer({
+            cwd: "/tmp",
+            packageManager: "pnpm",
+            fileMaker: {
+              localFmMcp: {
+                healthy: true,
+                connectedFiles: ["A.fmp12", "B.fmp12"],
+              },
+            },
+          }),
+        ),
+      ),
+    ).rejects.toThrow(
+      "Multiple FileMaker files are connected to the local ProofKit MCP Server. Pass --file-name with one of: A.fmp12, B.fmp12.",
+    );
+  });
+
+  it("uses --file-name for non-interactive local MCP selection when multiple files are open", async () => {
+    const request = await Effect.runPromise(
+      resolveInitRequest("demo", {
+        noGit: true,
+        noInstall: true,
+        force: false,
+        default: false,
+        importAlias: "~/",
+        CI: true,
+        appType: "webviewer",
+        dataSource: "filemaker",
+        fileName: "B.fmp12",
+      }).pipe(
+        makeTestLayer({
+          cwd: "/tmp",
+          packageManager: "pnpm",
+          fileMaker: {
+            localFmMcp: {
+              healthy: true,
+              connectedFiles: ["A.fmp12", "B.fmp12"],
+            },
+          },
+        }),
+      ),
+    );
+
+    expect(request.fileMaker).toMatchObject({
+      mode: "local-fm-mcp",
+      fileName: "B.fmp12",
+    });
+  });
+
+  it("fails when --file-name does not match a connected local FileMaker file", async () => {
+    await expect(
+      Effect.runPromise(
+        resolveInitRequest("demo", {
+          noGit: true,
+          noInstall: true,
+          force: false,
+          default: false,
+          importAlias: "~/",
+          CI: true,
+          appType: "webviewer",
+          dataSource: "filemaker",
+          fileName: "Missing.fmp12",
+        }).pipe(
+          makeTestLayer({
+            cwd: "/tmp",
+            packageManager: "pnpm",
+            fileMaker: {
+              localFmMcp: {
+                healthy: true,
+                connectedFiles: ["A.fmp12", "B.fmp12"],
+              },
+            },
+          }),
+        ),
+      ),
+    ).rejects.toThrow(
+      'FileMaker file "Missing.fmp12" is not currently connected to the local ProofKit MCP Server. Connected files: A.fmp12, B.fmp12.',
+    );
+  });
+
   it("prompts to retry when Proofkit MCP is running but no FileMaker file is open", async () => {
     const promptTranscript: PromptTranscript = {
       text: [],

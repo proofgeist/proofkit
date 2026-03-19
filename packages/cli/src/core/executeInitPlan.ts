@@ -212,6 +212,13 @@ export const executeInitPlan = (plan: InitPlan) =>
       yield* Effect.promise(() => settingsService.writeSettings(plan.targetDir, nextSettings));
     }
 
+    if (plan.tasks.installFmAddon) {
+      yield* Effect.promise(async () => {
+        const { installFmAddon } = await import("~/installers/install-fm-addon.js");
+        return installFmAddon({ addonName: "wv" });
+      });
+    }
+
     if (plan.tasks.runInstall) {
       let installArgs: string[] = ["install"];
       if (plan.request.packageManager === "yarn") {

@@ -124,6 +124,7 @@ export interface InitPlan {
   commands: Array<{ type: "install" } | { type: "codegen" } | { type: "git-init" }>;
   tasks: {
     bootstrapFileMaker: boolean;
+    installFmAddon: boolean;
     runInstall: boolean;
     runInitialCodegen: boolean;
     initializeGit: boolean;

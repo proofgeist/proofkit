@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import * as p from "~/cli/prompts.js";
 
 import { ensureProofKitProject } from "~/cli/utils.js";
-import { ciOption, nonInteractiveOption } from "~/globalOptions.js";
+import { nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState } from "~/state.js";
 import { promptForFileMakerDataSource } from "./filemaker.js";
 
@@ -32,7 +32,6 @@ export const runAddDataSourceCommand = async () => {
 export const makeAddDataSourceCommand = () => {
   const addDataSourceCommand = new Command("data");
   addDataSourceCommand.description("Add a new data source to your project");
-  addDataSourceCommand.addOption(ciOption);
   addDataSourceCommand.addOption(nonInteractiveOption);
 
   addDataSourceCommand.hook("preAction", (_thisCommand, actionCommand) => {

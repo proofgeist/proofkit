@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 
 const schema = z
   .object({
-    ci: z.boolean().default(false),
     nonInteractive: z.boolean().default(false),
     debug: z.boolean().default(false),
     localBuild: z.boolean().default(false),
@@ -23,11 +22,10 @@ export function initProgramState(args: unknown) {
   const parsed = schema.safeParse(args);
   if (parsed.success) {
     const mergedState = { ...state, ...parsed.data };
-    const nonInteractive = mergedState.nonInteractive || mergedState.ci;
-    state = { ...mergedState, ci: nonInteractive, nonInteractive };
+    state = mergedState;
   }
 }
 
 export function isNonInteractiveMode() {
-  return state.nonInteractive || state.ci;
+  return state.nonInteractive;
 }

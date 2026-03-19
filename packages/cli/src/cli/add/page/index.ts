@@ -8,7 +8,7 @@ import * as p from "~/cli/prompts.js";
 import { PKG_ROOT } from "~/consts.js";
 import { getExistingSchemas } from "~/generators/fmdapi.js";
 import { addRouteToNav } from "~/generators/route.js";
-import { ciOption, debugOption, nonInteractiveOption } from "~/globalOptions.js";
+import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { initProgramState, isNonInteractiveMode, state } from "~/state.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 import { type DataSource, getSettings, mergeSettings } from "~/utils/parseSettings.js";
@@ -180,7 +180,6 @@ export const makeAddPageCommand = () => {
     await runAddPageAction();
   });
 
-  addPageCommand.addOption(ciOption);
   addPageCommand.addOption(nonInteractiveOption);
   addPageCommand.addOption(debugOption);
 

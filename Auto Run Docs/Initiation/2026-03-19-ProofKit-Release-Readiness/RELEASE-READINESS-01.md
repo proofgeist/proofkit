@@ -4,7 +4,7 @@ This phase makes the ProofKit documentation site discoverable and consumable by 
 
 ## Tasks
 
-- [ ] Add SEO fundamentals to the Fumadocs site (`apps/docs/`):
+- [x] Add SEO fundamentals to the Fumadocs site (`apps/docs/`):
   - Create `apps/docs/src/app/sitemap.ts` using Next.js App Router's built-in sitemap generation. Import `source` from `@/lib/source` and iterate `source.getPages()` to produce URLs rooted at `https://proofkit.dev/docs/`. Include the llms.txt routes as well.
   - Create `apps/docs/src/app/robots.ts` using Next.js App Router's built-in robots generation. Allow all crawlers, point to the sitemap URL, and explicitly allow `/llms.txt`, `/llms-full.txt`, and `/llms/` paths.
   - Update `generateMetadata` in `apps/docs/src/app/docs/(docs)/[[...slug]]/page.tsx` to include OpenGraph metadata (`og:title`, `og:description`, `og:type: article`, `og:url`) using the page's title, description, and constructed URL. Use Next.js `Metadata` type's built-in `openGraph` field.

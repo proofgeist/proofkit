@@ -58,6 +58,17 @@ describe("proofkit CLI", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain("proofkit init <name> --non-interactive");
   });
 
+  it("auto-detects piped execution as non-interactive", () => {
+    const result = spawnSync("node", [distEntry], {
+      cwd: packageDir,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("interactive-only in non-interactive mode");
+  });
+
   it("runs when invoked through a symlinked bin path", async () => {
     const shimDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-shim-"));
     const shimPath = path.join(shimDir, "proofkit");

@@ -178,7 +178,7 @@ describe("Init Non-Interactive Failure Paths", () => {
     expect(existsSync(join(projectDir, "proofkit.json"))).toBe(false);
   });
 
-  it("does not surface typegen guidance for browser scaffolds without a typegen script", () => {
+  it("adds package-native typegen guidance for browser scaffolds", () => {
     const projectName = "browser-no-fm-guidance";
     const output = runInitExpectSuccess([
       projectName,
@@ -194,7 +194,7 @@ describe("Init Non-Interactive Failure Paths", () => {
     const packageJson = JSON.parse(readFileSync(join(testDir, projectName, "package.json"), "utf-8")) as {
       scripts?: Record<string, string>;
     };
-    expect(packageJson.scripts?.typegen).toBeUndefined();
+    expect(packageJson.scripts?.typegen).toBe("npx @proofkit/typegen");
     expect(output).not.toMatch(typegenCommandPattern);
   });
 });

@@ -1,19 +1,29 @@
 import chalk from "chalk";
+import { Effect } from "effect";
 import open from "open";
 import { confirm, log, select } from "~/cli/prompts.js";
 
 import { DOCS_URL } from "~/consts.js";
+import { runDoctor } from "~/core/doctor.js";
+import { runPrompt } from "~/core/prompt.js";
+import { makeLiveLayer } from "~/services/live.js";
 import { checkForAvailableUpgrades, runAllAvailableUpgrades } from "~/upgrades/index.js";
-import { getSettings } from "~/utils/parseSettings.js";
-import { runAdd } from "./add/index.js";
+import { resolveNonInteractiveMode } from "~/utils/nonInteractive.js";
 import { runDeploy } from "./deploy/index.js";
-import { runRemove } from "./remove/index.js";
-import { runTypegen } from "./typegen/index.js";
-import { runUpgrade } from "./update/index.js";
 import { abortIfCancel } from "./utils.js";
 
+function getMenuRuntime() {
+  return makeLiveLayer({
+    cwd: process.cwd(),
+    debug: false,
+    nonInteractive: resolveNonInteractiveMode({
+      stdinIsTTY: process.stdin?.isTTY,
+      stdoutIsTTY: process.stdout?.isTTY,
+    }),
+  });
+}
+
 export const runMenu = async () => {
-  const settings = getSettings();
   const upgrades = checkForAvailableUpgrades();
 
   if (upgrades.length > 0) {
@@ -43,29 +53,19 @@ export const runMenu = async () => {
       message: "What would you like to do?",
       options: [
         {
-          label: "Add Components",
-          value: "add",
-          hint: "Add new pages, schemas, data sources, etc.",
+          label: "Doctor",
+          value: "doctor",
+          hint: "Inspect project health and get exact next steps",
         },
         {
-          label: "Remove Components",
-          value: "remove",
-          hint: "Remove pages, schemas, data sources, etc.",
-        },
-        {
-          label: "Generate Types",
-          value: "typegen",
-          hint: "Update field definitions from your data sources",
+          label: "Prompt",
+          value: "prompt",
+          hint: "Reserved AI-agent workflow entrypoint",
         },
         {
           label: "Deploy",
           value: "deploy",
           hint: "Deploy your app to Vercel",
-        },
-        {
-          label: "Upgrade Components",
-          value: "upgrade",
-          hint: "Update ProofKit components to latest version",
         },
         {
           label: "View Documentation",
@@ -77,24 +77,18 @@ export const runMenu = async () => {
   );
 
   switch (menuChoice) {
-    case "add":
-      await runAdd(undefined);
+    case "doctor":
+      await Effect.runPromise(getMenuRuntime()(runDoctor));
       break;
-    case "remove":
-      await runRemove(undefined);
+    case "prompt":
+      await Effect.runPromise(getMenuRuntime()(runPrompt));
       break;
     case "docs":
       log.info(`Opening ${chalk.cyan(DOCS_URL)} in your browser...`);
       await open(DOCS_URL);
       break;
-    case "typegen":
-      await runTypegen({ settings });
-      break;
     case "deploy":
       await runDeploy();
-      break;
-    case "upgrade":
-      await runUpgrade();
       break;
     default:
       throw new Error(`Unknown menu choice: ${menuChoice}`);

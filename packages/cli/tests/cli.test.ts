@@ -43,7 +43,8 @@ describe("proofkit CLI", () => {
     expect(output).toContain("_______");
     expect(output).toContain("Found");
     expect(output).toContain("Project commands");
-    expect(output).toContain("proofkit add");
+    expect(output).toContain("proofkit doctor");
+    expect(output).toContain("proofkit prompt");
   });
 
   it("fails with guidance when no command is used in non-interactive mode", () => {
@@ -97,7 +98,7 @@ describe("proofkit CLI", () => {
 
     expect(result.status).not.toBe(0);
     expect(output).toContain(
-      "Invalid subcommand for proofkit - use one of 'init', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
+      "Invalid subcommand for proofkit - use one of 'init', 'doctor', 'prompt', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
     );
     expect(output).not.toContain('"CommandMismatch"');
     expect(output).not.toContain("[debug]");
@@ -114,10 +115,21 @@ describe("proofkit CLI", () => {
 
     expect(result.status).not.toBe(0);
     expect(output).toContain(
-      "Invalid subcommand for proofkit - use one of 'init', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
+      "Invalid subcommand for proofkit - use one of 'init', 'doctor', 'prompt', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
     );
     expect(output).toContain("[debug]");
     expect(output).toContain('"CommandMismatch"');
+  });
+
+  it("supports `proofkit prompt`", () => {
+    const result = spawnSync("node", [distEntry, "prompt"], {
+      cwd: packageDir,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("Agent-ready prompts are coming soon.");
   });
 
   it("supports `proofkit add addon webviewer`", async () => {

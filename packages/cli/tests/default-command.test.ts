@@ -68,7 +68,7 @@ describe("default command routing", () => {
     expect(consoleTranscript.note).toEqual([
       {
         title: "Project commands",
-        message: expect.stringContaining("Use an explicit command such as `proofkit add`"),
+        message: expect.stringContaining("Use an explicit command such as `proofkit doctor`"),
       },
     ]);
   });

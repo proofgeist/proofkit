@@ -29,9 +29,11 @@ import {
   PackageManagerService,
   TemplateService,
 } from "~/core/context.js";
+import { runDoctor } from "~/core/doctor.js";
 import { getCliErrorMessage, isCliError, NonInteractiveInputError } from "~/core/errors.js";
 import { executeInitPlan } from "~/core/executeInitPlan.js";
 import { planInit } from "~/core/planInit.js";
+import { runPrompt } from "~/core/prompt.js";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
 import type { CliFlags } from "~/core/types.js";
 import { makeLiveLayer } from "~/services/live.js";
@@ -83,8 +85,8 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
       intro(`Found ${proofGradient("ProofKit")} project`);
       consoleService.note(
         [
-          "Project command routing is being migrated into the Effect CLI surface.",
-          "Use an explicit command such as `proofkit add`, `proofkit remove`, `proofkit typegen`, `proofkit deploy`, or `proofkit upgrade`.",
+          "ProofKit now focuses on project bootstrap, diagnostics, and agent entrypoints.",
+          "Use an explicit command such as `proofkit doctor`, `proofkit prompt`, or `proofkit init`.",
         ].join("\n"),
         "Project commands",
       );
@@ -235,7 +237,7 @@ function makeAddCommand() {
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),
-  ).pipe(withCommandDescription("Add a new component to your project"));
+  ).pipe(withCommandDescription("Legacy command. Prefer package-native tools, agents, or shadcn."));
 }
 
 function makeRemoveCommand() {
@@ -267,7 +269,7 @@ function makeRemoveCommand() {
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),
-  ).pipe(withCommandDescription("Remove a component from your project"));
+  ).pipe(withCommandDescription("Legacy command. Prefer direct code edits or package-native tools."));
 }
 
 function makeTypegenCommand() {
@@ -290,7 +292,7 @@ function makeTypegenCommand() {
         },
         { debug },
       ),
-  ).pipe(withCommandDescription("Generate types for your project"));
+  ).pipe(withCommandDescription("Legacy alias. Prefer `npx @proofkit/typegen`."));
 }
 
 function makeDeployCommand() {
@@ -340,7 +342,37 @@ function makeUpgradeCommand() {
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),
-  ).pipe(withCommandDescription("Upgrade ProofKit components in your project"));
+  ).pipe(withCommandDescription("Legacy command."));
+}
+
+function makeDoctorCommand() {
+  return makeCommand(
+    "doctor",
+    {
+      debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
+    },
+    ({ debug }) =>
+      makeLiveLayer({
+        cwd: process.cwd(),
+        debug: debug === true,
+        nonInteractive: true,
+      })(runDoctor),
+  ).pipe(withCommandDescription("Inspect project health and suggest exact next steps"));
+}
+
+function makePromptCommand() {
+  return makeCommand(
+    "prompt",
+    {
+      debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
+    },
+    ({ debug }) =>
+      makeLiveLayer({
+        cwd: process.cwd(),
+        debug: debug === true,
+        nonInteractive: true,
+      })(runPrompt),
+  ).pipe(withCommandDescription("Agent workflow entrypoint placeholder"));
 }
 
 const rootCommand = makeCommand(
@@ -373,6 +405,8 @@ const rootCommand = makeCommand(
   withCommandDescription("Interactive CLI to scaffold and manage ProofKit projects"),
   withSubcommands([
     makeInitCommand(),
+    makeDoctorCommand(),
+    makePromptCommand(),
     makeAddCommand(),
     makeRemoveCommand(),
     makeTypegenCommand(),

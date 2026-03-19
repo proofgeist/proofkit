@@ -175,7 +175,7 @@ export function createPostInitGenerationError({
         "Post-init generation failed after scaffolding.",
         `Project created at: ${projectDir}`,
         "Root cause: a `typegen` package command was invoked, but browser scaffolds do not define that script.",
-        "Continue using the generated project, then run `proofkit typegen` later after FileMaker setup is complete.",
+        "Continue using the generated project, then run `npx @proofkit/typegen` later after FileMaker setup is complete.",
       ].join("\n"),
       rootError,
     );
@@ -185,7 +185,7 @@ export function createPostInitGenerationError({
     [
       "Post-init generation failed after scaffolding.",
       `Project created at: ${projectDir}`,
-      "Retry `proofkit typegen` from inside the project once FileMaker settings and connectivity are valid.",
+      "Retry `npx @proofkit/typegen` from inside the project once FileMaker settings and connectivity are valid.",
       `Underlying error: ${getErrorMessage(error)}`,
     ].join("\n"),
     rootError,

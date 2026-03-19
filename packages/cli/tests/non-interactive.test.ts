@@ -32,6 +32,16 @@ describe("non-interactive detection", () => {
     ).toBe(true);
   });
 
+  it("treats OPENAI_CODEX as non-interactive even with a tty", () => {
+    expect(
+      detectNonInteractiveTerminal({
+        stdinIsTTY: true,
+        stdoutIsTTY: true,
+        env: { OPENAI_CODEX: "1" },
+      }),
+    ).toBe(true);
+  });
+
   it("keeps real terminals interactive when no signals are present", () => {
     expect(
       detectNonInteractiveTerminal({

@@ -12,7 +12,7 @@ export function detectNonInteractiveTerminal(options?: {
   stdinIsTTY?: boolean;
   stdoutIsTTY?: boolean;
   env?: NodeJS.ProcessEnv;
-}) {
+}): boolean {
   const env = options?.env ?? process.env;
   const hasTTY = options?.stdinIsTTY === true && options?.stdoutIsTTY === true;
   const hasNonInteractiveEnv = NON_INTERACTIVE_ENV_VARS.some((name) => Boolean(env[name]));

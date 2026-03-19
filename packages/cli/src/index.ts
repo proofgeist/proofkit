@@ -117,9 +117,17 @@ function optionalChoiceOption<Choices extends readonly string[]>(name: string, c
   return optionalOption(choiceOption(name, choices).pipe(withOptionDescription(description)));
 }
 
+function getCurrentTTYState() {
+  return {
+    stdinIsTTY: process.stdin?.isTTY,
+    stdoutIsTTY: process.stdout?.isTTY,
+  };
+}
+
 function legacyEffect<T>(runLegacy: () => Promise<T>, options?: { nonInteractive?: boolean; debug?: boolean }) {
   const nonInteractive = resolveNonInteractiveMode({
     nonInteractive: options?.nonInteractive,
+    ...getCurrentTTYState(),
   });
 
   return makeLiveLayer({
@@ -159,6 +167,7 @@ function makeInitCommand() {
       const nonInteractive = resolveNonInteractiveMode({
         CI: options.CI,
         nonInteractive: options.nonInteractive,
+        ...getCurrentTTYState(),
       });
 
       const flags: CliFlags = {
@@ -345,6 +354,7 @@ const rootCommand = makeCommand(
       nonInteractive: resolveNonInteractiveMode({
         CI: options.CI,
         nonInteractive: options.nonInteractive,
+        ...getCurrentTTYState(),
       }),
     })(
       runDefaultCommand({

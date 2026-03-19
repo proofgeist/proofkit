@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "fs-extra";
 import { describe, expect, it } from "vitest";
-import { inspectFmAddon } from "~/installers/install-fm-addon.js";
+import { compareAddonVersions, inspectFmAddon } from "~/installers/install-fm-addon.js";
 import { getWebViewerAddonMessages } from "~/installers/proofkit-webviewer.js";
 
 async function writeAddonVersion(dir: string, version: string) {
@@ -80,6 +80,13 @@ describe("inspectFmAddon", () => {
 
     expect(result.status).toBe("unknown");
     expect(result.reason).toBe("unreadable-version");
+  });
+});
+
+describe("compareAddonVersions", () => {
+  it("preserves the fourth version segment", () => {
+    expect(compareAddonVersions("2.2.3.0", "2.2.3.1")).toBe(-1);
+    expect(compareAddonVersions("2.2.3.1", "2.2.3.0")).toBe(1);
   });
 });
 

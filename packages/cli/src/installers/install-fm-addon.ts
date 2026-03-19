@@ -2,7 +2,6 @@ import os from "node:os";
 import path from "node:path";
 import chalk from "chalk";
 import fs from "fs-extra";
-import semver from "semver";
 
 import { PKG_ROOT } from "~/consts.js";
 import { logger } from "~/utils/logger.js";
@@ -25,6 +24,7 @@ export interface FmAddonInspection {
 }
 
 const FM_ADDON_VERSION_REGEX = /<FMAdd_on[^>]*\bversion="([^"]+)"/i;
+const NUMERIC_VERSION_PART_REGEX = /^\d+$/;
 
 function getAddonDisplayName(addonName: FmAddonName) {
   return addonName === "auth" ? "FM Auth Add-on" : "ProofKit WebViewer";
@@ -52,19 +52,41 @@ export function resolveFmAddonModulesDir(platform = process.platform, homeDir = 
   return null;
 }
 
-function coerceAddonVersion(version: string) {
-  return semver.coerce(version);
+function parseAddonVersion(version: string) {
+  const parts = version
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0 || parts.some((part) => !NUMERIC_VERSION_PART_REGEX.test(part))) {
+    return undefined;
+  }
+
+  return parts.map((part) => Number.parseInt(part, 10));
 }
 
 export function compareAddonVersions(installedVersion: string, bundledVersion: string) {
-  const installed = coerceAddonVersion(installedVersion);
-  const bundled = coerceAddonVersion(bundledVersion);
+  const installed = parseAddonVersion(installedVersion);
+  const bundled = parseAddonVersion(bundledVersion);
 
   if (!(installed && bundled)) {
     return undefined;
   }
 
-  return semver.compare(installed, bundled);
+  const maxLength = Math.max(installed.length, bundled.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const installedPart = installed[index] ?? 0;
+    const bundledPart = bundled[index] ?? 0;
+
+    if (installedPart < bundledPart) {
+      return -1;
+    }
+    if (installedPart > bundledPart) {
+      return 1;
+    }
+  }
+
+  return 0;
 }
 
 async function readAddonVersionFromDirectory(addonPath: string): Promise<string | undefined> {

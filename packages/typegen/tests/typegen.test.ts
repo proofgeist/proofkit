@@ -514,6 +514,62 @@ describe("typegen unit tests", () => {
     expect(content).toContain('export { client as schemaBLayout } from "./schemaB";');
   });
 
+  it("clears shared output path once when any config enables clearOldFiles", async () => {
+    vi.stubGlobal(
+      "fetch",
+      createLayoutMetadataMock({
+        LayoutA: mockLayoutMetadata["basic-layout"],
+        LayoutB: mockLayoutMetadata["layout-with-portal"],
+      }),
+    );
+
+    const outputDir = path.join(__dirname, "unit-typegen-output/multi-config-clear");
+    await fs.mkdir(path.join(outputDir, "client"), { recursive: true });
+    await fs.mkdir(path.join(outputDir, "generated"), { recursive: true });
+    await fs.writeFile(path.join(outputDir, "client", "stale.ts"), "stale client");
+    await fs.writeFile(path.join(outputDir, "generated", "stale.ts"), "stale generated");
+
+    const config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>[] = [
+      {
+        type: "fmdapi",
+        layouts: [
+          {
+            layoutName: "LayoutA",
+            schemaName: "schemaA",
+          },
+        ],
+        path: "unit-typegen-output/multi-config-clear",
+        generateClient: true,
+        clientSuffix: "Layout",
+        clearOldFiles: true,
+      },
+      {
+        type: "fmdapi",
+        layouts: [
+          {
+            layoutName: "LayoutB",
+            schemaName: "schemaB",
+          },
+        ],
+        path: "unit-typegen-output/multi-config-clear",
+        generateClient: true,
+        clientSuffix: "Layout",
+        clearOldFiles: false,
+      },
+    ];
+
+    await generateTypedClients(config, { cwd: import.meta.dirname });
+
+    const indexPath = path.join(outputDir, "client/index.ts");
+    const indexContent = await fs.readFile(indexPath, "utf-8");
+
+    expect(indexContent).toContain('export { client as schemaALayout } from "./schemaA";');
+    expect(indexContent).toContain('export { client as schemaBLayout } from "./schemaB";');
+
+    await expect(fs.access(path.join(outputDir, "client", "stale.ts"))).rejects.toThrow();
+    await expect(fs.access(path.join(outputDir, "generated", "stale.ts"))).rejects.toThrow();
+  });
+
   it("generates client using WebViewerAdapter when fmMcp config is provided", async () => {
     process.env.FM_MCP_BASE_URL = "http://127.0.0.1:1365";
     process.env.FM_CONNECTED_FILE_NAME = "TestFile";

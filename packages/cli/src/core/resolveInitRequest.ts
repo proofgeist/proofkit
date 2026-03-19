@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { DEFAULT_APP_NAME } from "~/consts.js";
-import { CliContext, FileMakerService, PromptService } from "~/core/context.js";
+import { CliContext, ConsoleService, FileMakerService, PromptService } from "~/core/context.js";
 import type { AppType, CliFlags, DataSourceType, FileMakerInputs, InitRequest } from "~/core/types.js";
 import { createDataSourceEnvNames, getDefaultSchemaName } from "~/utils/projectFiles.js";
 import { parseNameAndPath, validateAppName } from "~/utils/projectName.js";
@@ -264,12 +264,14 @@ async function resolveHostedFileMakerInputs({
 
 async function resolveFileMakerInputs({
   prompt,
+  console,
   fileMakerService,
   flags,
   appType,
   nonInteractive,
 }: {
   prompt: PromptService;
+  console: ConsoleService;
   fileMakerService: FileMakerService;
   flags: CliFlags;
   appType: AppType;
@@ -282,16 +284,39 @@ async function resolveFileMakerInputs({
   validateLayoutInputs(flags);
 
   if (appType === "webviewer" && !flags.server) {
+    const resolveLocalFmMcpFile = async (connectedFiles: string[]) => {
+      const availableFiles = connectedFiles.filter(Boolean);
+      if (availableFiles.length === 0) {
+        return undefined;
+      }
+
+      if (availableFiles.length === 1 || nonInteractive) {
+        return availableFiles[0];
+      }
+
+      return await prompt.searchSelect({
+        message: "Multiple FileMaker files are open. Which file should ProofKit use?",
+        options: availableFiles.map((fileName) => ({
+          value: fileName,
+          label: fileName,
+          hint: "Connected via local ProofKit MCP Server",
+          keywords: [fileName],
+        })),
+      });
+    };
+
     while (true) {
       const localFmMcp = await fileMakerService.detectLocalFmMcp();
-      if (localFmMcp.healthy && localFmMcp.connectedFiles[0]) {
+      const selectedFile = localFmMcp.healthy ? await resolveLocalFmMcpFile(localFmMcp.connectedFiles) : undefined;
+      if (localFmMcp.healthy && selectedFile) {
+        console.info(`Using local ProofKit MCP file: ${selectedFile}`);
         return {
           fileMaker: {
             mode: "local-fm-mcp",
             dataSourceName: "filemaker",
             envNames: createDataSourceEnvNames("filemaker"),
             fmMcpBaseUrl: localFmMcp.baseUrl,
-            fileName: localFmMcp.connectedFiles[0],
+            fileName: selectedFile,
             layoutName: flags.layoutName,
             schemaName: flags.schemaName,
           } satisfies FileMakerInputs,
@@ -313,14 +338,14 @@ async function resolveFileMakerInputs({
 
       const fallbackAction = await prompt.select({
         message: localFmMcp.healthy
-          ? "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?"
+          ? "ProofKit MCP Server is running, but no FileMaker file is open yet. Open one, then choose how to continue."
           : "ProofKit MCP Server was not detected. How would you like to continue?",
         options: [
           {
             value: "retry",
             label: "Try again",
             hint: localFmMcp.healthy
-              ? "Open a FileMaker file, then retry detection"
+              ? "Check again after opening a FileMaker file"
               : "Retry ProofKit MCP Server detection",
           },
           {
@@ -366,6 +391,7 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
   Effect.gen(function* () {
     const flags = { ...defaultFlags, ...rawFlags };
     const prompt = yield* PromptService;
+    const console = yield* ConsoleService;
     const fileMakerService = yield* FileMakerService;
     const cliContext = yield* CliContext;
     const nonInteractive = cliContext.nonInteractive || flags.CI || flags.nonInteractive === true;
@@ -457,6 +483,7 @@ export const resolveInitRequest = (name?: string, rawFlags?: CliFlags) =>
     const { fileMaker, skipFileMakerSetup } = yield* Effect.promise(() =>
       resolveFileMakerInputs({
         prompt,
+        console,
         fileMakerService,
         flags: { ...flags, dataSource },
         appType,

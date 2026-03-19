@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
-import { makeTestLayer, type PromptTranscript } from "./test-layer.js";
+import { type ConsoleTranscript, makeTestLayer, type PromptTranscript } from "./test-layer.js";
 
 describe("resolveInitRequest", () => {
   it("fails for missing project name in non-interactive mode", async () => {
@@ -142,6 +142,14 @@ describe("resolveInitRequest", () => {
   });
 
   it("uses local fm http for webviewer setup when available", async () => {
+    const consoleTranscript: ConsoleTranscript = {
+      info: [],
+      warn: [],
+      error: [],
+      success: [],
+      note: [],
+    };
+
     const request = await Effect.runPromise(
       resolveInitRequest("demo", {
         noGit: true,
@@ -157,6 +165,7 @@ describe("resolveInitRequest", () => {
           cwd: "/tmp",
           packageManager: "pnpm",
           nonInteractive: false,
+          console: consoleTranscript,
           fileMaker: {
             localFmMcp: {
               healthy: true,
@@ -171,6 +180,55 @@ describe("resolveInitRequest", () => {
       mode: "local-fm-mcp",
       fileName: "LocalFile.fmp12",
     });
+    expect(consoleTranscript.info).toContain("Using local ProofKit MCP file: LocalFile.fmp12");
+  });
+
+  it("asks which local FileMaker file to use when multiple are open", async () => {
+    const promptTranscript: PromptTranscript = {
+      text: [],
+      password: [],
+      select: [],
+      searchSelect: [],
+      multiSearchSelect: [],
+      confirm: [],
+    };
+
+    const request = await Effect.runPromise(
+      resolveInitRequest("demo", {
+        noGit: true,
+        noInstall: true,
+        force: false,
+        default: false,
+        importAlias: "~/",
+        CI: false,
+        appType: "webviewer",
+        dataSource: "filemaker",
+      }).pipe(
+        makeTestLayer({
+          cwd: "/tmp",
+          packageManager: "pnpm",
+          nonInteractive: false,
+          prompts: {
+            searchSelect: ["B.fmp12"],
+          },
+          promptTranscript,
+          fileMaker: {
+            localFmMcp: {
+              healthy: true,
+              connectedFiles: ["A.fmp12", "B.fmp12"],
+            },
+          },
+        }),
+      ),
+    );
+
+    expect(request.fileMaker).toMatchObject({
+      mode: "local-fm-mcp",
+      fileName: "B.fmp12",
+    });
+    expect(promptTranscript.searchSelect).toContain(
+      "Multiple FileMaker files are open. Which file should ProofKit use?",
+    );
   });
 
   it("prompts to retry when Proofkit MCP is running but no FileMaker file is open", async () => {
@@ -216,9 +274,60 @@ describe("resolveInitRequest", () => {
     expect(request.skipFileMakerSetup).toBe(true);
     expect(promptTranscript.select).toContainEqual({
       message:
-        "I noticed you have the ProofKit MCP Server installed, but no files are open. How would you like to continue?",
+        "ProofKit MCP Server is running, but no FileMaker file is open yet. Open one, then choose how to continue.",
       options: ["retry", "hosted", "skip"],
     });
+  });
+
+  it("retries local MCP detection, then reports the connected file", async () => {
+    const consoleTranscript: ConsoleTranscript = {
+      info: [],
+      warn: [],
+      error: [],
+      success: [],
+      note: [],
+    };
+
+    const request = await Effect.runPromise(
+      resolveInitRequest("demo", {
+        noGit: true,
+        noInstall: true,
+        force: false,
+        default: false,
+        importAlias: "~/",
+        CI: false,
+        appType: "webviewer",
+        dataSource: "filemaker",
+      }).pipe(
+        makeTestLayer({
+          cwd: "/tmp",
+          packageManager: "pnpm",
+          nonInteractive: false,
+          prompts: {
+            select: ["retry"],
+          },
+          console: consoleTranscript,
+          fileMaker: {
+            localFmMcp: [
+              {
+                healthy: true,
+                connectedFiles: [],
+              },
+              {
+                healthy: true,
+                connectedFiles: ["RetryConnected.fmp12"],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    expect(request.fileMaker).toMatchObject({
+      mode: "local-fm-mcp",
+      fileName: "RetryConnected.fmp12",
+    });
+    expect(consoleTranscript.info).toContain("Using local ProofKit MCP file: RetryConnected.fmp12");
   });
 
   it("fails with a specific non-interactive error when Proofkit MCP is running but no FileMaker file is open", async () => {

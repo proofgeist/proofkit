@@ -96,6 +96,7 @@ export function planInit(
     ],
     tasks: {
       bootstrapFileMaker: request.dataSource === "filemaker" && !request.skipFileMakerSetup,
+      checkWebViewerAddon: request.appType === "webviewer",
       runInstall: !request.noInstall,
       runInitialCodegen:
         request.dataSource === "filemaker" &&

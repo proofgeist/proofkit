@@ -185,6 +185,7 @@ function makeAddCommand() {
     "add",
     {
       name: optionalArg(textArg({ name: "name" })).pipe(withArgDescription("Component or registry item to add")),
+      target: optionalArg(textArg({ name: "target" })).pipe(withArgDescription("Optional add target")),
       noInstall: booleanOption("no-install").pipe(withOptionDescription("Skip package installation")),
       CI: booleanOption("ci").pipe(withOptionDescription("Deprecated alias for --non-interactive")),
       nonInteractive: booleanOption("non-interactive").pipe(
@@ -192,7 +193,7 @@ function makeAddCommand() {
       ),
       debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
     },
-    ({ name, noInstall, CI, nonInteractive, debug }) =>
+    ({ name, target, noInstall, CI, nonInteractive, debug }) =>
       legacyEffect(
         async () => {
           const [{ runAdd }, { initProgramState, state }] = await Promise.all([
@@ -207,7 +208,7 @@ function makeAddCommand() {
           });
           state.baseCommand = "add";
           state.projectDir = process.cwd();
-          await runAdd(getOrUndefined(name), { noInstall });
+          await runAdd(getOrUndefined(name), { noInstall, target: getOrUndefined(target) });
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),

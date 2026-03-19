@@ -18,6 +18,7 @@ describe("planInit", () => {
     expect(plan.tasks.runInstall).toBe(true);
     expect(plan.tasks.initializeGit).toBe(true);
     expect(plan.tasks.bootstrapFileMaker).toBe(false);
+    expect(plan.tasks.checkWebViewerAddon).toBe(false);
   });
 
   it("plans a webviewer scaffold with no install and no git", () => {
@@ -37,6 +38,7 @@ describe("planInit", () => {
     expect(plan.packageJson.devDependencies["@proofkit/typegen"]).toBe("beta");
     expect(plan.tasks.runInstall).toBe(false);
     expect(plan.tasks.initializeGit).toBe(false);
+    expect(plan.tasks.checkWebViewerAddon).toBe(true);
   });
 
   it("plans filemaker bootstrap and initial codegen when inputs are explicit", () => {

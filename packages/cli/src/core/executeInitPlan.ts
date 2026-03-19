@@ -214,8 +214,15 @@ export const executeInitPlan = (plan: InitPlan) =>
 
     if (plan.tasks.installFmAddon) {
       yield* Effect.promise(async () => {
-        const { installFmAddon } = await import("~/installers/install-fm-addon.js");
-        return installFmAddon({ addonName: "wv" });
+        try {
+          const { installFmAddon } = await import("~/installers/install-fm-addon.js");
+          await installFmAddon({ addonName: "wv" });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          consoleService.warn(
+            `Could not auto-install the ProofKit WebViewer add-on (${message}). Please install it manually in FileMaker from Extensions/AddonModules.`,
+          );
+        }
       });
     }
 

@@ -1,5 +1,11 @@
 # @proofkit/fmodata
 
+## 0.1.0-beta.36
+
+### Patch Changes
+
+- e0a9443: Return structured query errors for invalid entity-id table refs and unresolved filter operands instead of throwing or sending malformed OData filters
+
 ## 0.1.0-beta.35
 
 ### Patch Changes
@@ -34,6 +40,7 @@
 ### Minor Changes
 
 - 78a9f70: Add CLI binary with commands for records, schema, metadata, scripts, and webhooks
+
   - New `fmodata` command-line interface for database operations
   - Records command: Query, create, update, delete FileMaker records
   - Schema command: Inspect and manage database schema
@@ -56,6 +63,7 @@
 - c5efdbd: fix(fmodata): align webhook types with actual FM OData API response
 
   BREAKING: `WebhookListResponse`, `WebhookInfo`, and `WebhookAddResponse` property names changed to match what the API actually returns:
+
   - `Status` → `status`, `WebHook` → `webhooks`
   - `webHookID` → `webhookID`, `url` → `webhook`
   - `webHookResult` → `webhookResult`

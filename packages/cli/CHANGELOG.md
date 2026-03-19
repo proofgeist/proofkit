@@ -1,5 +1,17 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.25
+
+### Patch Changes
+
+- 41c07ba: Auto-detect non-interactive terminals for CLI commands in CI, scripted runs, and coding-agent environments.
+- 1096f3b: Improve `proofkit init` error handling by using tagged Effect-based CLI errors for expected failures, unifying user cancellation, and rendering cleaner top-level error output.
+- e6d0c55: Improve local ProofKit MCP setup messaging during webviewer init by reporting the connected FileMaker file after retry and prompting to choose a file when multiple files are open.
+- 46696e4: Require `proofkit init` to use an explicit local FileMaker file selection in non-interactive multi-file setups, and save the selected local file into the generated typegen config.
+- Updated dependencies [7b46a23]
+- Updated dependencies [88242c2]
+  - @proofkit/typegen@1.1.0-beta.20
+
 ## 2.0.0-beta.23
 
 ### Minor Changes

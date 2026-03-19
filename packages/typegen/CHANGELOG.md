@@ -1,5 +1,14 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.20
+
+### Patch Changes
+
+- 7b46a23: Fix typegen client index generation when multiple fmdapi configs write to the same output path
+- 88242c2: fix(typegen): preserve inline validator helpers in generated odata files
+- Updated dependencies [e0a9443]
+  - @proofkit/fmodata@0.1.0-beta.36
+
 ## 1.1.0-beta.19
 
 ### Minor Changes

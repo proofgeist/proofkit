@@ -50,9 +50,9 @@ skills:
       - 'Environment variables (FM_SERVER, FM_DATABASE, OTTO_API_KEY, FM_USERNAME, FM_PASSWORD)'
       - 'strictNumbers, strictValueLists options'
       - 'webviewerScriptName option'
-      - 'fmHttp config (local FM HTTP proxy for typegen metadata fetching)'
-      - 'FM HTTP env vars (FM_HTTP_BASE_URL, FM_CONNECTED_FILE_NAME)'
-      - 'FM HTTP auto-discovery of connectedFileName via /connectedFiles'
+      - 'fmMcp config (local FM MCP proxy for typegen metadata fetching)'
+      - 'FM MCP env vars (FM_HTTP_BASE_URL, FM_CONNECTED_FILE_NAME)'
+      - 'FM MCP auto-discovery of connectedFileName via /connectedFiles'
       - 'Field type overrides for OData'
       - 'reduceMetadata, alwaysOverrideFieldNames'
       - 'Entity ID preservation across regeneration'
@@ -62,8 +62,8 @@ skills:
       - 'Regenerate types after FileMaker schema changes'
       - 'Switch from Data API to OData config'
       - 'Configure environment variables for FM connection'
-      - 'Set up FM HTTP mode for local typegen without credentials'
-      - 'Troubleshoot FM HTTP connectivity issues'
+      - 'Set up FM MCP mode for local typegen without credentials'
+      - 'Troubleshoot FM MCP connectivity issues'
       - 'Customize generated schemas with override files'
     failure_modes:
       - mistake: 'Editing files in generated/ or client/ directories'
@@ -173,12 +173,12 @@ skills:
         status: active
         skills: ['typegen-setup', 'fmdapi-client', 'fmodata-client']
 
-      - mistake: 'Using FmHttpAdapter in production application code'
-        mechanism: 'FmHttpAdapter is internal to typegen metadata fetching. Generated clients use WebViewerAdapter. Agent sees the adapter import in typegen source and uses it in app code.'
+      - mistake: 'Using FmMcpAdapter in production application code'
+        mechanism: 'FmMcpAdapter is internal to typegen metadata fetching. Generated clients use WebViewerAdapter. Agent sees the adapter import in typegen source and uses it in app code.'
         wrong_pattern: |
-          import { FmHttpAdapter } from "@proofkit/fmdapi/adapters/fm-http";
+          import { FmMcpAdapter } from "@proofkit/fmdapi/adapters/fm-mcp";
           const client = DataApi({
-            adapter: new FmHttpAdapter({ baseUrl: "http://127.0.0.1:1365", connectedFileName: "MyFile" }),
+            adapter: new FmMcpAdapter({ baseUrl: "http://127.0.0.1:1365", connectedFileName: "MyFile" }),
             layout: "Contacts",
           });
         correct_pattern: |
@@ -190,8 +190,8 @@ skills:
         status: active
         skills: ['typegen-setup']
 
-      - mistake: 'Setting standard FM env vars when using fmHttp mode'
-        mechanism: 'fmHttp mode does not need FM_SERVER, FM_DATABASE, or OTTO_API_KEY. Agent configures both standard and fmHttp env vars, causing confusion when standard vars fail validation.'
+      - mistake: 'Setting standard FM env vars when using fmMcp mode'
+        mechanism: 'fmMcp mode does not need FM_SERVER, FM_DATABASE, or OTTO_API_KEY. Agent configures both standard and fmMcp env vars, causing confusion when standard vars fail validation.'
         wrong_pattern: |
           # .env — agent sets both
           FM_SERVER=https://fm.example.com
@@ -199,7 +199,7 @@ skills:
           OTTO_API_KEY=dk_abc123
           FM_HTTP_BASE_URL=http://127.0.0.1:1365
         correct_pattern: |
-          # fmHttp mode only needs these (baseUrl defaults to 127.0.0.1:1365)
+          # fmMcp mode only needs these (baseUrl defaults to 127.0.0.1:1365)
           # connectedFileName is auto-discovered if not set
           FM_CONNECTED_FILE_NAME=MyFile
         source: 'source: getEnvValues.ts, constants.ts'
@@ -207,18 +207,18 @@ skills:
         status: active
         skills: ['typegen-setup']
 
-      - mistake: 'Suggesting OttoFMS/FetchAdapter fallback when FM HTTP fails'
-        mechanism: 'Agent troubleshoots FM HTTP connection failure by suggesting standard auth. Developer chose fmHttp because they have no hosted credentials or are working offline. Correct troubleshooting: check daemon health (GET http://127.0.0.1:1365/health), check /connectedFiles, ensure FM file has run "Connect to MCP" script and WebViewer window is open in Browse mode.'
+      - mistake: 'Suggesting OttoFMS/FetchAdapter fallback when FM MCP fails'
+        mechanism: 'Agent troubleshoots FM MCP connection failure by suggesting standard auth. Developer chose fmMcp because they have no hosted credentials or are working offline. Correct troubleshooting: check daemon health (GET http://127.0.0.1:1365/health), check /connectedFiles, ensure FM file has run "Connect to MCP" script and WebViewer window is open in Browse mode.'
         source: 'maintainer interview'
         priority: HIGH
         status: active
         skills: ['typegen-setup']
 
-      - mistake: 'FM HTTP WebViewer window closed or in Layout mode'
-        mechanism: 'The FM HTTP proxy works via a WebViewer window opened by the "Connect to MCP" script in FileMaker. If this window is closed or switched to Layout mode, all proxy requests fail. Error may not be obvious — typegen just fails to connect.'
+      - mistake: 'FM MCP WebViewer window closed or in Layout mode'
+        mechanism: 'The FM MCP proxy works via a WebViewer window opened by the "Connect to MCP" script in FileMaker. If this window is closed or switched to Layout mode, all proxy requests fail. Error may not be obvious — typegen just fails to connect.'
         correct_pattern: |
           # Troubleshooting checklist:
-          # 1. Is the fm-http daemon running? GET http://127.0.0.1:1365/health
+          # 1. Is the fm-mcp daemon running? GET http://127.0.0.1:1365/health
           # 2. Is the file connected? GET http://127.0.0.1:1365/connectedFiles
           # 3. If file not listed: open it in FileMaker, run "Connect to MCP" script
           # 4. Ensure the WebViewer window stays open in Browse mode (not Layout mode)
@@ -705,12 +705,12 @@ skills:
       - 'First typegen run'
       - 'First query with generated client'
       - 'Choosing between Data API and OData'
-      - 'FM HTTP mode for local/offline WebViewer development (no credentials needed)'
+      - 'FM MCP mode for local/offline WebViewer development (no credentials needed)'
     tasks:
       - 'Set up a new project with ProofKit'
       - 'Connect to FileMaker server for the first time'
       - 'Generate types and make first data query'
-      - 'Set up FM HTTP mode for local WebViewer development'
+      - 'Set up FM MCP mode for local WebViewer development'
     failure_modes:
       - mistake: 'Missing fmrest or fmodata privilege on FM account'
         mechanism: 'Data API requires fmrest extended privilege. OData requires fmodata privilege. Without these, all API calls return 401/403.'

@@ -9,20 +9,20 @@ function normalizeScriptName(scriptName?: string) {
   return normalized ? normalized : undefined;
 }
 
-function getGeneratedWebviewerScriptName(args: Pick<BuildSchemaArgs, "webviewerScriptName" | "fmHttp">) {
+function getGeneratedWebviewerScriptName(args: Pick<BuildSchemaArgs, "webviewerScriptName" | "fmMcp">) {
   const explicitWebviewerScriptName = normalizeScriptName(args.webviewerScriptName);
   if (explicitWebviewerScriptName) {
     return explicitWebviewerScriptName;
   }
-  if (args.fmHttp) {
+  if (args.fmMcp) {
     return defaultWebviewerScriptName;
   }
   return undefined;
 }
 
 export function buildLayoutClient(sourceFile: SourceFile, args: BuildSchemaArgs) {
-  const { schemaName, portalSchema, envNames, type, webviewerScriptName, fmHttp, layoutName } = args;
-  const generatedWebviewerScriptName = getGeneratedWebviewerScriptName({ webviewerScriptName, fmHttp });
+  const { schemaName, portalSchema, envNames, type, webviewerScriptName, fmMcp, layoutName } = args;
+  const generatedWebviewerScriptName = getGeneratedWebviewerScriptName({ webviewerScriptName, fmMcp });
   const usesWebviewerAdapter = generatedWebviewerScriptName !== undefined;
 
   const fmdapiImport = sourceFile.addImportDeclaration({

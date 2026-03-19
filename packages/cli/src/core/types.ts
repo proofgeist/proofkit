@@ -4,7 +4,7 @@ export type AppType = "browser" | "webviewer";
 export type UIType = "shadcn" | "mantine";
 export type DataSourceType = "filemaker" | "none";
 export type OverwriteMode = "overwrite" | "clear";
-export type FileMakerMode = "hosted-otto" | "local-fm-http";
+export type FileMakerMode = "hosted-otto" | "local-fm-mcp";
 
 export interface CliFlags {
   noGit: boolean;
@@ -47,17 +47,17 @@ export interface HostedFileMakerInputs {
   ottoVersion?: string | null;
 }
 
-export interface LocalFmHttpInputs {
-  mode: "local-fm-http";
+export interface LocalFmMcpInputs {
+  mode: "local-fm-mcp";
   dataSourceName: string;
   envNames: FileMakerEnvNames;
-  fmHttpBaseUrl: string;
+  fmMcpBaseUrl: string;
   fileName: string;
   layoutName?: string;
   schemaName?: string;
 }
 
-export type FileMakerInputs = HostedFileMakerInputs | LocalFmHttpInputs;
+export type FileMakerInputs = HostedFileMakerInputs | LocalFmMcpInputs;
 
 export interface InitRequest {
   projectName: string;

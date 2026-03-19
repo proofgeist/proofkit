@@ -29,8 +29,8 @@ export const defaultEnvNames = {
   password: "FM_PASSWORD",
   server: "FM_SERVER",
   db: "FM_DATABASE",
-  fmHttpBaseUrl: "FM_HTTP_BASE_URL",
-  fmHttpConnectedFileName: "FM_CONNECTED_FILE_NAME",
+  fmMcpBaseUrl: "FM_MCP_BASE_URL",
+  fmMcpConnectedFileName: "FM_CONNECTED_FILE_NAME",
 };
 
-export const defaultFmHttpBaseUrl = "http://127.0.0.1:1365";
+export const defaultFmMcpBaseUrl = "http://127.0.0.1:1365";

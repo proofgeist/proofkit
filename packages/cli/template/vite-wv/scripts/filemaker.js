@@ -7,13 +7,13 @@ const envPath = resolve(currentDirectory, "../.env");
 
 dotenv.config({ path: envPath });
 
-const defaultFmHttpBaseUrl = process.env.FM_HTTP_BASE_URL ?? "http://127.0.0.1:1365";
+const defaultFmMcpBaseUrl = process.env.FM_MCP_BASE_URL ?? "http://127.0.0.1:1365";
 
 function stripFileExtension(fileName) {
   return fileName.replace(/\.fmp12$/i, "");
 }
 
-async function getConnectedFiles(baseUrl = defaultFmHttpBaseUrl) {
+async function getConnectedFiles(baseUrl = defaultFmMcpBaseUrl) {
   const healthResponse = await fetch(`${baseUrl}/health`).catch(() => null);
   if (!healthResponse?.ok) {
     return [];
@@ -40,13 +40,13 @@ export async function resolveFileMakerTarget() {
       return {
         fileName: stripFileExtension(matches[0]),
         host: "$",
-        source: "fm-http",
+        source: "fm-mcp",
       };
     }
 
     if (connectedFiles.length > 0) {
       throw new Error(
-        `FM_DATABASE is set to "${process.env.FM_DATABASE}" but no matching connected file was found via FM HTTP.`,
+        `FM_DATABASE is set to "${process.env.FM_DATABASE}" but no matching connected file was found via FM MCP.`,
       );
     }
   }
@@ -55,13 +55,13 @@ export async function resolveFileMakerTarget() {
     return {
       fileName: stripFileExtension(connectedFiles[0]),
       host: "$",
-      source: "fm-http",
+      source: "fm-mcp",
     };
   }
 
   if (connectedFiles.length > 1) {
     throw new Error(
-      `Multiple FileMaker files are connected via FM HTTP (${connectedFiles.join(", ")}). Set FM_DATABASE to choose one.`,
+      `Multiple FileMaker files are connected via FM MCP (${connectedFiles.join(", ")}). Set FM_DATABASE to choose one.`,
     );
   }
 

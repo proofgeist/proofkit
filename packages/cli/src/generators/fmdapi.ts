@@ -201,7 +201,7 @@ export async function addConfig({
   }
 }
 
-export async function ensureWebviewerFmHttpConfig({
+export async function ensureWebviewerFmMcpConfig({
   projectDir,
   connectedFileName,
   dataSourceName = "filemaker",
@@ -220,7 +220,7 @@ export async function ensureWebviewerFmHttpConfig({
     webviewerScriptName: "ExecuteDataApi",
     envNames: undefined,
     layouts: [],
-    fmHttp: {
+    fmMcp: {
       enabled: true,
       ...(baseUrl ? { baseUrl } : {}),
       ...(connectedFileName ? { connectedFileName } : {}),
@@ -256,10 +256,10 @@ export async function ensureWebviewerFmHttpConfig({
       ...existingConfig,
       ...newConfig,
       layouts: existingConfig.layouts ?? [],
-      fmHttp: {
+      fmMcp: {
         enabled: true,
-        ...(existingConfig.fmHttp ?? {}),
-        ...(newConfig.fmHttp ?? {}),
+        ...(existingConfig.fmMcp ?? {}),
+        ...(newConfig.fmMcp ?? {}),
       },
     };
   }

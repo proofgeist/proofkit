@@ -35,7 +35,7 @@
     "fix-typegen-boolean-validator-duplication",
     "fix-typegen-fields-dialog-overflow",
     "fix-webhook-response-types",
-    "fm-http-typegen-flow",
+    "fm-mcp-typegen-flow",
     "fmodata-cli-binary",
     "fmodata-date-filter-date-param",
     "get-query-string-entity-ids-override",

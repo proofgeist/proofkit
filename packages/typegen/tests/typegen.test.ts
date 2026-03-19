@@ -467,13 +467,13 @@ describe("typegen unit tests", () => {
     expect(content).toContain("suffixSchemaLayout");
   });
 
-  it("generates client using WebViewerAdapter when fmHttp config is provided", async () => {
-    process.env.FM_HTTP_BASE_URL = "http://127.0.0.1:1365";
+  it("generates client using WebViewerAdapter when fmMcp config is provided", async () => {
+    process.env.FM_MCP_BASE_URL = "http://127.0.0.1:1365";
     process.env.FM_CONNECTED_FILE_NAME = "TestFile";
 
     const fetchMock = vi.fn(
       createLayoutMetadataMock({
-        FmHttpLayout: mockLayoutMetadata["basic-layout"],
+        FmMcpLayout: mockLayoutMetadata["basic-layout"],
       }),
     );
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
@@ -483,24 +483,24 @@ describe("typegen unit tests", () => {
       envNames: undefined,
       layouts: [
         {
-          layoutName: "FmHttpLayout",
-          schemaName: "fmHttpSchema",
+          layoutName: "FmMcpLayout",
+          schemaName: "fmMcpSchema",
         },
       ],
-      path: "unit-typegen-output/fm-http",
+      path: "unit-typegen-output/fm-mcp",
       generateClient: true,
       validator: false,
       webviewerScriptName: "execute_data_api_custom",
-      fmHttp: { enabled: true },
+      fmMcp: { enabled: true },
     };
 
     await generateTypedClients(config, { cwd: import.meta.dirname });
 
-    const clientPath = path.join(__dirname, "unit-typegen-output/fm-http/client/fmHttpSchema.ts");
+    const clientPath = path.join(__dirname, "unit-typegen-output/fm-mcp/client/fmMcpSchema.ts");
     const content = await fs.readFile(clientPath, "utf-8");
 
     expect(content).toContain("WebViewerAdapter");
-    expect(content).not.toContain("FmHttpAdapter");
+    expect(content).not.toContain("FmMcpAdapter");
     expect(content).not.toContain("FM_HTTP_BASE_URL");
     expect(content).not.toContain("FM_CONNECTED_FILE_NAME");
     expect(content).toContain('scriptName: "execute_data_api_custom"');
@@ -510,10 +510,10 @@ describe("typegen unit tests", () => {
     expect(String(url)).toContain("/callScript");
 
     const body = JSON.parse(String(init?.body ?? "{}"));
-    // FmHttpAdapter uses webviewerScriptName when fmHttp.scriptName not set
+    // FmMcpAdapter uses webviewerScriptName when fmMcp.scriptName not set
     expect(body.scriptName).toBe("execute_data_api_custom");
     const scriptParam = JSON.parse(String(body.data ?? "{}"));
     expect(scriptParam.action).toBe("metaData");
-    expect(scriptParam.layouts).toBe("FmHttpLayout");
+    expect(scriptParam.layouts).toBe("FmMcpLayout");
   });
 });

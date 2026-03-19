@@ -1,7 +1,7 @@
 import path from "node:path";
 import DataApi from "@proofkit/fmdapi";
 import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
-import { FmHttpAdapter } from "@proofkit/fmdapi/adapters/fm-http";
+import { FmMcpAdapter } from "@proofkit/fmdapi/adapters/fm-mcp";
 import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
 import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
 import chalk from "chalk";
@@ -131,22 +131,22 @@ const generateTypedClientsSingle = async (
     },
   });
 
-  const isFmHttpMode = config.fmHttp != null && config.fmHttp.enabled !== false;
-  const fmHttpObj = config.fmHttp ?? undefined;
+  const isFmMcpMode = config.fmMcp != null && config.fmMcp.enabled !== false;
+  const fmMcpObj = config.fmMcp ?? undefined;
 
-  if (isFmHttpMode && !config.webviewerScriptName) {
+  if (isFmMcpMode && !config.webviewerScriptName) {
     console.log(
       chalk.blue(
-        `INFO: Generated clients will use WebViewerAdapter with script "${fmHttpObj?.scriptName ?? "execute_data_api"}".`,
+        `INFO: Generated clients will use WebViewerAdapter with script "${fmMcpObj?.scriptName ?? "execute_data_api"}".`,
       ),
     );
   }
 
   const envValues = getEnvValues(envNames);
   const validationResult = validateAndLogEnvValues(envValues, envNames, {
-    fmHttp: isFmHttpMode,
-    fmHttpConfig: isFmHttpMode
-      ? { baseUrl: fmHttpObj?.baseUrl, connectedFileName: fmHttpObj?.connectedFileName }
+    fmMcp: isFmMcpMode,
+    fmMcpConfig: isFmMcpMode
+      ? { baseUrl: fmMcpObj?.baseUrl, connectedFileName: fmMcpObj?.connectedFileName }
       : undefined,
   });
 
@@ -158,22 +158,22 @@ const generateTypedClientsSingle = async (
   let server: string | undefined;
   let db: string | undefined;
   let auth: { apiKey: OttoAPIKey } | { username: string; password: string } | undefined;
-  let fmHttpBaseUrl: string | undefined;
-  let fmHttpConnectedFileName: string | undefined;
+  let fmMcpBaseUrl: string | undefined;
+  let fmMcpConnectedFileName: string | undefined;
 
-  if (validationResult.mode === "fmHttp") {
-    fmHttpBaseUrl = validationResult.baseUrl;
-    fmHttpConnectedFileName = validationResult.connectedFileName;
+  if (validationResult.mode === "fmMcp") {
+    fmMcpBaseUrl = validationResult.baseUrl;
+    fmMcpConnectedFileName = validationResult.connectedFileName;
 
     // Auto-discover connectedFileName if not provided
-    if (!fmHttpConnectedFileName) {
+    if (!fmMcpConnectedFileName) {
       try {
-        const res = await fetch(`${fmHttpBaseUrl}/connectedFiles`);
+        const res = await fetch(`${fmMcpBaseUrl}/connectedFiles`);
         if (res.ok) {
           const files = (await res.json()) as string[];
           if (files.length === 1) {
-            fmHttpConnectedFileName = files[0];
-            console.log(chalk.green(`Auto-discovered connected file: ${fmHttpConnectedFileName}`));
+            fmMcpConnectedFileName = files[0];
+            console.log(chalk.green(`Auto-discovered connected file: ${fmMcpConnectedFileName}`));
 
             // Write discovered connectedFileName back to config file
             if (options?.configPath) {
@@ -182,31 +182,31 @@ const generateTypedClientsSingle = async (
                 const raw = fs.readFileSync(configFilePath, "utf8");
                 const { modify, applyEdits } = await import("jsonc-parser");
                 const fmtOpts = { formattingOptions: { insertSpaces: true, tabSize: 2 } };
-                // Build the JSON path: array configs use ["config", index, "fmHttp", ...], single uses ["config", "fmHttp", ...]
+                // Build the JSON path: array configs use ["config", index, "fmMcp", ...], single uses ["config", "fmMcp", ...]
                 const basePath =
-                  options.configIndex !== undefined ? ["config", options.configIndex, "fmHttp"] : ["config", "fmHttp"];
+                  options.configIndex !== undefined ? ["config", options.configIndex, "fmMcp"] : ["config", "fmMcp"];
 
-                // If fmHttp was `true` in the raw file, replace it with an object first
+                // If fmMcp was `true` in the raw file, replace it with an object first
                 let current = raw;
                 const parsed = (await import("jsonc-parser")).parseTree(raw);
                 if (parsed) {
                   const { findNodeAtLocation } = await import("jsonc-parser");
-                  const fmHttpNode = findNodeAtLocation(parsed, basePath);
-                  if (fmHttpNode?.type === "boolean") {
+                  const fmMcpNode = findNodeAtLocation(parsed, basePath);
+                  if (fmMcpNode?.type === "boolean") {
                     const replaceEdits = modify(
                       current,
                       basePath,
-                      { enabled: true, connectedFileName: fmHttpConnectedFileName },
+                      { enabled: true, connectedFileName: fmMcpConnectedFileName },
                       fmtOpts,
                     );
                     current = applyEdits(current, replaceEdits);
                     fs.writeFileSync(configFilePath, current, "utf8");
-                    console.log(chalk.green(`Updated config with connectedFileName: ${fmHttpConnectedFileName}`));
+                    console.log(chalk.green(`Updated config with connectedFileName: ${fmMcpConnectedFileName}`));
                   } else {
-                    const edits = modify(current, [...basePath, "connectedFileName"], fmHttpConnectedFileName, fmtOpts);
+                    const edits = modify(current, [...basePath, "connectedFileName"], fmMcpConnectedFileName, fmtOpts);
                     current = applyEdits(current, edits);
                     fs.writeFileSync(configFilePath, current, "utf8");
-                    console.log(chalk.green(`Updated config with connectedFileName: ${fmHttpConnectedFileName}`));
+                    console.log(chalk.green(`Updated config with connectedFileName: ${fmMcpConnectedFileName}`));
                   }
                 }
               } catch (writeErr) {
@@ -220,22 +220,22 @@ const generateTypedClientsSingle = async (
           } else if (files.length > 1) {
             console.log(
               chalk.red(
-                "ERROR: Multiple connected files found. Please specify connectedFileName in your fmHttp config.",
+                "ERROR: Multiple connected files found. Please specify connectedFileName in your fmMcp config.",
               ),
             );
             console.log(chalk.yellow(`Connected files: ${files.join(", ")}`));
             return;
           } else {
-            console.log(chalk.red("ERROR: No connected files found on the FM HTTP server."));
+            console.log(chalk.red("ERROR: No connected files found on the FM MCP server."));
             return;
           }
         } else {
-          console.log(chalk.red(`ERROR: Failed to auto-discover connected files from ${fmHttpBaseUrl}/connectedFiles`));
+          console.log(chalk.red(`ERROR: Failed to auto-discover connected files from ${fmMcpBaseUrl}/connectedFiles`));
           return;
         }
       } catch (_err) {
-        console.log(chalk.red(`ERROR: Could not reach FM HTTP server at ${fmHttpBaseUrl}`));
-        console.log(chalk.yellow("Ensure the FM HTTP server is running and accessible."));
+        console.log(chalk.red(`ERROR: Could not reach FM MCP server at ${fmMcpBaseUrl}`));
+        console.log(chalk.yellow("Ensure the FM MCP server is running and accessible."));
         return;
       }
     }
@@ -261,12 +261,12 @@ const generateTypedClientsSingle = async (
   for await (const item of layouts) {
     totalCount++;
     let client: ReturnType<typeof DataApi>;
-    if (isFmHttpMode) {
+    if (isFmMcpMode) {
       client = DataApi({
-        adapter: new FmHttpAdapter({
-          baseUrl: fmHttpBaseUrl as string,
-          connectedFileName: fmHttpConnectedFileName as string,
-          scriptName: fmHttpObj?.scriptName ?? config.webviewerScriptName,
+        adapter: new FmMcpAdapter({
+          baseUrl: fmMcpBaseUrl as string,
+          connectedFileName: fmMcpConnectedFileName as string,
+          scriptName: fmMcpObj?.scriptName ?? config.webviewerScriptName,
         }),
         layout: item.layoutName,
       });
@@ -306,14 +306,14 @@ const generateTypedClientsSingle = async (
       type: validator === "zod" || validator === "zod/v4" || validator === "zod/v3" ? validator : "ts",
       strictNumbers: item.strictNumbers,
       webviewerScriptName: config?.type === "fmdapi" ? config.webviewerScriptName : undefined,
-      fmHttp: config?.type === "fmdapi" ? !!config.fmHttp : undefined,
+      fmMcp: config?.type === "fmdapi" ? !!config.fmMcp : undefined,
       envNames: (() => {
-        // FM HTTP mode: only need baseUrl + connectedFileName
-        if (isFmHttpMode) {
+        // FM MCP mode: only need baseUrl + connectedFileName
+        if (isFmMcpMode) {
           return {
-            fmHttp: {
-              baseUrl: envNames?.fmHttp?.baseUrl ?? defaultEnvNames.fmHttpBaseUrl,
-              connectedFileName: envNames?.fmHttp?.connectedFileName ?? defaultEnvNames.fmHttpConnectedFileName,
+            fmMcp: {
+              baseUrl: envNames?.fmMcp?.baseUrl ?? defaultEnvNames.fmMcpBaseUrl,
+              connectedFileName: envNames?.fmMcp?.connectedFileName ?? defaultEnvNames.fmMcpConnectedFileName,
             },
           };
         }

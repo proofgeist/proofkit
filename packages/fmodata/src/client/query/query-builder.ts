@@ -3,7 +3,8 @@ import type { FFetchOptions } from "@fetchkit/ffetch";
 import { Effect } from "effect";
 import buildQuery, { type QueryOptions } from "odata-query";
 import { requestFromService, runLayerResult } from "../../effect";
-import { RecordCountMismatchError } from "../../errors";
+import type { FMODataErrorType } from "../../errors";
+import { BuilderInvariantError, isFMODataError, RecordCountMismatchError } from "../../errors";
 import type { InternalLogger } from "../../logger";
 import { type Column, isColumn } from "../../orm/column";
 import { type FilterExpression, isOrderByExpression, type OrderByExpression } from "../../orm/operators";
@@ -53,6 +54,16 @@ export type { QueryReturnType, SystemColumnsOption, TypeSafeOrderBy } from "./ty
  * allowing substantial data retrieval. Users can override with .top().
  */
 const _DEFAULT_TOP = 1000;
+
+function normalizeQueryBuildError(error: unknown): FMODataErrorType {
+  if (isFMODataError(error)) {
+    return error;
+  }
+  if (error instanceof Error) {
+    return new BuilderInvariantError("QueryBuilder.execute", error.message, { cause: error });
+  }
+  return new BuilderInvariantError("QueryBuilder.execute", String(error));
+}
 
 export class QueryBuilder<
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
@@ -682,15 +693,31 @@ export class QueryBuilder<
     >;
 
     const mergedOptions = this.mergeExecuteOptions(options);
-    const queryString = this.buildQueryString(mergedOptions.includeSpecialColumns, mergedOptions.useEntityIds);
+    let queryString: string;
+    try {
+      queryString = this.buildQueryString(mergedOptions.includeSpecialColumns, mergedOptions.useEntityIds);
+    } catch (error) {
+      return Promise.resolve({
+        data: undefined,
+        error: normalizeQueryBuildError(error),
+      }) as Promise<Result<ExecuteResponse>>;
+    }
 
     // Handle $count endpoint
     if (this.readState.isCountMode) {
-      const url = this.urlBuilder.build(queryString, {
-        isCount: true,
-        useEntityIds: mergedOptions.useEntityIds,
-        navigation: this.readState.navigation,
-      });
+      let url: string;
+      try {
+        url = this.urlBuilder.build(queryString, {
+          isCount: true,
+          useEntityIds: mergedOptions.useEntityIds,
+          navigation: this.readState.navigation,
+        });
+      } catch (error) {
+        return Promise.resolve({
+          data: undefined,
+          error: normalizeQueryBuildError(error),
+        }) as Promise<Result<ExecuteResponse>>;
+      }
 
       const pipeline = requestFromService(url, mergedOptions).pipe(
         Effect.map((data) => {
@@ -704,11 +731,19 @@ export class QueryBuilder<
       }) as Promise<Result<ExecuteResponse>>;
     }
 
-    const url = this.urlBuilder.build(queryString, {
-      isCount: this.readState.isCountMode,
-      useEntityIds: mergedOptions.useEntityIds,
-      navigation: this.readState.navigation,
-    });
+    let url: string;
+    try {
+      url = this.urlBuilder.build(queryString, {
+        isCount: this.readState.isCountMode,
+        useEntityIds: mergedOptions.useEntityIds,
+        navigation: this.readState.navigation,
+      });
+    } catch (error) {
+      return Promise.resolve({
+        data: undefined,
+        error: normalizeQueryBuildError(error),
+      }) as Promise<Result<ExecuteResponse>>;
+    }
 
     const pipeline = requestFromService(url, mergedOptions).pipe(
       Effect.flatMap((data) =>

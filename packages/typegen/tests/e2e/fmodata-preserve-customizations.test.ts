@@ -319,6 +319,61 @@ describe("fmodata generateODataTypes preserves user customizations", () => {
     }
   });
 
+  it("preserves unrelated top-level imports and helper code", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
+
+    try {
+      const entitySetName = "Project";
+      const entityTypeName = "NS.Project";
+      const metadata = makeMetadata({
+        entitySetName,
+        entityTypeName,
+        fields: [{ name: "status", type: "Edm.String", fieldId: "F1" }],
+      });
+
+      const existingFilePath = path.join(tmpDir, "Project.ts");
+      await fs.writeFile(
+        existingFilePath,
+        [
+          `import { fmTableOccurrence, textField } from "@proofkit/fmodata";`,
+          `import { DateTime } from "luxon";`,
+          "",
+          `const STATUS_LABELS = new Map([["open", "Open"]]);`,
+          `function getGeneratedAt() {`,
+          `  return DateTime.utc().toISO();`,
+          `}`,
+          "",
+          `export const generatedAt = getGeneratedAt();`,
+          "",
+          `export const Project = fmTableOccurrence("Project", {`,
+          `  status: textField().entityId("F1"),`,
+          "}, {",
+          `  entityId: "T1",`,
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      await generateODataTypes(metadata, {
+        type: "fmodata",
+        path: tmpDir,
+        clearOldFiles: false,
+        tables: [{ tableName: "Project" }],
+      });
+
+      const regenerated = await fs.readFile(existingFilePath, "utf8");
+      expect(regenerated).toContain(`import { DateTime } from "luxon";`);
+      expect(regenerated).toContain(`const STATUS_LABELS = new Map([["open", "Open"]]);`);
+      expect(regenerated).toContain(`function getGeneratedAt()`);
+      expect(regenerated).toContain(`return DateTime.utc().toISO();`);
+      expect(regenerated).toContain(`export const generatedAt = getGeneratedAt();`);
+      expect(regenerated).toContain(`status: textField().entityId("F1")`);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("preserves custom validators and removes stale files when clearOldFiles is true", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-fmodata-preserve-"));
 

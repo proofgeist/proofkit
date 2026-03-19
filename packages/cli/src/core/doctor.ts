@@ -39,6 +39,20 @@ export const runDoctor = Effect.gen(function* () {
   const fs = yield* FileSystemService;
   const consoleService = yield* ConsoleService;
   const cwd = cliContext.cwd;
+  const readJsonSafe = <T>(targetPath: string) =>
+    fs.readJson<T>(targetPath).pipe(
+      Effect.match({
+        onFailure: () => undefined,
+        onSuccess: (value) => value,
+      }),
+    );
+  const readFileSafe = (targetPath: string) =>
+    fs.readFile(targetPath).pipe(
+      Effect.match({
+        onFailure: () => undefined,
+        onSuccess: (value) => value,
+      }),
+    );
 
   const settingsPath = path.join(cwd, "proofkit.json");
   if (!(yield* fs.exists(settingsPath))) {
@@ -72,10 +86,10 @@ export const runDoctor = Effect.gen(function* () {
       }
     | undefined;
 
-  try {
-    settings = yield* fs.readJson<typeof settings>(settingsPath);
+  settings = yield* readJsonSafe<typeof settings>(settingsPath);
+  if (settings) {
     findings.push({ level: "ok", message: "Found `proofkit.json`." });
-  } catch {
+  } else {
     findings.push({ level: "error", message: "Could not read `proofkit.json`." });
   }
 
@@ -89,8 +103,8 @@ export const runDoctor = Effect.gen(function* () {
     | undefined;
 
   if (yield* fs.exists(packageJsonPath)) {
-    try {
-      const nextPackageJson = yield* fs.readJson<NonNullable<typeof packageJson>>(packageJsonPath);
+    const nextPackageJson = yield* readJsonSafe<NonNullable<typeof packageJson>>(packageJsonPath);
+    if (nextPackageJson) {
       packageJson = nextPackageJson;
       const allDeps = {
         ...(nextPackageJson.dependencies ?? {}),
@@ -112,7 +126,7 @@ export const runDoctor = Effect.gen(function* () {
       if (nextPackageJson.scripts?.["typegen:ui"]) {
         findings.push({ level: "ok", message: "Found `typegen:ui` script." });
       }
-    } catch {
+    } else {
       findings.push({ level: "error", message: "Could not read `package.json`." });
     }
   } else {
@@ -127,8 +141,8 @@ export const runDoctor = Effect.gen(function* () {
     | undefined;
 
   if (yield* fs.exists(typegenConfigPath)) {
-    try {
-      const raw = yield* fs.readFile(typegenConfigPath);
+    const raw = yield* readFileSafe(typegenConfigPath);
+    if (raw) {
       const parsed = parseJsonc(raw);
       if (isTypegenConfigLike(parsed)) {
         parsedTypegenConfig = parsed;
@@ -173,7 +187,7 @@ export const runDoctor = Effect.gen(function* () {
           message: "Typegen config exists but is invalid. Open `npx @proofkit/typegen ui` or fix the JSONC file.",
         });
       }
-    } catch {
+    } else {
       findings.push({ level: "error", message: "Could not read `proofkit-typegen.config.jsonc`." });
     }
   } else {
@@ -224,8 +238,8 @@ export const runDoctor = Effect.gen(function* () {
 
   if (expectedEnvNames.length > 0) {
     if (resolvedEnvPath) {
-      try {
-        const envRaw = yield* fs.readFile(resolvedEnvPath);
+      const envRaw = yield* readFileSafe(resolvedEnvPath);
+      if (envRaw) {
         const env = parseDotenv(envRaw);
         const missing = expectedEnvNames.filter((name) => !(name in env));
         if (missing.length > 0) {
@@ -239,7 +253,7 @@ export const runDoctor = Effect.gen(function* () {
             message: `Expected env vars found in \`${path.basename(resolvedEnvPath)}\`.`,
           });
         }
-      } catch {
+      } else {
         findings.push({ level: "error", message: `Could not read env file \`${path.basename(resolvedEnvPath)}\`.` });
       }
     } else {

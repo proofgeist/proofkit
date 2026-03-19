@@ -1,11 +1,27 @@
 import chalk from "chalk";
+import { Effect } from "effect";
 import open from "open";
 import { confirm, log, select } from "~/cli/prompts.js";
 
 import { DOCS_URL } from "~/consts.js";
+import { runDoctor } from "~/core/doctor.js";
+import { runPrompt } from "~/core/prompt.js";
+import { makeLiveLayer } from "~/services/live.js";
 import { checkForAvailableUpgrades, runAllAvailableUpgrades } from "~/upgrades/index.js";
+import { resolveNonInteractiveMode } from "~/utils/nonInteractive.js";
 import { runDeploy } from "./deploy/index.js";
 import { abortIfCancel } from "./utils.js";
+
+function getMenuRuntime() {
+  return makeLiveLayer({
+    cwd: process.cwd(),
+    debug: false,
+    nonInteractive: resolveNonInteractiveMode({
+      stdinIsTTY: process.stdin?.isTTY,
+      stdoutIsTTY: process.stdout?.isTTY,
+    }),
+  });
+}
 
 export const runMenu = async () => {
   const upgrades = checkForAvailableUpgrades();
@@ -62,10 +78,10 @@ export const runMenu = async () => {
 
   switch (menuChoice) {
     case "doctor":
-      log.info(`Run ${chalk.cyan("proofkit doctor")} to inspect project health and get next steps.`);
+      await Effect.runPromise(getMenuRuntime()(runDoctor));
       break;
     case "prompt":
-      log.info(`Run ${chalk.cyan("proofkit prompt")} for the upcoming agent workflow entrypoint.`);
+      await Effect.runPromise(getMenuRuntime()(runPrompt));
       break;
     case "docs":
       log.info(`Opening ${chalk.cyan(DOCS_URL)} in your browser...`);

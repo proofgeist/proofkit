@@ -1,5 +1,5 @@
 {
-  "$schema": "https://turborepo.com/schema.json",
+  "$schema": "https://v2-8-19.turborepo.dev/schema.json",
   "concurrency": "11",
   "ui": "tui",
   "tasks": {

@@ -39,8 +39,6 @@ interface CliFlags {
   fmServerURL: string;
   auth: "none" | "next-auth" | "clerk";
   dataSource?: "filemaker" | "none" | "supabase";
-  /** @internal UI library selection; hidden flag */
-  ui?: "shadcn" | "mantine";
   /** @internal Used in CI. */
   CI: boolean;
   /** @internal Used in non-interactive mode. */
@@ -77,7 +75,6 @@ const defaultOptions: CliFlags = {
   dataApiKey: "",
   fmServerURL: "",
   dataSource: undefined,
-  ui: "shadcn",
 };
 
 export const makeInitCommand = () => {
@@ -85,8 +82,6 @@ export const makeInitCommand = () => {
     .description("Create a new project with ProofKit")
     .argument("[dir]", "The name of the application, as well as the name of the directory to create")
     .option("--appType [type]", "The type of app to create", undefined)
-    // hidden UI selector; default is shadcn; pass --ui mantine to opt-in legacy Mantine templates
-    .option("--ui [ui]", undefined, undefined)
     .option("--server [url]", "The URL of your FileMaker Server", undefined)
     .option("--adminApiKey [key]", "Admin API key for OttoFMS. If provided, will skip login prompt", undefined)
     .option("--fileName [name]", "The name of the FileMaker file to use for the web app", undefined)
@@ -198,8 +193,7 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
   const nonInteractive = isNonInteractiveMode();
   const noInstall = cliOptions.noInstall ?? (opts as { install?: boolean } | undefined)?.install === false;
   const noGit = cliOptions.noGit ?? (opts as { git?: boolean } | undefined)?.git === false;
-  // capture ui choice early into state
-  state.ui = (cliOptions.ui ?? "shadcn") as "shadcn" | "mantine";
+  state.ui = "shadcn";
 
   let projectName = name;
   if (!projectName) {
@@ -299,30 +293,15 @@ export const runInit = async (name?: string, opts?: CliFlags) => {
     spaces: 2,
   });
 
-  // Ensure proofkit.json exists with initial settings including ui
-  const initialSettings: Settings =
-    state.ui === "mantine"
-      ? {
-          appType: state.appType ?? "browser",
-          ui: "mantine",
-          auth: { type: "none" },
-          envFile: ".env",
-          dataSources: [],
-          tanstackQuery: false,
-          replacedMainPage: false,
-          appliedUpgrades: [],
-          reactEmail: false,
-          reactEmailServer: false,
-          registryTemplates: [],
-        }
-      : {
-          appType: state.appType ?? "browser",
-          ui: "shadcn",
-          envFile: ".env",
-          dataSources: [],
-          replacedMainPage: false,
-          registryTemplates: [],
-        };
+  // Ensure proofkit.json exists with shadcn settings
+  const initialSettings: Settings = {
+    appType: state.appType ?? "browser",
+    ui: "shadcn",
+    envFile: ".env",
+    dataSources: [],
+    replacedMainPage: false,
+    registryTemplates: [],
+  };
   setSettings(initialSettings);
 
   // for webviewer apps FM is required, so don't ask

@@ -43,8 +43,7 @@ export const createBareProject = async ({
     devMode: true,
   });
 
-  // Add new base dependencies for Tailwind v4 and shadcn/ui or legacy Mantine
-  // These should match the plan and dependencyVersionMap
+  // Add base deps for current templates. Legacy Mantine projects remain supported elsewhere.
   const NEXT_SHADCN_BASE_DEPS = [
     "@radix-ui/react-slot",
     "@tailwindcss/postcss",
@@ -72,31 +71,7 @@ export const createBareProject = async ({
   const SHADCN_BASE_DEV_DEPS = ["ultracite"] as AvailableDependencies[];
   const VITE_SHADCN_BASE_DEV_DEPS = ["@proofkit/typegen", "ultracite"] as AvailableDependencies[];
 
-  const MANTINE_DEPS = [
-    "@mantine/core",
-    "@mantine/dates",
-    "@mantine/hooks",
-    "@mantine/modals",
-    "@mantine/notifications",
-    "mantine-react-table",
-  ] as AvailableDependencies[];
-  const MANTINE_DEV_DEPS = [
-    "postcss",
-    "postcss-preset-mantine",
-    "postcss-simple-vars",
-    "ultracite",
-  ] as AvailableDependencies[];
-
-  if (state.ui === "mantine") {
-    addPackageDependency({
-      dependencies: MANTINE_DEPS,
-      devMode: false,
-    });
-    addPackageDependency({
-      dependencies: MANTINE_DEV_DEPS,
-      devMode: true,
-    });
-  } else if (state.ui === "shadcn") {
+  if (state.ui === "shadcn") {
     addPackageDependency({
       dependencies: state.appType === "webviewer" ? VITE_SHADCN_BASE_DEPS : NEXT_SHADCN_BASE_DEPS,
       devMode: false,
@@ -106,7 +81,7 @@ export const createBareProject = async ({
       devMode: true,
     });
   } else {
-    throw new Error(`Unsupported UI library: ${state.ui}`);
+    throw new Error(`Unsupported scaffold UI library: ${state.ui}`);
   }
 
   // Install the selected packages

@@ -184,12 +184,9 @@ const fileSystemService = {
 };
 
 const templateService = {
-  getTemplateDir: (appType: AppType, ui: UIType) => {
+  getTemplateDir: (appType: AppType, _ui: UIType) => {
     if (appType === "webviewer") {
       return path.join(TEMPLATE_ROOT, "vite-wv");
-    }
-    if (ui === "mantine") {
-      return path.join(TEMPLATE_ROOT, "nextjs-mantine");
     }
     return path.join(TEMPLATE_ROOT, "nextjs-shadcn");
   },

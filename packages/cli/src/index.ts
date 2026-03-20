@@ -110,7 +110,7 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
   });
 
 const initDirectoryArg = optionalArg(textArg({ name: "dir" })).pipe(
-  withArgDescription("The project name or target directory"),
+  withArgDescription("The project name or target directory. Use `.` for the current directory, best when it is empty."),
 );
 
 function optionalTextOption(name: string, description: string) {
@@ -147,7 +147,6 @@ function makeInitCommand() {
     {
       dir: initDirectoryArg,
       appType: optionalChoiceOption("app-type", ["browser", "webviewer"] as const, "The type of app to create"),
-      ui: optionalChoiceOption("ui", ["shadcn", "mantine"] as const, "The UI scaffold to create"),
       server: optionalTextOption("server", "The URL of your FileMaker Server"),
       adminApiKey: optionalTextOption("admin-api-key", "Admin API key for OttoFMS"),
       fileName: optionalTextOption(
@@ -180,7 +179,6 @@ function makeInitCommand() {
       const flags: CliFlags = {
         ...defaultCliFlags,
         appType: getOrUndefined(options.appType),
-        ui: getOrUndefined(options.ui),
         server: getOrUndefined(options.server),
         adminApiKey: getOrUndefined(options.adminApiKey),
         fileName: getOrUndefined(options.fileName),

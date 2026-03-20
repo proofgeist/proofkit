@@ -7,8 +7,6 @@ import chalk from "chalk";
 import { config } from "dotenv";
 import fs from "fs-extra";
 import { parse } from "jsonc-parser";
-import { startServer } from "./server";
-import { generateTypedClients } from "./typegen";
 import { typegenConfig } from "./types";
 
 const defaultConfigPaths = ["proofkit-typegen.config.jsonc", "proofkit-typegen.config.json"];
@@ -87,6 +85,7 @@ async function runCodegen({ configLocation, resetOverrides = false }: ConfigArgs
     return process.exit(1);
   }
 
+  const { generateTypedClients } = await import("./typegen");
   const result = await generateTypedClients(configParsed.data.config, {
     resetOverrides,
     postGenerateCommand: configParsed.data.postGenerateCommand,
@@ -167,6 +166,7 @@ program
     }
 
     try {
+      const { startServer } = await import("./server");
       const server = await startServer({
         port,
         cwd: process.cwd(),

@@ -7,6 +7,7 @@ import type { PackageManager } from "~/utils/packageManager.js";
 
 const commonFileMakerLayoutPrefixes = ["API_", "API ", "dapi_", "dapi"];
 const TRAILING_SLASH_REGEX = /[^/]$/;
+const DEFAULT_FM_MCP_BASE_URL = "http://127.0.0.1:1365";
 const textFileExtensions = new Set([
   ".ts",
   ".tsx",
@@ -191,10 +192,12 @@ export async function updateTypegenConfig(
     nextDataSource.webviewerScriptName = "ExecuteDataApi";
   }
 
-  if (options.fmMcpBaseUrl) {
+  if (options.fmMcpBaseUrl || options.connectedFileName) {
     nextDataSource.fmMcp = {
       enabled: true,
-      baseUrl: options.fmMcpBaseUrl,
+      ...(options.fmMcpBaseUrl && options.fmMcpBaseUrl !== DEFAULT_FM_MCP_BASE_URL
+        ? { baseUrl: options.fmMcpBaseUrl }
+        : {}),
       ...(options.connectedFileName ? { connectedFileName: options.connectedFileName } : {}),
     };
   }

@@ -20,7 +20,7 @@ import {
 import { DirectoryConflictError, FileSystemError, isCliError, UserCancelledError } from "~/core/errors.js";
 import { applyPackageJsonMutations } from "~/core/planInit.js";
 import type { InitPlan } from "~/core/types.js";
-import { normalizeImportAlias, replaceTextInFiles } from "~/utils/projectFiles.js";
+import { normalizeImportAlias, replaceTextInFiles, updateTypegenConfig } from "~/utils/projectFiles.js";
 
 const AGENT_METADATA_DIRS = new Set([".agents", ".claude", ".clawed", ".clinerules", ".cursor", ".windsurf"]);
 const IMPORT_ALIAS_WILDCARD_REGEX = /\*/g;
@@ -198,6 +198,7 @@ export const executeInitPlan = (plan: InitPlan) =>
       throw failure ?? Cause.squash(exit.cause);
     };
     const projectFilesFs = {
+      exists: (targetPath: string) => runFileSystemPromise(fs.exists(targetPath)),
       readdir: (targetPath: string) => runFileSystemPromise(fs.readdir(targetPath)),
       readFile: (targetPath: string) => runFileSystemPromise(fs.readFile(targetPath)),
       writeFile: (targetPath: string, content: string) => runFileSystemPromise(fs.writeFile(targetPath, content)),
@@ -303,6 +304,32 @@ export const executeInitPlan = (plan: InitPlan) =>
         plan.request.appType,
       );
       yield* settingsService.writeSettings(plan.targetDir, nextSettings);
+    }
+
+    if (plan.request.appType === "webviewer" && !plan.tasks.bootstrapFileMaker) {
+      const localFmMcp = yield* fileMakerService.detectLocalFmMcp();
+      const connectedFiles = localFmMcp.connectedFiles.filter(Boolean);
+      if (localFmMcp.healthy && connectedFiles.length === 1) {
+        const detectedFile = connectedFiles[0];
+        if (detectedFile) {
+          yield* Effect.tryPromise({
+            try: () =>
+              updateTypegenConfig(projectFilesFs, plan.targetDir, {
+                appType: "webviewer",
+                dataSourceName: "filemaker",
+                fmMcpBaseUrl: localFmMcp.baseUrl,
+                connectedFileName: detectedFile,
+              }),
+            catch: (cause) =>
+              new FileSystemError({
+                message: "Unable to persist local FileMaker file detection into typegen config.",
+                operation: "updateTypegenConfig",
+                path: plan.targetDir,
+                cause,
+              }),
+          });
+        }
+      }
     }
 
     if (plan.tasks.checkWebViewerAddon) {

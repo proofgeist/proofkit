@@ -29,12 +29,12 @@ export const parseNameAndPath = (rawInput: string) => {
   // If the user ran `npx proofkit .` or similar, the appName should be the current directory
   if (appName === ".") {
     const parsedCwd = pathModule.resolve(process.cwd());
-    appName = pathModule.basename(parsedCwd);
+    appName = pathModule.basename(parsedCwd).replace(whitespaceRegex, "-").toLowerCase();
   }
 
   // If the first part is a @, it's a scoped package
   const indexOfDelimiter = paths.findIndex((p) => p.startsWith("@"));
-  if (paths.findIndex((p) => p.startsWith("@")) !== -1) {
+  if (indexOfDelimiter !== -1) {
     appName = paths.slice(indexOfDelimiter).join("/");
   }
 

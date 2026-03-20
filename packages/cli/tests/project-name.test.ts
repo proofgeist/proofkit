@@ -25,4 +25,9 @@ describe("projectName utils", () => {
     vi.spyOn(process, "cwd").mockReturnValue("/tmp/my-app");
     expect(validateAppName(".")).toBeUndefined();
   });
+
+  it("normalizes the current directory name when parsing '.'", () => {
+    vi.spyOn(process, "cwd").mockReturnValue("/tmp/My App");
+    expect(parseNameAndPath(".")).toEqual(["my-app", "."]);
+  });
 });

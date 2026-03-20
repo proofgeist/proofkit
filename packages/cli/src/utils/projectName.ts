@@ -23,7 +23,7 @@ export function parseNameAndPath(projectName: string): [scopedAppName: string, a
   let scopedAppName = segments.at(-1) ?? "";
 
   if (scopedAppName === ".") {
-    scopedAppName = path.basename(path.resolve(process.cwd()));
+    scopedAppName = normalizeProjectNameForPackage(path.basename(path.resolve(process.cwd())));
   }
 
   const scopeIndex = segments.findIndex((segment) => segment.startsWith("@"));

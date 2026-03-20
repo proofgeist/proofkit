@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { removeTrailingSlash } from "./removeTrailingSlash.js";
 
 const validationRegExp = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
@@ -16,7 +18,11 @@ export const validateAppName = (rawInput: string) => {
     appName = paths.slice(indexOfDelimiter).join("/");
   }
 
-  if (input === "." || validationRegExp.test(appName ?? "")) {
+  if (input === ".") {
+    appName = path.basename(path.resolve(process.cwd())).replace(whitespaceRegex, "-").toLowerCase();
+  }
+
+  if (validationRegExp.test(appName ?? "")) {
     return;
   }
   return "Name must consist of only lowercase alphanumeric characters, '-', and '_'";

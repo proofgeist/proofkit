@@ -149,7 +149,6 @@ describe("executeInitPlan command paths", () => {
     await Effect.runPromise(executeInitPlan(plan).pipe(makeTestLayer({ cwd, packageManager: "pnpm" })));
 
     const { typegenConfig } = await readScaffoldArtifacts(path.join(cwd, "local-mcp-app"));
-    expect(typegenConfig).toContain('"baseUrl": "http://127.0.0.1:1365"');
     expect(typegenConfig).toContain('"connectedFileName": "Selected.fmp12"');
   });
 
@@ -194,8 +193,54 @@ describe("executeInitPlan command paths", () => {
     await Effect.runPromise(executeInitPlan(plan).pipe(makeTestLayer({ cwd, packageManager: "pnpm" })));
 
     const { typegenConfig } = await readScaffoldArtifacts(path.join(cwd, "single-local-mcp-app"));
-    expect(typegenConfig).toContain('"baseUrl": "http://127.0.0.1:1365"');
     expect(typegenConfig).toContain('"connectedFileName": "OnlyOpen.fmp12"');
+  });
+
+  it("persists detected local MCP file into typegen config when webviewer setup skips filemaker bootstrap", async () => {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-local-mcp-skip-bootstrap-"));
+
+    const plan = planInit(
+      makeInitRequest({
+        projectName: "skip-bootstrap-local-mcp-app",
+        scopedAppName: "skip-bootstrap-local-mcp-app",
+        appDir: "skip-bootstrap-local-mcp-app",
+        appType: "webviewer",
+        ui: "shadcn",
+        dataSource: "none",
+        packageManager: "pnpm",
+        noInstall: true,
+        noGit: true,
+        force: false,
+        cwd,
+        importAlias: "~/",
+        nonInteractive: true,
+        debug: false,
+        skipFileMakerSetup: false,
+        hasExplicitFileMakerInputs: false,
+      }),
+      {
+        templateDir: getSharedTemplateDir("vite-wv"),
+      },
+    );
+
+    await Effect.runPromise(
+      executeInitPlan(plan).pipe(
+        makeTestLayer({
+          cwd,
+          packageManager: "pnpm",
+          fileMaker: {
+            localFmMcp: {
+              healthy: true,
+              baseUrl: "http://127.0.0.1:1365",
+              connectedFiles: ["Autodetected.fmp12"],
+            },
+          },
+        }),
+      ),
+    );
+
+    const { typegenConfig } = await readScaffoldArtifacts(path.join(cwd, "skip-bootstrap-local-mcp-app"));
+    expect(typegenConfig).toContain('"connectedFileName": "Autodetected.fmp12"');
   });
 
   it("fails with a typed directory conflict in non-interactive mode", async () => {

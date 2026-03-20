@@ -67,8 +67,10 @@ export interface OdataClientResult {
 export interface OdataClientError {
   error: string;
   statusCode: number;
+  details?: Record<string, unknown>;
   kind?: "missing_env" | "adapter_error" | "connection_error" | "unknown";
   suspectedField?: "server" | "db" | "auth";
+  message?: string;
 }
 
 function getEnvVarsFromConfig(envNames: SingleConfig["envNames"]): EnvVarsResult {

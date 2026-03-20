@@ -23,7 +23,7 @@ const {
   execaMock: vi.fn(),
   mockState: {
     appType: undefined as "browser" | "webviewer" | undefined,
-    ui: "shadcn" as "shadcn" | "mantine",
+    ui: "shadcn" as const,
     projectDir: "/tmp/proofkit-regression",
   },
 }));

@@ -324,12 +324,10 @@ export function makeTestLayer(options: {
         }),
     }),
     Layer.succeed(TemplateService, {
-      getTemplateDir: (appType: AppType, ui: UIType) => {
+      getTemplateDir: (appType: AppType, _ui: UIType) => {
         let templateName = "nextjs-shadcn";
         if (appType === "webviewer") {
           templateName = "vite-wv";
-        } else if (ui === "mantine") {
-          templateName = "nextjs-mantine";
         }
         return path.resolve(__dirname, `../../cli/template/${templateName}`);
       },

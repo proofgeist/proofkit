@@ -27,7 +27,7 @@ export function makeInitRequest(overrides: Partial<InitRequest> = {}): InitReque
   };
 }
 
-export function getSharedTemplateDir(templateName: "nextjs-shadcn" | "nextjs-mantine" | "vite-wv") {
+export function getSharedTemplateDir(templateName: "nextjs-shadcn" | "vite-wv") {
   return path.resolve(__dirname, `../../cli/template/${templateName}`);
 }
 

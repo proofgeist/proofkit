@@ -9,7 +9,7 @@ description: >
   fmMcp mode for local typegen without credentials.
 type: core
 library: proofkit
-library_version: "1.1.0-beta.20"
+library_version: "1.1.0-beta.21"
 sources:
   - "proofgeist/proofkit:packages/typegen/src/cli.ts"
   - "proofgeist/proofkit:packages/typegen/src/typegen.ts"

@@ -7,7 +7,7 @@ description: >
   project, Node.js, FileMaker server, privileges, https
 type: lifecycle
 library: proofkit
-library_version: "monorepo"
+library_version: "1.1.0-beta.20"
 sources:
   - "proofgeist/proofkit:apps/docs/content/docs/cli/guides/getting-started.mdx"
   - "proofgeist/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx"

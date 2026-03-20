@@ -11,7 +11,7 @@ description: >
   webhooks getTableColumns select("all")
 type: core
 library: proofkit
-library_version: "0.1.0-beta.31"
+library_version: "0.1.0-beta.36"
 requires:
   - typegen-setup
 sources:

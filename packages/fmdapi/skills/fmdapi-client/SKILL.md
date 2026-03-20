@@ -8,7 +8,7 @@ description: >
   Data API, layout-bound clients, schema inference
 type: core
 library: proofkit
-library_version: "5.0.3-beta.1"
+library_version: "5.1.0-beta.3"
 requires:
   - typegen-setup
 sources:

@@ -1,3 +1,4 @@
+---
 "@proofkit/typegen": patch
 ---
 

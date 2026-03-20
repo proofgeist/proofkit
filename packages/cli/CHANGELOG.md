@@ -1,5 +1,21 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.27
+
+### Patch Changes
+
+- 5bc5504: Init(webviewer): if local FM MCP reports exactly 1 connected file, persist it to `proofkit-typegen.config.jsonc` as `fmMcp.connectedFileName` during scaffold.
+- 03294e5: Init now writes `CLAUDE.md` as `@AGENTS.md` and adds `.cursorignore` to keep `CLAUDE.md` out of Cursor scans.
+- 4f40bfe: Normalize and validate `.`-derived CLI project names from the current directory consistently, including whitespace-to-dash conversion and lowercasing
+- db11fda: Normalize only the final path segment in `parseNameAndPath`, preserving leading directory segments verbatim while keeping scoped-name parsing and `.` handling intact
+- fe43be6: Drop the unused `nextjs-mantine` scaffold from the current CLI and always scaffold browser apps from `nextjs-shadcn`.
+- 9add5ca: Remove the `--ui` init flag. ProofKit now only scaffolds shadcn.
+- 9add5ca: Allow spaces in project names by normalizing them to dashes
+- 9add5ca: Clarify that `.` uses the current directory for `proofkit init`
+- Updated dependencies [c85574f]
+- Updated dependencies [6da0c9a]
+  - @proofkit/typegen@1.1.0-beta.21
+
 ## 2.0.0-beta.26
 
 ### Patch Changes

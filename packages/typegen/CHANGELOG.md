@@ -1,5 +1,12 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.21
+
+### Patch Changes
+
+- c85574f: Make `@proofkit/fmdapi` and `@proofkit/fmodata` optional peers for `@proofkit/typegen`, and lazy-load each path so fmdapi-only and fmodata-only installs do not hard-require the other package.
+- 6da0c9a: Widen OData client error typing to include message and details payloads from env/config validation.
+
 ## 1.1.0-beta.20
 
 ### Patch Changes

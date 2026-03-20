@@ -68,21 +68,12 @@ describe("Init Non-Interactive Failure Paths", () => {
     expect(readdirSync(testDir).sort()).toEqual(["sentinel.txt"]);
   });
 
-  it("fails fast for invalid non-interactive app names and does not create a project directory", () => {
+  it("normalizes spaces in non-interactive app names and creates the project directory", () => {
     const projectName = "Bad Name";
 
-    const result = runInitExpectFailure([
-      projectName,
-      "--non-interactive",
-      "--app-type",
-      "webviewer",
-      "--no-install",
-      "--no-git",
-    ]);
-    const output = `${result.stdout}\n${result.stderr}`;
+    runInitExpectSuccess([projectName, "--non-interactive", "--app-type", "webviewer", "--no-install", "--no-git"]);
 
-    expect(result.status).toBe(1);
-    expect(output).toContain("Name must consist of only lowercase alphanumeric characters, '-', and '_'");
+    expect(existsSync(join(testDir, "bad-name"))).toBe(true);
     expect(existsSync(join(testDir, projectName))).toBe(false);
   });
 

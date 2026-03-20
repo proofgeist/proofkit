@@ -21,6 +21,7 @@ describe("proofkit CLI", () => {
     expect(output).toContain("--non-interactive");
     expect(output).toContain("--no-install");
     expect(output).toContain("--no-git");
+    expect(output).not.toContain("--ui");
     expect(output).not.toContain("--appType");
   });
 
@@ -85,6 +86,7 @@ describe("proofkit CLI", () => {
     expect(result.stdout).toContain("ProofKit");
     expect(result.stdout).toContain("Create a new project with ProofKit");
     expect(result.stdout).toContain("--app-type");
+    expect(result.stdout).not.toContain("--ui");
   });
 
   it("shows a clean invalid subcommand error by default", () => {

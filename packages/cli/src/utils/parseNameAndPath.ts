@@ -2,6 +2,8 @@ import pathModule from "node:path";
 
 import { removeTrailingSlash } from "./removeTrailingSlash.js";
 
+const whitespaceRegex = /\s+/g;
+
 /**
  * Parses the appName and its path from the user input.
  *
@@ -18,7 +20,7 @@ import { removeTrailingSlash } from "./removeTrailingSlash.js";
  * - dir/app => ["app", "dir/app"]
  */
 export const parseNameAndPath = (rawInput: string) => {
-  const input = removeTrailingSlash(rawInput);
+  const input = removeTrailingSlash(rawInput).replace(whitespaceRegex, "-").toLowerCase();
 
   const paths = input.split("/");
 

@@ -11,9 +11,14 @@ describe("projectName utils", () => {
     expect(parseNameAndPath(".\\my-app\\")).toEqual(["my-app", "./my-app"]);
   });
 
+  it("converts spaces to dashes when parsing the app name and directory", () => {
+    expect(parseNameAndPath("my app")).toEqual(["my-app", "my-app"]);
+    expect(validateAppName("my app")).toBeUndefined();
+  });
+
   it("validates the actual current directory name when projectName is '.'", () => {
     vi.spyOn(process, "cwd").mockReturnValue("/tmp/My App");
-    expect(validateAppName(".")).toBe("Name must consist of only lowercase alphanumeric characters, '-', and '_'");
+    expect(validateAppName(".")).toBeUndefined();
   });
 
   it("accepts '.' when the current directory name is valid", () => {

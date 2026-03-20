@@ -1,10 +1,11 @@
 import { removeTrailingSlash } from "./removeTrailingSlash.js";
 
 const validationRegExp = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+const whitespaceRegex = /\s+/g;
 
 //Validate a string against allowed package.json names
 export const validateAppName = (rawInput: string) => {
-  const input = removeTrailingSlash(rawInput);
+  const input = removeTrailingSlash(rawInput).replace(whitespaceRegex, "-").toLowerCase();
   const paths = input.split("/");
 
   // If the first part is a @, it's a scoped package

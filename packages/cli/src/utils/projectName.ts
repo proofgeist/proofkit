@@ -2,6 +2,7 @@ import path from "node:path";
 
 const TRAILING_SLASHES_REGEX = /\/+$/;
 const PATH_SEPARATOR_REGEX = /\\/g;
+const WHITESPACE_REGEX = /\s+/g;
 const VALID_APP_NAME_REGEX = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 
 function normalizeProjectName(value: string) {
@@ -12,8 +13,12 @@ function trimTrailingSlashes(value: string) {
   return normalizeProjectName(value).replace(TRAILING_SLASHES_REGEX, "");
 }
 
+function normalizeProjectNameForPackage(value: string) {
+  return trimTrailingSlashes(value).replace(WHITESPACE_REGEX, "-").toLowerCase();
+}
+
 export function parseNameAndPath(projectName: string): [scopedAppName: string, appDir: string] {
-  const normalized = trimTrailingSlashes(projectName);
+  const normalized = normalizeProjectNameForPackage(projectName);
   const segments = normalized.split("/");
   let scopedAppName = segments.at(-1) ?? "";
 
@@ -32,10 +37,10 @@ export function parseNameAndPath(projectName: string): [scopedAppName: string, a
 }
 
 export function validateAppName(projectName: string) {
-  const normalized = trimTrailingSlashes(projectName);
+  const normalized = normalizeProjectNameForPackage(projectName);
   if (normalized === ".") {
     const currentDirName = path.basename(path.resolve(process.cwd()));
-    return VALID_APP_NAME_REGEX.test(currentDirName)
+    return VALID_APP_NAME_REGEX.test(currentDirName.replace(WHITESPACE_REGEX, "-").toLowerCase())
       ? undefined
       : "Name must consist of only lowercase alphanumeric characters, '-', and '_'";
   }

@@ -22,7 +22,7 @@ sources:
 Install and initialize:
 
 ```bash
-npx @proofkit/typegen init
+npx @proofkit/typegen@beta init
 ```
 
 This creates `proofkit-typegen-config.jsonc` at your project root. Set environment variables:
@@ -38,15 +38,9 @@ Add a script to `package.json`:
 ```json
 {
   "scripts": {
-    "typegen": "npx @proofkit/typegen"
+    "typegen": "npx @proofkit/typegen@beta"
   }
 }
-```
-
-Run it:
-
-```bash
-npx @proofkit/typegen
 ```
 
 Generated output structure (assuming `"path": "schema"` with two layouts):

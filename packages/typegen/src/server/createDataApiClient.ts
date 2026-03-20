@@ -1,5 +1,4 @@
 import path from "node:path";
-import type { clientTypes } from "@proofkit/fmdapi";
 import type { OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
 import fs from "fs-extra";
 import { parse } from "jsonc-parser";
@@ -9,10 +8,17 @@ import { rethrowMissingDependency } from "../optionalDeps";
 import { typegenConfig, type typegenConfigSingle } from "../types";
 import type { ApiContext } from "./app";
 
+interface LocalLayoutOrFolder {
+  name: string;
+  isFolder?: boolean;
+  folderLayoutNames?: LocalLayoutOrFolder[];
+  table?: string;
+}
+
 export interface CreateClientResult {
   client: {
     layouts?: () => Promise<{
-      layouts: clientTypes.LayoutOrFolder[];
+      layouts: LocalLayoutOrFolder[];
     }>;
   };
   config: Extract<z.infer<typeof typegenConfigSingle>, { type: "fmdapi" }>;

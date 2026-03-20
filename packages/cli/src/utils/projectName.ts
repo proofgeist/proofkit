@@ -18,20 +18,22 @@ function normalizeProjectNameForPackage(value: string) {
 }
 
 export function parseNameAndPath(projectName: string): [scopedAppName: string, appDir: string] {
-  const normalized = normalizeProjectNameForPackage(projectName);
-  const segments = normalized.split("/");
-  let scopedAppName = segments.at(-1) ?? "";
+  const normalizedProjectName = trimTrailingSlashes(projectName);
+  const segments = normalizedProjectName.split("/");
+  const hasScopedPackage = (segments.at(-2) ?? "").startsWith("@");
+  const packageSegmentCount = hasScopedPackage ? 2 : 1;
+  const leadingSegments = segments.slice(0, -packageSegmentCount);
+  const packageSegments = segments.slice(-packageSegmentCount);
+  const normalizedPackageSegments = packageSegments.map(normalizeProjectNameForPackage);
+  let scopedAppName = normalizedPackageSegments.join("/");
+  let appDirPackageSegments = normalizedPackageSegments;
 
   if (scopedAppName === ".") {
     scopedAppName = normalizeProjectNameForPackage(path.basename(path.resolve(process.cwd())));
+    appDirPackageSegments = packageSegments;
   }
 
-  const scopeIndex = segments.findIndex((segment) => segment.startsWith("@"));
-  if (scopeIndex !== -1) {
-    scopedAppName = segments.slice(scopeIndex).join("/");
-  }
-
-  const appDir = segments.filter((segment) => !segment.startsWith("@")).join("/");
+  const appDir = [...leadingSegments, ...appDirPackageSegments].join("/");
 
   return [scopedAppName, appDir];
 }

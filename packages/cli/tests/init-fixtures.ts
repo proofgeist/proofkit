@@ -39,6 +39,7 @@ export async function readScaffoldArtifacts(projectDir: string) {
   const typegenConfig = (await fs.pathExists(typegenPath)) ? await fs.readFile(typegenPath, "utf8") : undefined;
   const agentsPath = path.join(projectDir, "AGENTS.md");
   const claudePath = path.join(projectDir, "CLAUDE.md");
+  const cursorIgnorePath = path.join(projectDir, ".cursorignore");
   const launchPath = path.join(projectDir, ".claude", "launch.json");
 
   return {
@@ -48,6 +49,7 @@ export async function readScaffoldArtifacts(projectDir: string) {
     typegenConfig,
     agentsFile: (await fs.pathExists(agentsPath)) ? await fs.readFile(agentsPath, "utf8") : undefined,
     claudeFile: (await fs.pathExists(claudePath)) ? await fs.readFile(claudePath, "utf8") : undefined,
+    cursorIgnoreFile: (await fs.pathExists(cursorIgnorePath)) ? await fs.readFile(cursorIgnorePath, "utf8") : undefined,
     launchConfig: (await fs.pathExists(launchPath)) ? await fs.readFile(launchPath, "utf8") : undefined,
   };
 }

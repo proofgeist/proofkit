@@ -84,7 +84,12 @@ export function planInit(
       path: path.join(targetDir, ".env"),
       content: createEnvFileContent(),
     },
-    writes: [],
+    writes: [
+      {
+        path: path.join(targetDir, ".cursorignore"),
+        content: "CLAUDE.md\n",
+      },
+    ],
     commands: [
       ...(request.noInstall ? [] : [{ type: "install" as const }]),
       ...(request.dataSource === "filemaker" &&

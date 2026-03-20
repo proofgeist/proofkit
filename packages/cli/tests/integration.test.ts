@@ -58,7 +58,8 @@ describe("integration scaffold generation", () => {
     expect(await fs.pathExists(path.join(projectDir, "proofkit.json"))).toBe(true);
     expect(await fs.pathExists(path.join(projectDir, ".env"))).toBe(true);
 
-    const { packageJson, proofkitJson, envFile } = await readScaffoldArtifacts(projectDir);
+    const { packageJson, proofkitJson, envFile, claudeFile, cursorIgnoreFile } =
+      await readScaffoldArtifacts(projectDir);
 
     expect(packageJson.name).toBe("browser-app");
     expect(packageJson.packageManager).toBe("pnpm@10.27.0");
@@ -73,6 +74,8 @@ describe("integration scaffold generation", () => {
       dataSources: [],
       envFile: ".env",
     });
+    expect(claudeFile).toBe("@AGENTS.md\n");
+    expect(cursorIgnoreFile).toBe("CLAUDE.md\n");
     expect(envFile).toContain("# When adding additional environment variables");
     expect(consoleTranscript.success.at(-1) ?? "").toContain("Created browser-app");
   });
@@ -185,7 +188,8 @@ describe("integration scaffold generation", () => {
 
     await Effect.runPromise(layer(executeInitPlan(plan)));
 
-    const { packageJson, agentsFile, claudeFile, launchConfig } = await readScaffoldArtifacts(projectDir);
+    const { packageJson, agentsFile, claudeFile, cursorIgnoreFile, launchConfig } =
+      await readScaffoldArtifacts(projectDir);
     const routerFile = await fs.readFile(path.join(projectDir, "src/router.tsx"), "utf8");
     const mainFile = await fs.readFile(path.join(projectDir, "src/main.tsx"), "utf8");
     const queryDemoFile = await fs.readFile(path.join(projectDir, "src/routes/query-demo.tsx"), "utf8");
@@ -197,7 +201,8 @@ describe("integration scaffold generation", () => {
     expect(packageJson.devDependencies.ultracite).toBe("7.0.8");
     expect(agentsFile).toContain("Use the ProofKit docs as the primary reference");
     expect(agentsFile).toContain("npx @tanstack/intent@latest install");
-    expect(claudeFile).toBe(agentsFile);
+    expect(claudeFile).toBe("@AGENTS.md\n");
+    expect(cursorIgnoreFile).toBe("CLAUDE.md\n");
     expect(launchConfig).toContain('"runtimeExecutable": "pnpm"');
     expect(routerFile).toContain("createHashHistory");
     expect(mainFile).toContain("QueryClientProvider");

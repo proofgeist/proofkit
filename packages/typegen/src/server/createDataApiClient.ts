@@ -216,6 +216,18 @@ export async function createOdataClientFromConfig(
 
     return { db, connection, server, dbName, authType };
   } catch (error) {
+    if (error instanceof TypeError) {
+      const message = error.message.toLowerCase();
+      if (message.includes("invalid url") || message.includes("malformed")) {
+        return {
+          error: error.message,
+          statusCode: 400,
+          kind: "adapter_error",
+          suspectedField: "server",
+        };
+      }
+    }
+
     return {
       error: error instanceof Error ? error.message : "Failed to create OData client",
       statusCode: 500,

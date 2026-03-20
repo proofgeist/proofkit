@@ -1,8 +1,16 @@
-import type { DataApi } from "@proofkit/fmdapi";
-import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
+import type { clientTypes, DataApi } from "@proofkit/fmdapi";
 import chalk from "chalk";
 import type { F } from "ts-toolbelt";
 import type { TSchema, ValueListsOptions } from "./types";
+
+function getErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return undefined;
+  }
+
+  const { code } = error as { code?: unknown };
+  return typeof code === "string" ? code : undefined;
+}
 
 /**
  * Calls the FileMaker Data API to get the layout metadata and returns a schema
@@ -35,7 +43,7 @@ export const getLayoutMetadata = async (args: {
 
   const { client, valueLists = "ignore" } = args;
   const meta = await client.layoutMetadata().catch((err) => {
-    if (err instanceof FileMakerError && err.code === "105") {
+    if (getErrorCode(err) === "105") {
       console.log(
         chalk.bold.red("ERROR:"),
         "Skipping typegen for layout:",

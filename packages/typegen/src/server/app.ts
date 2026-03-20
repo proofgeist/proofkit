@@ -1,12 +1,11 @@
 import path from "node:path";
 import { zValidator } from "@hono/zod-validator";
-import { type clientTypes, FileMakerError } from "@proofkit/fmdapi";
+import type { clientTypes } from "@proofkit/fmdapi";
 import fs from "fs-extra";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { parse } from "jsonc-parser";
 import z from "zod/v4";
-import { downloadTableMetadata, parseMetadata } from "../fmodata";
 import { generateTypedClients } from "../typegen";
 import { typegenConfig, typegenConfigSingle, typegenConfigSingleForValidation } from "../types";
 import { createClientFromConfig, createDataApiClient, createOdataClientFromConfig } from "./createDataApiClient";
@@ -44,6 +43,15 @@ function flattenLayouts(
   }
 
   return result;
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return undefined;
+  }
+
+  const { code } = error as { code?: unknown };
+  return typeof code === "string" ? code : undefined;
 }
 
 export function createApiApp(context: ApiContext) {
@@ -272,7 +280,7 @@ export function createApiApp(context: ApiContext) {
       const input = c.req.valid("query");
       const configIndex = input.configIndex;
 
-      const result = createDataApiClient(context, configIndex);
+      const result = await createDataApiClient(context, configIndex);
 
       // Check if result is an error
       if ("error" in result) {
@@ -309,7 +317,7 @@ export function createApiApp(context: ApiContext) {
       // Call layouts method - using type assertion as TypeScript has inference issues with DataApi return type
       // The layouts method exists but TypeScript can't infer it from the complex return type
       try {
-        if (!("layouts" in client)) {
+        if (typeof client.layouts !== "function") {
           return c.json({ error: "Layouts method not found" }, 500);
         }
         const layoutsResp = (await client.layouts()) as {
@@ -328,17 +336,18 @@ export function createApiApp(context: ApiContext) {
         let suspectedField: "server" | "db" | "auth" | undefined;
         let fmErrorCode: string | undefined;
 
-        if (err instanceof FileMakerError) {
-          errorMessage = err.message;
-          fmErrorCode = err.code;
+        const nextFmErrorCode = getErrorCode(err);
+        if (nextFmErrorCode) {
+          errorMessage = err instanceof Error ? err.message : errorMessage;
+          fmErrorCode = nextFmErrorCode;
 
           // Infer suspected field from error code
-          if (err.code === "105") {
+          if (nextFmErrorCode === "105") {
             suspectedField = "db";
-            errorMessage = `Database not found: ${err.message}`;
-          } else if (err.code === "212" || err.code === "952") {
+            errorMessage = `Database not found: ${err instanceof Error ? err.message : errorMessage}`;
+          } else if (nextFmErrorCode === "212" || nextFmErrorCode === "952") {
             suspectedField = "auth";
-            errorMessage = `Authentication failed: ${err.message}`;
+            errorMessage = `Authentication failed: ${err instanceof Error ? err.message : errorMessage}`;
           }
           statusCode = 400;
         } else if (err instanceof TypeError) {
@@ -398,6 +407,7 @@ export function createApiApp(context: ApiContext) {
         }
         const tableConfig = config.tables.find((t) => t.tableName === tableName);
         try {
+          const { downloadTableMetadata, parseMetadata } = await import("../fmodata");
           // Download metadata for the specified table
           const tableMetadataXml = await downloadTableMetadata({
             config,
@@ -446,7 +456,7 @@ export function createApiApp(context: ApiContext) {
           return c.json({ error: "Invalid config type" }, 400);
         }
         try {
-          const result = createOdataClientFromConfig(config);
+          const result = await createOdataClientFromConfig(config);
           if ("error" in result) {
             return c.json(
               {
@@ -487,7 +497,7 @@ export function createApiApp(context: ApiContext) {
           // Validate config type
           if (config.type === "fmdapi") {
             // Create client from config
-            const clientResult = createClientFromConfig(config);
+            const clientResult = await createClientFromConfig(config);
 
             // Check if client creation failed
             if ("error" in clientResult) {
@@ -504,6 +514,18 @@ export function createApiApp(context: ApiContext) {
 
             // Test connection by calling layouts()
             try {
+              if (typeof client.layouts !== "function") {
+                return c.json(
+                  {
+                    ok: false,
+                    error: "Layouts method not found",
+                    statusCode: 500,
+                    kind: "adapter_error",
+                    message: "Layouts method not found",
+                  },
+                  500,
+                );
+              }
               await client.layouts();
 
               return c.json({
@@ -520,9 +542,10 @@ export function createApiApp(context: ApiContext) {
               let suspectedField: "server" | "db" | "auth" | undefined;
               let fmErrorCode: string | undefined;
 
-              if (err instanceof FileMakerError) {
-                errorMessage = err.message;
-                fmErrorCode = err.code;
+              const nextFmErrorCode = getErrorCode(err);
+              if (nextFmErrorCode) {
+                errorMessage = err instanceof Error ? err.message : errorMessage;
+                fmErrorCode = nextFmErrorCode;
                 kind = "connection_error";
 
                 // Infer suspected field from error code
@@ -530,12 +553,12 @@ export function createApiApp(context: ApiContext) {
                 // 105 = Database not found
                 // 212 = Authentication failed
                 // 802 = Record not found (less relevant here)
-                if (err.code === "105") {
+                if (nextFmErrorCode === "105") {
                   suspectedField = "db";
-                  errorMessage = `Database not found: ${err.message}`;
-                } else if (err.code === "212" || err.code === "952") {
+                  errorMessage = `Database not found: ${err instanceof Error ? err.message : errorMessage}`;
+                } else if (nextFmErrorCode === "212" || nextFmErrorCode === "952") {
                   suspectedField = "auth";
-                  errorMessage = `Authentication failed: ${err.message}`;
+                  errorMessage = `Authentication failed: ${err instanceof Error ? err.message : errorMessage}`;
                 }
                 statusCode = 400;
               } else if (err instanceof TypeError) {
@@ -564,7 +587,7 @@ export function createApiApp(context: ApiContext) {
               );
             }
           } else if (config.type === "fmodata") {
-            const result = createOdataClientFromConfig(config);
+            const result = await createOdataClientFromConfig(config);
             if ("error" in result) {
               return c.json(
                 {

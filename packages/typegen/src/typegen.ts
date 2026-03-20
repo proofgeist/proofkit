@@ -1,9 +1,5 @@
 import path from "node:path";
-import DataApi from "@proofkit/fmdapi";
-import { FetchAdapter } from "@proofkit/fmdapi/adapters/fetch";
-import { FmMcpAdapter } from "@proofkit/fmdapi/adapters/fm-mcp";
-import { OttoAdapter, type OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
-import { memoryStore } from "@proofkit/fmdapi/tokenStore/memory";
+import type { OttoAPIKey } from "@proofkit/fmdapi/adapters/otto";
 import chalk from "chalk";
 import fs from "fs-extra";
 import semver from "semver";
@@ -13,10 +9,9 @@ import type { z } from "zod/v4";
 import { buildLayoutClient } from "./buildLayoutClient";
 import { buildOverrideFile, buildSchema } from "./buildSchema";
 import { commentHeader, defaultEnvNames, overrideCommentHeader } from "./constants";
-import { generateODataTablesSingle } from "./fmodata/typegen";
 import { formatAndSaveSourceFiles, runPostGenerateCommand } from "./formatting";
 import { getEnvValues, validateAndLogEnvValues } from "./getEnvValues";
-import { getLayoutMetadata } from "./getLayoutMetadata";
+import { rethrowMissingDependency } from "./optionalDeps";
 import { type BuildSchemaArgs, typegenConfig, type typegenConfigSingle } from "./types";
 
 type GlobalOptions = Omit<z.infer<typeof typegenConfig>, "config">;
@@ -95,6 +90,9 @@ export const generateTypedClients = async (
         }
       }
     } else if (singleConfig.type === "fmodata") {
+      const { generateODataTablesSingle } = await import("./fmodata/typegen").catch((error: unknown) =>
+        rethrowMissingDependency(error, "@proofkit/fmodata", "fmodata type generation"),
+      );
       const outputPath = await generateODataTablesSingle(singleConfig, { cwd });
       if (outputPath) {
         outputPaths.push(outputPath);
@@ -269,6 +267,31 @@ const generateTypedClientsSingle = async (
 
   await fs.ensureDir(rootDir);
   const clientIndexFilePath = path.join(rootDir, "client", "index.ts");
+  const [
+    { default: DataApi },
+    { FetchAdapter },
+    { FmMcpAdapter },
+    { OttoAdapter },
+    { memoryStore },
+    { getLayoutMetadata },
+  ] = await Promise.all([
+    import("@proofkit/fmdapi").catch((error: unknown) =>
+      rethrowMissingDependency(error, "@proofkit/fmdapi", "fmdapi type generation"),
+    ),
+    import("@proofkit/fmdapi/adapters/fetch").catch((error: unknown) =>
+      rethrowMissingDependency(error, "@proofkit/fmdapi", "fmdapi type generation"),
+    ),
+    import("@proofkit/fmdapi/adapters/fm-mcp").catch((error: unknown) =>
+      rethrowMissingDependency(error, "@proofkit/fmdapi", "fmdapi type generation"),
+    ),
+    import("@proofkit/fmdapi/adapters/otto").catch((error: unknown) =>
+      rethrowMissingDependency(error, "@proofkit/fmdapi", "fmdapi type generation"),
+    ),
+    import("@proofkit/fmdapi/tokenStore/memory").catch((error: unknown) =>
+      rethrowMissingDependency(error, "@proofkit/fmdapi", "fmdapi type generation"),
+    ),
+    import("./getLayoutMetadata"),
+  ]);
 
   let successCount = 0;
   let errorCount = 0;

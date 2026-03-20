@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildMockScriptTag,
+  buildNoConnectedFilesRuntimeError,
   defaultWsUrl,
   discoverConnectedFileName,
   fmBridge,
@@ -130,7 +131,7 @@ describe("discoverConnectedFileName", () => {
     );
   });
 
-  it("rejects when no connected files are available", async () => {
+  it("returns null when no connected files are available", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(
       new Response(JSON.stringify(["", "   "]), {
         status: 200,
@@ -138,21 +139,31 @@ describe("discoverConnectedFileName", () => {
       }),
     );
 
-    await expect(discoverConnectedFileName("http://localhost:1365")).rejects.toThrow(
-      "fmBridge found no connected FileMaker files at http://localhost:1365/connectedFiles. Open FileMaker and load /webviewer?fileName=YourFile.",
-    );
+    await expect(discoverConnectedFileName("http://localhost:1365")).resolves.toBeNull();
   });
 });
 
 describe("fmBridge", () => {
   const originalFetch = globalThis.fetch;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+  const originalWindow = globalThis.window;
 
   beforeEach(() => {
     globalThis.fetch = vi.fn();
+    console.warn = vi.fn();
+    console.error = vi.fn();
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+    if (typeof originalWindow === "undefined") {
+      Reflect.deleteProperty(globalThis, "window");
+    } else {
+      globalThis.window = originalWindow;
+    }
   });
 
   it("injects the bridge script in serve mode", async () => {
@@ -199,5 +210,82 @@ describe("fmBridge", () => {
     expect(plugin.apply({} as never, { command: "build", mode: "production" } as never)).toBe(false);
     await expect(plugin.transformIndexHtml?.("")).resolves.toBeUndefined();
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("warns and injects a fallback bridge when FM MCP responds with no connected files", async () => {
+    vi.mocked(globalThis.fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+    const plugin = fmBridge({
+      fmMcpBaseUrl: "http://localhost:1365",
+    });
+
+    if (typeof plugin.apply === "function") {
+      expect(plugin.apply({} as never, { command: "serve", mode: "development" } as never)).toBe(true);
+    }
+
+    await expect(plugin.configureServer?.({} as never)).resolves.toBeUndefined();
+    expect(console.warn).toHaveBeenCalledWith(
+      "fmBridge found no connected FileMaker files at http://localhost:1365/connectedFiles. Dev server will continue. Connect a FileMaker webviewer to enable bridge forwarding.",
+    );
+
+    const tags = await plugin.transformIndexHtml?.("");
+
+    expect(tags).toHaveLength(1);
+    expect(tags?.[0]).toMatchObject({
+      tag: "script",
+      injectTo: "head-prepend",
+    });
+    expect(tags?.[0]).toHaveProperty("children");
+  });
+
+  it("logs runtime errors from the fallback bridge when no file is connected", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const plugin = fmBridge({
+      fmMcpBaseUrl: "http://localhost:1365",
+    });
+
+    if (typeof plugin.apply === "function") {
+      expect(plugin.apply({} as never, { command: "serve", mode: "development" } as never)).toBe(true);
+    }
+
+    const tags = await plugin.transformIndexHtml?.("");
+    const tag = tags?.[0];
+
+    expect(tag).toHaveProperty("children");
+
+    globalThis.window = {} as Window & typeof globalThis;
+    new Function((tag as HtmlTagDescriptor & { children: string }).children)();
+
+    expect(typeof globalThis.window.filemaker).toBe("function");
+    globalThis.window.filemaker?.("TestScript", "{}");
+    globalThis.window.FileMaker?.PerformScript("TestScript", "{}");
+
+    expect(console.error).toHaveBeenCalledTimes(2);
+    expect(console.error).toHaveBeenNthCalledWith(
+      1,
+      buildNoConnectedFilesRuntimeError("http://localhost:1365/connectedFiles"),
+    );
+    expect(console.error).toHaveBeenNthCalledWith(
+      2,
+      buildNoConnectedFilesRuntimeError("http://localhost:1365/connectedFiles"),
+    );
   });
 });

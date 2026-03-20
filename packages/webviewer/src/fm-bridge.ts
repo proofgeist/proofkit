@@ -24,6 +24,12 @@ export const trimToNull = (value: unknown): string | null => {
 
 export const normalizeBaseUrl = (value: string): string => value.replace(TRAILING_SLASH_PATTERN, "");
 
+export const buildNoConnectedFilesWarning = (connectedFilesUrl: string): string =>
+  `fmBridge found no connected FileMaker files at ${connectedFilesUrl}. Dev server will continue. Connect a FileMaker webviewer to enable bridge forwarding.`;
+
+export const buildNoConnectedFilesRuntimeError = (connectedFilesUrl: string): string =>
+  `fmBridge could not forward message because no connected FileMaker file is available from ${connectedFilesUrl}.`;
+
 export const resolveWsUrl = (options: Pick<FmBridgeOptions, "fmMcpBaseUrl" | "wsUrl">): string => {
   const explicitWsUrl = trimToNull(options.wsUrl);
   if (explicitWsUrl) {
@@ -41,7 +47,7 @@ export const resolveWsUrl = (options: Pick<FmBridgeOptions, "fmMcpBaseUrl" | "ws
   }
 };
 
-export const discoverConnectedFileName = async (baseUrl: string): Promise<string> => {
+export const discoverConnectedFileName = async (baseUrl: string): Promise<string | null> => {
   const connectedFilesUrl = `${normalizeBaseUrl(baseUrl)}/connectedFiles`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -76,9 +82,7 @@ export const discoverConnectedFileName = async (baseUrl: string): Promise<string
   const firstFileName = payload.find((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
 
   if (!firstFileName) {
-    throw new Error(
-      `fmBridge found no connected FileMaker files at ${connectedFilesUrl}. Open FileMaker and load /webviewer?fileName=YourFile.`,
-    );
+    return null;
   }
 
   return firstFileName;
@@ -109,6 +113,41 @@ export const buildMockScriptTag = (options: {
   };
 };
 
+export const buildNoConnectedFilesScriptTag = (baseUrl: string): HtmlTagDescriptor => {
+  const connectedFilesUrl = `${normalizeBaseUrl(baseUrl)}/connectedFiles`;
+  const errorMessage = buildNoConnectedFilesRuntimeError(connectedFilesUrl);
+
+  return {
+    tag: "script",
+    injectTo: "head-prepend",
+    children: `
+(() => {
+  const errorMessage = ${JSON.stringify(errorMessage)};
+  const report = () => {
+    console.error(errorMessage);
+    return undefined;
+  };
+
+  if (!window.filemaker) {
+    const filemakerStub = function filemaker() {
+      return report();
+    };
+    filemakerStub.performScript = report;
+    filemakerStub.performScriptWithOption = report;
+    window.filemaker = filemakerStub;
+  }
+
+  if (!window.FileMaker) {
+    window.FileMaker = {
+      PerformScript: report,
+      PerformScriptWithOption: report,
+    };
+  }
+})();
+`.trim(),
+  };
+};
+
 export const fmBridge = (options: FmBridgeOptions = {}): Plugin => {
   const baseUrl = trimToNull(options.fmMcpBaseUrl) ?? defaultFmMcpBaseUrl;
   const wsUrl = resolveWsUrl(options);
@@ -132,6 +171,9 @@ export const fmBridge = (options: FmBridgeOptions = {}): Plugin => {
       }
 
       resolvedFileName = await discoverConnectedFileName(baseUrl);
+      if (!resolvedFileName) {
+        console.warn(buildNoConnectedFilesWarning(`${normalizeBaseUrl(baseUrl)}/connectedFiles`));
+      }
     },
     async transformIndexHtml() {
       if (!isServeMode) {
@@ -142,12 +184,14 @@ export const fmBridge = (options: FmBridgeOptions = {}): Plugin => {
         resolvedFileName = await discoverConnectedFileName(baseUrl);
       }
 
-      const tag = buildMockScriptTag({
-        baseUrl,
-        fileName: resolvedFileName,
-        wsUrl,
-        debug,
-      });
+      const tag = resolvedFileName
+        ? buildMockScriptTag({
+            baseUrl,
+            fileName: resolvedFileName,
+            wsUrl,
+            debug,
+          })
+        : buildNoConnectedFilesScriptTag(baseUrl);
 
       return tag ? [tag] : undefined;
     },

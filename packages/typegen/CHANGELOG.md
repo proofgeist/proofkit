@@ -1,5 +1,15 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.22
+
+### Patch Changes
+
+- 0643ddd: Move @proofkit/fmdapi and @proofkit/fmodata from optional peerDependencies to regular dependencies, fixing ERR_MODULE_NOT_FOUND when running typegen via npx
+- e6889d0: Update skill content
+- Updated dependencies [e6889d0]
+  - @proofkit/fmodata@0.1.0-beta.37
+  - @proofkit/fmdapi@5.1.0-beta.4
+
 ## 1.1.0-beta.21
 
 ### Patch Changes

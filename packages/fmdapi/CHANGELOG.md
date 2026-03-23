@@ -1,5 +1,11 @@
 # @proofkit/fmdapi
 
+## 5.1.0-beta.4
+
+### Patch Changes
+
+- e6889d0: Update skill content
+
 ## 5.1.0-beta.3
 
 ### Minor Changes

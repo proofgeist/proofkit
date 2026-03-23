@@ -27,10 +27,10 @@ globalSettings.setWebViewerName("web");
 const result = await fmFetch("MyScript", { key: "value" });
 ```
 
-If you also want the local `typegen-setup` skill for generating `@proofkit/fmdapi` clients that work with `WebViewerAdapter`, install:
+To generate `@proofkit/fmdapi` clients that work with `WebViewerAdapter`, run typegen with FM MCP mode enabled (see the **typegen-fmdapi** skill in `@proofkit/fmdapi`):
 
 ```bash
-pnpm add -D @proofkit/typegen@^1.1.0-beta.0
+npx @proofkit/typegen@beta
 ```
 
 The `setWebViewerName` call is required for `fmFetch` to work. It tells the FM `SendCallback` script which webviewer to call back into. Set it once at app initialization.

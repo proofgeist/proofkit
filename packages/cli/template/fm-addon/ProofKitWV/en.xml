@@ -133,6 +133,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.099EE24B07E075A063F3607A43895372</StringID>
+	<SourceText>file:/</SourceText>
+	<TargetText>file:/</TargetText>
+	<Comment>com.fmi.calculation.text.file:/</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.0A2A6F666A2955B3C0D398EA50924A61</StringID>
 	<SourceText>code</SourceText>
 	<TargetText>code</TargetText>
@@ -308,13 +315,6 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
-	<StringID>com.fmi.calculation.text.4EBB3119669BFADD4D20AAF17F05F6CC</StringID>
-	<SourceText> needs to be edited to get the DDL setup</SourceText>
-	<TargetText> needs to be edited to get the DDL setup</TargetText>
-	<Comment>com.fmi.calculation.text. needs to be edited to get the DDL setup</Comment>
-</DynamicTemplateString>
-
-<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.4F8B0E48F3AFD74F9717B499A5EAF829</StringID>
 	<SourceText>tableNamesInFile</SourceText>
 	<TargetText>tableNamesInFile</TargetText>
@@ -455,6 +455,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.801B881F19BA415B89345FB52E200AEE</StringID>
+	<SourceText>toNames</SourceText>
+	<TargetText>toNames</TargetText>
+	<Comment>com.fmi.calculation.text.toNames</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.81DDA427909D1792D7E52F1849852EFC</StringID>
 	<SourceText>error</SourceText>
 	<TargetText>error</TargetText>
@@ -508,6 +515,13 @@
 	<SourceText>ddl</SourceText>
 	<TargetText>ddl</TargetText>
 	<Comment>com.fmi.calculation.text.ddl</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.8F6CB1773BDD60657B8ACE95C3C6CC45</StringID>
+	<SourceText>handleFMCallback</SourceText>
+	<TargetText>handleFMCallback</TargetText>
+	<Comment>com.fmi.calculation.text.handleFMCallback</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -819,6 +833,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.calculation.text.DB55169D5CFECBDCC91C05CC1DE72CF4</StringID>
+	<SourceText>.fmp12</SourceText>
+	<TargetText>.fmp12</TargetText>
+	<Comment>com.fmi.calculation.text..fmp12</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.calculation.text.DCDF1E9F27F0708E782858CEC973DA89</StringID>
 	<SourceText>          } catch (e) {</SourceText>
 	<TargetText>          } catch (e) {</TargetText>
@@ -980,6 +1001,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.script.04E222968FD5C03ED6FCB83722D815C3</StringID>
+	<SourceText>get_relation_info</SourceText>
+	<TargetText>get_relation_info</TargetText>
+	<Comment>com.fmi.script.get_relation_info</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.script.0964A099A0AB5C57A10D9142B36C4388</StringID>
 	<SourceText>deploy_html</SourceText>
 	<TargetText>deploy_html</TargetText>
@@ -991,13 +1019,6 @@
 	<SourceText>Refresh Webviewer Widget</SourceText>
 	<TargetText>Refresh Webviewer Widget</TargetText>
 	<Comment>com.fmi.script.Refresh Webviewer Widget</Comment>
-</DynamicTemplateString>
-
-<DynamicTemplateString>
-	<StringID>com.fmi.script.286F6527DF6D67374CE843B13FC87D7C</StringID>
-	<SourceText>get_realation_info</SourceText>
-	<TargetText>get_realation_info</TargetText>
-	<Comment>com.fmi.script.get_realation_info</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -1047,6 +1068,13 @@
 	<SourceText>UploadWebviewerWidget</SourceText>
 	<TargetText>UploadWebviewerWidget</TargetText>
 	<Comment>com.fmi.script.UploadWebviewerWidget</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
+	<StringID>com.fmi.script.A2EC26C43BD9311C39C1FAEEC9E10213</StringID>
+	<SourceText>get_file_path_for_upload</SourceText>
+	<TargetText>get_file_path_for_upload</TargetText>
+	<Comment>com.fmi.script.get_file_path_for_upload</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>
@@ -1267,6 +1295,13 @@
 </DynamicTemplateString>
 
 <DynamicTemplateString>
+	<StringID>com.fmi.scriptstep.text.726655869DF5DF4378CBF8E94FAAC20D</StringID>
+	<SourceText>mac only right now</SourceText>
+	<TargetText>mac only right now</TargetText>
+	<Comment>com.fmi.scriptstep.text.mac only right now</Comment>
+</DynamicTemplateString>
+
+<DynamicTemplateString>
 	<StringID>com.fmi.scriptstep.text.91DD624E3BA0CAD077A8990C590C154C</StringID>
 	<SourceText>@param {object} json.result the data to send back to the WebViwer</SourceText>
 	<TargetText>@param {object} json.result the data to send back to the WebViwer</TargetText>
@@ -1313,13 +1348,6 @@
 	<SourceText> uploads the html code into the right location</SourceText>
 	<TargetText> uploads the html code into the right location</TargetText>
 	<Comment>com.fmi.scriptstep.text. uploads the html code into the right location</Comment>
-</DynamicTemplateString>
-
-<DynamicTemplateString>
-	<StringID>com.fmi.scriptstep.text.C4E1AB58BC75DDAA182369B6AC950BFD</StringID>
-	<SourceText> you need to connect this to a script the gets the ddl</SourceText>
-	<TargetText> you need to connect this to a script the gets the ddl</TargetText>
-	<Comment>com.fmi.scriptstep.text. you need to connect this to a script the gets the ddl</Comment>
 </DynamicTemplateString>
 
 <DynamicTemplateString>

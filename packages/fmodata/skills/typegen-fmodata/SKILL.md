@@ -28,7 +28,7 @@ sources:
 ## Prerequisites
 
 - **FileMaker Server 22.0.4+** accessible via port 443
-- **OttoFMS 4.11+** installed on the FM server (optional, only for API key auth)
+- **OttoFMS 4.11+** installed on the FM server (only required for API key auth)
 - **FileMaker account** with the `fmodata` extended privilege enabled
 - **OData API enabled** on the FileMaker server
 
@@ -47,9 +47,9 @@ npm add @proofkit/fmodata
 FM_SERVER=https://your-server.com     # must start with https://
 FM_DATABASE=MyFile.fmp12              # must end with .fmp12
 
-# API key auth (OttoFMS 4.11+, recommended)
+# Option A: API key auth (requires OttoFMS 4.11+)
 OTTO_API_KEY=dk_123456...789
-# OR username/password
+# Option B: username/password auth
 FM_USERNAME=admin
 FM_PASSWORD=password
 ```
@@ -68,7 +68,6 @@ This creates `proofkit-typegen-config.jsonc`. Configure for OData mode:
   "config": {
     "type": "fmodata",
     "path": "schema/odata",
-    "reduceMetadata": true,
     "tables": [
       {
         "tableName": "Customers",
@@ -95,6 +94,7 @@ Add a convenience script to `package.json`:
 {
   "scripts": {
     "typegen": "npx @proofkit/typegen@beta"
+    "typegen:ui": "npm run tyepgen ui"
   }
 }
 ```
@@ -252,24 +252,33 @@ The `config` key can be an array mixing `fmdapi` and `fmodata` entries, each wit
 
 ## Common Mistakes
 
-### CRITICAL: Manually adding fields or inventing entity IDs
+### CRITICAL: Inventing entity IDs or guessing field names
 
 Wrong:
 ```ts
-// Agent adds a field it thinks exists in FileMaker
+// Agent adds a field with a guessed entity ID
 const contacts = fmTableOccurrence("contacts", {
   ...existingFields,
   newField: textField().entityId("FMFID:99"), // guessed ID — will silently fail
 });
 ```
 
-Correct:
+Entity IDs (`FMFID`/`FMTID`) are opaque and MUST come from FileMaker metadata via typegen. Guessed entity IDs cause silent query failures — wrong data or empty results with no error.
+
+To add new fields, use the fmodata CLI to discover real field names programmatically, then add them to the `tables[].fields` array in `proofkit-typegen-config.jsonc`, and re-run typegen to generate the correct definitions with entity IDs:
+
 ```bash
-# Re-run typegen to pick up new fields from FileMaker
+# 1. Discover available fields via the CLI
+npx @proofkit/fmodata@beta metadata fields --table <TableName>
+# Add --details for field types, nullability, etc.
+
+# 2. Edit proofkit-typegen-config.jsonc to include the new field(s)
+
+# 3. Re-run typegen to regenerate schemas with correct entity IDs
 npx @proofkit/typegen@beta
 ```
 
-Field definitions and entity IDs (`FMFID`/`FMTID`) must come from FileMaker metadata via typegen. Guessed entity IDs cause silent query failures — wrong data or empty results with no error.
+Never manually edit entity IDs or field definitions in generated files — always re-run typegen after config changes.
 
 Source: packages/typegen/src/fmodata/typegen.ts
 
@@ -346,11 +355,12 @@ Without `"type": "fmodata"`, the config defaults to `"fmdapi"` and expects a `la
 
 Source: packages/typegen/src/types.ts:238-243
 
-### HIGH: Not running typegen after FileMaker schema changes
+### HIGH: Not running typegen after FileMaker schema changes or config edits
 
 Wrong:
 ```ts
 // Manually editing a generated file to add a new field
+// OR editing proofkit-typegen-config.jsonc without re-running typegen
 ```
 
 Correct:
@@ -358,7 +368,7 @@ Correct:
 npx @proofkit/typegen@beta
 ```
 
-After changing table schemas in FileMaker, re-run typegen to regenerate types. The generated schemas are the source of truth for field names, types, and entity IDs.
+After changing table schemas in FileMaker or editing `proofkit-typegen-config.jsonc`, re-run typegen to regenerate types. The generated schemas are the source of truth for field names, types, and entity IDs.
 
 Source: packages/typegen/src/fmodata/typegen.ts
 

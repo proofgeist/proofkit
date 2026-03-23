@@ -1,5 +1,12 @@
 # @proofkit/webviewer
 
+## 3.0.7-beta.4
+
+### Patch Changes
+
+- 8818805: Document the `proofkit add addon webviewer` command in the WebViewer skill and setup docs.
+- e6889d0: Update skill content
+
 ## 3.0.7-beta.3
 
 ### Patch Changes

@@ -6,7 +6,7 @@ description: >
   fire-and-forget FMScriptOption PerformScript callback fetchId handleFmWVFetchCallback
 type: core
 library: proofkit
-library_version: "3.0.7-beta.3"
+library_version: "3.0.7-beta.4"
 sources:
   - "proofgeist/proofkit:packages/webviewer/src/main.ts"
   - "proofgeist/proofkit:packages/webviewer/src/adapter.ts"

@@ -24,12 +24,14 @@
     "bright-dogs-teach",
     "brown-keys-float",
     "clean-suns-matter",
+    "clear-lions-think",
     "cli-auto-detect-non-interactive",
     "cli-effect-errors",
     "cli-init-claude-cursorignore",
     "cli-webviewer-scaffold-fm-mcp",
     "expose-typegen-buildschema-root-export",
     "fair-lamps-taste",
+    "fair-poems-care",
     "fix-cli-dot-name-normalization",
     "fix-cli-parse-name-parent-paths",
     "fix-date-filter-quoting",
@@ -44,6 +46,7 @@
     "fix-typegen-boolean-validator-duplication",
     "fix-typegen-fields-dialog-overflow",
     "fix-typegen-multi-config-client-index",
+    "fix-typegen-optional-peer-deps",
     "fix-webhook-response-types",
     "fm-bridge-empty-connected-files",
     "fm-http-to-fm-mcp",
@@ -64,6 +67,7 @@
     "persist-init-local-file-selection",
     "proofkit-cli-major-migration",
     "quick-ends-drop",
+    "quick-lions-pull",
     "real-ideas-sort",
     "remove-cli-ui-flag",
     "select-all-override",
@@ -74,6 +78,7 @@
     "tough-forks-start",
     "ui-default-shadcn",
     "update-fmodata-docs-ai-agent",
-    "use-ultracite-for-new-app-scripts"
+    "use-ultracite-for-new-app-scripts",
+    "witty-impalas-heal"
   ]
 }

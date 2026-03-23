@@ -10,7 +10,7 @@ description: >
   prerequisites, and choosing between OttoAdapter and FetchAdapter auth.
 type: core
 library: proofkit
-library_version: "5.1.0-beta.3"
+library_version: "5.1.0-beta.4"
 sources:
   - "proofgeist/proofkit:packages/typegen/src/cli.ts"
   - "proofgeist/proofkit:packages/typegen/src/typegen.ts"

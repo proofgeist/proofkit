@@ -1,5 +1,16 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.28
+
+### Patch Changes
+
+- 8818805: Fix `proofkit add addon` so it works outside an existing ProofKit project.
+- e0ea042: updated addon to fix a bug in the SendCallback script
+- Updated dependencies [0643ddd]
+- Updated dependencies [e6889d0]
+  - @proofkit/typegen@1.1.0-beta.22
+  - @proofkit/fmdapi@5.1.0-beta.4
+
 ## 2.0.0-beta.27
 
 ### Patch Changes

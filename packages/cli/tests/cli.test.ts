@@ -137,13 +137,6 @@ describe("proofkit CLI", () => {
   it("supports `proofkit add addon webviewer`", async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-addon-project-"));
     const addonModulesDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-addon-modules-"));
-    await fs.writeJson(path.join(cwd, "proofkit.json"), {
-      appType: "webviewer",
-      ui: "shadcn",
-      dataSources: [],
-      replacedMainPage: false,
-      registryTemplates: [],
-    });
 
     const result = spawnSync("node", [distEntry, "add", "addon", "webviewer", "--non-interactive"], {
       cwd,

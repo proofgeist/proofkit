@@ -15,7 +15,12 @@ sources:
 
 ## Setup
 
+This package assumes the user has already added specific layouts, scripts, etc into their FileMaker file. This is accomplished using a FileMaker add-on, downloaded during the setup process if the project was created using @proofkit/cli, but the user must still manually install the add-on in their FileMaker file.
+To download the latest version of the add-on to the user's computer, run `npx -y @proofkit/cli@beta add addon webviewer` in any directory.
+
 Install the package and set the webviewer name before calling any scripts.
+
+
 
 ```ts
 import { fmFetch, globalSettings } from "@proofkit/webviewer";

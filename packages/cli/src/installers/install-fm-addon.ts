@@ -211,6 +211,7 @@ export async function inspectFmAddon(
 export function getFmAddonInstallInstructions(addonName: FmAddonName) {
   const addonDisplayName = getAddonDisplayName(addonName);
   const installCommand = getAddonInstallCommand(addonName);
+  const removeOldStep = `If your FileMaker file already has an older ${addonDisplayName} add-on installed, remove that old add-on first`;
 
   return {
     addonDisplayName,
@@ -218,7 +219,8 @@ export function getFmAddonInstallInstructions(addonName: FmAddonName) {
     docsUrl: addonName === "auth" ? "https://proofkit.dev/auth/fm-addon" : "https://proofkit.dev/webviewer",
     steps: [
       `Run \`${installCommand}\` to install or update the local add-on files`,
-      "Restart FileMaker Pro (if it's currently running)",
+      "Restart FileMaker Pro so the new local add-on files appear",
+      removeOldStep,
       `Open your FileMaker file, go to layout mode, and install the ${addonDisplayName} add-on to the file`,
     ],
   };
@@ -256,8 +258,9 @@ export async function installFmAddonExplicitly({ addonName }: { addonName: FmAdd
     );
   }
   const steps = [
-    "Restart FileMaker Pro (if it's currently running)",
-    `Open your FileMaker file, go to layout mode, and install the ${addonDisplayName} addon to the file`,
+    "Restart FileMaker Pro so the new local add-on files appear",
+    `If your FileMaker file already has an older ${addonDisplayName} add-on installed, remove that old add-on first`,
+    `Open your FileMaker file, go to layout mode, and install the ${addonDisplayName} add-on to the file`,
   ];
   steps.forEach((step, index) => {
     console.log(`${index + 1}. ${step}`);

@@ -3,8 +3,7 @@ import { select } from "~/cli/prompts.js";
 import { debugOption, nonInteractiveOption } from "~/globalOptions.js";
 import { installFmAddonExplicitly } from "~/installers/install-fm-addon.js";
 import { initProgramState, isNonInteractiveMode } from "~/state.js";
-import { getSettings } from "~/utils/parseSettings.js";
-import { abortIfCancel, ensureProofKitProject } from "../utils.js";
+import { abortIfCancel } from "../utils.js";
 
 type AddonTarget = "webviewer" | "auth";
 
@@ -29,17 +28,7 @@ async function resolveAddonTarget(name?: string): Promise<AddonTarget> {
 }
 
 export async function runAddAddonAction(targetName?: string) {
-  ensureProofKitProject({ commandName: "add addon" });
-  const settings = getSettings();
   const target = await resolveAddonTarget(targetName);
-
-  if (target === "webviewer" && settings.appType !== "webviewer") {
-    throw new Error("The WebViewer add-on can only be added from a WebViewer ProofKit project.");
-  }
-
-  if (target === "auth" && settings.appType !== "browser") {
-    throw new Error("The auth add-on can only be added from a browser ProofKit project.");
-  }
 
   await installFmAddonExplicitly({ addonName: target === "webviewer" ? "wv" : "auth" });
 }

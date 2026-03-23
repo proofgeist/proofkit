@@ -10,7 +10,7 @@ type: core
 library: proofkit
 library_version: "5.1.0-beta.3"
 requires:
-  - typegen-setup
+  - typegen-fmdapi
 sources:
   - "proofgeist/proofkit:packages/fmdapi/src/client.ts"
   - "proofgeist/proofkit:packages/fmdapi/src/adapters/otto.ts"
@@ -20,16 +20,12 @@ sources:
 
 ## Setup
 
+> **Start with typegen.** Before manually configuring a DataApi client, use `npx @proofkit/typegen@beta` to generate type-safe clients from your FileMaker layouts. See the **typegen-fmdapi** skill. Manual setup below is only needed for advanced or non-typegen workflows.
+
 Install the package:
 
 ```bash
 pnpm add @proofkit/fmdapi
-```
-
-If you want the companion `typegen-setup` skill available locally in this project, also install:
-
-```bash
-pnpm add -D @proofkit/typegen@*
 ```
 
 ### OttoAdapter (recommended)
@@ -486,5 +482,5 @@ Zod v3 and v4 have different Standard Schema implementations. Mixing them causes
 
 ## References
 
-- **typegen-setup** -- type generation and client scaffolding that produces the layout-specific clients referenced above
+- **typegen-fmdapi** -- type generation and client scaffolding that produces the layout-specific clients referenced above. This is the recommended entry point for new projects.
 - **fmodata-client** -- alternative ORM-style client using the OData API (Drizzle-like query builder, different from the REST-based Data API covered here)

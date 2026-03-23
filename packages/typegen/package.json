@@ -21,8 +21,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "bin": {
-    "typegen": "./dist/esm/cli.js",
-    "intent": "./bin/intent.js"
+    "typegen": "./dist/esm/cli.js"
   },
   "exports": {
     ".": {
@@ -52,16 +51,13 @@
     "fmdapi",
     "proofgeist",
     "filemaker",
-    "fmrest",
-    "tanstack-intent"
+    "fmrest"
   ],
   "files": [
     "dist",
     "src",
     "stubs",
-    "skills",
-    "bin",
-    "!skills/_artifacts"
+    "bin"
   ],
   "author": "",
   "license": "ISC",

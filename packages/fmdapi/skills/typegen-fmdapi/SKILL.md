@@ -1,79 +1,64 @@
 ---
-name: typegen-setup
+name: typegen-fmdapi
 description: >
-  Configure and run @proofkit/typegen to generate TypeScript types and Zod
-  validators from FileMaker layouts or OData metadata. Covers
-  proofkit-typegen-config.jsonc, validator options (zod/v4, zod/v3),
-  generated vs override file structure, envNames, InferTableSchema,
-  InferZodPortals, schema/generated/client directory layout, and
-  fmMcp mode for local typegen without credentials.
+  ENTRY POINT for @proofkit/fmdapi projects. Generate TypeScript types and Zod
+  validators from FileMaker layouts using @proofkit/typegen. Covers
+  proofkit-typegen-config.jsonc for Data API mode, npx @proofkit/typegen setup,
+  OttoAdapter and FetchAdapter env vars, FM MCP mode for local WebViewer
+  development, generated vs override file structure, schema/generated/client
+  directory layout, Standard Schema validation, InferZodPortals, fmMcp mode
+  prerequisites, and choosing between OttoAdapter and FetchAdapter auth.
 type: core
 library: proofkit
-library_version: "1.1.0-beta.21"
+library_version: "5.1.0-beta.3"
 sources:
   - "proofgeist/proofkit:packages/typegen/src/cli.ts"
   - "proofgeist/proofkit:packages/typegen/src/typegen.ts"
-  - "proofgeist/proofkit:packages/typegen/src/fmodata/typegen.ts"
   - "proofgeist/proofkit:apps/docs/content/docs/typegen/*.mdx"
+  - "proofgeist/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx"
 ---
+
+> **ALWAYS use `@proofkit/typegen` to set up an @proofkit/fmdapi project.**
+> Typegen generates type-safe, schema-validated clients directly from your
+> FileMaker layouts. It is the preferred and recommended path — manual client
+> setup is only a fallback. Before writing any DataApi code, run typegen first.
+
+## Prerequisites
+
+- **FileMaker Server 19.6+** accessible via port 443
+- **OttoFMS 4.7+** installed on the FM server (for API key auth)
+- **FileMaker account** with the `fmrest` extended privilege enabled
+- **Data API enabled** on the FileMaker server
 
 ## Setup
 
-Install and initialize:
+### 1. Install the runtime package
+
+```bash
+pnpm add @proofkit/fmdapi
+```
+
+### 2. Set environment variables
+
+```bash
+# .env
+FM_SERVER=https://your-server.com     # must start with https://
+FM_DATABASE=MyFile.fmp12              # must end with .fmp12
+
+# OttoFMS Data API key (recommended)
+OTTO_API_KEY=dk_123456...789
+# OR username/password (requires token store in production)
+FM_USERNAME=admin
+FM_PASSWORD=password
+```
+
+### 3. Initialize and run typegen
 
 ```bash
 npx @proofkit/typegen@beta init
 ```
 
-This creates `proofkit-typegen-config.jsonc` at your project root. Set environment variables:
-
-```bash
-FM_SERVER=https://your-server.com
-FM_DATABASE=MyFile.fmp12
-OTTO_API_KEY=dk_123...abc
-```
-
-Add a script to `package.json`:
-
-```json
-{
-  "scripts": {
-    "typegen": "npx @proofkit/typegen@beta"
-  }
-}
-```
-
-Generated output structure (assuming `"path": "schema"` with two layouts):
-
-```
-schema/
-  generated/      # Auto-generated. NEVER edit.
-    Customers.ts
-    Invoices.ts
-  client/         # Auto-generated. NEVER edit.
-    Customers.ts
-    Invoices.ts
-    index.ts
-  Customers.ts    # Override file. Safe to edit.
-  Invoices.ts     # Override file. Safe to edit.
-```
-
-### OData-generated output structure
-
-For OData configs (`"type": "fmodata"`), typegen generates `fmTableOccurrence` definitions:
-
-```text
-schema/odata/
-  generated/      # Auto-generated. NEVER edit fields or entity IDs.
-    Customers.ts  # fmTableOccurrence with fields, entity IDs from FM metadata
-    Orders.ts
-```
-
-You may add `readValidator`, `writeValidator`, `defaultSelect`, `navigationPaths`, and other options to generated schemas. Do NOT add new fields or change entity IDs (`FMFID`/`FMTID`) — these must come from FileMaker metadata via typegen. Re-run `npx @proofkit/typegen` after any FileMaker schema change.
-
-## Core Patterns
-
-### Data API config
+This creates `proofkit-typegen-config.jsonc` at your project root. Configure your layouts:
 
 ```jsonc
 {
@@ -98,42 +83,57 @@ You may add `readValidator`, `writeValidator`, `defaultSelect`, `navigationPaths
 }
 ```
 
-Use the generated client:
+Run typegen to generate clients:
 
-```ts
-import { CustomersLayout } from "./schema/client";
-
-const { data } = await CustomersLayout.list();
+```bash
+npx @proofkit/typegen@beta
 ```
 
-### OData config
+Add a convenience script to `package.json`:
 
-OData configs require `"type": "fmodata"`. Tables replace layouts.
-
-```jsonc
+```json
 {
-  "$schema": "https://proofkit.dev/typegen-config-schema.json",
-  "config": {
-    "type": "fmodata",
-    "path": "schema/odata",
-    "reduceMetadata": true,
-    "tables": [
-      {
-        "tableName": "Customers",
-        "fields": [
-          { "fieldName": "InternalID", "exclude": true },
-          { "fieldName": "Status", "typeOverride": "boolean" }
-        ]
-      },
-      { "tableName": "Orders", "variableName": "OrdersTable" }
-    ]
+  "scripts": {
+    "typegen": "npx @proofkit/typegen@beta"
+    "typegen:ui": "npm run typegen ui"
   }
 }
 ```
 
+### 4. First query
+
+```ts
+import { CustomersLayout } from "./schema/client";
+
+const { data } = await CustomersLayout.findOne({
+  query: { id: "==123" },
+});
+
+console.log(data.fieldData);
+```
+
+The generated client includes full type safety and runtime schema validation — no manual type definitions needed.
+
+## Core Patterns
+
+### Generated output structure
+
+```
+schema/
+  generated/      # Auto-generated. NEVER edit.
+    Customers.ts
+    Invoices.ts
+  client/         # Auto-generated. NEVER edit.
+    Customers.ts
+    Invoices.ts
+    index.ts
+  Customers.ts    # Override file. Safe to edit.
+  Invoices.ts     # Override file. Safe to edit.
+```
+
 ### Override files for customization
 
-Override files live at `schema/<schemaName>.ts`. They re-export from `generated/` and are never overwritten. Customize by modifying the Zod schema:
+Override files live at `schema/<schemaName>.ts`. They re-export from `generated/` and are never overwritten by typegen. Customize by modifying the Zod schema:
 
 ```ts
 // schema/Customers.ts (override file)
@@ -155,7 +155,7 @@ The generated client automatically imports from the override file, so transforma
 
 ### Type inference helpers
 
-For Data API portals, use `InferZodPortals` from `@proofkit/fmdapi`:
+For portals, use `InferZodPortals` from `@proofkit/fmdapi`:
 
 ```ts
 import type { InferZodPortals } from "@proofkit/fmdapi";
@@ -167,22 +167,35 @@ export const ZInvoicesPortals = {
 export type TInvoicesPortals = InferZodPortals<typeof ZInvoicesPortals>;
 ```
 
-For OData tables, use `InferTableSchema` from `@proofkit/fmodata`:
+### Custom env variable names
 
-```ts
-import type { InferTableSchema } from "@proofkit/fmodata";
-import { Customers } from "./schema/odata/generated/Customers";
-
-type CustomerRow = InferTableSchema<typeof Customers>;
+```jsonc
+{
+  "config": {
+    "type": "fmdapi",
+    "envNames": {
+      "server": "MY_FM_SERVER",
+      "db": "MY_FM_DATABASE",
+      "auth": {
+        "apiKey": "MY_OTTO_KEY"
+      }
+    },
+    "layouts": [
+      { "layoutName": "api_Users", "schemaName": "Users" }
+    ]
+  }
+}
 ```
+
+Default env variable names when `envNames` is omitted: `FM_SERVER`, `FM_DATABASE`, `OTTO_API_KEY` (or `FM_USERNAME`/`FM_PASSWORD` for Fetch adapter).
 
 ### Multiple configs
 
 The `config` key can be an array mixing `fmdapi` and `fmodata` entries, each with its own `path` and `envNames`.
 
-### FM MCP mode (local development, no credentials)
+### FM MCP mode (local WebViewer development — no credentials)
 
-FM MCP mode lets typegen fetch layout metadata from a locally running FileMaker file via the FM MCP proxy, without needing OttoFMS, a hosted server, or any credentials. Generated clients still use `WebViewerAdapter` — FM MCP is only used during typegen.
+FM MCP mode lets typegen fetch layout metadata from a locally running FileMaker file via the FM MCP proxy, without needing OttoFMS, a hosted server, or any credentials. Generated clients use `WebViewerAdapter` — FM MCP is only used during typegen.
 
 ```jsonc
 {
@@ -212,29 +225,41 @@ The generated client uses `WebViewerAdapter` with `webviewerScriptName` if set, 
 3. "Connect to MCP" script run in the FileMaker file (opens a WebViewer window that bridges HTTP requests)
 4. That WebViewer window must stay open in **Browse mode** (not Layout mode)
 
-### Custom env variable names
-
-```jsonc
-{
-  "config": {
-    "type": "fmdapi",
-    "envNames": {
-      "server": "MY_FM_SERVER",
-      "db": "MY_FM_DATABASE",
-      "auth": {
-        "apiKey": "MY_OTTO_KEY"
-      }
-    },
-    "layouts": [
-      { "layoutName": "api_Users", "schemaName": "Users" }
-    ]
-  }
-}
-```
-
-Default env variable names when `envNames` is omitted: `FM_SERVER`, `FM_DATABASE`, `OTTO_API_KEY` (or `FM_USERNAME`/`FM_PASSWORD` for Fetch adapter).
+No `.env` file needed for typegen in fmMcp mode — baseUrl defaults, connectedFileName is auto-discovered.
 
 ## Common Mistakes
+
+### CRITICAL: Manually redefining TypeScript types instead of using typegen
+
+Wrong:
+```ts
+// Hand-writing types that duplicate your FM layout
+interface Customer {
+  name: string;
+  email: string;
+  phone: string;
+}
+const client = DataApi<Customer>({
+  adapter: new OttoAdapter({ /* ... */ }),
+  layout: "API_Contacts",
+});
+```
+
+Correct:
+```bash
+# Generate types and clients from FileMaker
+npx @proofkit/typegen@beta
+```
+```ts
+// Use the generated client
+import { ContactsLayout } from "./schema/client";
+
+const { data } = await ContactsLayout.find({ query: { email: "==test@example.com" } });
+```
+
+Hand-written types drift when FileMaker fields change, with no runtime protection. The typegen-generated client bundles a Standard Schema validator that catches field renames at runtime.
+
+Source: packages/typegen/src/buildSchema.ts
 
 ### CRITICAL: Editing generated or client directories
 
@@ -259,7 +284,7 @@ export const ZCustomers = ZCustomers_generated
 export type TCustomers = z.infer<typeof ZCustomers>;
 ```
 
-Files in `generated/` and `client/` are overwritten on every typegen run; all customizations belong in the override files at the schema root. For OData schemas, do not manually add fields or change entity IDs (`FMFID`/`FMTID`) in generated files — these come from FileMaker metadata. You may safely add `readValidator`, `writeValidator`, `defaultSelect`, `navigationPaths`, and other options.
+Files in `generated/` and `client/` are overwritten on every typegen run; all customizations belong in the override files at the schema root.
 
 Source: apps/docs/content/docs/typegen/customization.mdx
 
@@ -333,66 +358,12 @@ const ZCustomers = ZCustomers_generated.extend({
 
 Correct:
 ```bash
-npx @proofkit/typegen
+npx @proofkit/typegen@beta
 ```
 
-After changing layouts or table schemas in FileMaker, re-run typegen to regenerate types; the generated schemas are the source of truth for field names and types.
+After changing layouts in FileMaker, re-run typegen to regenerate types; the generated schemas are the source of truth for field names and types.
 
 Source: packages/typegen/src/typegen.ts
-
-### HIGH: Omitting type discriminator for OData config
-
-Wrong:
-```jsonc
-{
-  "config": {
-    "tables": [
-      { "tableName": "Customers" }
-    ]
-  }
-}
-```
-
-Correct:
-```jsonc
-{
-  "config": {
-    "type": "fmodata",
-    "tables": [
-      { "tableName": "Customers" }
-    ]
-  }
-}
-```
-
-Without `"type": "fmodata"`, the config defaults to `"fmdapi"` and expects a `layouts` array instead of `tables`, causing a validation error.
-
-Source: packages/typegen/src/types.ts:238-243
-
-### CRITICAL: Manually redefining types instead of using generated ones
-
-Wrong:
-```ts
-// Defining types by hand
-interface Customer {
-  name: string;
-  email: string;
-  phone: string;
-}
-```
-
-Correct:
-```ts
-import type { TCustomers } from "./schema/Customers";
-// or for OData:
-import type { InferTableSchema } from "@proofkit/fmodata";
-import { Customers } from "./schema/odata/generated/Customers";
-type CustomerRow = InferTableSchema<typeof Customers>;
-```
-
-Hand-written types drift from the database schema; always derive types from typegen output to stay in sync.
-
-Source: packages/typegen/src/buildSchema.ts
 
 ### HIGH: Mixing Zod v3 and v4 in the same project
 
@@ -476,7 +447,29 @@ Troubleshooting checklist:
 3. **File not listed?** Open the FileMaker file and run the **"Connect to MCP"** script
 4. **Still not working?** Ensure the WebViewer window opened by "Connect to MCP" is in **Browse mode**, not Layout mode. Closing this window or switching to Layout mode silently breaks the proxy.
 
+### CRITICAL: FM_SERVER without https:// prefix
+
+Wrong:
+```bash
+FM_SERVER=filemaker.example.com
+```
+
+Correct:
+```bash
+FM_SERVER=https://filemaker.example.com
+```
+
+`@proofkit/fmdapi` expects `FM_SERVER` to be a full URL including the `https://` protocol prefix. Without it, requests fail with connection errors or malformed URL exceptions.
+
+Source: apps/docs/content/docs/fmdapi/quick-start.mdx
+
+### CRITICAL: Missing fmrest privilege on FM account
+
+The Data API requires the `fmrest` extended privilege on the FileMaker account. Without it, all API calls return authorization errors. Enable via File > Manage > Security > Privilege Sets > Extended Privileges.
+
+Source: apps/docs/content/docs/cli/guides/getting-started.mdx
+
 ## References
 
-- **fmdapi-client**: Typegen generates the layout-specific clients consumed by `@proofkit/fmdapi`. Override files and `InferZodPortals` bridge typegen output into fmdapi usage.
-- **fmodata-client**: Typegen generates `fmTableOccurrence` schemas consumed by `@proofkit/fmodata`. `InferTableSchema` extracts row types from generated table definitions.
+- **fmdapi-client**: After generating clients with typegen, see the fmdapi-client skill for full CRUD method usage, adapter configuration, portal data, and script execution patterns.
+- **webviewer-integration**: For WebViewer projects using FM MCP mode, the webviewer-integration skill covers fmFetch, callFMScript, and WebViewerAdapter runtime usage.

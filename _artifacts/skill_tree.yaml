@@ -1,37 +1,58 @@
 # skills/_artifacts/skill_tree.yaml
 library:
   name: '@proofkit'
-  version: 'fmdapi@5.0.3-beta.1, fmodata@0.1.0-beta.31, typegen@1.1.0-beta.15, webviewer@3.0.7-beta.0, better-auth@0.4.0-beta.7'
+  version: 'fmdapi@5.1.0-beta.3, fmodata@0.1.0-beta.36, typegen@1.1.0-beta.21, webviewer@3.0.7-beta.3, better-auth@0.4.0-beta.12'
   repository: 'https://github.com/proofgeist/proofkit'
   description: 'TypeScript tools and libraries for building web applications integrated with Claris FileMaker'
 generated_from:
   domain_map: '_artifacts/domain_map.yaml'
   skill_spec: '_artifacts/skill_spec.md'
-generated_at: '2026-03-13'
+generated_at: '2026-03-23'
 
 skills:
-  - name: 'Typegen Setup'
-    slug: 'typegen-setup'
+  - name: 'Typegen for Data API'
+    slug: 'typegen-fmdapi'
     type: 'core'
     domain: 'connecting'
-    path: 'skills/typegen-setup/SKILL.md'
-    package: 'packages/typegen'
+    path: 'skills/typegen-fmdapi/SKILL.md'
+    package: 'packages/fmdapi'
     description: >
-      Configure and run @proofkit/typegen to generate TypeScript types and
-      runtime validators from FileMaker layouts (Data API) or OData metadata.
-      Covers proofkit-typegen-config.jsonc, validator options (zod/v4, zod/v3),
-      generated vs override file structure, environment variables, and
-      type inference helpers (InferTableSchema, InferZodPortals).
+      ENTRY POINT for @proofkit/fmdapi projects. Generate TypeScript types and
+      Zod validators from FileMaker layouts using @proofkit/typegen. Covers
+      proofkit-typegen-config.jsonc for Data API mode, npx setup, OttoAdapter
+      and FetchAdapter env vars, FM MCP mode for local WebViewer development,
+      generated vs override file structure, Standard Schema validation, and
+      InferZodPortals.
     requires: []
     sources:
       - 'proofgeist/proofkit:packages/typegen/src/cli.ts'
       - 'proofgeist/proofkit:packages/typegen/src/typegen.ts'
-      - 'proofgeist/proofkit:packages/typegen/src/fmodata/typegen.ts'
       - 'proofgeist/proofkit:apps/docs/content/docs/typegen/index.mdx'
       - 'proofgeist/proofkit:apps/docs/content/docs/typegen/config.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/config-odata.mdx'
       - 'proofgeist/proofkit:apps/docs/content/docs/typegen/customization.mdx'
+      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx'
       - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/version-5.mdx'
+
+  - name: 'Typegen for OData'
+    slug: 'typegen-fmodata'
+    type: 'core'
+    domain: 'connecting'
+    path: 'skills/typegen-fmodata/SKILL.md'
+    package: 'packages/fmodata'
+    description: >
+      ENTRY POINT for @proofkit/fmodata projects. Generate TypeScript table
+      schemas with entity IDs from FileMaker OData metadata using
+      @proofkit/typegen. Covers proofkit-typegen-config.jsonc for OData mode,
+      npx setup, fmTableOccurrence generation, entity IDs (FMFID/FMTID),
+      field exclusion, type overrides, InferTableSchema, and OData
+      prerequisites.
+    requires: []
+    sources:
+      - 'proofgeist/proofkit:packages/typegen/src/cli.ts'
+      - 'proofgeist/proofkit:packages/typegen/src/fmodata/typegen.ts'
+      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/index.mdx'
+      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/config-odata.mdx'
+      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/quick-start.mdx'
 
   - name: 'Data API Client'
     slug: 'fmdapi-client'
@@ -46,7 +67,7 @@ skills:
       find, findOne, findFirst, findAll, create, update, delete), executeScript,
       containerUpload, Standard Schema validation, and portal data access.
     requires:
-      - 'typegen-setup'
+      - 'typegen-fmdapi'
     sources:
       - 'proofgeist/proofkit:packages/fmdapi/src/client.ts'
       - 'proofgeist/proofkit:packages/fmdapi/src/adapters/otto.ts'
@@ -76,7 +97,7 @@ skills:
       batch operations, Result error handling (neverthrow pattern), entity IDs,
       scripts, webhooks, and schema management.
     requires:
-      - 'typegen-setup'
+      - 'typegen-fmodata'
     sources:
       - 'proofgeist/proofkit:packages/fmodata/src/index.ts'
       - 'proofgeist/proofkit:packages/fmodata/src/client/database.ts'
@@ -141,26 +162,6 @@ skills:
       - 'proofgeist/proofkit:apps/docs/content/docs/better-auth/index.mdx'
       - 'proofgeist/proofkit:apps/docs/content/docs/better-auth/installation.mdx'
       - 'proofgeist/proofkit:apps/docs/content/docs/better-auth/troubleshooting.mdx'
-
-  - name: 'Getting Started'
-    slug: 'getting-started'
-    type: 'lifecycle'
-    domain: 'connecting'
-    path: 'skills/getting-started/SKILL.md'
-    package: 'packages/typegen'
-    description: >
-      End-to-end journey from first install to first working data query with
-      ProofKit. Covers prerequisites (Node.js, FM server 19.6+, OttoFMS,
-      fmrest/fmodata privileges), environment variable setup (FM_SERVER with
-      https://, FM_DATABASE, OTTO_API_KEY), first typegen run, and first CRUD
-      query with the generated client. Helps choose between Data API (fmdapi)
-      and OData (fmodata) paths.
-    requires: []
-    sources:
-      - 'proofgeist/proofkit:apps/docs/content/docs/cli/guides/getting-started.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/quick-start.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/cli/guides/motivation.mdx'
 
   - name: 'OData Query Optimization'
     slug: 'odata-query-optimization'

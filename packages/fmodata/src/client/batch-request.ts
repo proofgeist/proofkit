@@ -10,6 +10,8 @@ const BOUNDARY_REGEX = /boundary=([^;]+)/;
 const HTTP_STATUS_LINE_REGEX = /HTTP\/\d\.\d\s+(\d+)\s*(.*)/;
 const CRLF_REGEX = /\r\n/;
 const CHANGESET_CONTENT_TYPE_REGEX = /Content-Type: multipart\/mixed;\s*boundary=([^\r\n]+)/;
+const OTTO_PREFIX_REGEX = /^\/otto/;
+const FMPRO_EXT_REGEX = /\.fmp12/;
 
 export interface RequestConfig {
   method: string;
@@ -63,6 +65,18 @@ async function requestToConfig(request: Request): Promise<RequestConfig> {
 }
 
 /**
+ * Transforms a full URL into the canonical path format required by FileMaker's
+ * OData batch processor. Strips proxy prefixes (e.g. /otto/) and the .fmp12
+ * file extension from the database name segment.
+ */
+export function toBatchSubRequestUrl(fullUrl: string): string {
+  const url = new URL(fullUrl);
+  const path = url.pathname.replace(OTTO_PREFIX_REGEX, "");
+  const batchPath = path.replace(FMPRO_EXT_REGEX, "");
+  return `${batchPath}${url.search}`;
+}
+
+/**
  * Formats a single HTTP request for inclusion in a batch
  * @param request - The request configuration
  * @param baseUrl - The base URL to prepend to relative URLs
@@ -80,11 +94,15 @@ function formatSubRequest(request: RequestConfig, baseUrl: string): string {
   lines.push("Content-Transfer-Encoding: binary");
   lines.push(""); // Empty line after multipart headers
 
-  // Construct full URL (convert relative to absolute)
+  // Construct sub-request URL as a canonical FileMaker OData path.
+  // Sub-requests inside the batch body are processed directly by FileMaker's
+  // OData engine, so they must not include proxy prefixes (e.g. /otto/) or
+  // the .fmp12 file extension on the database name.
   const fullUrl = request.url.startsWith("http") ? request.url : `${baseUrl}${request.url}`;
+  const subRequestUrl = toBatchSubRequestUrl(fullUrl);
 
   // Add HTTP request line
-  lines.push(`${request.method} ${fullUrl} HTTP/1.1`);
+  lines.push(`${request.method} ${subRequestUrl} HTTP/1.1`);
 
   // For requests with body, add headers
   if (request.body) {

@@ -275,14 +275,9 @@ export class InsertBuilder<
       // Check for Location header (for return=minimal)
       if (this.returnPreference === "minimal") {
         const locationHeader = getLocationHeader(response.headers);
-        if (locationHeader) {
-          const rowid = this.parseLocationHeader(locationHeader);
-          // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
-          return { data: { ROWID: rowid } as any, error: undefined };
-        }
-        throw new InvalidLocationHeaderError(
-          "Location header is required when using return=minimal but was not found in response",
-        );
+        const rowid = locationHeader ? this.parseLocationHeader(locationHeader) : -1;
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
+        return { data: { ROWID: rowid } as any, error: undefined };
       }
 
       // For 204 responses without return=minimal, FileMaker doesn't return the created entity
@@ -295,11 +290,14 @@ export class InsertBuilder<
       };
     }
 
-    // If we expected return=minimal but got a body, that's unexpected
+    // If we expected return=minimal but got a body (e.g. batch sub-responses
+    // where FM returns 204-with-body, converted to 200 by parsedToResponse),
+    // try to extract ROWID from the Location header or return -1.
     if (this.returnPreference === "minimal") {
-      throw new InvalidLocationHeaderError(
-        "Expected 204 No Content for return=minimal, but received response with body",
-      );
+      const locationHeader = getLocationHeader(response.headers);
+      const rowid = locationHeader ? this.parseLocationHeader(locationHeader) : -1;
+      // biome-ignore lint/suspicious/noExplicitAny: Type assertion for generic return type
+      return { data: { ROWID: rowid } as any, error: undefined };
     }
 
     // Use safeJsonParse to handle FileMaker's invalid JSON with unquoted ? values

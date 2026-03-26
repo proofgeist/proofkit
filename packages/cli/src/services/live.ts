@@ -24,6 +24,7 @@ import {
 } from "~/core/context.js";
 import { ExternalCommandError, FileMakerSetupError, FileSystemError, UserCancelledError } from "~/core/errors.js";
 import type { AppType, FileMakerInputs, ProofKitSettings, UIType } from "~/core/types.js";
+import { installFmAddonExplicitly } from "~/installers/install-fm-addon.js";
 import { openBrowser } from "~/utils/browserOpen.js";
 import { deleteJson, getJson, postJson } from "~/utils/http.js";
 import { detectUserPackageManager } from "~/utils/packageManager.js";
@@ -357,6 +358,17 @@ const fileMakerService = {
           cause,
         }),
     }),
+  installLocalWebViewerAddon: () =>
+    Effect.tryPromise({
+      try: async () => {
+        await installFmAddonExplicitly({ addonName: "wv" });
+      },
+      catch: (cause) =>
+        new FileMakerSetupError({
+          message: "Unable to install local ProofKit WebViewer add-on files.",
+          cause,
+        }),
+    }).pipe(Effect.asVoid),
   validateHostedServerUrl: (serverUrl: string, ottoPort?: number | null) =>
     Effect.gen(function* () {
       const normalizedUrl = normalizeUrl(serverUrl);

@@ -10,7 +10,7 @@
     "dev:api": "concurrently -n \"build,server\" -c \"cyan,magenta\" \"pnpm build:watch\" \"nodemon --watch dist/esm --delay 1 --exec 'node dist/esm/cli.js ui --port 3141 --no-open'\"",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --watch --config vitest.config.ts",
-    "test:e2e": "doppler run -- vitest run --config vitest.e2e.config.ts",
+    "test:e2e": "varlock run -- vitest run --config vitest.e2e.config.ts",
     "typecheck": "tsc --noEmit",
     "build": "pnpm -C web build && pnpm vite build && node scripts/build-copy.js && publint --strict",
     "build:watch": "vite build --watch",

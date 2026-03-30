@@ -26,6 +26,7 @@
     "@biomejs/biome": "2.3.11",
     "@changesets/cli": "^2.29.8",
     "@types/node": "^22.19.5",
+    "@varlock/1password-plugin": "^0.3.0",
     "husky": "^9.1.7",
     "knip": "^5.80.2",
     "lint-staged": "^16.2.7",
@@ -33,6 +34,7 @@
     "turbo": "^2.8.19",
     "typescript": "^5.9.3",
     "ultracite": "7.0.8",
+    "varlock": "^0.6.4",
     "vitest": "^4.0.17"
   },
   "packageManager": "pnpm@10.27.0",

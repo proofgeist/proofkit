@@ -10,7 +10,7 @@ description: >
   required for entity ID correctness.
 type: core
 library: proofkit
-library_version: "0.1.0-beta.37"
+library_version: "0.1.0-beta.38"
 sources:
   - "proofgeist/proofkit:packages/typegen/src/cli.ts"
   - "proofgeist/proofkit:packages/typegen/src/fmodata/typegen.ts"

@@ -1,5 +1,12 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.23
+
+### Patch Changes
+
+- Updated dependencies [b075656]
+  - @proofkit/fmodata@0.1.0-beta.38
+
 ## 1.1.0-beta.22
 
 ### Patch Changes

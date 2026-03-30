@@ -59,6 +59,10 @@ export function planInit(
     Object.assign(packageJson.dependencies, sharedUiDependencies);
     packageJson.dependencies["@tailwindcss/postcss"] = "^4.1.10";
     packageJson.dependencies["next-themes"] = "^0.4.6";
+    if (request.dataSource === "filemaker") {
+      packageJson.dependencies["@proofkit/fmdapi"] = releaseTag;
+      packageJson.dependencies.zod = "^4";
+    }
   }
 
   if (request.appType === "webviewer") {

@@ -1,7 +1,12 @@
 import { describe, expect, it, test } from "vitest";
-import { DataApi, OttoAdapter } from "../src";
-import type { AllLayoutsMetadataResponse, Layout, ScriptOrFolder, ScriptsMetadataResponse } from "../src/client-types";
-import { config, containerClient, layoutClient, weirdPortalClient } from "./setup";
+import { DataApi, OttoAdapter } from "../../src";
+import type {
+  AllLayoutsMetadataResponse,
+  Layout,
+  ScriptOrFolder,
+  ScriptsMetadataResponse,
+} from "../../src/client-types";
+import { config, containerClient, layoutClient, weirdPortalClient } from "../setup";
 
 describe("sort methods", () => {
   test("should sort descending", async () => {

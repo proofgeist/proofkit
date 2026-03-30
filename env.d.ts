@@ -32,12 +32,12 @@ export type CoercedEnvSchema = {
   FM_SERVER: string;
   
   /**
-   * **g**  
+   * **FM_DATABASE**  
    * Canonical FileMaker database name used across fmdapi, fmodata, typegen,  
    * CLI templates, and integration tests. Usually ends in `.fmp12`.  
    * ![icon](data:image/svg+xml;utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cpath%20fill%3D%22%23808080%22%20d%3D%22M29%2022h-5a2.003%202.003%200%200%201-2-2v-6a2%202%200%200%201%202-2h5v2h-5v6h5ZM18%2012h-4V8h-2v14h6a2.003%202.003%200%200%200%202-2v-6a2%202%200%200%200-2-2m-4%208v-6h4v6Zm-6-8H3v2h5v2H4a2%202%200%200%200-2%202v2a2%202%200%200%200%202%202h6v-8a2%202%200%200%200-2-2m0%208H4v-2h4Z%22%2F%3E%3C%2Fsvg%3E)   
    */
-  g: string;
+  FM_DATABASE: string;
   
   /**
    * **FM_USERNAME**  
@@ -199,7 +199,7 @@ export type CoercedEnvSchema = {
 
 declare module 'varlock/env' {
   export interface TypedEnvSchema extends Readonly<CoercedEnvSchema> {}
-  export interface PublicTypedEnvSchema extends Readonly<Pick<CoercedEnvSchema, 'APP_ENV' | 'FM_SERVER' | 'g' | 'FM_USERNAME' | 'FMODATA_SERVER_URL' | 'FMODATA_USERNAME' | 'FMODATA_DATABASE' | 'OTTO_SERVER_URL' | 'FM_FILE_NAME' | 'FM_LAYOUT_NAME' | 'DIFFERENT_FM_SERVER' | 'DIFFERENT_FM_DATABASE' | 'DIFFERENT_FM_USERNAME' | 'FM_MCP_BASE_URL' | 'PROOFKIT_ALLOW_INSECURE_TLS'>> {}
+  export interface PublicTypedEnvSchema extends Readonly<Pick<CoercedEnvSchema, 'APP_ENV' | 'FM_SERVER' | 'FM_DATABASE' | 'FM_USERNAME' | 'FMODATA_SERVER_URL' | 'FMODATA_USERNAME' | 'FMODATA_DATABASE' | 'OTTO_SERVER_URL' | 'FM_FILE_NAME' | 'FM_LAYOUT_NAME' | 'DIFFERENT_FM_SERVER' | 'DIFFERENT_FM_DATABASE' | 'DIFFERENT_FM_USERNAME' | 'FM_MCP_BASE_URL' | 'PROOFKIT_ALLOW_INSECURE_TLS'>> {}
 }
 
 

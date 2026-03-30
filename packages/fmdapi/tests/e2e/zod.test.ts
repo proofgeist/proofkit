@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
-import { DataApi, OttoAdapter } from "../src";
-import { config } from "./setup";
+import { DataApi, OttoAdapter } from "../../src";
+import { config } from "../setup";
 
 const ZCustomer = z.object({ name: z.string(), phone: z.string() });
 const ZPortalTable = z.object({

@@ -464,6 +464,7 @@ function resolveFileMakerInputs({
 
       while (true) {
         const localFmMcp = yield* fileMakerService.detectLocalFmMcp();
+        yield* fileMakerService.installLocalWebViewerAddon();
         const selectedFile = localFmMcp.healthy ? yield* resolveLocalFmMcpFile(localFmMcp.connectedFiles) : undefined;
         if (localFmMcp.healthy && selectedFile) {
           console.info(`Using local ProofKit MCP file: ${selectedFile}`);

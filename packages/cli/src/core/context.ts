@@ -164,6 +164,7 @@ export interface FileMakerBootstrapArtifacts {
 
 export interface FileMakerService {
   readonly detectLocalFmMcp: (baseUrl?: string) => Eff<FmMcpStatus, CliError>;
+  readonly installLocalWebViewerAddon: () => Eff<void, CliError>;
   readonly validateHostedServerUrl: (
     serverUrl: string,
     ottoPort?: number | null,

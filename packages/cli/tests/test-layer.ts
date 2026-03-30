@@ -64,6 +64,7 @@ export function makeTestLayer(options: {
     gitInits: number;
     codegens: number;
     filemakerBootstraps: number;
+    addonInstalls?: number;
   };
   fileMaker?: {
     localFmMcp?:
@@ -399,6 +400,12 @@ export function makeTestLayer(options: {
           healthy: next?.healthy ?? false,
           connectedFiles: next?.connectedFiles ?? [],
         });
+      },
+      installLocalWebViewerAddon: () => {
+        if (tracker) {
+          tracker.addonInstalls = (tracker.addonInstalls ?? 0) + 1;
+        }
+        return Effect.void;
       },
       validateHostedServerUrl: (serverUrl: string) => {
         if (options.failures?.validateHostedServerUrl) {

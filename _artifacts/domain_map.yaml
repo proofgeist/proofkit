@@ -8,7 +8,7 @@
 library:
   name: '@proofkit'
   version: 'monorepo (see individual packages)'
-  repository: 'https://github.com/proofgeist/proofkit'
+  repository: 'https://github.com/proofsh/proofkit'
   description: 'TypeScript tools and libraries for building web applications integrated with Claris FileMaker'
   primary_framework: 'framework-agnostic'
 

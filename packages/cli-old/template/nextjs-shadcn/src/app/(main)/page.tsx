@@ -61,7 +61,7 @@ export default function Home() {
             alt="ProofKit"
             className="h-auto max-h-64 w-auto"
             height={256}
-            src="https://raw.githubusercontent.com/proofgeist/proofkit/dde6366c529104658dfba67a8fc2910a8644fc64/docs/src/assets/proofkit.png"
+            src="https://raw.githubusercontent.com/proofsh/proofkit/dde6366c529104658dfba67a8fc2910a8644fc64/docs/src/assets/proofkit.png"
             width={256}
           />
           <h1 className="font-bold text-3xl text-foreground">Welcome!</h1>
@@ -91,11 +91,11 @@ export default function Home() {
             Sponsored by{' '}
             <a
               className="text-foreground underline hover:text-primary"
-              href="https://proofgeist.com"
+              href="http://proof.sh"
               rel="noopener proofkit-app"
               target="_blank"
             >
-              Proof+Geist
+              Proof
             </a>{' '}
             and{' '}
             <a
@@ -110,7 +110,7 @@ export default function Home() {
           <div>
             <a
               className="text-muted-foreground hover:text-foreground"
-              href="https://github.com/proofgeist/proofkit"
+              href="https://github.com/proofsh/proofkit"
               rel="noopener"
               target="_blank"
             >

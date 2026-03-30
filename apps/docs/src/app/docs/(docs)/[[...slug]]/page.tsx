@@ -16,7 +16,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
   return (
     <DocsPage
       editOnGithub={{
-        owner: "proofgeist",
+        owner: "proofsh",
         repo: "proofkit",
         path: `apps/docs/content/docs/${page.path}`,
         sha: "main",

@@ -2,7 +2,7 @@
 library:
   name: '@proofkit'
   version: 'fmdapi@5.1.0-beta.3, fmodata@0.1.0-beta.36, typegen@1.1.0-beta.21, webviewer@3.0.7-beta.3, better-auth@0.4.0-beta.12'
-  repository: 'https://github.com/proofgeist/proofkit'
+  repository: 'https://github.com/proofsh/proofkit'
   description: 'TypeScript tools and libraries for building web applications integrated with Claris FileMaker'
 generated_from:
   domain_map: '_artifacts/domain_map.yaml'
@@ -25,13 +25,13 @@ skills:
       InferZodPortals.
     requires: []
     sources:
-      - 'proofgeist/proofkit:packages/typegen/src/cli.ts'
-      - 'proofgeist/proofkit:packages/typegen/src/typegen.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/index.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/config.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/customization.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/version-5.mdx'
+      - 'proofsh/proofkit:packages/typegen/src/cli.ts'
+      - 'proofsh/proofkit:packages/typegen/src/typegen.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/typegen/index.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/typegen/config.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/typegen/customization.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/version-5.mdx'
 
   - name: 'Typegen for OData'
     slug: 'typegen-fmodata'
@@ -48,11 +48,11 @@ skills:
       prerequisites.
     requires: []
     sources:
-      - 'proofgeist/proofkit:packages/typegen/src/cli.ts'
-      - 'proofgeist/proofkit:packages/typegen/src/fmodata/typegen.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/index.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/typegen/config-odata.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/quick-start.mdx'
+      - 'proofsh/proofkit:packages/typegen/src/cli.ts'
+      - 'proofsh/proofkit:packages/typegen/src/fmodata/typegen.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/typegen/index.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/typegen/config-odata.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/quick-start.mdx'
 
   - name: 'Data API Client'
     slug: 'fmdapi-client'
@@ -69,14 +69,14 @@ skills:
     requires:
       - 'typegen-fmdapi'
     sources:
-      - 'proofgeist/proofkit:packages/fmdapi/src/client.ts'
-      - 'proofgeist/proofkit:packages/fmdapi/src/adapters/otto.ts'
-      - 'proofgeist/proofkit:packages/fmdapi/src/adapters/fetch.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/index.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/methods.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/adapters.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/token-store.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmdapi/examples.mdx'
+      - 'proofsh/proofkit:packages/fmdapi/src/client.ts'
+      - 'proofsh/proofkit:packages/fmdapi/src/adapters/otto.ts'
+      - 'proofsh/proofkit:packages/fmdapi/src/adapters/fetch.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/index.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/methods.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/adapters.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/token-store.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmdapi/examples.mdx'
     subsystems:
       - 'OttoAdapter'
       - 'FetchAdapter'
@@ -99,20 +99,20 @@ skills:
     requires:
       - 'typegen-fmodata'
     sources:
-      - 'proofgeist/proofkit:packages/fmodata/src/index.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/client/database.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/client/entity-set.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/orm/table.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/orm/field-builders.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/client/builders/query-builder.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/errors.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/index.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/schema.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/queries.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/crud.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/errors.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/relationships.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/batch.mdx'
+      - 'proofsh/proofkit:packages/fmodata/src/index.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/client/database.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/client/entity-set.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/orm/table.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/orm/field-builders.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/client/builders/query-builder.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/errors.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/index.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/schema.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/queries.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/crud.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/errors.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/relationships.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/batch.mdx'
     references:
       - 'references/filter-operators.md'
       - 'references/error-types.md'
@@ -132,13 +132,13 @@ skills:
       performance considerations.
     requires: []
     sources:
-      - 'proofgeist/proofkit:packages/webviewer/src/main.ts'
-      - 'proofgeist/proofkit:packages/webviewer/src/adapter.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/webviewer/index.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/webviewer/fmFetch.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/webviewer/callFmScript.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/webviewer/fmdapi.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/webviewer/troubleshooting.mdx'
+      - 'proofsh/proofkit:packages/webviewer/src/main.ts'
+      - 'proofsh/proofkit:packages/webviewer/src/adapter.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/webviewer/index.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/webviewer/fmFetch.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/webviewer/callFmScript.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/webviewer/fmdapi.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/webviewer/troubleshooting.mdx'
 
   - name: 'Better Auth Setup'
     slug: 'better-auth-setup'
@@ -155,13 +155,13 @@ skills:
     requires:
       - 'fmodata-client'
     sources:
-      - 'proofgeist/proofkit:packages/better-auth/src/index.ts'
-      - 'proofgeist/proofkit:packages/better-auth/src/adapter.ts'
-      - 'proofgeist/proofkit:packages/better-auth/src/migrate.ts'
-      - 'proofgeist/proofkit:packages/better-auth/src/better-auth-cli/index.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/better-auth/index.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/better-auth/installation.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/better-auth/troubleshooting.mdx'
+      - 'proofsh/proofkit:packages/better-auth/src/index.ts'
+      - 'proofsh/proofkit:packages/better-auth/src/adapter.ts'
+      - 'proofsh/proofkit:packages/better-auth/src/migrate.ts'
+      - 'proofsh/proofkit:packages/better-auth/src/better-auth-cli/index.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/better-auth/index.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/better-auth/installation.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/better-auth/troubleshooting.mdx'
 
   - name: 'OData Query Optimization'
     slug: 'odata-query-optimization'
@@ -180,11 +180,11 @@ skills:
     requires:
       - 'fmodata-client'
     sources:
-      - 'proofgeist/proofkit:packages/fmodata/src/client/builders/query-builder.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/client/entity-set.ts'
-      - 'proofgeist/proofkit:packages/fmodata/src/orm/table.ts'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/queries.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/entity-ids.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/extra-properties.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/batch.mdx'
-      - 'proofgeist/proofkit:apps/docs/content/docs/fmodata/inspecting-queries.mdx'
+      - 'proofsh/proofkit:packages/fmodata/src/client/builders/query-builder.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/client/entity-set.ts'
+      - 'proofsh/proofkit:packages/fmodata/src/orm/table.ts'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/queries.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/entity-ids.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/extra-properties.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/batch.mdx'
+      - 'proofsh/proofkit:apps/docs/content/docs/fmodata/inspecting-queries.mdx'

@@ -12,10 +12,10 @@ type: core
 library: proofkit
 library_version: "5.1.0-beta.4"
 sources:
-  - "proofgeist/proofkit:packages/typegen/src/cli.ts"
-  - "proofgeist/proofkit:packages/typegen/src/typegen.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/typegen/*.mdx"
-  - "proofgeist/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx"
+  - "proofsh/proofkit:packages/typegen/src/cli.ts"
+  - "proofsh/proofkit:packages/typegen/src/typegen.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/typegen/*.mdx"
+  - "proofsh/proofkit:apps/docs/content/docs/fmdapi/quick-start.mdx"
 ---
 
 > **ALWAYS use `@proofkit/typegen` to set up an @proofkit/fmdapi project.**

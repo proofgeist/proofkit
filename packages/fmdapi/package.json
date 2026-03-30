@@ -4,7 +4,7 @@
   "description": "FileMaker Data API client",
   "repository": {
     "type": "git",
-    "url": "https://github.com/proofgeist/proofkit"
+    "url": "https://github.com/proofsh/proofkit"
   },
   "author": "Eric <37158449+eluce2@users.noreply.github.com>",
   "license": "MIT",
@@ -102,6 +102,7 @@
     "fmrest",
     "fmdapi",
     "proofgeist",
+    "proofsh",
     "fm-dapi",
     "tanstack-intent"
   ],

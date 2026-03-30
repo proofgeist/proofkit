@@ -12,8 +12,8 @@ library_version: "0.4.0-beta.14"
 requires:
   - fmodata-client
 sources:
-  - "proofgeist/proofkit:packages/better-auth/src/*.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/better-auth/*.mdx"
+  - "proofsh/proofkit:packages/better-auth/src/*.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/better-auth/*.mdx"
 ---
 
 ## Setup

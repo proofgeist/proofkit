@@ -78,17 +78,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/proofgeist/proofkit.git"
+    "url": "git+https://github.com/proofsh/proofkit.git"
   },
   "author": "Todd Geist",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/proofgeist/proofkit/issues"
+    "url": "https://github.com/proofsh/proofkit/issues"
   },
   "homepage": "https://proofkit.dev/docs/webviewer",
   "keywords": [
     "filemaker",
     "proofgeist",
+    "proofsh",
     "webviewer",
     "fm",
     "tanstack-intent"

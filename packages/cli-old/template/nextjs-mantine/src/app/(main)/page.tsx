@@ -20,7 +20,7 @@ export default function Home() {
       <Container mt="5rem">
         <Stack gap="xl" ta="center">
           <Image
-            src="https://raw.githubusercontent.com/proofgeist/proofkit/dde6366c529104658dfba67a8fc2910a8644fc64/docs/src/assets/proofkit.png"
+            src="https://raw.githubusercontent.com/proofsh/proofkit/dde6366c529104658dfba67a8fc2910a8644fc64/docs/src/assets/proofkit.png"
             alt="ProofKit"
             style={{
               marginRight: "auto",
@@ -59,11 +59,11 @@ export default function Home() {
               <Text size="sm" c="dimmed">
                 Sponsored by{" "}
                 <Anchor
-                  href="https://proofgeist.com"
+                  href="http://proof.sh"
                   target="_blank"
                   rel="proofkit-app"
                 >
-                  Proof+Geist
+                  Proof
                 </Anchor>{" "}
                 and{" "}
                 <Anchor
@@ -76,7 +76,7 @@ export default function Home() {
               </Text>
             </Group>
             <Group>
-              <a href="https://github.com/proofgeist/proofkit" target="_blank">
+              <a href="https://github.com/proofsh/proofkit" target="_blank">
                 <ActionIcon variant="subtle" color="gray" size="lg">
                   <IconBrandGithub size={px("1.25rem")} />
                 </ActionIcon>

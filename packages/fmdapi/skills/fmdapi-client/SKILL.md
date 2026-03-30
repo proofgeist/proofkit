@@ -12,10 +12,10 @@ library_version: "5.1.0-beta.4"
 requires:
   - typegen-fmdapi
 sources:
-  - "proofgeist/proofkit:packages/fmdapi/src/client.ts"
-  - "proofgeist/proofkit:packages/fmdapi/src/adapters/otto.ts"
-  - "proofgeist/proofkit:packages/fmdapi/src/adapters/fetch.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/fmdapi/*.mdx"
+  - "proofsh/proofkit:packages/fmdapi/src/client.ts"
+  - "proofsh/proofkit:packages/fmdapi/src/adapters/otto.ts"
+  - "proofsh/proofkit:packages/fmdapi/src/adapters/fetch.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/fmdapi/*.mdx"
 ---
 
 ## Setup

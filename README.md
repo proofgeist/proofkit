@@ -36,7 +36,7 @@ If you use an AI coding agent, run `npx @tanstack/intent@latest install` to load
 
 ## Contributing
 
-We welcome contributions! Please open issues or pull requests on [GitHub](https://github.com/proofgeist/proofkit). For questions, join the [community forum](https://community.ottomatic.cloud/c/proofkit/13) in the **ProofKit** category.
+We welcome contributions! Please open issues or pull requests on [GitHub](https://github.com/proofsh/proofkit). For questions, join the [community forum](https://community.ottomatic.cloud/c/proofkit/13) in the **ProofKit** category.
 
 ## License
 

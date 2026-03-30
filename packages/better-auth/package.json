@@ -34,6 +34,7 @@
     "better-auth",
     "fmdapi",
     "proofgeist",
+    "proofsh",
     "filemaker",
     "fmrest",
     "tanstack-intent"
@@ -50,7 +51,7 @@
   "homepage": "https://proofkit.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/proofgeist/proofkit.git"
+    "url": "git+https://github.com/proofsh/proofkit.git"
   },
   "dependencies": {
     "@babel/preset-react": "^7.28.5",

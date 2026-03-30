@@ -6,7 +6,7 @@
   "bin": "./src/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/proofgeist/proofkit.git",
+    "url": "https://github.com/proofsh/proofkit.git",
     "directory": "packages/create-proofkit"
   },
   "files": [

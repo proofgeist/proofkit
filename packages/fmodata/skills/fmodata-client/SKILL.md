@@ -15,8 +15,8 @@ library_version: "0.1.0-beta.38"
 requires:
   - typegen-fmodata
 sources:
-  - "proofgeist/proofkit:packages/fmodata/src/**/*.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/fmodata/*.mdx"
+  - "proofsh/proofkit:packages/fmodata/src/**/*.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/fmodata/*.mdx"
 ---
 
 ## Setup

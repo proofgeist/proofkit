@@ -8,9 +8,9 @@ type: core
 library: proofkit
 library_version: "3.0.7-beta.4"
 sources:
-  - "proofgeist/proofkit:packages/webviewer/src/main.ts"
-  - "proofgeist/proofkit:packages/webviewer/src/adapter.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/webviewer/*.mdx"
+  - "proofsh/proofkit:packages/webviewer/src/main.ts"
+  - "proofsh/proofkit:packages/webviewer/src/adapter.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/webviewer/*.mdx"
 ---
 
 ## Setup

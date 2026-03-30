@@ -1,5 +1,12 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.29
+
+### Patch Changes
+
+- c79f183: Fix FileMaker webviewer init flow to install local addon files before prompting that no FileMaker file is open in the local MCP server.
+  - @proofkit/typegen@1.1.0-beta.23
+
 ## 2.0.0-beta.28
 
 ### Patch Changes

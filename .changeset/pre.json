@@ -32,6 +32,8 @@
     "expose-typegen-buildschema-root-export",
     "fair-lamps-taste",
     "fair-poems-care",
+    "fifty-lobsters-remain",
+    "fix-batch-sub-request-urls",
     "fix-cli-dot-name-normalization",
     "fix-cli-parse-name-parent-paths",
     "fix-date-filter-quoting",

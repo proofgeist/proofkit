@@ -17,6 +17,8 @@ env:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
+  actions: read
 
 jobs:
   lint:
@@ -141,6 +143,8 @@ jobs:
       - cli-smoke
       - fmodata-e2e
     runs-on: ubuntu-latest
+    outputs:
+      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
     permissions:
       contents: write
       pull-requests: write
@@ -174,3 +178,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NPM_CONFIG_PROVENANCE: true
+
+  publish-release-pr-preview:
+    name: Publish Any Commit for Release PR
+    needs:
+      - release
+    if: needs.release.outputs.hasChangesets == 'true'
+    uses: ./.github/workflows/publish-any-commit-reusable.yml
+    with:
+      ref: refs/heads/changeset-release/${{ github.ref_name }}
+    secrets: inherit

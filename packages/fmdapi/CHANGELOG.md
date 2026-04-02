@@ -1,5 +1,11 @@
 # @proofkit/fmdapi
 
+## 5.1.0-beta.4
+
+### Patch Changes
+
+- e6889d0: Update skill content
+
 ## 5.1.0-beta.3
 
 ### Minor Changes
@@ -185,7 +191,7 @@
 ### Patch Changes
 
 - 5fe2192: Fix portal range options in query and create/update types
-  Fixes [#100](https://github.com/proofgeist/fmdapi/issues/100) and [#101](https://github.com/proofgeist/fmdapi/issues/101)
+  Fixes [#100](https://github.com/proofsh/fmdapi/issues/100) and [#101](https://github.com/proofsh/fmdapi/issues/101)
 
 ## 3.4.0
 

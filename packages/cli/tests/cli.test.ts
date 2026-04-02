@@ -21,6 +21,7 @@ describe("proofkit CLI", () => {
     expect(output).toContain("--non-interactive");
     expect(output).toContain("--no-install");
     expect(output).toContain("--no-git");
+    expect(output).not.toContain("--ui");
     expect(output).not.toContain("--appType");
   });
 
@@ -43,7 +44,8 @@ describe("proofkit CLI", () => {
     expect(output).toContain("_______");
     expect(output).toContain("Found");
     expect(output).toContain("Project commands");
-    expect(output).toContain("proofkit add");
+    expect(output).toContain("proofkit doctor");
+    expect(output).toContain("proofkit prompt");
   });
 
   it("fails with guidance when no command is used in non-interactive mode", () => {
@@ -56,6 +58,17 @@ describe("proofkit CLI", () => {
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain("interactive-only in non-interactive mode");
     expect(`${result.stdout}\n${result.stderr}`).toContain("proofkit init <name> --non-interactive");
+  });
+
+  it("auto-detects piped execution as non-interactive", () => {
+    const result = spawnSync("node", [distEntry], {
+      cwd: packageDir,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("interactive-only in non-interactive mode");
   });
 
   it("runs when invoked through a symlinked bin path", async () => {
@@ -73,6 +86,7 @@ describe("proofkit CLI", () => {
     expect(result.stdout).toContain("ProofKit");
     expect(result.stdout).toContain("Create a new project with ProofKit");
     expect(result.stdout).toContain("--app-type");
+    expect(result.stdout).not.toContain("--ui");
   });
 
   it("shows a clean invalid subcommand error by default", () => {
@@ -86,7 +100,7 @@ describe("proofkit CLI", () => {
 
     expect(result.status).not.toBe(0);
     expect(output).toContain(
-      "Invalid subcommand for proofkit - use one of 'init', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
+      "Invalid subcommand for proofkit - use one of 'init', 'doctor', 'prompt', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
     );
     expect(output).not.toContain('"CommandMismatch"');
     expect(output).not.toContain("[debug]");
@@ -103,22 +117,26 @@ describe("proofkit CLI", () => {
 
     expect(result.status).not.toBe(0);
     expect(output).toContain(
-      "Invalid subcommand for proofkit - use one of 'init', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
+      "Invalid subcommand for proofkit - use one of 'init', 'doctor', 'prompt', 'add', 'remove', 'typegen', 'deploy', 'upgrade'",
     );
     expect(output).toContain("[debug]");
     expect(output).toContain('"CommandMismatch"');
   });
 
+  it("supports `proofkit prompt`", () => {
+    const result = spawnSync("node", [distEntry, "prompt"], {
+      cwd: packageDir,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("Agent-ready prompts are coming soon.");
+  });
+
   it("supports `proofkit add addon webviewer`", async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-addon-project-"));
     const addonModulesDir = await fs.mkdtemp(path.join(os.tmpdir(), "proofkit-new-cli-addon-modules-"));
-    await fs.writeJson(path.join(cwd, "proofkit.json"), {
-      appType: "webviewer",
-      ui: "shadcn",
-      dataSources: [],
-      replacedMainPage: false,
-      registryTemplates: [],
-    });
 
     const result = spawnSync("node", [distEntry, "add", "addon", "webviewer", "--non-interactive"], {
       cwd,

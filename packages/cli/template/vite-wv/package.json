@@ -11,8 +11,8 @@
     "proofkit": "proofkit",
     "serve": "vite preview",
     "start": "vite",
-    "typegen": "typegen",
-    "typegen:ui": "typegen ui",
+    "typegen": "npx @proofkit/typegen",
+    "typegen:ui": "npx @proofkit/typegen ui",
     "upload": "node ./scripts/upload.js",
     "lint": "ultracite check .",
     "format": "ultracite fix ."

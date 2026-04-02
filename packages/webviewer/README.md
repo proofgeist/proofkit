@@ -1,6 +1,6 @@
 # @proofkit/webviewer
 
-### Sponsored by [Proof+Geist](https://www.proofgeist.com/)
+### Sponsored by [Proof](http://proof.sh/)
 
 This is a fetch replacement for calling a FileMaker script and getting a promise back in return. Or you can use callback if you want instead.
 

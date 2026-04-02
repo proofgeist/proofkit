@@ -19,14 +19,16 @@ For web-based applications where you're looking to interact with the Data API us
 
 We strongly recommend using the [ProofKit CLI](/docs/cli) to setup your project. It will also walk you through a FileMaker add-on that installs the neccesary layouts, scripts and custom functions to get you started.
 
+If you already have a ProofKit WebViewer project and need to install or update the FileMaker add-on manually, run `proofkit add addon webviewer` from the project root. That copies the local add-on files; you still need to install the add-on into the FileMaker file.
+
 <Accordions type="single">
   <Accordion title="Manual Installation">
 
 {" "}
 <Callout type="warn">
   This demo file is a very simplified example. To see more features, use the
-  [ProofKit CLI](/docs/cli) to build a new app and follow the instructions to
-  install the FileMaker addon.
+  [ProofKit CLI](/docs/cli) to build a new app or run `proofkit add addon webviewer`
+  in an existing ProofKit project, then install the FileMaker add-on.
 </Callout>
 
 Use your preferred package manager to install the package.

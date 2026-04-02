@@ -1,12 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Effect as Fx } from "effect";
 import { Effect, Layer } from "effect";
 import fs from "fs-extra";
 import {
   CliContext,
   CodegenService,
   ConsoleService,
-  type FileMakerBootstrapArtifacts,
   FileMakerService,
   FileSystemService,
   GitService,
@@ -16,6 +16,7 @@ import {
   SettingsService,
   TemplateService,
 } from "~/core/context.js";
+import { type ExternalCommandError, FileMakerSetupError, FileSystemError, UserCancelledError } from "~/core/errors.js";
 import type { AppType, FileMakerInputs, ProofKitSettings, UIType } from "~/core/types.js";
 import type { PackageManager } from "~/utils/packageManager.js";
 import { createDataSourceEnvNames, updateTypegenConfig } from "~/utils/projectFiles.js";
@@ -63,13 +64,27 @@ export function makeTestLayer(options: {
     gitInits: number;
     codegens: number;
     filemakerBootstraps: number;
+    addonInstalls?: number;
   };
   fileMaker?: {
-    localFmMcp?: {
-      healthy: boolean;
-      baseUrl?: string;
-      connectedFiles?: string[];
-    };
+    localFmMcp?:
+      | {
+          healthy: boolean;
+          baseUrl?: string;
+          connectedFiles?: string[];
+        }
+      | Array<{
+          healthy: boolean;
+          baseUrl?: string;
+          connectedFiles?: string[];
+        }>;
+  };
+  failures?: {
+    processRun?: unknown;
+    gitInitialize?: unknown;
+    codegenRun?: unknown;
+    validateHostedServerUrl?: unknown;
+    deployDemoFile?: unknown;
   };
 }) {
   const tracker = options.tracker;
@@ -82,6 +97,21 @@ export function makeTestLayer(options: {
     multiSearchSelect: [...(options.prompts?.multiSearchSelect ?? [])],
   };
   const consoleTranscript = options.console;
+  let localFmMcpScript:
+    | Array<{
+        healthy: boolean;
+        baseUrl?: string;
+        connectedFiles?: string[];
+      }>
+    | undefined;
+  if (Array.isArray(options.fileMaker?.localFmMcp)) {
+    localFmMcpScript = [...options.fileMaker.localFmMcp];
+  } else if (options.fileMaker?.localFmMcp) {
+    localFmMcpScript = [options.fileMaker.localFmMcp];
+  } else {
+    localFmMcpScript = [];
+  }
+  let lastLocalFmMcp = localFmMcpScript[0];
 
   const layer = Layer.mergeAll(
     Layer.succeed(CliContext, {
@@ -94,11 +124,18 @@ export function makeTestLayer(options: {
       text: ({ message, defaultValue }: { message: string; defaultValue?: string }) => {
         options.promptTranscript?.text.push(message);
         const next = promptScript.text.shift();
+        if (next === "__cancel__") {
+          return Promise.reject(new UserCancelledError({ message: "User aborted the operation" }));
+        }
         return Promise.resolve(next ?? defaultValue ?? "value");
       },
       password: ({ message }: { message: string }) => {
         options.promptTranscript?.password.push(message);
-        return Promise.resolve(promptScript.password.shift() ?? "password");
+        const next = promptScript.password.shift();
+        if (next === "__cancel__") {
+          return Promise.reject(new UserCancelledError({ message: "User aborted the operation" }));
+        }
+        return Promise.resolve(next ?? "password");
       },
       select: <T extends string>({ message, options: selectOptions }: { message: string; options: { value: T }[] }) => {
         options.promptTranscript?.select.push({
@@ -106,6 +143,9 @@ export function makeTestLayer(options: {
           options: selectOptions.map((option) => option.value),
         });
         const next = promptScript.select.shift();
+        if (next === "__cancel__") {
+          return Promise.reject(new UserCancelledError({ message: "User aborted the operation" }));
+        }
         if (next) {
           const match = selectOptions.find((option) => option.value === next);
           if (match) {
@@ -123,6 +163,9 @@ export function makeTestLayer(options: {
       }) => {
         options.promptTranscript?.searchSelect.push(message);
         const next = promptScript.searchSelect.shift();
+        if (next === "__cancel__") {
+          return Promise.reject(new UserCancelledError({ message: "User aborted the operation" }));
+        }
         if (next) {
           const match = searchOptions.find((option) => option.value === next);
           if (match) {
@@ -170,36 +213,136 @@ export function makeTestLayer(options: {
       },
     }),
     Layer.succeed(FileSystemService, {
-      exists: async (targetPath: string) => fs.pathExists(targetPath),
-      readdir: async (targetPath: string) => fs.readdir(targetPath),
-      emptyDir: async (targetPath: string) => fs.emptyDir(targetPath),
-      copyDir: async (from: string, to: string, opts?: { overwrite?: boolean }) =>
-        fs.copy(from, to, { overwrite: opts?.overwrite ?? true }),
-      rename: async (from: string, to: string) => fs.rename(from, to),
-      remove: async (targetPath: string) => fs.remove(targetPath),
-      readJson: async <T>(targetPath: string) => fs.readJson(targetPath) as Promise<T>,
-      writeJson: async (targetPath: string, value: unknown) => fs.writeJson(targetPath, value, { spaces: 2 }),
-      writeFile: async (targetPath: string, content: string) => fs.writeFile(targetPath, content, "utf8"),
-      readFile: async (targetPath: string) => fs.readFile(targetPath, "utf8"),
+      exists: (targetPath: string) =>
+        Effect.tryPromise({
+          try: () => fs.pathExists(targetPath),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system exists failed for ${targetPath}.`,
+              operation: "exists",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      readdir: (targetPath: string) =>
+        Effect.tryPromise({
+          try: () => fs.readdir(targetPath),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system readdir failed for ${targetPath}.`,
+              operation: "readdir",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      emptyDir: (targetPath: string) =>
+        Effect.tryPromise({
+          try: () => fs.emptyDir(targetPath),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system emptyDir failed for ${targetPath}.`,
+              operation: "emptyDir",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      copyDir: (from: string, to: string, opts?: { overwrite?: boolean }) =>
+        Effect.tryPromise({
+          try: () => fs.copy(from, to, { overwrite: opts?.overwrite ?? true }),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system copyDir failed for ${from} -> ${to}.`,
+              operation: "copyDir",
+              path: `${from} -> ${to}`,
+              cause,
+            }),
+        }),
+      rename: (from: string, to: string) =>
+        Effect.tryPromise({
+          try: () => fs.rename(from, to),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system rename failed for ${from} -> ${to}.`,
+              operation: "rename",
+              path: `${from} -> ${to}`,
+              cause,
+            }),
+        }),
+      remove: (targetPath: string) =>
+        Effect.tryPromise({
+          try: () => fs.remove(targetPath),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system remove failed for ${targetPath}.`,
+              operation: "remove",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      readJson: <T>(targetPath: string) =>
+        Effect.tryPromise({
+          try: () => fs.readJson(targetPath) as Promise<T>,
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system readJson failed for ${targetPath}.`,
+              operation: "readJson",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      writeJson: (targetPath: string, value: unknown) =>
+        Effect.tryPromise({
+          try: () => fs.writeJson(targetPath, value, { spaces: 2 }),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system writeJson failed for ${targetPath}.`,
+              operation: "writeJson",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      writeFile: (targetPath: string, content: string) =>
+        Effect.tryPromise({
+          try: () => fs.writeFile(targetPath, content, "utf8"),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system writeFile failed for ${targetPath}.`,
+              operation: "writeFile",
+              path: targetPath,
+              cause,
+            }),
+        }),
+      readFile: (targetPath: string) =>
+        Effect.tryPromise({
+          try: () => fs.readFile(targetPath, "utf8"),
+          catch: (cause) =>
+            new FileSystemError({
+              message: `File system readFile failed for ${targetPath}.`,
+              operation: "readFile",
+              path: targetPath,
+              cause,
+            }),
+        }),
     }),
     Layer.succeed(TemplateService, {
-      getTemplateDir: (appType: AppType, ui: UIType) => {
+      getTemplateDir: (appType: AppType, _ui: UIType) => {
         let templateName = "nextjs-shadcn";
         if (appType === "webviewer") {
           templateName = "vite-wv";
-        } else if (ui === "mantine") {
-          templateName = "nextjs-mantine";
         }
         return path.resolve(__dirname, `../../cli/template/${templateName}`);
       },
     }),
     Layer.succeed(PackageManagerService, {
-      getVersion: async () => "10.27.0",
+      getVersion: () => Effect.succeed("10.27.0"),
     }),
     Layer.succeed(ProcessService, {
       run: (command: string, args: string[]) => {
         tracker?.commands.push([command, ...args].join(" "));
-        return Promise.resolve({ stdout: "", stderr: "" });
+        if (options.failures?.processRun) {
+          return Effect.fail(options.failures.processRun as ExternalCommandError);
+        }
+        return Effect.succeed({ stdout: "", stderr: "" });
       },
     }),
     Layer.succeed(GitService, {
@@ -207,82 +350,97 @@ export function makeTestLayer(options: {
         if (tracker) {
           tracker.gitInits += 1;
         }
-        return Promise.resolve();
+        if (options.failures?.gitInitialize) {
+          return Effect.fail(options.failures.gitInitialize as ExternalCommandError);
+        }
+        return Effect.void;
       },
     }),
     Layer.succeed(SettingsService, {
-      writeSettings: async (projectDir: string, settings: ProofKitSettings) =>
-        fs.writeJson(path.join(projectDir, "proofkit.json"), settings, { spaces: 2 }),
-      appendEnvVars: async (projectDir: string, vars: Record<string, string>) => {
-        const envPath = path.join(projectDir, ".env");
-        const existing = (await fs.pathExists(envPath)) ? await fs.readFile(envPath, "utf8") : "";
-        const additions = Object.entries(vars)
-          .map(([name, value]) => `${name}=${value}`)
-          .join("\n");
-        await fs.writeFile(envPath, [existing.trimEnd(), additions].filter(Boolean).join("\n").concat("\n"), "utf8");
-      },
-      ensureTypegenConfig: async (projectDir: string, options: { appType: AppType; fileMaker?: FileMakerInputs }) => {
-        const typegenPath = path.join(projectDir, "proofkit-typegen.config.jsonc");
-        if (!(await fs.pathExists(typegenPath))) {
-          await fs.writeFile(typegenPath, `${JSON.stringify({ config: { layouts: [] } }, null, 2)}\n`, "utf8");
-        }
-        if (options.fileMaker?.layoutName && options.fileMaker?.schemaName) {
-          const parsed = JSON.parse(await fs.readFile(typegenPath, "utf8")) as {
-            config:
-              | { layouts?: Array<{ layoutName: string; schemaName: string }> }
-              | Array<{ layouts?: Array<{ layoutName: string; schemaName: string }> }>;
-          };
-          let layouts: Array<{ layoutName: string; schemaName: string }>;
-          if (Array.isArray(parsed.config)) {
-            const firstConfig = parsed.config[0] ?? {};
-            firstConfig.layouts ??= [];
-            parsed.config[0] = firstConfig;
-            layouts = firstConfig.layouts;
-          } else {
-            parsed.config.layouts ??= [];
-            layouts = parsed.config.layouts;
-          }
-          layouts.push({
-            layoutName: options.fileMaker.layoutName,
-            schemaName: options.fileMaker.schemaName,
-          });
-          await fs.writeFile(typegenPath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
-        }
-      },
+      writeSettings: (projectDir: string, settings: ProofKitSettings) =>
+        Effect.tryPromise({
+          try: () => fs.writeJson(path.join(projectDir, "proofkit.json"), settings, { spaces: 2 }),
+          catch: (cause) =>
+            new FileSystemError({
+              message: "Unable to write ProofKit settings.",
+              operation: "writeSettings",
+              path: path.join(projectDir, "proofkit.json"),
+              cause,
+            }),
+        }),
+      appendEnvVars: (projectDir: string, vars: Record<string, string>) =>
+        Effect.tryPromise({
+          try: async () => {
+            const envPath = path.join(projectDir, ".env");
+            const existing = (await fs.pathExists(envPath)) ? await fs.readFile(envPath, "utf8") : "";
+            const additions = Object.entries(vars)
+              .map(([name, value]) => `${name}=${value}`)
+              .join("\n");
+            await fs.writeFile(
+              envPath,
+              [existing.trimEnd(), additions].filter(Boolean).join("\n").concat("\n"),
+              "utf8",
+            );
+          },
+          catch: (cause) =>
+            new FileSystemError({
+              message: "Unable to append env vars.",
+              operation: "appendEnvVars",
+              path: path.join(projectDir, ".env"),
+              cause,
+            }),
+        }),
     }),
     Layer.succeed(FileMakerService, {
-      detectLocalFmMcp: async () => ({
-        baseUrl: options.fileMaker?.localFmMcp?.baseUrl ?? "http://127.0.0.1:1365",
-        healthy: options.fileMaker?.localFmMcp?.healthy ?? false,
-        connectedFiles: options.fileMaker?.localFmMcp?.connectedFiles ?? [],
-      }),
-      validateHostedServerUrl: async (serverUrl: string) => ({
-        normalizedUrl: serverUrl,
-        versions: {
-          fmsVersion: "21.0.0",
-          ottoVersion: "4.8.0",
-        },
-      }),
-      getOttoFMSToken: async () => ({ token: "admin_token" }),
-      listFiles: async () => [{ filename: "Contacts.fmp12", status: "open" }],
-      listAPIKeys: async () => [
-        {
-          key: "dk_existing",
-          user: "Admin",
-          database: "Contacts.fmp12",
-          label: "Existing key",
-        },
-      ],
-      createDataAPIKeyWithCredentials: async () => ({ apiKey: "dk_created" }),
-      deployDemoFile: async () => ({ apiKey: "dk_demo", filename: "ProofKitDemo.fmp12" }),
-      listLayouts: async () => ["API_Contacts", "Contacts"],
-      createFileMakerBootstrapArtifacts: (
-        settings: ProofKitSettings,
-        inputs: FileMakerInputs,
-        appType: AppType,
-      ): Promise<FileMakerBootstrapArtifacts> => {
+      detectLocalFmMcp: () => {
+        const next = localFmMcpScript.shift() ?? lastLocalFmMcp;
+        lastLocalFmMcp = next;
+        return Effect.succeed({
+          baseUrl: next?.baseUrl ?? "http://127.0.0.1:1365",
+          healthy: next?.healthy ?? false,
+          connectedFiles: next?.connectedFiles ?? [],
+        });
+      },
+      installLocalWebViewerAddon: () => {
+        if (tracker) {
+          tracker.addonInstalls = (tracker.addonInstalls ?? 0) + 1;
+        }
+        return Effect.void;
+      },
+      validateHostedServerUrl: (serverUrl: string) => {
+        if (options.failures?.validateHostedServerUrl) {
+          return Effect.fail(options.failures.validateHostedServerUrl as FileMakerSetupError);
+        }
+        return Effect.succeed({
+          normalizedUrl: serverUrl,
+          versions: {
+            fmsVersion: "21.0.0",
+            ottoVersion: "4.8.0",
+          },
+        });
+      },
+      getOttoFMSToken: () => Effect.succeed({ token: "admin_token" }),
+      listFiles: () => Effect.succeed([{ filename: "Contacts.fmp12", status: "open" }]),
+      listAPIKeys: () =>
+        Effect.succeed([
+          {
+            key: "dk_existing",
+            user: "Admin",
+            database: "Contacts.fmp12",
+            label: "Existing key",
+          },
+        ]),
+      createDataAPIKeyWithCredentials: () => Effect.succeed({ apiKey: "dk_created" }),
+      deployDemoFile: () => {
+        if (options.failures?.deployDemoFile) {
+          return Effect.fail(options.failures.deployDemoFile as FileMakerSetupError);
+        }
+        return Effect.succeed({ apiKey: "dk_demo", filename: "ProofKitDemo.fmp12" });
+      },
+      listLayouts: () => Effect.succeed(["API_Contacts", "Contacts"]),
+      createFileMakerBootstrapArtifacts: (settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) => {
         const envNames = createDataSourceEnvNames("filemaker");
-        return Promise.resolve({
+        return Effect.succeed({
           settings: {
             ...settings,
             dataSources: [
@@ -326,61 +484,68 @@ export function makeTestLayer(options: {
           },
         });
       },
-      bootstrap: async (projectDir: string, settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) => {
-        if (tracker) {
-          tracker.filemakerBootstraps += 1;
-        }
-        const nextSettings: ProofKitSettings = {
-          ...settings,
-          dataSources: [
-            ...settings.dataSources,
-            {
-              type: "fm",
-              name: "filemaker",
-              envNames: {
-                database: "FM_DATABASE",
-                server: "FM_SERVER",
-                apiKey: "OTTO_API_KEY",
+      bootstrap: (projectDir: string, settings: ProofKitSettings, inputs: FileMakerInputs, appType: AppType) =>
+        Effect.tryPromise({
+          try: async () => {
+            if (tracker) {
+              tracker.filemakerBootstraps += 1;
+            }
+            const nextSettings: ProofKitSettings = {
+              ...settings,
+              dataSources: [
+                ...settings.dataSources,
+                {
+                  type: "fm",
+                  name: "filemaker",
+                  envNames: {
+                    database: "FM_DATABASE",
+                    server: "FM_SERVER",
+                    apiKey: "OTTO_API_KEY",
+                  },
+                },
+              ],
+            };
+            if (inputs.mode === "hosted-otto") {
+              const envPath = path.join(projectDir, ".env");
+              const content = (await fs.readFile(envPath, "utf8")).concat(
+                `FM_DATABASE=${inputs.fileName}\nFM_SERVER=${inputs.server}\nOTTO_API_KEY=${inputs.dataApiKey}\n`,
+              );
+              await fs.writeFile(envPath, content, "utf8");
+            }
+            await updateTypegenConfig(
+              {
+                exists: async (targetPath: string) => fs.pathExists(targetPath),
+                readFile: async (targetPath: string) => fs.readFile(targetPath, "utf8"),
+                writeFile: async (targetPath: string, content: string) => fs.writeFile(targetPath, content, "utf8"),
               },
-            },
-          ],
-        };
-        if (inputs.mode === "hosted-otto") {
-          const envPath = path.join(projectDir, ".env");
-          const content = (await fs.readFile(envPath, "utf8")).concat(
-            `FM_DATABASE=${inputs.fileName}\nFM_SERVER=${inputs.server}\nOTTO_API_KEY=${inputs.dataApiKey}\n`,
-          );
-          await fs.writeFile(envPath, content, "utf8");
-        }
-        await updateTypegenConfig(
-          {
-            exists: async (targetPath: string) => fs.pathExists(targetPath),
-            readFile: async (targetPath: string) => fs.readFile(targetPath, "utf8"),
-            writeFile: async (targetPath: string, content: string) => fs.writeFile(targetPath, content, "utf8"),
+              projectDir,
+              {
+                appType,
+                dataSourceName: "filemaker",
+                envNames: inputs.mode === "hosted-otto" ? createDataSourceEnvNames("filemaker") : undefined,
+                fmMcpBaseUrl: inputs.mode === "local-fm-mcp" ? inputs.fmMcpBaseUrl : undefined,
+                connectedFileName: inputs.mode === "local-fm-mcp" ? inputs.fileName : undefined,
+                layoutName: inputs.layoutName,
+                schemaName: inputs.schemaName,
+              },
+            );
+            return nextSettings;
           },
-          projectDir,
-          {
-            appType,
-            dataSourceName: "filemaker",
-            envNames: inputs.mode === "hosted-otto" ? createDataSourceEnvNames("filemaker") : undefined,
-            fmMcpBaseUrl: inputs.mode === "local-fm-mcp" ? inputs.fmMcpBaseUrl : undefined,
-            connectedFileName: inputs.mode === "local-fm-mcp" ? inputs.fileName : undefined,
-            layoutName: inputs.layoutName,
-            schemaName: inputs.schemaName,
-          },
-        );
-        return nextSettings;
-      },
+          catch: (cause) => new FileMakerSetupError({ message: "Unable to bootstrap FileMaker in test layer.", cause }),
+        }),
     }),
     Layer.succeed(CodegenService, {
       runInitial: () => {
         if (tracker) {
           tracker.codegens += 1;
         }
-        return Promise.resolve();
+        if (options.failures?.codegenRun) {
+          return Effect.fail(options.failures.codegenRun as ExternalCommandError);
+        }
+        return Effect.void;
       },
     }),
   );
 
-  return <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.provide(effect, layer);
+  return <A, E, R>(effect: Fx.Effect<A, E, R>) => Effect.provide(effect, layer);
 }

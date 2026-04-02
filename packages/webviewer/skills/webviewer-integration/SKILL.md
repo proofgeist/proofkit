@@ -6,16 +6,21 @@ description: >
   fire-and-forget FMScriptOption PerformScript callback fetchId handleFmWVFetchCallback
 type: core
 library: proofkit
-library_version: "3.0.7-beta.0"
+library_version: "3.0.7-beta.4"
 sources:
-  - "proofgeist/proofkit:packages/webviewer/src/main.ts"
-  - "proofgeist/proofkit:packages/webviewer/src/adapter.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/webviewer/*.mdx"
+  - "proofsh/proofkit:packages/webviewer/src/main.ts"
+  - "proofsh/proofkit:packages/webviewer/src/adapter.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/webviewer/*.mdx"
 ---
 
 ## Setup
 
+This package assumes the user has already added specific layouts, scripts, etc into their FileMaker file. This is accomplished using a FileMaker add-on, downloaded during the setup process if the project was created using @proofkit/cli, but the user must still manually install the add-on in their FileMaker file.
+To download the latest version of the add-on to the user's computer, run `npx -y @proofkit/cli@beta add addon webviewer` in any directory.
+
 Install the package and set the webviewer name before calling any scripts.
+
+
 
 ```ts
 import { fmFetch, globalSettings } from "@proofkit/webviewer";
@@ -27,10 +32,10 @@ globalSettings.setWebViewerName("web");
 const result = await fmFetch("MyScript", { key: "value" });
 ```
 
-If you also want the local `typegen-setup` skill for generating `@proofkit/fmdapi` clients that work with `WebViewerAdapter`, install:
+To generate `@proofkit/fmdapi` clients that work with `WebViewerAdapter`, run typegen with FM MCP mode enabled (see the **typegen-fmdapi** skill in `@proofkit/fmdapi`):
 
 ```bash
-pnpm add -D @proofkit/typegen@^1.1.0-beta.0
+npx @proofkit/typegen@beta
 ```
 
 The `setWebViewerName` call is required for `fmFetch` to work. It tells the FM `SendCallback` script which webviewer to call back into. Set it once at app initialization.

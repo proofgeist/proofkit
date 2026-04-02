@@ -10,6 +10,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 env:
+  OP_TOKEN: ${{ secrets.OP_TOKEN }}
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
@@ -41,6 +42,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Check skill versions
+        run: pnpm skill:check-versions
 
   typecheck:
     name: Type Check
@@ -105,23 +109,8 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Doppler CLI
-        uses: dopplerhq/cli-action@v4
-
-      - name: Get OIDC token
-        run: |
-          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://github.com/$GITHUB_REPOSITORY_OWNER")
-          echo "OIDC_TOKEN=$(echo $TOKEN | jq -r '.value')" >> $GITHUB_ENV
-
-      - name: Authenticate with Doppler
-        run: |
-          doppler oidc login --scope=. --identity=${{ vars.DOPPLER_SERVICE_IDENTITY_ID }} --token=$OIDC_TOKEN
-          doppler configure set project proofkit
-          doppler configure set config test
-
       - name: Run CLI External Integration Smoke Tests
-        run: doppler run -- pnpm --filter @proofkit/cli test:smoke
+        run: pnpm exec varlock run -- pnpm --filter @proofkit/cli test:smoke
 
   fmodata-e2e:
     name: fmodata E2E Tests
@@ -142,21 +131,6 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Doppler CLI
-        uses: dopplerhq/cli-action@v4
-
-      - name: Get OIDC token
-        run: |
-          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://github.com/$GITHUB_REPOSITORY_OWNER")
-          echo "OIDC_TOKEN=$(echo $TOKEN | jq -r '.value')" >> $GITHUB_ENV
-
-      - name: Authenticate with Doppler
-        run: |
-          doppler oidc login --scope=. --identity=${{ vars.DOPPLER_SERVICE_IDENTITY_ID }} --token=$OIDC_TOKEN
-          doppler configure set project proofkit
-          doppler configure set config test
-
       - name: Run fmodata E2E Tests
         run: pnpm --filter @proofkit/fmodata test:e2e
 
@@ -171,6 +145,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
@@ -188,10 +166,14 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Sync skill versions
+        run: pnpm skill:sync-versions
+
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
+          version: pnpm version-packages
           publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ github.token }}

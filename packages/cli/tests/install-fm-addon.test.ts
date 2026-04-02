@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "fs-extra";
 import { describe, expect, it } from "vitest";
-import { compareAddonVersions, inspectFmAddon } from "~/installers/install-fm-addon.js";
+import { compareAddonVersions, getFmAddonInstallInstructions, inspectFmAddon } from "~/installers/install-fm-addon.js";
 import { getWebViewerAddonMessages } from "~/installers/proofkit-webviewer.js";
 
 async function writeAddonVersion(dir: string, version: string) {
@@ -110,5 +110,14 @@ describe("getWebViewerAddonMessages", () => {
 
     expect(messages.warn.join("\n")).toContain("proofkit add addon webviewer");
     expect(messages.nextSteps).toEqual(["proofkit add addon webviewer"]);
+  });
+});
+
+describe("getFmAddonInstallInstructions", () => {
+  it("includes restart and old add-on removal guidance", () => {
+    const instructions = getFmAddonInstallInstructions("wv");
+
+    expect(instructions.steps).toContain("Restart FileMaker Pro so the new local add-on files appear");
+    expect(instructions.steps.join("\n")).toContain("remove that old add-on first");
   });
 });

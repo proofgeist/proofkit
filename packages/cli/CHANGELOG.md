@@ -1,5 +1,57 @@
 # @proofgeist/kit
 
+## 2.0.0-beta.29
+
+### Patch Changes
+
+- c79f183: Fix FileMaker webviewer init flow to install local addon files before prompting that no FileMaker file is open in the local MCP server.
+  - @proofkit/typegen@1.1.0-beta.23
+
+## 2.0.0-beta.28
+
+### Patch Changes
+
+- 8818805: Fix `proofkit add addon` so it works outside an existing ProofKit project.
+- e0ea042: updated addon to fix a bug in the SendCallback script
+- Updated dependencies [0643ddd]
+- Updated dependencies [e6889d0]
+  - @proofkit/typegen@1.1.0-beta.22
+  - @proofkit/fmdapi@5.1.0-beta.4
+
+## 2.0.0-beta.27
+
+### Patch Changes
+
+- 5bc5504: Init(webviewer): if local FM MCP reports exactly 1 connected file, persist it to `proofkit-typegen.config.jsonc` as `fmMcp.connectedFileName` during scaffold.
+- 03294e5: Init now writes `CLAUDE.md` as `@AGENTS.md` and adds `.cursorignore` to keep `CLAUDE.md` out of Cursor scans.
+- 4f40bfe: Normalize and validate `.`-derived CLI project names from the current directory consistently, including whitespace-to-dash conversion and lowercasing
+- db11fda: Normalize only the final path segment in `parseNameAndPath`, preserving leading directory segments verbatim while keeping scoped-name parsing and `.` handling intact
+- fe43be6: Drop the unused `nextjs-mantine` scaffold from the current CLI and always scaffold browser apps from `nextjs-shadcn`.
+- 9add5ca: Remove the `--ui` init flag. ProofKit now only scaffolds shadcn.
+- 9add5ca: Allow spaces in project names by normalizing them to dashes
+- 9add5ca: Clarify that `.` uses the current directory for `proofkit init`
+- Updated dependencies [c85574f]
+- Updated dependencies [6da0c9a]
+  - @proofkit/typegen@1.1.0-beta.21
+
+## 2.0.0-beta.26
+
+### Patch Changes
+
+- e3b25c3: Refocus the ProofKit CLI around project bootstrap and diagnostics by adding `doctor` and placeholder `prompt` commands, updating default guidance and docs, and switching scaffolded typegen scripts to package-native `@proofkit/typegen` commands.
+
+## 2.0.0-beta.25
+
+### Patch Changes
+
+- 41c07ba: Auto-detect non-interactive terminals for CLI commands in CI, scripted runs, and coding-agent environments.
+- 1096f3b: Improve `proofkit init` error handling by using tagged Effect-based CLI errors for expected failures, unifying user cancellation, and rendering cleaner top-level error output.
+- e6d0c55: Improve local ProofKit MCP setup messaging during webviewer init by reporting the connected FileMaker file after retry and prompting to choose a file when multiple files are open.
+- 46696e4: Require `proofkit init` to use an explicit local FileMaker file selection in non-interactive multi-file setups, and save the selected local file into the generated typegen config.
+- Updated dependencies [7b46a23]
+- Updated dependencies [88242c2]
+  - @proofkit/typegen@1.1.0-beta.20
+
 ## 2.0.0-beta.23
 
 ### Minor Changes

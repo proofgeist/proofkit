@@ -1,4 +1,3 @@
-import { FMServerConnection } from "@proofkit/fmodata";
 import type { z } from "zod/v4";
 import { getEnvValues, validateEnvValues } from "../getEnvValues";
 import type { typegenConfigSingle } from "../types";
@@ -34,6 +33,7 @@ export async function downloadTableMetadata({
   }
 
   const { server, db, auth } = validationResult;
+  const { FMServerConnection } = await import("@proofkit/fmodata");
 
   // Create connection based on authentication method
   const connection = new FMServerConnection({

@@ -216,6 +216,12 @@ export class FilterExpression {
     if (value instanceof Date) {
       return value.toISOString();
     }
+    if (typeof value === "object") {
+      const valueType = value?.constructor?.name ?? "Object";
+      throw new Error(
+        `Unsupported filter operand: received ${valueType}. Pass a table column or a primitive filter value.`,
+      );
+    }
     return String(value);
   }
 }

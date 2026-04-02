@@ -41,6 +41,21 @@ describe("planInit", () => {
     expect(plan.tasks.checkWebViewerAddon).toBe(true);
   });
 
+  it("adds fmdapi for browser filemaker scaffolds", () => {
+    const plan = planInit(
+      makeInitRequest({
+        appType: "browser",
+        dataSource: "filemaker",
+      }),
+      {
+        templateDir: "/templates/browser",
+      },
+    );
+
+    expect(plan.packageJson.dependencies["@proofkit/fmdapi"]).toBe("beta");
+    expect(plan.packageJson.dependencies.zod).toBe("^4");
+  });
+
   it("plans filemaker bootstrap and initial codegen when inputs are explicit", () => {
     const plan = planInit(
       makeInitRequest({

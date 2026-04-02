@@ -13,7 +13,7 @@
 1. Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/proofgeist/proofkit.git
+git clone https://github.com/proofsh/proofkit.git
 cd proofkit
 corepack enable
 pnpm install
@@ -69,4 +69,4 @@ pnpm format
 
 ## Code Style
 
-This project uses [Ultracite](https://github.com/proofgeist/ultracite) for linting and formatting. Run `pnpm dlx ultracite fix` to auto-fix issues before committing.
+This project uses [Ultracite](https://github.com/proofsh/ultracite) for linting and formatting. Run `pnpm dlx ultracite fix` to auto-fix issues before committing.

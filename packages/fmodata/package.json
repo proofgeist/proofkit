@@ -1,8 +1,8 @@
 {
   "name": "@proofkit/fmodata",
-  "version": "0.1.0-beta.35",
+  "version": "0.1.0-beta.38",
   "description": "FileMaker OData API client",
-  "repository": "git@github.com:proofgeist/proofkit.git",
+  "repository": "git@github.com:proofsh/proofkit.git",
   "author": "Eric <37158449+eluce2@users.noreply.github.com>",
   "license": "MIT",
   "private": false,
@@ -52,9 +52,9 @@
     "test:watch": "vitest --typecheck",
     "test:build": "pnpm build && TEST_BUILD=true vitest run --typecheck",
     "test:watch:build": "TEST_BUILD=true vitest --typecheck",
-    "test:e2e": "doppler run -- vitest run tests/e2e",
-    "test:cli:e2e": "doppler run -- vitest run tests/cli/e2e",
-    "capture": "doppler run -- tsx scripts/capture-responses.ts",
+    "test:e2e": "varlock run -- vitest run tests/e2e",
+    "test:cli:e2e": "varlock run -- vitest run tests/cli/e2e",
+    "capture": "varlock run -- tsx scripts/capture-responses.ts",
     "knip": "knip",
     "pub:alpha": "bun run scripts/publish-alpha.ts",
     "global:link": "pnpm link --global"
@@ -107,6 +107,7 @@
     "fm",
     "odata",
     "proofgeist",
+    "proofsh",
     "proofkit",
     "tanstack-intent"
   ]

@@ -16,7 +16,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
   return (
     <DocsPage
       editOnGithub={{
-        owner: "proofgeist",
+        owner: "proofsh",
         repo: "proofkit",
         path: `apps/docs/content/docs/${page.path}`,
         sha: "main",
@@ -50,8 +50,16 @@ export async function generateMetadata(props: { params: Promise<{ slug?: string[
     notFound();
   }
 
+  const url = `https://proofkit.dev${page.url}`;
+
   return {
     title: page.data.title,
     description: page.data.description,
+    openGraph: {
+      title: page.data.title,
+      description: page.data.description ?? undefined,
+      type: "article",
+      url,
+    },
   };
 }

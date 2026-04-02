@@ -1,5 +1,18 @@
 # @proofkit/webviewer
 
+## 3.0.7-beta.4
+
+### Patch Changes
+
+- 8818805: Document the `proofkit add addon webviewer` command in the WebViewer skill and setup docs.
+- e6889d0: Update skill content
+
+## 3.0.7-beta.3
+
+### Patch Changes
+
+- 5dda815: Soften the Vite FM bridge startup path when FM MCP responds but has no connected files. The dev server now logs a warning, injects a fallback bridge shim, and logs runtime errors if bridge calls are made before a file connects. Unreachable or unhealthy FM MCP still fails setup.
+
 ## 3.0.7-beta.2
 
 ### Patch Changes

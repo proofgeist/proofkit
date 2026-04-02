@@ -68,21 +68,12 @@ describe("Init Non-Interactive Failure Paths", () => {
     expect(readdirSync(testDir).sort()).toEqual(["sentinel.txt"]);
   });
 
-  it("fails fast for invalid non-interactive app names and does not create a project directory", () => {
+  it("normalizes spaces in non-interactive app names and creates the project directory", () => {
     const projectName = "Bad Name";
 
-    const result = runInitExpectFailure([
-      projectName,
-      "--non-interactive",
-      "--app-type",
-      "webviewer",
-      "--no-install",
-      "--no-git",
-    ]);
-    const output = `${result.stdout}\n${result.stderr}`;
+    runInitExpectSuccess([projectName, "--non-interactive", "--app-type", "webviewer", "--no-install", "--no-git"]);
 
-    expect(result.status).toBe(1);
-    expect(output).toContain("Name must consist of only lowercase alphanumeric characters, '-', and '_'");
+    expect(existsSync(join(testDir, "bad-name"))).toBe(true);
     expect(existsSync(join(testDir, projectName))).toBe(false);
   });
 
@@ -178,7 +169,7 @@ describe("Init Non-Interactive Failure Paths", () => {
     expect(existsSync(join(projectDir, "proofkit.json"))).toBe(false);
   });
 
-  it("does not surface typegen guidance for browser scaffolds without a typegen script", () => {
+  it("adds package-native typegen guidance for browser scaffolds", () => {
     const projectName = "browser-no-fm-guidance";
     const output = runInitExpectSuccess([
       projectName,
@@ -194,7 +185,7 @@ describe("Init Non-Interactive Failure Paths", () => {
     const packageJson = JSON.parse(readFileSync(join(testDir, projectName, "package.json"), "utf-8")) as {
       scripts?: Record<string, string>;
     };
-    expect(packageJson.scripts?.typegen).toBeUndefined();
+    expect(packageJson.scripts?.typegen).toBe("npx @proofkit/typegen");
     expect(output).not.toMatch(typegenCommandPattern);
   });
 });

@@ -9,14 +9,14 @@ description: >
   service overload during testing.
 type: core
 library: proofkit
-library_version: "0.1.0-beta.31"
+library_version: "0.1.0-beta.38"
 requires:
   - fmodata-client
 sources:
-  - "proofgeist/proofkit:packages/fmodata/src/client/builders/query-builder.ts"
-  - "proofgeist/proofkit:packages/fmodata/src/client/entity-set.ts"
-  - "proofgeist/proofkit:packages/fmodata/src/orm/table.ts"
-  - "proofgeist/proofkit:apps/docs/content/docs/fmodata/*.mdx"
+  - "proofsh/proofkit:packages/fmodata/src/client/builders/query-builder.ts"
+  - "proofsh/proofkit:packages/fmodata/src/client/entity-set.ts"
+  - "proofsh/proofkit:packages/fmodata/src/orm/table.ts"
+  - "proofsh/proofkit:apps/docs/content/docs/fmodata/*.mdx"
 ---
 
 ## Setup

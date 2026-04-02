@@ -42,7 +42,7 @@ describe("init post-init generation error handling", () => {
     expect(userFacingError.message).toContain("Post-init generation failed after scaffolding.");
     expect(userFacingError.message).toContain("Project created at: /tmp/demo-browser");
     expect(userFacingError.message).toContain("browser scaffolds do not define that script");
-    expect(userFacingError.message).toContain("proofkit typegen");
+    expect(userFacingError.message).toContain("npx @proofkit/typegen");
   });
 
   it("creates generic recovery guidance for other generation failures", () => {
@@ -56,7 +56,7 @@ describe("init post-init generation error handling", () => {
 
     expect(userFacingError.message).toContain("Post-init generation failed after scaffolding.");
     expect(userFacingError.message).toContain("Project created at: /tmp/demo-webviewer");
-    expect(userFacingError.message).toContain("Retry `proofkit typegen`");
+    expect(userFacingError.message).toContain("Retry `npx @proofkit/typegen`");
     expect(userFacingError.message).toContain("Underlying error: Unable to read layout metadata");
   });
 });

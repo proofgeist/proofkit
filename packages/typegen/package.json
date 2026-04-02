@@ -1,6 +1,6 @@
 {
   "name": "@proofkit/typegen",
-  "version": "1.1.0-beta.19",
+  "version": "1.1.0-beta.23",
   "description": "",
   "type": "module",
   "main": "dist/esm/index.js",
@@ -10,7 +10,7 @@
     "dev:api": "concurrently -n \"build,server\" -c \"cyan,magenta\" \"pnpm build:watch\" \"nodemon --watch dist/esm --delay 1 --exec 'node dist/esm/cli.js ui --port 3141 --no-open'\"",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --watch --config vitest.config.ts",
-    "test:e2e": "doppler run -- vitest run --config vitest.e2e.config.ts",
+    "test:e2e": "varlock run -- vitest run --config vitest.e2e.config.ts",
     "typecheck": "tsc --noEmit",
     "build": "pnpm -C web build && pnpm vite build && node scripts/build-copy.js && publint --strict",
     "build:watch": "vite build --watch",
@@ -21,8 +21,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "bin": {
-    "typegen": "./dist/esm/cli.js",
-    "intent": "./bin/intent.js"
+    "typegen": "./dist/esm/cli.js"
   },
   "exports": {
     ".": {
@@ -51,24 +50,22 @@
     "typegen",
     "fmdapi",
     "proofgeist",
+    "proofsh",
     "filemaker",
-    "fmrest",
-    "tanstack-intent"
+    "fmrest"
   ],
   "files": [
     "dist",
     "src",
     "stubs",
-    "skills",
-    "bin",
-    "!skills/_artifacts"
+    "bin"
   ],
   "author": "",
   "license": "ISC",
   "homepage": "https://proofkit.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/proofgeist/proofkit.git"
+    "url": "git+https://github.com/proofsh/proofkit.git"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",

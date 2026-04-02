@@ -7,6 +7,8 @@
     "build": "next build --turbopack",
     "proofkit": "proofkit",
     "start": "next start",
+    "typegen": "npx @proofkit/typegen",
+    "typegen:ui": "npx @proofkit/typegen ui",
     "lint": "ultracite check .",
     "format": "ultracite fix ."
   },

@@ -1,5 +1,38 @@
 # @proofkit/typegen
 
+## 1.1.0-beta.23
+
+### Patch Changes
+
+- Updated dependencies [b075656]
+  - @proofkit/fmodata@0.1.0-beta.38
+
+## 1.1.0-beta.22
+
+### Patch Changes
+
+- 0643ddd: Move @proofkit/fmdapi and @proofkit/fmodata from optional peerDependencies to regular dependencies, fixing ERR_MODULE_NOT_FOUND when running typegen via npx
+- e6889d0: Update skill content
+- Updated dependencies [e6889d0]
+  - @proofkit/fmodata@0.1.0-beta.37
+  - @proofkit/fmdapi@5.1.0-beta.4
+
+## 1.1.0-beta.21
+
+### Patch Changes
+
+- c85574f: Make `@proofkit/fmdapi` and `@proofkit/fmodata` optional peers for `@proofkit/typegen`, and lazy-load each path so fmdapi-only and fmodata-only installs do not hard-require the other package.
+- 6da0c9a: Widen OData client error typing to include message and details payloads from env/config validation.
+
+## 1.1.0-beta.20
+
+### Patch Changes
+
+- 7b46a23: Fix typegen client index generation when multiple fmdapi configs write to the same output path
+- 88242c2: fix(typegen): preserve inline validator helpers in generated odata files
+- Updated dependencies [e0a9443]
+  - @proofkit/fmodata@0.1.0-beta.36
+
 ## 1.1.0-beta.19
 
 ### Minor Changes

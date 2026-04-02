@@ -29,11 +29,15 @@ import {
   PackageManagerService,
   TemplateService,
 } from "~/core/context.js";
+import { runDoctor } from "~/core/doctor.js";
+import { getCliErrorMessage, isCliError, NonInteractiveInputError } from "~/core/errors.js";
 import { executeInitPlan } from "~/core/executeInitPlan.js";
 import { planInit } from "~/core/planInit.js";
+import { runPrompt } from "~/core/prompt.js";
 import { resolveInitRequest } from "~/core/resolveInitRequest.js";
 import type { CliFlags } from "~/core/types.js";
 import { makeLiveLayer } from "~/services/live.js";
+import { resolveNonInteractiveMode } from "~/utils/nonInteractive.js";
 import { intro } from "~/utils/prompts.js";
 import { proofGradient, renderTitle } from "~/utils/renderTitle.js";
 
@@ -62,9 +66,7 @@ export const runInit = (name?: string, rawFlags?: Partial<CliFlags>) =>
     const packageManagerService = yield* PackageManagerService;
     const request = yield* resolveInitRequest(name, { ...defaultCliFlags, ...rawFlags });
     const templateDir = templateService.getTemplateDir(request.appType, request.ui);
-    const packageManagerVersion = yield* Effect.promise(() =>
-      packageManagerService.getVersion(request.packageManager, request.cwd),
-    );
+    const packageManagerVersion = yield* packageManagerService.getVersion(request.packageManager, request.cwd);
     const plan = planInit(request, { templateDir, packageManagerVersion });
     yield* executeInitPlan(plan);
     return { request, plan };
@@ -76,26 +78,28 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
     const fsService = yield* FileSystemService;
     const consoleService = yield* ConsoleService;
     const flags = { ...defaultCliFlags, ...rawFlags };
-
-    if (cliContext.nonInteractive || flags.CI || flags.nonInteractive) {
-      throw new Error(
-        "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
-      );
-    }
-
     const settingsPath = path.join(cliContext.cwd, "proofkit.json");
-    const hasProofKitProject = yield* Effect.promise(() => fsService.exists(settingsPath));
+    const hasProofKitProject = yield* fsService.exists(settingsPath);
 
     if (hasProofKitProject) {
       intro(`Found ${proofGradient("ProofKit")} project`);
       consoleService.note(
         [
-          "Project command routing is being migrated into the Effect CLI surface.",
-          "Use an explicit command such as `proofkit add`, `proofkit remove`, `proofkit typegen`, `proofkit deploy`, or `proofkit upgrade`.",
+          "ProofKit now focuses on project bootstrap, diagnostics, and agent entrypoints.",
+          "Use an explicit command such as `proofkit doctor`, `proofkit prompt`, or `proofkit init`.",
         ].join("\n"),
         "Project commands",
       );
       return;
+    }
+
+    if (cliContext.nonInteractive || flags.CI || flags.nonInteractive) {
+      return yield* Effect.fail(
+        new NonInteractiveInputError({
+          message:
+            "The default command is interactive-only in non-interactive mode. Run an explicit command such as `proofkit init <name> --non-interactive`.",
+        }),
+      );
     }
 
     intro(`No ${proofGradient("ProofKit")} project found, running \`init\``);
@@ -106,7 +110,7 @@ export const runDefaultCommand = (rawFlags?: Partial<CliFlags>) =>
   });
 
 const initDirectoryArg = optionalArg(textArg({ name: "dir" })).pipe(
-  withArgDescription("The project name or target directory"),
+  withArgDescription("The project name or target directory. Use `.` for the current directory, best when it is empty."),
 );
 
 function optionalTextOption(name: string, description: string) {
@@ -117,11 +121,23 @@ function optionalChoiceOption<Choices extends readonly string[]>(name: string, c
   return optionalOption(choiceOption(name, choices).pipe(withOptionDescription(description)));
 }
 
+function getCurrentTTYState() {
+  return {
+    stdinIsTTY: process.stdin?.isTTY,
+    stdoutIsTTY: process.stdout?.isTTY,
+  };
+}
+
 function legacyEffect<T>(runLegacy: () => Promise<T>, options?: { nonInteractive?: boolean; debug?: boolean }) {
+  const nonInteractive = resolveNonInteractiveMode({
+    nonInteractive: options?.nonInteractive,
+    ...getCurrentTTYState(),
+  });
+
   return makeLiveLayer({
     cwd: process.cwd(),
     debug: options?.debug === true,
-    nonInteractive: options?.nonInteractive === true,
+    nonInteractive,
   })(Effect.promise(runLegacy));
 }
 
@@ -131,10 +147,12 @@ function makeInitCommand() {
     {
       dir: initDirectoryArg,
       appType: optionalChoiceOption("app-type", ["browser", "webviewer"] as const, "The type of app to create"),
-      ui: optionalChoiceOption("ui", ["shadcn", "mantine"] as const, "The UI scaffold to create"),
       server: optionalTextOption("server", "The URL of your FileMaker Server"),
       adminApiKey: optionalTextOption("admin-api-key", "Admin API key for OttoFMS"),
-      fileName: optionalTextOption("file-name", "The name of the FileMaker file"),
+      fileName: optionalTextOption(
+        "file-name",
+        "The FileMaker file name to use, including selecting a local connected file",
+      ),
       layoutName: optionalTextOption("layout-name", "The FileMaker layout name to scaffold"),
       schemaName: optionalTextOption("schema-name", "The generated schema name"),
       dataApiKey: optionalTextOption("data-api-key", "The Otto Data API key to use"),
@@ -152,10 +170,15 @@ function makeInitCommand() {
       debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
     },
     ({ dir, ...options }) => {
+      const nonInteractive = resolveNonInteractiveMode({
+        CI: options.CI,
+        nonInteractive: options.nonInteractive,
+        ...getCurrentTTYState(),
+      });
+
       const flags: CliFlags = {
         ...defaultCliFlags,
         appType: getOrUndefined(options.appType),
-        ui: getOrUndefined(options.ui),
         server: getOrUndefined(options.server),
         adminApiKey: getOrUndefined(options.adminApiKey),
         fileName: getOrUndefined(options.fileName),
@@ -174,7 +197,7 @@ function makeInitCommand() {
       return makeLiveLayer({
         cwd: process.cwd(),
         debug: flags.debug === true,
-        nonInteractive: Boolean(flags.CI || flags.nonInteractive),
+        nonInteractive,
       })(runInit(getOrUndefined(dir), flags));
     },
   ).pipe(withCommandDescription("Create a new project with ProofKit"));
@@ -212,7 +235,7 @@ function makeAddCommand() {
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),
-  ).pipe(withCommandDescription("Add a new component to your project"));
+  ).pipe(withCommandDescription("Legacy command. Prefer package-native tools, agents, or shadcn."));
 }
 
 function makeRemoveCommand() {
@@ -244,7 +267,7 @@ function makeRemoveCommand() {
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),
-  ).pipe(withCommandDescription("Remove a component from your project"));
+  ).pipe(withCommandDescription("Legacy command. Prefer direct code edits or package-native tools."));
 }
 
 function makeTypegenCommand() {
@@ -267,7 +290,7 @@ function makeTypegenCommand() {
         },
         { debug },
       ),
-  ).pipe(withCommandDescription("Generate types for your project"));
+  ).pipe(withCommandDescription("Legacy alias. Prefer `npx @proofkit/typegen`."));
 }
 
 function makeDeployCommand() {
@@ -317,7 +340,37 @@ function makeUpgradeCommand() {
         },
         { nonInteractive: CI || nonInteractive, debug },
       ),
-  ).pipe(withCommandDescription("Upgrade ProofKit components in your project"));
+  ).pipe(withCommandDescription("Legacy command."));
+}
+
+function makeDoctorCommand() {
+  return makeCommand(
+    "doctor",
+    {
+      debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
+    },
+    ({ debug }) =>
+      makeLiveLayer({
+        cwd: process.cwd(),
+        debug: debug === true,
+        nonInteractive: true,
+      })(runDoctor),
+  ).pipe(withCommandDescription("Inspect project health and suggest exact next steps"));
+}
+
+function makePromptCommand() {
+  return makeCommand(
+    "prompt",
+    {
+      debug: booleanOption("debug").pipe(withOptionDescription("Run in debug mode")),
+    },
+    ({ debug }) =>
+      makeLiveLayer({
+        cwd: process.cwd(),
+        debug: debug === true,
+        nonInteractive: true,
+      })(runPrompt),
+  ).pipe(withCommandDescription("Agent workflow entrypoint placeholder"));
 }
 
 const rootCommand = makeCommand(
@@ -333,7 +386,11 @@ const rootCommand = makeCommand(
     makeLiveLayer({
       cwd: process.cwd(),
       debug: options.debug === true,
-      nonInteractive: Boolean(options.CI || options.nonInteractive),
+      nonInteractive: resolveNonInteractiveMode({
+        CI: options.CI,
+        nonInteractive: options.nonInteractive,
+        ...getCurrentTTYState(),
+      }),
     })(
       runDefaultCommand({
         ...defaultCliFlags,
@@ -346,6 +403,8 @@ const rootCommand = makeCommand(
   withCommandDescription("Interactive CLI to scaffold and manage ProofKit projects"),
   withSubcommands([
     makeInitCommand(),
+    makeDoctorCommand(),
+    makePromptCommand(),
     makeAddCommand(),
     makeRemoveCommand(),
     makeTypegenCommand(),
@@ -381,10 +440,19 @@ function shouldShowDebugDetails(argv: readonly string[]) {
   return argv.some((arg) => debugFlagNames.has(arg));
 }
 
-function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
+export function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
   const failure = getOrUndefined(Cause.failureOption(cause));
 
-  if (!(failure && isValidationError(failure))) {
+  if (failure && isValidationError(failure)) {
+    if (showDebugDetails) {
+      console.error(`\n[debug] ${Cause.pretty(cause)}`);
+    }
+    return;
+  }
+
+  if (failure && isCliError(failure)) {
+    console.error(getCliErrorMessage(failure));
+  } else {
     const error = Cause.squash(cause);
     console.error(error instanceof Error ? error.message : String(error));
   }
@@ -396,7 +464,7 @@ function renderFailure(cause: Cause.Cause<unknown>, showDebugDetails: boolean) {
 
 async function main(argv: readonly string[]) {
   const showDebugDetails = shouldShowDebugDetails(argv);
-  const exit = await Effect.runPromiseExit(cli(argv).pipe(Effect.provide(nodeContextLayer)));
+  const exit = await Effect.runPromiseExit(Effect.provide(cli(argv), nodeContextLayer));
 
   if (Exit.isFailure(exit)) {
     renderFailure(exit.cause, showDebugDetails);

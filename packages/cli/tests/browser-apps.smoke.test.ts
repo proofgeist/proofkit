@@ -54,14 +54,15 @@ describeWhenSmokeEnvPresent("External integration smoke tests (non-interactive C
       `node "${cliPath}" init`,
       projectName,
       "--non-interactive",
-      "--appType browser",
-      "--dataSource filemaker",
+      "--app-type browser",
+      "--data-source filemaker",
       `--server "${testEnv.OTTO_SERVER_URL}"`,
-      `--adminApiKey "${testEnv.OTTO_ADMIN_API_KEY}"`,
-      `--dataApiKey "${testEnv.FM_DATA_API_KEY}"`,
-      `--fileName "${testEnv.FM_FILE_NAME}"`,
-      `--layoutName "${testEnv.FM_LAYOUT_NAME}"`,
-      "--noGit", // Skip git initialization for testing
+      `--admin-api-key "${testEnv.OTTO_ADMIN_API_KEY}"`,
+      `--data-api-key "${testEnv.FM_DATA_API_KEY}"`,
+      `--file-name "${testEnv.FM_FILE_NAME}"`,
+      `--layout-name "${testEnv.FM_LAYOUT_NAME}"`,
+      "--schema-name Contacts",
+      "--no-git", // Skip git initialization for testing
     ].join(" ");
 
     // Execute the command

@@ -23,7 +23,7 @@ export const baseOptions = {
     },
     {
       type: "icon",
-      url: "https://github.com/proofgeist/proofkit",
+      url: "https://github.com/proofsh/proofkit",
       text: "Github",
       icon: (
         <svg aria-label="GitHub" fill="currentColor" role="img" viewBox="0 0 24 24">

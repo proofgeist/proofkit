@@ -4,10 +4,10 @@
     {
       "type": "git",
       "name": "fm-mcp",
-      "url": "https://github.com/proofgeist/fm-mcp",
+      "url": "https://github.com/proofsh/fm-mcp",
       "branch": "main"
     }
   ],
-  "model": "gpt-5.3-codex",
+  "model": "gpt-5.4-mini",
   "provider": "openai"
 }

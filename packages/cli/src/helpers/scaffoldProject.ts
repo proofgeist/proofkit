@@ -38,12 +38,7 @@ export const scaffoldProject = async ({
 }: InstallerOptions & { force?: boolean }) => {
   const projectDir = state.projectDir;
 
-  const srcDir = path.join(
-    PKG_ROOT,
-    state.appType === "browser"
-      ? `template/${state.ui === "mantine" ? "nextjs-mantine" : "nextjs-shadcn"}`
-      : "template/vite-wv",
-  );
+  const srcDir = path.join(PKG_ROOT, state.appType === "browser" ? "template/nextjs-shadcn" : "template/vite-wv");
 
   if (noInstall) {
     logger.info("");
@@ -129,6 +124,7 @@ export const scaffoldProject = async ({
 
   // Rename gitignore
   fs.renameSync(path.join(projectDir, "_gitignore"), path.join(projectDir, ".gitignore"));
+  fs.writeFileSync(path.join(projectDir, ".cursorignore"), "CLAUDE.md\n", "utf8");
 
   const scaffoldedName = projectName === "." ? "App" : chalk.cyan.bold(projectName);
 

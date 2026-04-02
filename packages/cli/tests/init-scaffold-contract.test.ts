@@ -135,6 +135,7 @@ describe("Init scaffold contract tests", () => {
     expect(existsSync(join(browserProjectDir, "package.json"))).toBe(true);
     expect(existsSync(join(browserProjectDir, "proofkit.json"))).toBe(true);
     expect(existsSync(join(browserProjectDir, ".env"))).toBe(true);
+    expect(existsSync(join(browserProjectDir, ".cursorignore"))).toBe(true);
     expect(existsSync(join(browserProjectDir, "src", "lib", "env.ts"))).toBe(true);
     expect(existsSync(join(browserProjectDir, "src", "app", "layout.tsx"))).toBe(true);
     expect(existsSync(join(browserProjectDir, "postcss.config.mjs"))).toBe(true);
@@ -147,6 +148,8 @@ describe("Init scaffold contract tests", () => {
     expect(packageJson.proofkitMetadata?.initVersion).toBe(cliVersion);
     expect(packageJson.packageManager).toMatch(packageManagerPattern);
     expect(allProofkitDependenciesUseCurrentReleaseTag(packageJson)).toBe(true);
+    expect(readFileSync(join(browserProjectDir, "CLAUDE.md"), "utf-8")).toBe("@AGENTS.md\n");
+    expect(readFileSync(join(browserProjectDir, ".cursorignore"), "utf-8")).toBe("CLAUDE.md\n");
     const pkgManager = getPackageManagerName(packageJson);
     expect(outputSuggestsCommand(normalizedOutput, formatRunCommand(pkgManager, "typegen"))).toBe(false);
 
@@ -172,6 +175,7 @@ describe("Init scaffold contract tests", () => {
     expect(existsSync(join(webviewerProjectDir, "proofkit.json"))).toBe(true);
     expect(existsSync(join(webviewerProjectDir, "proofkit-typegen.config.jsonc"))).toBe(true);
     expect(existsSync(join(webviewerProjectDir, ".env"))).toBe(true);
+    expect(existsSync(join(webviewerProjectDir, ".cursorignore"))).toBe(true);
     expect(existsSync(join(webviewerProjectDir, "src", "main.tsx"))).toBe(true);
     expect(existsSync(join(webviewerProjectDir, "scripts", "launch-fm.js"))).toBe(true);
     expect(existsSync(join(webviewerProjectDir, "scripts", "upload.js"))).toBe(true);
@@ -179,12 +183,14 @@ describe("Init scaffold contract tests", () => {
     const packageJson = readJsonFile<PackageJsonShape>(join(webviewerProjectDir, "package.json"));
     expect(packageJson.name).toBe(webviewerProjectName);
     expect(packageJson.scripts?.build).toBe("vite build");
-    expect(packageJson.scripts?.typegen).toBe("typegen");
-    expect(packageJson.scripts?.["typegen:ui"]).toBe("typegen ui");
+    expect(packageJson.scripts?.typegen).toBe("npx @proofkit/typegen");
+    expect(packageJson.scripts?.["typegen:ui"]).toBe("npx @proofkit/typegen ui");
     expect(packageJson.scripts?.proofkit).toBe("proofkit");
     expect(packageJson.proofkitMetadata?.initVersion).toBe(cliVersion);
     expect(packageJson.packageManager).toMatch(packageManagerPattern);
     expect(allProofkitDependenciesUseCurrentReleaseTag(packageJson)).toBe(true);
+    expect(readFileSync(join(webviewerProjectDir, "CLAUDE.md"), "utf-8")).toBe("@AGENTS.md\n");
+    expect(readFileSync(join(webviewerProjectDir, ".cursorignore"), "utf-8")).toBe("CLAUDE.md\n");
     const pkgManager = getPackageManagerName(packageJson);
     expect(outputSuggestsCommand(normalizedOutput, formatRunCommand(pkgManager, "typegen"))).toBe(true);
     expect(outputSuggestsCommand(normalizedOutput, formatRunCommand(pkgManager, "launch-fm"))).toBe(true);

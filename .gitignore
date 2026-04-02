@@ -20,10 +20,12 @@ generated/
 
 # ENV FILES
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.schema
 
 # LOGS
 logs

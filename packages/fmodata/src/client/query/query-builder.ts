@@ -69,7 +69,8 @@ type QueryBuilderHasSelect<
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   Occ extends FMTable<any, any>,
   Selected,
-> = Selected extends Record<string, Column<any, any, any>> // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+> = Selected extends Record<string, Column<any, any, any>>
   ? true
   : Selected extends keyof InferSchemaOutputFromFMTable<Occ>
     ? false

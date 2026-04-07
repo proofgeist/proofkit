@@ -15,6 +15,7 @@ import { createLogger, type InternalLogger, type Logger } from "../logger";
 import { type FMODataLayer, HttpClient, ODataConfig, ODataLogger } from "../services";
 import type { Auth, ExecutionContext, Result } from "../types";
 import { getAcceptHeader } from "../types";
+import { ClarisIdAuthManager } from "./claris-id";
 import { Database } from "./database";
 import { safeJsonParse } from "./sanitize-json";
 
@@ -27,6 +28,7 @@ export class FMServerConnection implements ExecutionContext {
   private useEntityIds = false;
   private includeSpecialColumns = false;
   private readonly logger: InternalLogger;
+  private readonly clarisIdAuthManager: ClarisIdAuthManager | null;
   /** @internal Stored so credential-override flows can inherit non-auth config. */
   readonly _fetchClientOptions: FFetchOptions | undefined;
   constructor(config: {
@@ -50,6 +52,13 @@ export class FMServerConnection implements ExecutionContext {
     url.pathname = url.pathname.replace(TRAILING_SLASH_REGEX, "");
     this.serverUrl = url.toString().replace(TRAILING_SLASH_REGEX, "");
     this.auth = config.auth;
+    this.clarisIdAuthManager =
+      "clarisId" in config.auth
+        ? new ClarisIdAuthManager({
+            username: config.auth.clarisId.username,
+            password: config.auth.clarisId.password,
+          })
+        : null;
   }
 
   /**
@@ -90,6 +99,21 @@ export class FMServerConnection implements ExecutionContext {
    */
   _getBaseUrl(): string {
     return `${this.serverUrl}${"apiKey" in this.auth ? "/otto" : ""}/fmi/odata/v4`;
+  }
+
+  private _getAuthorizationHeader(fetchHandler?: typeof fetch): Promise<string> {
+    if ("apiKey" in this.auth) {
+      return Promise.resolve(`Bearer ${this.auth.apiKey}`);
+    }
+
+    if ("clarisId" in this.auth) {
+      if (!this.clarisIdAuthManager) {
+        throw new Error("Claris ID auth manager was not initialized");
+      }
+      return this.clarisIdAuthManager.getAuthorizationHeader(fetchHandler);
+    }
+
+    return Promise.resolve(`Basic ${btoa(`${this.auth.username}:${this.auth.password}`)}`);
   }
 
   /**
@@ -219,46 +243,43 @@ export class FMServerConnection implements ExecutionContext {
       preferValues.push("fmodata.include-specialcolumns");
     }
 
-    const headers = {
-      Authorization:
-        "apiKey" in this.auth
-          ? `Bearer ${this.auth.apiKey}`
-          : `Basic ${btoa(`${this.auth.username}:${this.auth.password}`)}`,
+    const buildHeaders = async () => ({
+      Authorization: await this._getAuthorizationHeader(fetchHandler),
       "Content-Type": "application/json",
       Accept: getAcceptHeader(includeODataAnnotations),
       ...(preferValues.length > 0 ? { Prefer: preferValues.join(", ") } : {}),
       ...(options?.headers || {}),
-    };
-
-    // Prepare loggableHeaders by omitting the Authorization key
-    const { Authorization, ...loggableHeaders } = headers;
-    logger.debug("Request headers:", loggableHeaders);
+    });
 
     // TEMPORARY WORKAROUND: Hopefully this feature will be fixed in the ffetch library
     // Extract fetchHandler and headers separately, only for tests where we're overriding the fetch handler per-request
-    const fetchHandler = options?.fetchHandler;
+    const fetchHandler = options?.fetchHandler ?? this._fetchClientOptions?.fetchHandler;
     const { headers: _headers, fetchHandler: _fetchHandler, ...restOptions } = options || {};
 
     // If fetchHandler is provided, create a temporary client with it
     // Otherwise use the existing client
     const clientToUse = fetchHandler ? createClient({ retries: 0, fetchHandler }) : this.fetchClient;
 
-    const finalOptions = {
-      ...restOptions,
-      headers,
-    };
-
     // Step 1: Execute the HTTP request
     const fetchEffect = Effect.tryPromise({
-      try: () => clientToUse(fullUrl, finalOptions),
+      try: async () => {
+        const headers = await buildHeaders();
+        const { Authorization, ...loggableHeaders } = headers;
+        logger.debug("Request headers:", loggableHeaders);
+
+        const finalOptions = {
+          ...restOptions,
+          headers,
+        };
+
+        return clientToUse(fullUrl, finalOptions);
+      },
       catch: (err) => this._classifyError(err, fullUrl),
     });
 
     // Step 2: Process the response
     const pipeline = fetchEffect.pipe(
-      Effect.tap((resp) =>
-        Effect.sync(() => logger.debug(`${finalOptions.method ?? "GET"} ${resp.status} ${fullUrl}`)),
-      ),
+      Effect.tap((resp) => Effect.sync(() => logger.debug(`${restOptions.method ?? "GET"} ${resp.status} ${fullUrl}`))),
       Effect.flatMap((resp) => {
         // Handle HTTP errors
         if (!resp.ok) {
@@ -319,7 +340,7 @@ export class FMServerConnection implements ExecutionContext {
 
     // biome-ignore lint/suspicious/noExplicitAny: Type assertion for optional property access
     const retryPolicy = (options as any)?.retryPolicy;
-    const method = (finalOptions.method ?? "GET").toUpperCase();
+    const method = (restOptions.method ?? "GET").toUpperCase();
     const isRetrySafeMethod = method === "GET" || method === "HEAD" || method === "OPTIONS" || method === "PUT";
 
     const requestEffect = retryPolicy && isRetrySafeMethod ? withRetryPolicy(pipeline, retryPolicy) : pipeline;

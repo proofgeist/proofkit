@@ -113,10 +113,14 @@ export class QueryUrlBuilder {
    * Builds a query string path (without database prefix) for getQueryString().
    * Used when the full URL is not needed.
    */
-  buildPath(queryString: string, options?: { useEntityIds?: boolean; navigation?: NavigationConfig }): string {
+  buildPath(
+    queryString: string,
+    options?: { isCount?: boolean; useEntityIds?: boolean; navigation?: NavigationConfig },
+  ): string {
     const effectiveUseEntityIds = options?.useEntityIds ?? this.useEntityIds;
     const navigation = options?.navigation;
     const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), effectiveUseEntityIds);
+    const suffix = options?.isCount ? "/$count" : "";
 
     if (navigation?.recordId && navigation?.relation) {
       const sourceTable = effectiveUseEntityIds
@@ -130,7 +134,7 @@ export class QueryUrlBuilder {
         : navigation.relation;
       const { recordId } = navigation;
       const base = baseRelation ? `${sourceTable}/${baseRelation}('${recordId}')` : `${sourceTable}('${recordId}')`;
-      return queryString ? `/${base}/${relation}${queryString}` : `/${base}/${relation}`;
+      return queryString ? `/${base}/${relation}${suffix}${queryString}` : `/${base}/${relation}${suffix}`;
     }
     if (navigation?.relation) {
       const sourceTable = effectiveUseEntityIds
@@ -143,9 +147,9 @@ export class QueryUrlBuilder {
         ? (navigation.relationEntityId ?? navigation.relation)
         : navigation.relation;
       const base = basePath || sourceTable;
-      return queryString ? `/${base}/${relation}${queryString}` : `/${base}/${relation}`;
+      return queryString ? `/${base}/${relation}${suffix}${queryString}` : `/${base}/${relation}${suffix}`;
     }
-    return queryString ? `/${tableId}${queryString}` : `/${tableId}`;
+    return queryString ? `/${tableId}${suffix}${queryString}` : `/${tableId}${suffix}`;
   }
 
   /**

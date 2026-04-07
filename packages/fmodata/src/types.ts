@@ -3,8 +3,13 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 export type Auth = { username: string; password: string } | { apiKey: string };
 
-export interface ExecutableBuilder<T> {
-  execute(): Promise<Result<T>>;
+export interface CountedListResult<T> {
+  records: T[];
+  count: number;
+}
+
+export interface ExecutableBuilder<_T> {
+  execute(options?: ExecuteOptions): Promise<Result<unknown>>;
   // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any };
 
@@ -23,7 +28,7 @@ export interface ExecutableBuilder<T> {
    * @param options - Optional execution options (e.g., skipValidation, includeODataAnnotations)
    * @returns A typed Result with the builder's expected return type
    */
-  processResponse(response: Response, options?: ExecuteOptions): Promise<Result<T>>;
+  processResponse(response: Response, options?: ExecuteOptions): Promise<Result<unknown>>;
 }
 
 export interface ExecutionContext {
@@ -216,15 +221,20 @@ export function getAcceptHeader(includeODataAnnotations?: boolean): string {
   return includeODataAnnotations === true ? "application/json" : "application/json;odata.metadata=none";
 }
 
+type WithODataAnnotations<T> =
+  T extends CountedListResult<infer U>
+    ? CountedListResult<WithODataAnnotations<U>>
+    : T extends readonly (infer U)[]
+      ? WithODataAnnotations<U>[]
+      : // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
+        T extends Record<string, any>
+        ? T & ODataRecordMetadata
+        : T;
+
 export type ConditionallyWithODataAnnotations<
   T,
   IncludeODataAnnotations extends boolean,
-> = IncludeODataAnnotations extends true
-  ? T & {
-      "@id": string;
-      "@editLink": string;
-    }
-  : T;
+> = IncludeODataAnnotations extends true ? WithODataAnnotations<T> : T;
 
 /**
  * Normalizes includeSpecialColumns with a database-level default.
@@ -236,6 +246,19 @@ export type NormalizeIncludeSpecialColumns<
   IncludeSpecialColumns extends boolean | undefined,
   DatabaseDefault extends boolean = false,
 > = [IncludeSpecialColumns] extends [true] ? true : [IncludeSpecialColumns] extends [false] ? false : DatabaseDefault; // When undefined, use database-level default
+
+type WithSpecialColumnsDeep<T> =
+  T extends CountedListResult<infer U>
+    ? CountedListResult<WithSpecialColumnsDeep<U>>
+    : T extends readonly (infer U)[]
+      ? WithSpecialColumnsDeep<U>[]
+      : // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
+        T extends Record<string, any>
+        ? T & {
+            ROWID: number;
+            ROWMODID: number;
+          }
+        : T;
 
 /**
  * Conditionally adds ROWID and ROWMODID special columns to a type.
@@ -250,27 +273,7 @@ export type ConditionallyWithSpecialColumns<
   T,
   IncludeSpecialColumns extends boolean,
   HasSelect extends boolean,
-> = IncludeSpecialColumns extends true
-  ? HasSelect extends false
-    ? // Handle array types
-      T extends readonly (infer U)[]
-      ? // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
-        U extends Record<string, any>
-        ? (U & {
-            ROWID: number;
-            ROWMODID: number;
-          })[]
-        : T
-      : // Handle single object types
-        // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any record shape
-        T extends Record<string, any>
-        ? T & {
-            ROWID: number;
-            ROWMODID: number;
-          }
-        : T // Don't add special columns to primitives (e.g., single field queries)
-    : T
-  : T;
+> = IncludeSpecialColumns extends true ? (HasSelect extends false ? WithSpecialColumnsDeep<T> : T) : T;
 
 // Helper type to extract schema from a FMTable
 export type ExtractSchemaFromOccurrence<Occ> = Occ extends {

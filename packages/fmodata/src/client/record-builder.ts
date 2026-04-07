@@ -406,9 +406,9 @@ export class RecordBuilder<
   >(
     targetTable: ValidExpandTarget<Occ, TargetTable>,
     callback?: (
-      builder: QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>,
+      builder: QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}, false>,
       // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
-    ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands>,
+    ) => QueryBuilder<TargetTable, TSelected, any, any, TNestedExpands, any, any>,
   ): RecordBuilder<
     Occ,
     false,
@@ -451,14 +451,21 @@ export class RecordBuilder<
 
     // Use ExpandBuilder.processExpand to handle the expand logic
     const expandBuilder = new ExpandBuilder(this.config.useEntityIds, this.logger);
-    type TargetBuilder = QueryBuilder<TargetTable, keyof InferSchemaOutputFromFMTable<TargetTable>, false, false, {}>;
+    type TargetBuilder = QueryBuilder<
+      TargetTable,
+      keyof InferSchemaOutputFromFMTable<TargetTable>,
+      false,
+      false,
+      {},
+      false
+    >;
     const expandConfig = expandBuilder.processExpand<TargetTable, TargetBuilder>(
       targetTable,
       this.table ?? undefined,
       callback as ((builder: TargetBuilder) => TargetBuilder) | undefined,
       () =>
         // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
-        new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
+        new QueryBuilder<TargetTable, any, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
           occurrence: targetTable,
           layer: this.layer,
         }),
@@ -480,6 +487,7 @@ export class RecordBuilder<
     false,
     false,
     {},
+    false,
     DatabaseIncludeSpecialColumns,
     undefined
   > {
@@ -498,7 +506,7 @@ export class RecordBuilder<
 
     // Create QueryBuilder with target table
     // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any QueryBuilder configuration
-    const builder = new QueryBuilder<TargetTable, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
+    const builder = new QueryBuilder<TargetTable, any, any, any, any, any, DatabaseIncludeSpecialColumns, undefined>({
       occurrence: targetTable,
       layer: this.layer,
     });

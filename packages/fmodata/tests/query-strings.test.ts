@@ -208,6 +208,14 @@ describe("OData Query String Generation", () => {
     });
   });
 
+  describe("$count", () => {
+    it("should include /$count for navigated top-level count queries", () => {
+      const queryString = db.from(users).navigate(contacts).count().where(eq(contacts.name, "Alice")).getQueryString();
+
+      expect(queryString).toBe(`/users/contacts/$count?$filter=name eq 'Alice'`);
+    });
+  });
+
   describe("$orderby", () => {
     it("should generate $orderby for ascending order", () => {
       const queryString = db.from(users).list().orderBy(asc(users.name)).getQueryString();

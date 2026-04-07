@@ -278,6 +278,13 @@ export async function processQueryResponse<T>(
   }
 
   if (includeCount) {
+    if (processedResponse.error) {
+      return {
+        data: undefined,
+        error: processedResponse.error,
+      };
+    }
+
     if (singleMode !== false) {
       return {
         data: undefined,

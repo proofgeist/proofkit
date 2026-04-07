@@ -140,6 +140,24 @@ describe("Mock Fetch Tests", () => {
       expect(isResponseStructureError(result.error)).toBe(true);
     });
 
+    it("should preserve list validation errors before building counted results", async () => {
+      const mock = new MockFMServerConnection();
+      mock.addRoute({
+        urlPattern: "/fmdapi_test.fmp12/contacts",
+        response: {
+          "@context": "https://api.example.com/fmi/odata/v4/fmdapi_test.fmp12/$metadata#contacts",
+          "@odata.count": "1",
+        },
+        status: 200,
+      });
+      const db = mock.database("fmdapi_test.fmp12");
+
+      const result = await db.from(contacts).list().count().execute();
+
+      expect(result.data).toBeUndefined();
+      expect(isResponseStructureError(result.error)).toBe(true);
+    });
+
     it("should reject single() after list().count()", () => {
       const mock = new MockFMServerConnection();
       const db = mock.database("fmdapi_test.fmp12");

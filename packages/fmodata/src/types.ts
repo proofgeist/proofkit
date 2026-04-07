@@ -8,8 +8,8 @@ export interface CountedListResult<T> {
   count: number;
 }
 
-export interface ExecutableBuilder<_T> {
-  execute(options?: ExecuteOptions): Promise<Result<unknown>>;
+export interface ExecutableBuilder<T> {
+  execute(options?: ExecuteOptions): Promise<Result<T>>;
   // biome-ignore lint/suspicious/noExplicitAny: Request body can be any JSON-serializable value
   getRequestConfig(): { method: string; url: string; body?: any };
 
@@ -28,7 +28,7 @@ export interface ExecutableBuilder<_T> {
    * @param options - Optional execution options (e.g., skipValidation, includeODataAnnotations)
    * @returns A typed Result with the builder's expected return type
    */
-  processResponse(response: Response, options?: ExecuteOptions): Promise<Result<unknown>>;
+  processResponse(response: Response, options?: ExecuteOptions): Promise<Result<T>>;
 }
 
 export interface ExecutionContext {

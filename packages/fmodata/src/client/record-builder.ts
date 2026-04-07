@@ -82,6 +82,94 @@ export type RecordReturnType<
       ? Pick<Schema, Selected> & ResolveExpandedRelations<Expands> & SystemColumnsFromOption<SystemCols>
       : never;
 
+type RecordBuilderHasSelect<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  Occ extends FMTable<any, any>,
+  IsSingleField extends boolean,
+  Selected,
+> = IsSingleField extends true
+  ? false
+  : // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+    Selected extends Record<string, Column<any, any, any>>
+    ? true
+    : Selected extends keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>
+      ? false
+      : true;
+
+type ExecutableRecordBuilderReturn<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  Occ extends FMTable<any, any>,
+  IsSingleField extends boolean,
+  // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  FieldColumn extends Column<any, any, any, any> | undefined,
+  Selected extends
+    | keyof InferSchemaOutputFromFMTable<NonNullable<Occ>>
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+    | Record<string, Column<any, any, ExtractTableName<NonNullable<Occ>>>>,
+  Expands extends ExpandedRelations,
+  SystemCols extends SystemColumnsOption | undefined,
+> =
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        RecordReturnType<
+          InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+          IsSingleField,
+          FieldColumn,
+          Selected,
+          Expands,
+          SystemCols
+        >,
+        true,
+        RecordBuilderHasSelect<Occ, IsSingleField, Selected>
+      >,
+      true
+    >
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        RecordReturnType<
+          InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+          IsSingleField,
+          FieldColumn,
+          Selected,
+          Expands,
+          SystemCols
+        >,
+        true,
+        RecordBuilderHasSelect<Occ, IsSingleField, Selected>
+      >,
+      false
+    >
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        RecordReturnType<
+          InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+          IsSingleField,
+          FieldColumn,
+          Selected,
+          Expands,
+          SystemCols
+        >,
+        false,
+        RecordBuilderHasSelect<Occ, IsSingleField, Selected>
+      >,
+      true
+    >
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        RecordReturnType<
+          InferSchemaOutputFromFMTable<NonNullable<Occ>>,
+          IsSingleField,
+          FieldColumn,
+          Selected,
+          Expands,
+          SystemCols
+        >,
+        false,
+        RecordBuilderHasSelect<Occ, IsSingleField, Selected>
+      >,
+      false
+    >;
+
 export class RecordBuilder<
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration, default allows untyped tables
   Occ extends FMTable<any, any> = FMTable<any, any>,
@@ -98,16 +186,7 @@ export class RecordBuilder<
   DatabaseIncludeSpecialColumns extends boolean = false,
   SystemCols extends SystemColumnsOption | undefined = undefined,
 > implements
-    ExecutableBuilder<
-      RecordReturnType<
-        InferSchemaOutputFromFMTable<NonNullable<Occ>>,
-        IsSingleField,
-        FieldColumn,
-        Selected,
-        Expands,
-        SystemCols
-      >
-    >
+    ExecutableBuilder<ExecutableRecordBuilderReturn<Occ, IsSingleField, FieldColumn, Selected, Expands, SystemCols>>
 {
   private readonly table: Occ;
   private readonly recordId: string | number;

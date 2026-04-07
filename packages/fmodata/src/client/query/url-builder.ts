@@ -52,61 +52,7 @@ export class QueryUrlBuilder {
       navigation?: NavigationConfig;
     },
   ): string {
-    const effectiveUseEntityIds = options.useEntityIds ?? this.useEntityIds;
-    const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), effectiveUseEntityIds);
-
-    const navigation = options.navigation;
-    if (navigation?.recordId && navigation?.relation) {
-      return this.buildRecordNavigation(queryString, tableId, navigation, effectiveUseEntityIds);
-    }
-    if (navigation?.relation) {
-      return this.buildEntitySetNavigation(queryString, tableId, navigation, effectiveUseEntityIds);
-    }
-    if (options.isCount) {
-      return `/${this.databaseName}/${tableId}/$count${queryString}`;
-    }
-    return `/${this.databaseName}/${tableId}${queryString}`;
-  }
-
-  /**
-   * Builds URL for record navigation: /database/sourceTable('recordId')/relation
-   * or /database/sourceTable/baseRelation('recordId')/relation for chained navigations
-   */
-  private buildRecordNavigation(
-    queryString: string,
-    _tableId: string,
-    navigation: NavigationConfig,
-    useEntityIds: boolean,
-  ): string {
-    const sourceTable = useEntityIds
-      ? (navigation.sourceTableEntityId ?? navigation.sourceTableName)
-      : navigation.sourceTableName;
-    const baseRelation = useEntityIds
-      ? (navigation.baseRelationEntityId ?? navigation.baseRelation)
-      : navigation.baseRelation;
-    const relation = useEntityIds ? (navigation.relationEntityId ?? navigation.relation) : navigation.relation;
-    const { recordId } = navigation;
-    const base = baseRelation ? `${sourceTable}/${baseRelation}('${recordId}')` : `${sourceTable}('${recordId}')`;
-    return `/${this.databaseName}/${base}/${relation}${queryString}`;
-  }
-
-  /**
-   * Builds URL for entity set navigation: /database/sourceTable/relation
-   * or /database/basePath/relation for chained navigations
-   */
-  private buildEntitySetNavigation(
-    queryString: string,
-    _tableId: string,
-    navigation: NavigationConfig,
-    useEntityIds: boolean,
-  ): string {
-    const sourceTable = useEntityIds
-      ? (navigation.sourceTableEntityId ?? navigation.sourceTableName)
-      : navigation.sourceTableName;
-    const basePath = useEntityIds ? (navigation.basePathEntityId ?? navigation.basePath) : navigation.basePath;
-    const relation = useEntityIds ? (navigation.relationEntityId ?? navigation.relation) : navigation.relation;
-    const base = basePath || sourceTable;
-    return `/${this.databaseName}/${base}/${relation}${queryString}`;
+    return `/${this.databaseName}${this.buildPath(queryString, options)}`;
   }
 
   /**

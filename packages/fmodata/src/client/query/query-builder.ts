@@ -65,6 +65,84 @@ function normalizeQueryBuildError(error: unknown): FMODataErrorType {
   return new BuilderInvariantError("QueryBuilder.execute", String(error));
 }
 
+type QueryBuilderHasSelect<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  Occ extends FMTable<any, any>,
+  Selected,
+> = Selected extends Record<string, Column<any, any, any>> // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+  ? true
+  : Selected extends keyof InferSchemaOutputFromFMTable<Occ>
+    ? false
+    : true;
+
+type BaseQueryBuilderReturn<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  Occ extends FMTable<any, any>,
+  Selected extends
+    | keyof InferSchemaOutputFromFMTable<Occ>
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+    | Record<string, Column<any, any, ExtractTableName<Occ>>>,
+  SingleMode extends "exact" | "maybe" | false,
+  IsCount extends boolean,
+  Expands extends ExpandedRelations,
+  IncludeCount extends boolean,
+  SystemCols extends SystemColumnsOption | undefined,
+> = QueryReturnType<
+  InferSchemaOutputFromFMTable<Occ>,
+  Selected,
+  SingleMode,
+  IsCount,
+  Expands,
+  IncludeCount,
+  SystemCols
+>;
+
+type ExecutableQueryBuilderReturn<
+  // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
+  Occ extends FMTable<any, any>,
+  Selected extends
+    | keyof InferSchemaOutputFromFMTable<Occ>
+    // biome-ignore lint/suspicious/noExplicitAny: Generic constraint accepting any Column configuration
+    | Record<string, Column<any, any, ExtractTableName<Occ>>>,
+  SingleMode extends "exact" | "maybe" | false,
+  IsCount extends boolean,
+  Expands extends ExpandedRelations,
+  IncludeCount extends boolean,
+  SystemCols extends SystemColumnsOption | undefined,
+> =
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        BaseQueryBuilderReturn<Occ, Selected, SingleMode, IsCount, Expands, IncludeCount, SystemCols>,
+        true,
+        QueryBuilderHasSelect<Occ, Selected>
+      >,
+      true
+    >
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        BaseQueryBuilderReturn<Occ, Selected, SingleMode, IsCount, Expands, IncludeCount, SystemCols>,
+        true,
+        QueryBuilderHasSelect<Occ, Selected>
+      >,
+      false
+    >
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        BaseQueryBuilderReturn<Occ, Selected, SingleMode, IsCount, Expands, IncludeCount, SystemCols>,
+        false,
+        QueryBuilderHasSelect<Occ, Selected>
+      >,
+      true
+    >
+  | ConditionallyWithODataAnnotations<
+      ConditionallyWithSpecialColumns<
+        BaseQueryBuilderReturn<Occ, Selected, SingleMode, IsCount, Expands, IncludeCount, SystemCols>,
+        false,
+        QueryBuilderHasSelect<Occ, Selected>
+      >,
+      false
+    >;
+
 export class QueryBuilder<
   // biome-ignore lint/suspicious/noExplicitAny: Accepts any FMTable configuration
   Occ extends FMTable<any, any>,
@@ -81,15 +159,7 @@ export class QueryBuilder<
   SystemCols extends SystemColumnsOption | undefined = undefined,
 > implements
     ExecutableBuilder<
-      QueryReturnType<
-        InferSchemaOutputFromFMTable<Occ>,
-        Selected,
-        SingleMode,
-        IsCount,
-        Expands,
-        IncludeCount,
-        SystemCols
-      >
+      ExecutableQueryBuilderReturn<Occ, Selected, SingleMode, IsCount, Expands, IncludeCount, SystemCols>
     >
 {
   private readState = createInitialQueryReadBuilderState<InferSchemaOutputFromFMTable<Occ>>();

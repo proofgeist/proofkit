@@ -15,6 +15,7 @@ import { createLogger, type InternalLogger, type Logger } from "../logger";
 import { type FMODataLayer, HttpClient, ODataConfig, ODataLogger } from "../services";
 import type { Auth, ExecutionContext, Result } from "../types";
 import { getAcceptHeader } from "../types";
+import { mergePreferHeaderValues } from "./builders/mutation-helpers";
 import { Database } from "./database";
 import { safeJsonParse } from "./sanitize-json";
 
@@ -228,8 +229,14 @@ export class FMServerConnection implements ExecutionContext {
     );
     headers.set("Content-Type", "application/json");
     headers.set("Accept", getAcceptHeader(includeODataAnnotations));
-    if (!headers.has("Prefer") && preferValues.length > 0) {
-      headers.set("Prefer", preferValues.join(", "));
+    const mergedPrefer = mergePreferHeaderValues(
+      preferValues.length > 0 ? preferValues.join(", ") : undefined,
+      headers.get("Prefer") ?? undefined,
+    );
+    if (mergedPrefer) {
+      headers.set("Prefer", mergedPrefer);
+    } else {
+      headers.delete("Prefer");
     }
 
     // Prepare loggableHeaders by omitting the Authorization key

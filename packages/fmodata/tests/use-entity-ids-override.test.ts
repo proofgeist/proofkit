@@ -111,7 +111,7 @@ describe("Per-request useEntityIds override", () => {
 
     const call0 = mock.spy?.calls[0];
     expect(call0?.url).toContain("FMTID:100");
-    expect(call0?.headers?.prefer).toBe("return=representation, fmodata.entity-ids");
+    expect(call0?.headers?.prefer).toBe("fmodata.entity-ids, return=representation");
 
     // Insert with entity IDs disabled — URL should use table name, Prefer keeps return preference only
     await db.from(localContactsTO).insert({ name: "Test" }).execute({ useEntityIds: false });

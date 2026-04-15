@@ -344,6 +344,35 @@ describe("includeSpecialColumns feature", () => {
     expect(preferHeader3).toBeNull();
   });
 
+  it("should merge caller Prefer with database-level special columns header", async () => {
+    const mock = new MockFMServerConnection();
+    mock.addRoute({
+      urlPattern: "/TestDB/contacts",
+      response: { value: [{ id: "1", name: "John", ROWID: 123, ROWMODID: 456 }] },
+      status: 200,
+    });
+    const db = mock.database("TestDB", {
+      includeSpecialColumns: true,
+    });
+
+    let preferHeader: string | null = null;
+    await db
+      .from(contactsTO)
+      .list()
+      .execute({
+        headers: {
+          Prefer: "handling=lenient, fmodata.include-specialcolumns",
+        },
+        hooks: {
+          before: (req) => {
+            preferHeader = req.headers.get("Prefer");
+          },
+        },
+      });
+
+    expect(preferHeader).toBe("fmodata.include-specialcolumns, handling=lenient");
+  });
+
   it("should combine includeSpecialColumns with useEntityIds in Prefer header", async () => {
     const contactsTOWithEntityIds = fmTableOccurrence(
       "contacts",
@@ -674,7 +703,7 @@ describe("includeSpecialColumns feature", () => {
         },
       });
 
-    expect(preferHeader).toBe("return=representation, fmodata.include-specialcolumns");
+    expect(preferHeader).toBe("fmodata.include-specialcolumns, return=representation");
     assert(data, "data is undefined");
     expectTypeOf(data).toHaveProperty("ROWID");
     expectTypeOf(data).toHaveProperty("ROWMODID");
@@ -698,7 +727,7 @@ describe("includeSpecialColumns feature", () => {
         },
       });
 
-    expect(mergedPreferHeader).toBe("return=representation, fmodata.include-specialcolumns, handling=lenient");
+    expect(mergedPreferHeader).toBe("fmodata.include-specialcolumns, return=representation, handling=lenient");
   });
 
   it("should include special columns for update returnFullRecord responses", async () => {
@@ -726,7 +755,7 @@ describe("includeSpecialColumns feature", () => {
         },
       });
 
-    expect(preferHeader).toBe("return=representation, fmodata.include-specialcolumns");
+    expect(preferHeader).toBe("fmodata.include-specialcolumns, return=representation");
     assert(data, "data is undefined");
     expectTypeOf(data).toHaveProperty("ROWID");
     expectTypeOf(data).toHaveProperty("ROWMODID");
@@ -752,6 +781,6 @@ describe("includeSpecialColumns feature", () => {
         },
       });
 
-    expect(mergedPreferHeader).toBe("return=representation, fmodata.include-specialcolumns, handling=lenient");
+    expect(mergedPreferHeader).toBe("fmodata.include-specialcolumns, return=representation, handling=lenient");
   });
 });

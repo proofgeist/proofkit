@@ -181,15 +181,18 @@ export class ExecutableUpdateBuilder<
       builderName: "ExecutableUpdateBuilder",
     });
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const requestHeaders = new Headers(callerHeaders || {});
     const preferHeader = mergePreferHeaderValues(
-      new Headers(callerHeaders).get("Prefer") ?? undefined,
       this.returnPreference === "representation" ? "return=representation" : undefined,
       shouldUseIds ? "fmodata.entity-ids" : undefined,
       includeSpecialColumns ? "fmodata.include-specialcolumns" : undefined,
+      requestHeaders.get("Prefer") ?? undefined,
     );
+    requestHeaders.set("Content-Type", "application/json");
     if (preferHeader) {
-      headers.Prefer = preferHeader;
+      requestHeaders.set("Prefer", preferHeader);
+    } else {
+      requestHeaders.delete("Prefer");
     }
 
     const pipeline = Effect.gen(this, function* () {
@@ -211,11 +214,6 @@ export class ExecutableUpdateBuilder<
         this.table && shouldUseIds ? transformFieldNamesToIds(validatedData, this.table) : validatedData;
 
       // Step 3: Make PATCH request via DI
-      const requestHeaders = {
-        ...Object.fromEntries(new Headers(callerHeaders).entries()),
-        ...headers,
-      };
-
       const response = yield* requestFromService(url, {
         ...requestOptions,
         method: "PATCH",
@@ -295,19 +293,33 @@ export class ExecutableUpdateBuilder<
     });
   }
 
-  async processResponse(
+  async processResponse<EO extends ExecuteOptions | undefined = undefined>(
     response: Response,
-    options?: ExecuteOptions,
+    options?: EO,
   ): Promise<
     Result<
       ReturnPreference extends "minimal"
         ? { updatedCount: number }
-        : ConditionallyWithSpecialColumns<InferSchemaOutputFromFMTable<Occ>, DatabaseIncludeSpecialColumns, false>
+        : ConditionallyWithSpecialColumns<
+            InferSchemaOutputFromFMTable<Occ>,
+            NormalizeIncludeSpecialColumns<
+              EO extends ExecuteOptions ? EO["includeSpecialColumns"] : undefined,
+              DatabaseIncludeSpecialColumns
+            >,
+            false
+          >
     >
   > {
     type UpdateResponse = ReturnPreference extends "minimal"
       ? { updatedCount: number }
-      : ConditionallyWithSpecialColumns<InferSchemaOutputFromFMTable<Occ>, DatabaseIncludeSpecialColumns, false>;
+      : ConditionallyWithSpecialColumns<
+          InferSchemaOutputFromFMTable<Occ>,
+          NormalizeIncludeSpecialColumns<
+            EO extends ExecuteOptions ? EO["includeSpecialColumns"] : undefined,
+            DatabaseIncludeSpecialColumns
+          >,
+          false
+        >;
 
     // Check for error responses (important for batch operations)
     if (!response.ok) {

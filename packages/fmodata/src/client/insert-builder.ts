@@ -144,12 +144,19 @@ export class InsertBuilder<
     const url = `/${this.config.databaseName}/${tableId}`;
     const shouldUseIds = mergedOptions.useEntityIds ?? this.config.useEntityIds;
     const includeSpecialColumns = mergedOptions.includeSpecialColumns ?? this.config.includeSpecialColumns;
+    const canonicalHeaders = new Headers(callerHeaders || {});
     const preferHeader = mergePreferHeaderValues(
-      new Headers(callerHeaders).get("Prefer") ?? undefined,
       this.returnPreference === "minimal" ? "return=minimal" : "return=representation",
       shouldUseIds ? "fmodata.entity-ids" : undefined,
       includeSpecialColumns ? "fmodata.include-specialcolumns" : undefined,
+      canonicalHeaders.get("Prefer") ?? undefined,
     );
+    canonicalHeaders.set("Content-Type", "application/json");
+    if (preferHeader) {
+      canonicalHeaders.set("Prefer", preferHeader);
+    } else {
+      canonicalHeaders.delete("Prefer");
+    }
 
     const pipeline = Effect.gen(this, function* () {
       // Step 1: Validate input
@@ -174,11 +181,7 @@ export class InsertBuilder<
       const responseData = yield* requestFromService<any>(url, {
         ...requestOptions,
         method: "POST",
-        headers: {
-          ...(callerHeaders || {}),
-          "Content-Type": "application/json",
-          ...(preferHeader ? { Prefer: preferHeader } : {}),
-        },
+        headers: canonicalHeaders,
         body: JSON.stringify(transformedData),
       });
 
@@ -285,16 +288,19 @@ export class InsertBuilder<
     });
   }
 
-  async processResponse(
+  async processResponse<EO extends ExecuteOptions | undefined = undefined>(
     response: Response,
-    options?: ExecuteOptions,
+    options?: EO,
   ): Promise<
     Result<
       ReturnPreference extends "minimal"
         ? { ROWID: number }
         : ConditionallyWithSpecialColumns<
             InferSchemaOutputFromFMTable<NonNullable<Occ>>,
-            DatabaseIncludeSpecialColumns,
+            NormalizeIncludeSpecialColumns<
+              EO extends ExecuteOptions ? EO["includeSpecialColumns"] : undefined,
+              DatabaseIncludeSpecialColumns
+            >,
             false
           >
     >

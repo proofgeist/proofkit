@@ -682,6 +682,23 @@ describe("includeSpecialColumns feature", () => {
     data.ROWMODID;
     expect(data).toHaveProperty("ROWID", 123);
     expect(data).toHaveProperty("ROWMODID", 456);
+
+    let mergedPreferHeader: string | null = null;
+    await db
+      .from(contactsTO)
+      .insert({ name: "John" })
+      .execute({
+        headers: {
+          Prefer: "handling=lenient, fmodata.include-specialcolumns",
+        },
+        hooks: {
+          before: (req) => {
+            mergedPreferHeader = req.headers.get("Prefer");
+          },
+        },
+      });
+
+    expect(mergedPreferHeader).toBe("return=representation, fmodata.include-specialcolumns, handling=lenient");
   });
 
   it("should include special columns for update returnFullRecord responses", async () => {
@@ -717,5 +734,24 @@ describe("includeSpecialColumns feature", () => {
     data.ROWMODID;
     expect(data).toHaveProperty("ROWID", 123);
     expect(data).toHaveProperty("ROWMODID", 456);
+
+    let mergedPreferHeader: string | null = null;
+    await db
+      .from(contactsTO)
+      .update({ name: "John" }, { returnFullRecord: true })
+      .byId("1")
+      .execute({
+        includeSpecialColumns: true,
+        headers: {
+          Prefer: "handling=lenient, return=representation",
+        },
+        hooks: {
+          before: (req) => {
+            mergedPreferHeader = req.headers.get("Prefer");
+          },
+        },
+      });
+
+    expect(mergedPreferHeader).toBe("return=representation, fmodata.include-specialcolumns, handling=lenient");
   });
 });

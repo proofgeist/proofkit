@@ -15,6 +15,7 @@ import { createLogger, type InternalLogger, type Logger } from "../logger";
 import { type FMODataLayer, HttpClient, ODataConfig, ODataLogger } from "../services";
 import type { Auth, ExecutionContext, Result } from "../types";
 import { getAcceptHeader } from "../types";
+import { mergePreferHeaderValues } from "./builders/mutation-helpers";
 import { Database } from "./database";
 import { safeJsonParse } from "./sanitize-json";
 
@@ -219,19 +220,27 @@ export class FMServerConnection implements ExecutionContext {
       preferValues.push("fmodata.include-specialcolumns");
     }
 
-    const headers = {
-      Authorization:
-        "apiKey" in this.auth
-          ? `Bearer ${this.auth.apiKey}`
-          : `Basic ${btoa(`${this.auth.username}:${this.auth.password}`)}`,
-      "Content-Type": "application/json",
-      Accept: getAcceptHeader(includeODataAnnotations),
-      ...(preferValues.length > 0 ? { Prefer: preferValues.join(", ") } : {}),
-      ...(options?.headers || {}),
-    };
+    const headers = new Headers(options?.headers);
+    headers.set(
+      "Authorization",
+      "apiKey" in this.auth
+        ? `Bearer ${this.auth.apiKey}`
+        : `Basic ${btoa(`${this.auth.username}:${this.auth.password}`)}`,
+    );
+    headers.set("Content-Type", "application/json");
+    headers.set("Accept", getAcceptHeader(includeODataAnnotations));
+    const mergedPrefer = mergePreferHeaderValues(
+      preferValues.length > 0 ? preferValues.join(", ") : undefined,
+      headers.get("Prefer") ?? undefined,
+    );
+    if (mergedPrefer) {
+      headers.set("Prefer", mergedPrefer);
+    } else {
+      headers.delete("Prefer");
+    }
 
     // Prepare loggableHeaders by omitting the Authorization key
-    const { Authorization, ...loggableHeaders } = headers;
+    const { authorization: _authorization, ...loggableHeaders } = Object.fromEntries(headers.entries());
     logger.debug("Request headers:", loggableHeaders);
 
     // TEMPORARY WORKAROUND: Hopefully this feature will be fixed in the ffetch library

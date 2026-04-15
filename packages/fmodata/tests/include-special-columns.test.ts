@@ -650,4 +650,72 @@ describe("includeSpecialColumns feature", () => {
     expect(firstRecord).toHaveProperty("ROWID");
     expect(firstRecord).toHaveProperty("ROWMODID");
   });
+
+  it("should include special columns for insert full-record responses", async () => {
+    const mock = new MockFMServerConnection();
+    mock.addRoute({
+      urlPattern: "/TestDB/contacts",
+      response: { id: "1", name: "John", ROWID: 123, ROWMODID: 456 },
+      status: 200,
+    });
+    const db = mock.database("TestDB", {
+      includeSpecialColumns: true,
+    });
+
+    let preferHeader: string | null = null;
+    const { data } = await db
+      .from(contactsTO)
+      .insert({ name: "John" })
+      .execute({
+        hooks: {
+          before: (req) => {
+            preferHeader = req.headers.get("Prefer");
+          },
+        },
+      });
+
+    expect(preferHeader).toBe("return=representation, fmodata.include-specialcolumns");
+    assert(data, "data is undefined");
+    expectTypeOf(data).toHaveProperty("ROWID");
+    expectTypeOf(data).toHaveProperty("ROWMODID");
+    data.ROWID;
+    data.ROWMODID;
+    expect(data).toHaveProperty("ROWID", 123);
+    expect(data).toHaveProperty("ROWMODID", 456);
+  });
+
+  it("should include special columns for update returnFullRecord responses", async () => {
+    const mock = new MockFMServerConnection();
+    mock.addRoute({
+      urlPattern: "/TestDB/contacts",
+      response: { id: "1", name: "John", ROWID: 123, ROWMODID: 456 },
+      status: 200,
+    });
+    const db = mock.database("TestDB", {
+      includeSpecialColumns: false,
+    });
+
+    let preferHeader: string | null = null;
+    const { data } = await db
+      .from(contactsTO)
+      .update({ name: "John" }, { returnFullRecord: true })
+      .byId("1")
+      .execute({
+        includeSpecialColumns: true,
+        hooks: {
+          before: (req) => {
+            preferHeader = req.headers.get("Prefer");
+          },
+        },
+      });
+
+    expect(preferHeader).toBe("return=representation, fmodata.include-specialcolumns");
+    assert(data, "data is undefined");
+    expectTypeOf(data).toHaveProperty("ROWID");
+    expectTypeOf(data).toHaveProperty("ROWMODID");
+    data.ROWID;
+    data.ROWMODID;
+    expect(data).toHaveProperty("ROWID", 123);
+    expect(data).toHaveProperty("ROWMODID", 456);
+  });
 });

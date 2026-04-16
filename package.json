@@ -57,6 +57,18 @@
       "qs": "^6.14.1",
       "vite": "^6.4.1",
       "body-parser": "^2.2.1"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "better-sqlite3",
+      "es5-ext",
+      "esbuild",
+      "msgpackr-extract",
+      "msw",
+      "prisma",
+      "sharp"
+    ]
   }
 }

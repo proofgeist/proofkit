@@ -1,12 +1,13 @@
 import type { FMTable } from "../../orm/table";
 import { getTableName } from "../../orm/table";
+import { buildRecordPath, type RecordLocator } from "../builders/mutation-helpers";
 import { resolveTableId } from "../builders/table-utils";
 
 /**
  * Configuration for navigation from RecordBuilder or EntitySet
  */
 export interface NavigationConfig {
-  recordId?: string | number;
+  recordLocator?: RecordLocator;
   relation: string;
   relationEntityId?: string;
   sourceTableName: string;
@@ -56,7 +57,7 @@ export class QueryUrlBuilder {
     const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), effectiveUseEntityIds);
 
     const navigation = options.navigation;
-    if (navigation?.recordId && navigation?.relation) {
+    if (navigation?.recordLocator !== undefined && navigation?.relation) {
       return this.buildRecordNavigation(queryString, tableId, navigation, effectiveUseEntityIds);
     }
     if (navigation?.relation) {
@@ -85,8 +86,13 @@ export class QueryUrlBuilder {
       ? (navigation.baseRelationEntityId ?? navigation.baseRelation)
       : navigation.baseRelation;
     const relation = useEntityIds ? (navigation.relationEntityId ?? navigation.relation) : navigation.relation;
-    const { recordId } = navigation;
-    const base = baseRelation ? `${sourceTable}/${baseRelation}('${recordId}')` : `${sourceTable}('${recordId}')`;
+    const { recordLocator } = navigation;
+    if (recordLocator === undefined) {
+      throw new Error("recordLocator is required for record navigation");
+    }
+    const base = baseRelation
+      ? buildRecordPath(`${sourceTable}/${baseRelation}`, recordLocator)
+      : buildRecordPath(sourceTable, recordLocator);
     return `/${this.databaseName}/${base}/${relation}${queryString}`;
   }
 
@@ -118,7 +124,7 @@ export class QueryUrlBuilder {
     const navigation = options?.navigation;
     const tableId = resolveTableId(this.occurrence, getTableName(this.occurrence), effectiveUseEntityIds);
 
-    if (navigation?.recordId && navigation?.relation) {
+    if (navigation?.recordLocator !== undefined && navigation?.relation) {
       const sourceTable = effectiveUseEntityIds
         ? (navigation.sourceTableEntityId ?? navigation.sourceTableName)
         : navigation.sourceTableName;
@@ -128,8 +134,13 @@ export class QueryUrlBuilder {
       const relation = effectiveUseEntityIds
         ? (navigation.relationEntityId ?? navigation.relation)
         : navigation.relation;
-      const { recordId } = navigation;
-      const base = baseRelation ? `${sourceTable}/${baseRelation}('${recordId}')` : `${sourceTable}('${recordId}')`;
+      const { recordLocator } = navigation;
+      if (recordLocator === undefined) {
+        throw new Error("recordLocator is required for record navigation");
+      }
+      const base = baseRelation
+        ? buildRecordPath(`${sourceTable}/${baseRelation}`, recordLocator)
+        : buildRecordPath(sourceTable, recordLocator);
       return queryString ? `/${base}/${relation}${queryString}` : `/${base}/${relation}`;
     }
     if (navigation?.relation) {
@@ -152,12 +163,12 @@ export class QueryUrlBuilder {
    * Build URL for record operations (single record by ID).
    * Used by RecordBuilder to build URLs like /database/table('id').
    *
-   * @param recordId - The record ID
+   * @param recordLocator - The record locator
    * @param queryString - The OData query string (e.g., "?$select=...")
    * @param options - Options including operation type and useEntityIds override
    */
   buildRecordUrl(
-    recordId: string | number,
+    recordLocator: RecordLocator,
     queryString: string,
     options?: {
       operation?: "getSingleField";
@@ -175,10 +186,13 @@ export class QueryUrlBuilder {
     let url: string;
     if (options?.isNavigateFromEntitySet && options.navigateSourceTableName && options.navigateRelation) {
       // From navigated EntitySet: /sourceTable/relation('recordId')
-      url = `/${this.databaseName}/${options.navigateSourceTableName}/${options.navigateRelation}('${recordId}')`;
+      url = `/${this.databaseName}/${buildRecordPath(
+        `${options.navigateSourceTableName}/${options.navigateRelation}`,
+        recordLocator,
+      )}`;
     } else {
       // Normal record: /tableName('recordId') - use FMTID if configured
-      url = `/${this.databaseName}/${tableId}('${recordId}')`;
+      url = `/${this.databaseName}/${buildRecordPath(tableId, recordLocator)}`;
     }
 
     if (options?.operation === "getSingleField" && options.operationParam) {

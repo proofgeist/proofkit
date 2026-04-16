@@ -17,6 +17,7 @@ import {
   isUsingEntityIds,
 } from "../orm/table";
 import type { FMODataLayer, ODataConfig } from "../services";
+import type { RowIdRecordLocator } from "./builders/mutation-helpers";
 import { resolveTableId } from "./builders/table-utils";
 import type { Database } from "./database";
 import { DeleteBuilder } from "./delete-builder";
@@ -173,9 +174,15 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
   }
 
   get(
-    id: string | number,
-    // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
-  ): RecordBuilder<Occ, false, undefined, keyof InferSchemaOutputFromFMTable<Occ>, {}, DatabaseIncludeSpecialColumns> {
+    locator: RowIdRecordLocator | string | number,
+  ): RecordBuilder<
+    Occ,
+    false,
+    undefined,
+    keyof InferSchemaOutputFromFMTable<Occ>,
+    Record<string, never>,
+    DatabaseIncludeSpecialColumns
+  > {
     const builder = new RecordBuilder<
       Occ,
       false,
@@ -187,7 +194,7 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
     >({
       occurrence: this.occurrence,
       layer: this.layer,
-      recordId: id,
+      recordLocator: locator,
     });
 
     // Apply defaultSelect if occurrence exists

@@ -18,6 +18,7 @@ import {
 } from "../orm/table";
 import type { FMODataLayer, ODataConfig } from "../services";
 import { resolveTableId } from "./builders/table-utils";
+import { CountBuilder } from "./count-builder";
 import type { Database } from "./database";
 import { DeleteBuilder } from "./delete-builder";
 import { InsertBuilder } from "./insert-builder";
@@ -105,8 +106,16 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
     return builder;
   }
 
-  // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
-  list(): QueryBuilder<Occ, keyof InferSchemaOutputFromFMTable<Occ>, false, false, {}, DatabaseIncludeSpecialColumns> {
+  list(): QueryBuilder<
+    Occ,
+    keyof InferSchemaOutputFromFMTable<Occ>,
+    false,
+    false,
+    // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
+    {},
+    false,
+    DatabaseIncludeSpecialColumns
+  > {
     const builder = new QueryBuilder<
       Occ,
       keyof InferSchemaOutputFromFMTable<Occ>,
@@ -114,6 +123,7 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
       false,
       // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
       {},
+      false,
       DatabaseIncludeSpecialColumns
     >({
       occurrence: this.occurrence as Occ,
@@ -145,6 +155,7 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
           false,
           // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
           {},
+          false,
           DatabaseIncludeSpecialColumns
         >;
       }
@@ -161,6 +172,7 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
           false,
           // biome-ignore lint/complexity/noBannedTypes: Empty object type represents no expands by default
           {},
+          false,
           DatabaseIncludeSpecialColumns
         >;
       }
@@ -170,6 +182,15 @@ export class EntitySet<Occ extends FMTable<any, any>, DatabaseIncludeSpecialColu
     // Apply default pagination limit of 1000 records to prevent stack overflow
     // with large datasets. Users can override with .top() if needed.
     return this.applyNavigationContext(builder).top(1000);
+  }
+
+  count(): CountBuilder<Occ, DatabaseIncludeSpecialColumns> {
+    const builder = new CountBuilder<Occ, DatabaseIncludeSpecialColumns>({
+      occurrence: this.occurrence,
+      layer: this.layer,
+    });
+
+    return this.applyNavigationContext(builder);
   }
 
   get(
